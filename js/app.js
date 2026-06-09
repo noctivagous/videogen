@@ -1,7 +1,7 @@
 const state = {
   project: {
     name: 'Untitled_Project_01',
-    resolution: '1920x1080',
+    resolution: '854x480',
     aspectRatio: '16:9',
     fps: 30,
     duration: 5
@@ -35,6 +35,39 @@ const state = {
     { id: 3, name: 'Shot 03', duration: 7, thumbnail: null, active: false, references: [null, null, null], referenceRoles: ['Subject', 'Style', 'Motion'] }
   ],
   currentShot: 1
+};
+
+const RESOLUTION_PRESETS = {
+  '16:9': [
+    { label: '4K', value: '3840x2160' },
+    { label: '1080p', value: '1920x1080' },
+    { label: '720p', value: '1280x720' },
+    { label: '480p', value: '854x480' }
+  ],
+  '9:16': [
+    { label: '4K (Vertical)', value: '2160x3840' },
+    { label: '1080p (Vertical)', value: '1080x1920' },
+    { label: '720p (Vertical)', value: '720x1280' },
+    { label: '480p (Vertical)', value: '480x854' }
+  ],
+  '1:1': [
+    { label: '4K (Square)', value: '2160x2160' },
+    { label: '1080p (Square)', value: '1080x1080' },
+    { label: '720p (Square)', value: '720x720' },
+    { label: '480p (Square)', value: '480x480' }
+  ],
+  '4:3': [
+    { label: '4K (Classic)', value: '2880x2160' },
+    { label: '1080p (Classic)', value: '1440x1080' },
+    { label: '720p (Classic)', value: '960x720' },
+    { label: '480p (Classic)', value: '640x480' }
+  ],
+  '21:9': [
+    { label: '4K (Ultrawide)', value: '3840x1645' },
+    { label: '1080p (Ultrawide)', value: '2560x1080' },
+    { label: '720p (Ultrawide)', value: '1680x720' },
+    { label: '480p (Ultrawide)', value: '1120x480' }
+  ]
 };
 
 // ==================== AI PROVIDER STATE (from Settings) ====================
@@ -129,9 +162,60 @@ function init() {
   loadAIState();
   updateCurrentProviderDisplay();
   renderShotList();
+  populateResolutionOptions();
   attachEventListeners();
   initReferenceSlots();
   updateResolutionIndicator();
+  updatePreviewAspectRatio();
+}
+
+function populateResolutionOptions() {
+  const ar = state.project.aspectRatio || '16:9';
+  const presets = RESOLUTION_PRESETS[ar] || RESOLUTION_PRESETS['16:9'];
+  
+  elements.resolution.innerHTML = presets.map(p => `
+    <option value="${p.value}" ${state.project.resolution === p.value ? 'selected' : ''}>${p.label} (${p.value})</option>
+  `).join('');
+  
+  // If current resolution doesn't match any preset for this AR, pick the last one (usually 480p)
+  if (!presets.find(p => p.value === state.project.resolution)) {
+    state.project.resolution = presets[presets.length - 1].value;
+    elements.resolution.value = state.project.resolution;
+  }
+}
+
+function updatePreviewAspectRatio() {
+  const ar = state.project.aspectRatio || '16:9';
+  const [w, h] = ar.split(':');
+  const previewFrame = document.getElementById('previewFrame').parentElement;
+  if (previewFrame) {
+    // Remove any existing aspect-ratio classes from Tailwind
+    previewFrame.className = previewFrame.className.split(' ')
+      .filter(c => !c.startsWith('aspect-'))
+      .join(' ');
+    
+    // Apply dynamic aspect ratio
+    previewFrame.style.aspectRatio = `${w}/${h}`;
+    
+    // Smart fitting: compare target ratio with container ratio
+    const container = previewFrame.parentElement;
+    const containerRect = container.getBoundingClientRect();
+    const containerRatio = containerRect.width / containerRect.height;
+    const targetRatio = parseInt(w) / parseInt(h);
+    
+    if (targetRatio > containerRatio) {
+      // Target is wider than container: fill width
+      previewFrame.style.width = '100%';
+      previewFrame.style.height = 'auto';
+    } else {
+      // Target is taller than container: fill height
+      previewFrame.style.width = 'auto';
+      previewFrame.style.height = '100%';
+    }
+    
+    previewFrame.style.maxWidth = '100%';
+    previewFrame.style.maxHeight = '100%';
+  }
 }
 
 // Reference Slots Logic
@@ -279,6 +363,8 @@ function attachEventListeners() {
   });
   elements.aspectRatio.addEventListener('change', e => {
     state.project.aspectRatio = e.target.value;
+    populateResolutionOptions();
+    updatePreviewAspectRatio();
     updateResolutionIndicator();
   });
   elements.fps.addEventListener('change', e => {
@@ -350,9 +436,15 @@ function attachEventListeners() {
 
 // Update Resolution Indicator
 function updateResolutionIndicator() {
-  const [w, h] = state.project.resolution.split('x');
   const ar = state.project.aspectRatio || '16:9';
-  elements.resIndicator.textContent = `${w}×${h} (${ar}) @ ${state.project.fps}fps`;
+  const res = state.project.resolution;
+  const presets = RESOLUTION_PRESETS[ar] || [];
+  const preset = presets.find(p => p.value === res);
+  const label = preset ? preset.label : 'Custom';
+  
+  if (elements.resIndicator) {
+    elements.resIndicator.textContent = `${label} (${res}) — ${ar} @ ${state.project.fps}fps`;
+  }
 }
 
 // Render Shot List
@@ -549,6 +641,8 @@ function handleLoad() {
         
         renderShotList();
         updateReferenceUI();
+        populateResolutionOptions();
+        updatePreviewAspectRatio();
         updateResolutionIndicator();
         showToast('Project loaded successfully');
       } catch (err) {

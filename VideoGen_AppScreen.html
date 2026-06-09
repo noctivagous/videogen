@@ -39,33 +39,29 @@
     </div>
 
     <div class="hidden lg:flex items-center gap-2">
-      <div class="flex items-center gap-2 bg-surface-800 rounded-lg px-3 py-2 border border-surface-700">
-        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
-        </svg>
-        <select id="resolution" class="bg-transparent text-sm outline-none select-arrow appearance-none pr-8 cursor-pointer">
-          <option value="3840x2160">4K (3840×2160)</option>
-          <option value="1920x1080" selected>HD (1920×1080)</option>
-          <option value="1280x720">720p (1280×720)</option>
-          <option value="1080x1920">Vertical HD (1080×1920)</option>
-          <option value="1080x1080">Square (1080×1080)</option>
-        </select>
-      </div>
-
-      <div class="flex items-center gap-2 bg-surface-800 rounded-lg px-3 py-2 border border-surface-700">
+      <div class="flex items-center gap-2 bg-surface-800 rounded-lg px-3 py-2 border border-surface-700 parameter-enclosure">
         <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path>
         </svg>
         <select id="aspectRatio" class="bg-transparent text-sm outline-none select-arrow appearance-none pr-8 cursor-pointer">
-          <option value="16:9" selected>16:9</option>
-          <option value="9:16">9:16</option>
-          <option value="21:9">21:9</option>
-          <option value="4:3">4:3</option>
-          <option value="1:1">1:1</option>
+          <option value="16:9" selected>16:9 Landscape</option>
+          <option value="9:16">9:16 Portrait</option>
+          <option value="1:1">1:1 Square</option>
+          <option value="4:3">4:3 Classic</option>
+          <option value="21:9">21:9 Ultra-wide</option>
+        </select>
+      </div>
+
+      <div class="flex items-center gap-2 bg-surface-800 rounded-lg px-3 py-2 border border-surface-700 parameter-enclosure">
+        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
+        </svg>
+        <select id="resolution" class="bg-transparent text-sm outline-none select-arrow appearance-none pr-8 cursor-pointer">
+          <!-- Populated dynamically by JS -->
         </select>
       </div>
       
-      <div class="flex items-center gap-2 bg-surface-800 rounded-lg px-3 py-2 border border-surface-700">
+      <div class="flex items-center gap-2 bg-surface-800 rounded-lg px-3 py-2 border border-surface-700 parameter-enclosure">
         <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
         </svg>
@@ -77,7 +73,7 @@
         </select>
       </div>
       
-      <div class="flex items-center gap-2 bg-surface-800 rounded-lg px-3 py-2 border border-surface-700">
+      <div class="flex items-center gap-2 bg-surface-800 rounded-lg px-3 py-2 border border-surface-700 parameter-enclosure">
         <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"></path>
         </svg>
@@ -128,7 +124,7 @@
         </div>
         
         <div class="space-y-4">
-          <div>
+          <div class="parameter-enclosure">
             <label class="text-xs text-gray-400 mb-2 block">Lens Type</label>
             <select id="lensType" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
               <option value="wide">Wide Angle (14-35mm)</option>
@@ -140,7 +136,7 @@
             </select>
           </div>
 
-          <div>
+          <div class="parameter-enclosure">
             <label class="text-xs text-gray-400 mb-2 block flex justify-between">
               <span>Focal Length</span>
               <span id="focalLengthVal" class="text-brand-400 font-medium">50mm</span>
@@ -148,7 +144,7 @@
             <input type="range" id="focalLength" min="14" max="200" value="50" class="w-full">
           </div>
 
-          <div>
+          <div class="parameter-enclosure">
             <label class="text-xs text-gray-400 mb-2 block">Angle</label>
             <select id="cameraAngle" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
               <option value="eye-level" selected>Eye Level</option>
@@ -160,7 +156,7 @@
             </select>
           </div>
 
-          <div>
+          <div class="parameter-enclosure">
             <label class="text-xs text-gray-400 mb-2 block">Movement</label>
             <select id="cameraMovement" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
               <option value="static" selected>Static</option>
@@ -178,7 +174,7 @@
             </select>
           </div>
 
-          <div>
+          <div class="parameter-enclosure">
             <label class="text-xs text-gray-400 mb-2 block flex justify-between">
               <span>Aperture</span>
               <span id="apertureVal" class="text-brand-400 font-medium">f/2.8</span>
@@ -186,7 +182,7 @@
             <input type="range" id="aperture" min="1.4" max="22" step="0.1" value="2.8" class="w-full">
           </div>
 
-          <div>
+          <div class="parameter-enclosure">
             <label class="text-xs text-gray-400 mb-2 block">Depth of Field</label>
             <select id="dof" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
               <option value="shallow" selected>Shallow</option>
@@ -204,7 +200,7 @@
             </div>
             
             <div class="space-y-4">
-              <div>
+              <div class="parameter-enclosure">
                 <label class="text-xs text-gray-400 mb-2 block">Motion Intensity</label>
                 <select id="motionIntensity" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
                   <option value="none">None</option>
@@ -215,7 +211,7 @@
                 </select>
               </div>
               
-              <div>
+              <div class="parameter-enclosure">
                 <label class="text-xs text-gray-400 mb-2 block">Subject Action</label>
                 <select id="subjectAction" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
                   <option value="still" selected>Still Pose</option>
@@ -228,7 +224,7 @@
                 </select>
               </div>
               
-              <div>
+              <div class="parameter-enclosure">
                 <label class="text-xs text-gray-400 mb-2 block flex justify-between">
                   <span>Stabilization</span>
                   <span id="stabVal" class="text-brand-400 font-medium">70%</span>
@@ -236,7 +232,7 @@
                 <input type="range" id="stabilization" min="0" max="100" value="70" class="w-full">
               </div>
               
-              <div>
+              <div class="parameter-enclosure">
                 <label class="text-xs text-gray-400 mb-2 block">Motion Blur</label>
                 <select id="motionBlur" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
                   <option value="off">Off</option>
@@ -311,7 +307,7 @@
         </div>
         
         <div class="space-y-4">
-          <div>
+          <div class="parameter-enclosure">
             <label class="text-xs text-gray-400 mb-2 block">Key Light</label>
             <select id="keyLight" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
               <option value="soft" selected>Soft</option>
@@ -322,7 +318,7 @@
             </select>
           </div>
 
-          <div>
+          <div class="parameter-enclosure">
             <label class="text-xs text-gray-400 mb-2 block flex justify-between">
               <span>Light Intensity</span>
               <span id="lightIntensityVal" class="text-brand-400 font-medium">80%</span>
@@ -330,7 +326,7 @@
             <input type="range" id="lightIntensity" min="0" max="100" value="80" class="w-full">
           </div>
 
-          <div>
+          <div class="parameter-enclosure">
             <label class="text-xs text-gray-400 mb-2 block">Lighting Style</label>
             <select id="lightingStyle" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
               <option value="natural" selected>Natural</option>
@@ -344,7 +340,7 @@
             </select>
           </div>
 
-          <div>
+          <div class="parameter-enclosure">
             <label class="text-xs text-gray-400 mb-2 block">Time of Day</label>
             <select id="timeOfDay" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
               <option value="dawn">Dawn</option>
@@ -357,15 +353,15 @@
             </select>
           </div>
 
-          <div>
+          <div class="parameter-enclosure">
             <label class="text-xs text-gray-400 mb-2 block flex justify-between">
               <span>Color Temperature</span>
               <span id="colorTempVal" class="text-brand-400 font-medium">5500K</span>
             </label>
-            <input type="range" id="colorTemp" min="2000" max="10000" step="100" value="5500" class="w-full">
+            <input type="range" id="colorTemp" min="2000" max="10000" step="100" value="5500" class="w-full color-temp-slider">
           </div>
 
-          <div>
+          <div class="parameter-enclosure">
             <label class="text-xs text-gray-400 mb-2 block">Atmosphere</label>
             <select id="atmosphere" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
               <option value="clear" selected>Clear</option>
@@ -387,7 +383,7 @@
     <div class="p-4 space-y-4">
       
       <!-- Prompt Input -->
-      <div class="flex gap-4 items-start">
+      <div class="flex gap-4 items-end">
         <!-- Reference Image Slots -->
         <div id="referenceSlots" class="flex gap-2">
           <!-- Slot 1 -->
@@ -426,7 +422,7 @@
         </div>
 
         <!-- Prompt & Generate -->
-        <div class="flex-1 flex flex-col">
+        <div class="flex-1 flex flex-col parameter-enclosure">
           <div class="flex items-center justify-between mb-2">
             <div class="flex items-center gap-2">
               <svg class="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
