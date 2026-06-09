@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VideoGen - AI Video Generation</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        surface: {
+          900: '#0a0a0b',
+          800: '#131316',
+          700: '#1c1c21',
+          600: '#27272d',
+          500: '#3f3f46'
+        },
+        brand: {
+          400: '#818cf8',
+          500: '#6366f1',
+          600: '#4f46e5'
+        }
+      },
+      animation: {
+        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'slide-up': 'slideUp 0.3s ease-out',
+        'fade-in': 'fadeIn 0.2s ease-out'
+      },
+      keyframes: {
+        slideUp: {
+          '0%': { transform: 'translateY(10px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' }
+        },
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' }
+        }
+      }
+    }
+  }
+}
+</script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+* {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+.glass {
+  background: rgba(28, 28, 33, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.control-panel {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-track {
+  background: #27272d;
+  height: 4px;
+  border-radius: 2px;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -6px;
+  background: #6366f1;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  transition: all 0.15s ease;
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+  background: #818cf8;
+  transform: scale(1.2);
+}
+input[type="range"]::-moz-range-track {
+  background: #27272d;
+  height: 4px;
+  border-radius: 2px;
+}
+input[type="range"]::-moz-range-thumb {
+  background: #6366f1;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  border: none;
+  transition: all 0.15s ease;
+}
+input[type="range"]::-moz-range-thumb:hover {
+  background: #818cf8;
+  transform: scale(1.2);
+}
+.select-arrow {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+}
+.timeline-thumb {
+  background: linear-gradient(135deg, #1c1c21 0%, #27272d 100%);
+}
+.timeline-thumb.active {
+  box-shadow: 0 0 0 2px #6366f1, 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+.shot-item:hover .shot-overlay {
+  opacity: 1;
+}
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #131316;
+}
+::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
+</style>
+</head>
+<body class="bg-surface-900 text-gray-100 h-screen overflow-hidden">
+<div id="app" class="h-screen flex flex-col">
+  
+  <!-- Top Bar: Project Controls -->
+  <header class="glass border-b border-surface-700 h-16 flex items-center justify-between px-4 md:px-6 z-50">
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+          </svg>
+        </div>
+        <span class="font-semibold text-lg hidden sm:block">VideoGen</span>
+      </div>
+      
+      <div class="h-8 w-px bg-surface-600 hidden md:block"></div>
+      
+      <input type="text" id="projectName" value="Untitled_Project_01" 
+        class="bg-surface-700 hover:bg-surface-600 focus:bg-surface-600 border-surface-600 rounded-lg px-3 py-1.5 text-sm font-medium outline-none focus:ring-2 focus:ring-brand-500 transition-all w-32 md:w-48">
+    </div>
+
+    <div class="hidden lg:flex items-center gap-2">
+      <div class="flex items-center gap-2 bg-surface-800 rounded-lg px-3 py-2 border border-surface-700">
+        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
+        </svg>
+        <select id="resolution" class="bg-transparent text-sm outline-none select-arrow appearance-none pr-8 cursor-pointer">
+          <option value="3840x2160">4K (3840×2160)</option>
+          <option value="1920x1080" selected>HD (1920×1080)</option>
+          <option value="1280x720">720p (1280×720)</option>
+          <option value="1080x1920">Vertical HD (1080×1920)</option>
+          <option value="1080x1080">Square (1080×1080)</option>
+        </select>
+      </div>
+      
+      <div class="flex items-center gap-2 bg-surface-800 rounded-lg px-3 py-2 border border-surface-700">
+        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <select id="fps" class="bg-transparent text-sm outline-none select-arrow appearance-none pr-8 cursor-pointer">
+          <option value="24">24 FPS</option>
+          <option value="30" selected>30 FPS</option>
+          <option value="60">60 FPS</option>
+          <option value="120">120 FPS</option>
+        </select>
+      </div>
+      
+      <div class="flex items-center gap-2 bg-surface-800 rounded-lg px-3 py-2 border border-surface-700">
+        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"></path>
+        </svg>
+        <input type="number" id="duration" value="5" min="1" max="60" class="bg-transparent text-sm w-12 outline-none">
+        <span class="text-sm text-gray-400">sec</span>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <button id="saveBtn" class="p-2 hover:bg-surface-700 rounded-lg transition-all group">
+        <svg class="w-5 h-5 text-gray-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+        </svg>
+      </button>
+      <button id="loadBtn" class="p-2 hover:bg-surface-700 rounded-lg transition-all group">
+        <svg class="w-5 h-5 text-gray-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+        </svg>
+      </button>
+      <button id="exportBtn" class="bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-500 px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-lg shadow-brand-500/20 flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+        </svg>
+        <span class="hidden sm:inline">Export</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content: Perimeter Controls + Center Preview -->
+  <div class="flex-1 flex overflow-hidden">
+    
+    <!-- Left Edge: Camera Controls -->
+    <aside class="hidden lg:block w-72 glass border-r border-surface-700 overflow-y-auto control-panel">
+      <div class="p-4">
+        <div class="flex items-center gap-2 mb-4">
+          <svg class="w-5 h-5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
+          <h3 class="font-semibold text-sm uppercase tracking-wider text-gray-300">Camera</h3>
+        </div>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="text-xs text-gray-400 mb-2 block">Lens Type</label>
+            <select id="lensType" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
+              <option value="wide">Wide Angle (14-35mm)</option>
+              <option value="standard" selected>Standard (35-70mm)</option>
+              <option value="telephoto">Telephoto (70-200mm)</option>
+              <option value="macro">Macro</option>
+              <option value="fisheye">Fisheye</option>
+              <option value="anamorphic">Anamorphic</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-xs text-gray-400 mb-2 block flex justify-between">
+              <span>Focal Length</span>
+              <span id="focalLengthVal" class="text-brand-400 font-medium">50mm</span>
+            </label>
+            <input type="range" id="focalLength" min="14" max="200" value="50" class="w-full">
+          </div>
+
+          <div>
+            <label class="text-xs text-gray-400 mb-2 block">Angle</label>
+            <select id="cameraAngle" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
+              <option value="eye-level" selected>Eye Level</option>
+              <option value="high-angle">High Angle</option>
+              <option value="low-angle">Low Angle</option>
+              <option value="birds-eye">Bird's Eye</option>
+              <option value="worms-eye">Worm's Eye</option>
+              <option value="dutch">Dutch Tilt</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-xs text-gray-400 mb-2 block">Movement</label>
+            <select id="cameraMovement" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
+              <option value="static" selected>Static</option>
+              <option value="pan-left">Pan Left</option>
+              <option value="pan-right">Pan Right</option>
+              <option value="tilt-up">Tilt Up</option>
+              <option value="tilt-down">Tilt Down</option>
+              <option value="dolly-in">Dolly In</option>
+              <option value="dolly-out">Dolly Out</option>
+              <option value="truck-left">Truck Left</option>
+              <option value="truck-right">Truck Right</option>
+              <option value="orbit">Orbit</option>
+              <option value="handheld">Handheld</option>
+              <option value="drone">Drone Shot</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-xs text-gray-400 mb-2 block flex justify-between">
+              <span>Aperture</span>
+              <span id="apertureVal" class="text-brand-400 font-medium">f/2.8</span>
+            </label>
+            <input type="range" id="aperture" min="1.4" max="22" step="0.1" value="2.8" class="w-full">
+          </div>
+
+          <div>
+            <label class="text-xs text-gray-400 mb-2 block">Depth of Field</label>
+            <select id="dof" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
+              <option value="shallow" selected>Shallow</option>
+              <option value="medium">Medium</option>
+              <option value="deep">Deep Focus</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Center: Preview + Bottom Controls -->
+    <main class="flex-1 flex flex-col bg-surface-900">
+      
+      <!-- Central Preview Frame -->
+      <div class="flex-1 flex items-center justify-center p-4 md:p-8 min-h-0">
+        <div class="relative w-full max-w-5xl h-full flex items-center justify-center">
+          <div class="aspect-video w-full max-h-full bg-surface-800 rounded-xl border-2 border-surface-700 overflow-hidden shadow-2xl relative group">
+            <div id="previewFrame" class="w-full h-full bg-gradient-to-br from-surface-700 via-surface-800 to-surface-900 flex items-center justify-center">
+              <div id="previewContent" class="text-center animate-fade-in">
+                <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-surface-600 flex items-center justify-center">
+                  <svg class="w-10 h-10 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                </div>
+                <p class="text-gray-400 text-sm">Enter a prompt and click Generate</p>
+              </div>
+              
+              <!-- Loading State -->
+              <div id="loadingState" class="hidden absolute inset-0 bg-surface-900/90 flex items-center justify-center backdrop-blur-sm">
+                <div class="text-center">
+                  <div class="w-16 h-16 border-4 border-surface-600 border-t-brand-500 rounded-full animate-spin mx-auto mb-4"></div>
+                  <p class="text-sm text-gray-300 font-medium">Generating video...</p>
+                  <p class="text-xs text-gray-500 mt-1" id="progressText">Processing frame 1 of 150</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Preview Overlay Controls -->
+            <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-surface-900/80 backdrop-blur-md rounded-xl px-4 py-2 border border-surface-700 opacity-0 group-hover:opacity-100 transition-all">
+              <button class="p-2 hover:bg-surface-700 rounded-lg transition-all">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </button>
+              <div class="h-6 w-px bg-surface-600"></div>
+              <span class="text-xs text-gray-400">00:00 / 00:05</span>
+            </div>
+          </div>
+          
+          <!-- Resolution Indicator -->
+          <div class="absolute -top-3 right-4 bg-surface-800 border border-surface-700 px-3 py-1 rounded-lg text-xs text-gray-400">
+            <span id="resIndicator">1920×1080 @ 30fps</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Edge: Motion + Subject Controls -->
+      <div class="glass border-t border-surface-700">
+        <div class="p-4 space-y-3">
+          <div class="flex items-center gap-2 mb-2">
+            <svg class="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            <h3 class="font-semibold text-xs uppercase tracking-wider text-gray-300">Motion & Subject</h3>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div>
+              <label class="text-xs text-gray-400 mb-1 block">Motion Intensity</label>
+              <select id="motionIntensity" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
+                <option value="none">None</option>
+                <option value="subtle" selected>Subtle</option>
+                <option value="moderate">Moderate</option>
+                <option value="dynamic">Dynamic</option>
+                <option value="intense">Intense</option>
+              </select>
+            </div>
+            
+            <div>
+              <label class="text-xs text-gray-400 mb-1 block">Subject Action</label>
+              <select id="subjectAction" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
+                <option value="still" selected>Still Pose</option>
+                <option value="walking">Walking</option>
+                <option value="running">Running</option>
+                <option value="talking">Talking</option>
+                <option value="gesturing">Gesturing</option>
+                <option value="dancing">Dancing</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+            
+            <div>
+              <label class="text-xs text-gray-400 mb-1 block flex justify-between">
+                <span>Stabilization</span>
+                <span id="stabVal" class="text-brand-400 font-medium">70%</span>
+              </label>
+              <input type="range" id="stabilization" min="0" max="100" value="70" class="w-full">
+            </div>
+            
+            <div>
+              <label class="text-xs text-gray-400 mb-1 block">Motion Blur</label>
+              <select id="motionBlur" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
+                <option value="off">Off</option>
+                <option value="low" selected>Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Right Edge: Lighting Controls -->
+    <aside class="hidden lg:block w-72 glass border-l border-surface-700 overflow-y-auto control-panel">
+      <div class="p-4">
+        <div class="flex items-center gap-2 mb-4">
+          <svg class="w-5 h-5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+          </svg>
+          <h3 class="font-semibold text-sm uppercase tracking-wider text-gray-300">Lighting</h3>
+        </div>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="text-xs text-gray-400 mb-2 block">Key Light</label>
+            <select id="keyLight" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
+              <option value="soft" selected>Soft</option>
+              <option value="hard">Hard</option>
+              <option value="rim">Rim Light</option>
+              <option value="backlight">Backlight</option>
+              <option value="side">Side Light</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-xs text-gray-400 mb-2 block flex justify-between">
+              <span>Light Intensity</span>
+              <span id="lightIntensityVal" class="text-brand-400 font-medium">80%</span>
+            </label>
+            <input type="range" id="lightIntensity" min="0" max="100" value="80" class="w-full">
+          </div>
+
+          <div>
+            <label class="text-xs text-gray-400 mb-2 block">Lighting Style</label>
+            <select id="lightingStyle" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
+              <option value="natural" selected>Natural</option>
+              <option value="cinematic">Cinematic</option>
+              <option value="dramatic">Dramatic</option>
+              <option value="high-key">High Key</option>
+              <option value="low-key">Low Key</option>
+              <option value="neon">Neon</option>
+              <option value="golden-hour">Golden Hour</option>
+              <option value="blue-hour">Blue Hour</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-xs text-gray-400 mb-2 block">Time of Day</label>
+            <select id="timeOfDay" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
+              <option value="dawn">Dawn</option>
+              <option value="morning">Morning</option>
+              <option value="noon" selected>Noon</option>
+              <option value="afternoon">Afternoon</option>
+              <option value="sunset">Sunset</option>
+              <option value="dusk">Dusk</option>
+              <option value="night">Night</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-xs text-gray-400 mb-2 block flex justify-between">
+              <span>Color Temperature</span>
+              <span id="colorTempVal" class="text-brand-400 font-medium">5500K</span>
+            </label>
+            <input type="range" id="colorTemp" min="2000" max="10000" step="100" value="5500" class="w-full">
+          </div>
+
+          <div>
+            <label class="text-xs text-gray-400 mb-2 block">Atmosphere</label>
+            <select id="atmosphere" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
+              <option value="clear" selected>Clear</option>
+              <option value="foggy">Foggy</option>
+              <option value="misty">Misty</option>
+              <option value="rainy">Rainy</option>
+              <option value="snowy">Snowy</option>
+              <option value="dusty">Dusty</option>
+              <option value="smoky">Smoky</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Bottom Section: Prompt + Timeline -->
+  <div class="glass border-t border-surface-700">
+    <div class="p-4 space-y-4">
+      
+      <!-- Prompt Input -->
+      <div class="flex gap-3">
+        <div class="flex-1">
+          <div class="flex items-center gap-2 mb-2">
+            <svg class="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+            </svg>
+            <label class="text-xs uppercase tracking-wider font-semibold text-gray-300">Prompt</label>
+          </div>
+          <textarea id="promptInput" rows="2" placeholder="Describe your scene... e.g., A cinematic shot of a person walking through a neon-lit cyberpunk city at night, rain reflections on wet pavement"
+            class="w-full bg-surface-700 hover:bg-surface-600 focus:bg-surface-600 border border-surface-600 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all resize-none"></textarea>
+        </div>
+        <div class="flex flex-col justify-end">
+          <button id="generateBtn" class="bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-500 px-6 py-3 rounded-lg font-semibold transition-all shadow-lg shadow-brand-500/30 flex items-center gap-2 h-fit">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            Generate
+          </button>
+        </div>
+      </div>
+
+      <!-- Timeline / Shot List -->
+      <div>
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"></path>
+            </svg>
+            <label class="text-xs uppercase tracking-wider font-semibold text-gray-300">Shot List</label>
+            <span class="text-xs text-gray-500 bg-surface-700 px-2 py-0.5 rounded" id="shotCount">3 shots</span>
+          </div>
+          <button id="addShotBtn" class="text-xs text-brand-400 hover:text-brand-300 font-medium flex items-center gap-1 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Add Shot
+          </button>
+        </div>
+        
+        <div id="shotList" class="flex gap-3 overflow-x-auto pb-2">
+          <!-- Shots will be rendered here -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Controls Toggle -->
+  <div class="lg:hidden fixed bottom-4 right-4 z-50">
+    <button id="mobileControlsBtn" class="w-14 h-14 bg-gradient-to-r from-brand-500 to-brand-600 rounded-full shadow-lg shadow-brand-500/40 flex items-center justify-center">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Mobile Controls Drawer -->
+  <div id="mobileDrawer" class="hidden lg:hidden fixed inset-0 z-40">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="drawerOverlay"></div>
+    <div class="absolute bottom-0 left-0 right-0 bg-surface-800 rounded-t-2xl border-t border-surface-700 max-h-[80vh] overflow-y-auto animate-slide-up">
+      <div class="p-4">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold">Controls</h3>
+          <button id="closeMobileDrawer" class="p-2 hover:bg-surface-700 rounded-lg">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="space-y-6" id="mobileControlsContainer"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="hidden fixed top-20 right-4 bg-surface-700 border border-surface-600 rounded-lg px-4 py-3 shadow-xl z-50 animate-fade-in">
+    <div class="flex items-center gap-3">
+      <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+      </svg>
+      <span id="toastMessage" class="text-sm font-medium"></span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const state = {
+  project: {
+    name: 'Untitled_Project_01',
+    resolution: '1920x1080',
+    fps: 30,
+    duration: 5
+  },
+  camera: {
+    lensType: 'standard',
+    focalLength: 50,
+    angle: 'eye-level',
+    movement: 'static',
+    aperture: 2.8,
+    dof: 'shallow'
+  },
+  lighting: {
+    keyLight: 'soft',
+    intensity: 80,
+    style: 'natural',
+    timeOfDay: 'noon',
+    colorTemp: 5500,
+    atmosphere: 'clear'
+  },
+  motion: {
+    intensity: 'subtle',
+    subjectAction: 'still',
+    stabilization: 70,
+    motionBlur: 'low'
+  },
+  prompt: '',
+  shots: [
+    { id: 1, name: 'Shot 01', duration: 5, thumbnail: null, active: true },
+    { id: 2, name: 'Shot 02', duration: 3, thumbnail: null, active: false },
+    { id: 3, name: 'Shot 03', duration: 7, thumbnail: null, active: false }
+  ],
+  currentShot: 1
+};
+
+// DOM Elements
+const elements = {
+  projectName: document.getElementById('projectName'),
+  resolution: document.getElementById('resolution'),
+  fps: document.getElementById('fps'),
+  duration: document.getElementById('duration'),
+  resIndicator: document.getElementById('resIndicator'),
+  
+  lensType: document.getElementById('lensType'),
+  focalLength: document.getElementById('focalLength'),
+  focalLengthVal: document.getElementById('focalLengthVal'),
+  cameraAngle: document.getElementById('cameraAngle'),
+  cameraMovement: document.getElementById('cameraMovement'),
+  aperture: document.getElementById('aperture'),
+  apertureVal: document.getElementById('apertureVal'),
+  dof: document.getElementById('dof'),
+  
+  keyLight: document.getElementById('keyLight'),
+  lightIntensity: document.getElementById('lightIntensity'),
+  lightIntensityVal: document.getElementById('lightIntensityVal'),
+  lightingStyle: document.getElementById('lightingStyle'),
+  timeOfDay: document.getElementById('timeOfDay'),
+  colorTemp: document.getElementById('colorTemp'),
+  colorTempVal: document.getElementById('colorTempVal'),
+  atmosphere: document.getElementById('atmosphere'),
+  
+  motionIntensity: document.getElementById('motionIntensity'),
+  subjectAction: document.getElementById('subjectAction'),
+  stabilization: document.getElementById('stabilization'),
+  stabVal: document.getElementById('stabVal'),
+  motionBlur: document.getElementById('motionBlur'),
+  
+  promptInput: document.getElementById('promptInput'),
+  generateBtn: document.getElementById('generateBtn'),
+  saveBtn: document.getElementById('saveBtn'),
+  loadBtn: document.getElementById('loadBtn'),
+  exportBtn: document.getElementById('exportBtn'),
+  
+  previewContent: document.getElementById('previewContent'),
+  loadingState: document.getElementById('loadingState'),
+  progressText: document.getElementById('progressText'),
+  
+  shotList: document.getElementById('shotList'),
+  shotCount: document.getElementById('shotCount'),
+  addShotBtn: document.getElementById('addShotBtn'),
+  
+  mobileControlsBtn: document.getElementById('mobileControlsBtn'),
+  mobileDrawer: document.getElementById('mobileDrawer'),
+  drawerOverlay: document.getElementById('drawerOverlay'),
+  closeMobileDrawer: document.getElementById('closeMobileDrawer'),
+  
+  toast: document.getElementById('toast'),
+  toastMessage: document.getElementById('toastMessage')
+};
+
+// Initialize
+function init() {
+  renderShotList();
+  attachEventListeners();
+  updateResolutionIndicator();
+}
+
+// Event Listeners
+function attachEventListeners() {
+  // Project controls
+  elements.projectName.addEventListener('input', e => {
+    state.project.name = e.target.value;
+  });
+  elements.resolution.addEventListener('change', e => {
+    state.project.resolution = e.target.value;
+    updateResolutionIndicator();
+  });
+  elements.fps.addEventListener('change', e => {
+    state.project.fps = parseInt(e.target.value);
+    updateResolutionIndicator();
+  });
+  elements.duration.addEventListener('input', e => {
+    state.project.duration = parseInt(e.target.value) || 5;
+  });
+
+  // Camera controls
+  elements.lensType.addEventListener('change', e => state.camera.lensType = e.target.value);
+  elements.focalLength.addEventListener('input', e => {
+    state.camera.focalLength = parseInt(e.target.value);
+    elements.focalLengthVal.textContent = e.target.value + 'mm';
+  });
+  elements.cameraAngle.addEventListener('change', e => state.camera.angle = e.target.value);
+  elements.cameraMovement.addEventListener('change', e => state.camera.movement = e.target.value);
+  elements.aperture.addEventListener('input', e => {
+    state.camera.aperture = parseFloat(e.target.value);
+    elements.apertureVal.textContent = 'f/' + e.target.value;
+  });
+  elements.dof.addEventListener('change', e => state.camera.dof = e.target.value);
+
+  // Lighting controls
+  elements.keyLight.addEventListener('change', e => state.lighting.keyLight = e.target.value);
+  elements.lightIntensity.addEventListener('input', e => {
+    state.lighting.intensity = parseInt(e.target.value);
+    elements.lightIntensityVal.textContent = e.target.value + '%';
+  });
+  elements.lightingStyle.addEventListener('change', e => state.lighting.style = e.target.value);
+  elements.timeOfDay.addEventListener('change', e => state.lighting.timeOfDay = e.target.value);
+  elements.colorTemp.addEventListener('input', e => {
+    state.lighting.colorTemp = parseInt(e.target.value);
+    elements.colorTempVal.textContent = e.target.value + 'K';
+  });
+  elements.atmosphere.addEventListener('change', e => state.lighting.atmosphere = e.target.value);
+
+  // Motion controls
+  elements.motionIntensity.addEventListener('change', e => state.motion.intensity = e.target.value);
+  elements.subjectAction.addEventListener('change', e => state.motion.subjectAction = e.target.value);
+  elements.stabilization.addEventListener('input', e => {
+    state.motion.stabilization = parseInt(e.target.value);
+    elements.stabVal.textContent = e.target.value + '%';
+  });
+  elements.motionBlur.addEventListener('change', e => state.motion.motionBlur = e.target.value);
+
+  // Prompt
+  elements.promptInput.addEventListener('input', e => state.prompt = e.target.value);
+
+  // Actions
+  elements.generateBtn.addEventListener('click', handleGenerate);
+  elements.saveBtn.addEventListener('click', handleSave);
+  elements.loadBtn.addEventListener('click', handleLoad);
+  elements.exportBtn.addEventListener('click', handleExport);
+  elements.addShotBtn.addEventListener('click', handleAddShot);
+
+  // Mobile
+  elements.mobileControlsBtn.addEventListener('click', () => {
+    elements.mobileDrawer.classList.remove('hidden');
+  });
+  elements.drawerOverlay.addEventListener('click', () => {
+    elements.mobileDrawer.classList.add('hidden');
+  });
+  elements.closeMobileDrawer.addEventListener('click', () => {
+    elements.mobileDrawer.classList.add('hidden');
+  });
+}
+
+// Update Resolution Indicator
+function updateResolutionIndicator() {
+  const [w, h] = state.project.resolution.split('x');
+  elements.resIndicator.textContent = `${w}×${h} @ ${state.project.fps}fps`;
+}
+
+// Render Shot List
+function renderShotList() {
+  elements.shotList.innerHTML = state.shots.map(shot => `
+    <div class="shot-item relative flex-shrink-0 w-40 group cursor-pointer" data-shot-id="${shot.id}">
+      <div class="timeline-thumb ${shot.active ? 'active' : ''} aspect-video bg-surface-700 rounded-lg border-2 ${shot.active ? 'border-brand-500' : 'border-surface-600'} overflow-hidden transition-all hover:border-brand-400">
+        <div class="w-full h-full bg-gradient-to-br from-surface-600 to-surface-700 flex items-center justify-center">
+          <svg class="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+          </svg>
+        </div>
+        <div class="shot-overlay absolute inset-0 bg-black/60 opacity-0 transition-opacity flex items-center justify-center gap-2">
+          <button class="p-2 bg-surface-800 hover:bg-brand-600 rounded-lg transition-all edit-shot" data-id="${shot.id}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+            </svg>
+          </button>
+          <button class="p-2 bg-surface-800 hover:bg-red-600 rounded-lg transition-all delete-shot" data-id="${shot.id}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="mt-2 flex items-center justify-between">
+        <span class="text-xs font-medium text-gray-300">${shot.name}</span>
+        <span class="text-xs text-gray-500">${shot.duration}s</span>
+      </div>
+    </div>
+  `).join('');
+  
+  elements.shotCount.textContent = `${state.shots.length} shot${state.shots.length !== 1 ? 's' : ''}`;
+  
+  // Add click listeners
+  document.querySelectorAll('.shot-item').forEach(el => {
+    el.addEventListener('click', e => {
+      if (!e.target.closest('.edit-shot') && !e.target.closest('.delete-shot')) {
+        selectShot(parseInt(el.dataset.shotId));
+      }
+    });
+  });
+  
+  document.querySelectorAll('.delete-shot').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      deleteShot(parseInt(btn.dataset.id));
+    });
+  });
+}
+
+// Select Shot
+function selectShot(id) {
+  state.shots.forEach(s => s.active = s.id === id);
+  state.currentShot = id;
+  renderShotList();
+  showToast(`Switched to Shot ${id}`);
+}
+
+// Delete Shot
+function deleteShot(id) {
+  if (state.shots.length === 1) {
+    showToast('Cannot delete the last shot', 'error');
+    return;
+  }
+  state.shots = state.shots.filter(s => s.id !== id);
+  if (state.currentShot === id) {
+    state.currentShot = state.shots[0].id;
+    state.shots[0].active = true;
+  }
+  renderShotList();
+  showToast('Shot deleted');
+}
+
+// Add Shot
+function handleAddShot() {
+  const newId = Math.max(...state.shots.map(s => s.id)) + 1;
+  state.shots.push({
+    id: newId,
+    name: `Shot ${String(newId).padStart(2, '0')}`,
+    duration: 5,
+    thumbnail: null,
+    active: false
+  });
+  renderShotList();
+  showToast('New shot added');
+}
+
+// Generate Video
+async function handleGenerate() {
+  if (!state.prompt.trim()) {
+    showToast('Please enter a prompt first', 'error');
+    return;
+  }
+  
+  elements.loadingState.classList.remove('hidden');
+  elements.previewContent.classList.add('hidden');
+  elements.generateBtn.disabled = true;
+  
+  // Simulate generation progress
+  const totalFrames = state.project.duration * state.project.fps;
+  let currentFrame = 0;
+  
+  const interval = setInterval(() => {
+    currentFrame += Math.floor(totalFrames / 20);
+    if (currentFrame >= totalFrames) {
+      currentFrame = totalFrames;
+      clearInterval(interval);
+      
+      setTimeout(() => {
+        elements.loadingState.classList.add('hidden');
+        elements.previewContent.classList.remove('hidden');
+        elements.generateBtn.disabled = false;
+        
+        // Update preview with "generated" content
+        elements.previewContent.innerHTML = `
+          <div class="relative w-full h-full bg-gradient-to-br from-brand-500/20 via-surface-700 to-brand-600/20 flex items-center justify-center animate-fade-in">
+            <div class="text-center p-8">
+              <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-brand-500/20 flex items-center justify-center">
+                <svg class="w-8 h-8 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+              </div>
+              <p class="text-sm text-gray-300 font-medium">Video Generated Successfully</p>
+              <p class="text-xs text-gray-500 mt-2 max-w-md mx-auto line-clamp-2">${state.prompt}</p>
+            </div>
+          </div>
+        `;
+        
+        showToast('Video generation complete!');
+      }, 500);
+    }
+    elements.progressText.textContent = `Processing frame ${currentFrame} of ${totalFrames}`;
+  }, 150);
+}
+
+// Save Project
+function handleSave() {
+  const projectData = {
+    project: state.project,
+    camera: state.camera,
+    lighting: state.lighting,
+    motion: state.motion,
+    prompt: state.prompt,
+    shots: state.shots
+  };
+  
+  const dataStr = JSON.stringify(projectData, null, 2);
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(dataBlob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${state.project.name}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+  
+  showToast('Project saved successfully');
+}
+
+// Load Project
+function handleLoad() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = event => {
+      try {
+        const data = JSON.parse(event.target.result);
+        Object.assign(state, data);
+        
+        // Update UI
+        elements.projectName.value = state.project.name;
+        elements.resolution.value = state.project.resolution;
+        elements.fps.value = state.project.fps;
+        elements.duration.value = state.project.duration;
+        elements.promptInput.value = state.prompt;
+        
+        renderShotList();
+        updateResolutionIndicator();
+        showToast('Project loaded successfully');
+      } catch (err) {
+        showToast('Failed to load project', 'error');
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// Export Video
+function handleExport() {
+  showToast('Export started... Video will be ready shortly');
+  
+  setTimeout(() => {
+    const link = document.createElement('a');
+    link.href = '#';
+    link.download = `${state.project.name}.mp4`;
+    showToast('Video exported successfully!');
+  }, 2000);
+}
+
+// Show Toast
+function showToast(message, type = 'success') {
+  elements.toastMessage.textContent = message;
+  elements.toast.classList.remove('hidden');
+  
+  const icon = elements.toast.querySelector('svg');
+  if (type === 'error') {
+    icon.classList.remove('text-green-400');
+    icon.classList.add('text-red-400');
+  } else {
+    icon.classList.remove('text-red-400');
+    icon.classList.add('text-green-400');
+  }
+  
+  setTimeout(() => {
+    elements.toast.classList.add('hidden');
+  }, 3000);
+}
+
+// Initialize app
+init();
+</script>
+</body>
+</html>
