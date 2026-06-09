@@ -1,133 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VideoGen - AI Video Generation</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-tailwind.config = {
-  theme: {
-    extend: {
-      colors: {
-        surface: {
-          900: '#0a0a0b',
-          800: '#131316',
-          700: '#1c1c21',
-          600: '#27272d',
-          500: '#3f3f46'
-        },
-        brand: {
-          400: '#818cf8',
-          500: '#6366f1',
-          600: '#4f46e5'
-        }
-      },
-      animation: {
-        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'slide-up': 'slideUp 0.3s ease-out',
-        'fade-in': 'fadeIn 0.2s ease-out'
-      },
-      keyframes: {
-        slideUp: {
-          '0%': { transform: 'translateY(10px)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' }
-        },
-        fadeIn: {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' }
-        }
-      }
-    }
-  }
-}
-</script>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-* {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-}
-.glass {
-  background: rgba(28, 28, 33, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-.control-panel {
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-}
-input[type="range"] {
-  -webkit-appearance: none;
-  appearance: none;
-  background: transparent;
-  cursor: pointer;
-}
-input[type="range"]::-webkit-slider-track {
-  background: #27272d;
-  height: 4px;
-  border-radius: 2px;
-}
-input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  margin-top: -6px;
-  background: #6366f1;
-  height: 16px;
-  width: 16px;
-  border-radius: 50%;
-  transition: all 0.15s ease;
-}
-input[type="range"]::-webkit-slider-thumb:hover {
-  background: #818cf8;
-  transform: scale(1.2);
-}
-input[type="range"]::-moz-range-track {
-  background: #27272d;
-  height: 4px;
-  border-radius: 2px;
-}
-input[type="range"]::-moz-range-thumb {
-  background: #6366f1;
-  height: 16px;
-  width: 16px;
-  border-radius: 50%;
-  border: none;
-  transition: all 0.15s ease;
-}
-input[type="range"]::-moz-range-thumb:hover {
-  background: #818cf8;
-  transform: scale(1.2);
-}
-.select-arrow {
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-  background-position: right 0.5rem center;
-  background-repeat: no-repeat;
-  background-size: 1.5em 1.5em;
-}
-.timeline-thumb {
-  background: linear-gradient(135deg, #1c1c21 0%, #27272d 100%);
-}
-.timeline-thumb.active {
-  box-shadow: 0 0 0 2px #6366f1, 0 4px 12px rgba(99, 102, 241, 0.4);
-}
-.shot-item:hover .shot-overlay {
-  opacity: 1;
-}
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #131316;
-}
-::-webkit-scrollbar-thumb {
-  background: #3f3f46;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #52525b;
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VideoGen - AI Video Generation</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="js/tailwind-config.js"></script>
+  <link rel="stylesheet" href="css/app.css">
 </head>
 <body class="bg-surface-900 text-gray-100 h-screen overflow-hidden">
 <div id="app" class="h-screen flex flex-col">
@@ -148,6 +27,14 @@ input[type="range"]::-moz-range-thumb:hover {
       
       <input type="text" id="projectName" value="Untitled_Project_01" 
         class="bg-surface-700 hover:bg-surface-600 focus:bg-surface-600 border-surface-600 rounded-lg px-3 py-1.5 text-sm font-medium outline-none focus:ring-2 focus:ring-brand-500 transition-all w-32 md:w-48">
+
+      <!-- Current AI Provider indicator (click to open Settings) -->
+      <div onclick="showSettingsModal()" class="hidden md:flex items-center gap-2 ml-2 px-3 py-1 bg-surface-800 hover:bg-surface-700 border border-surface-600 rounded-lg cursor-pointer transition-all text-xs" title="Click to manage AI providers &amp; models">
+        <div class="flex items-center gap-1.5">
+          <div class="w-2 h-2 bg-emerald-400 rounded-full"></div>
+          <span id="currentProvider" class="font-medium text-gray-300">xAI</span>
+        </div>
+      </div>
     </div>
 
     <div class="hidden lg:flex items-center gap-2">
@@ -201,6 +88,16 @@ input[type="range"]::-moz-range-thumb:hover {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
         </svg>
         <span class="hidden sm:inline">Export</span>
+      </button>
+
+      <!-- Settings Button -->
+      <button id="settingsBtn" onclick="showSettingsModal()" 
+              class="p-2 hover:bg-surface-700 rounded-lg transition-all group border border-surface-600 hover:border-surface-500"
+              title="AI Providers, Models &amp; API Keys">
+        <svg class="w-5 h-5 text-gray-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 002.572 1.065c1.755.426 1.755 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-2.572-1.065c-1.755-.426-1.755-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        </svg>
       </button>
     </div>
   </header>
@@ -565,416 +462,170 @@ input[type="range"]::-moz-range-thumb:hover {
     </div>
   </div>
 
-</div>
-
-<script>
-const state = {
-  project: {
-    name: 'Untitled_Project_01',
-    resolution: '1920x1080',
-    fps: 30,
-    duration: 5
-  },
-  camera: {
-    lensType: 'standard',
-    focalLength: 50,
-    angle: 'eye-level',
-    movement: 'static',
-    aperture: 2.8,
-    dof: 'shallow'
-  },
-  lighting: {
-    keyLight: 'soft',
-    intensity: 80,
-    style: 'natural',
-    timeOfDay: 'noon',
-    colorTemp: 5500,
-    atmosphere: 'clear'
-  },
-  motion: {
-    intensity: 'subtle',
-    subjectAction: 'still',
-    stabilization: 70,
-    motionBlur: 'low'
-  },
-  prompt: '',
-  shots: [
-    { id: 1, name: 'Shot 01', duration: 5, thumbnail: null, active: true },
-    { id: 2, name: 'Shot 02', duration: 3, thumbnail: null, active: false },
-    { id: 3, name: 'Shot 03', duration: 7, thumbnail: null, active: false }
-  ],
-  currentShot: 1
-};
-
-// DOM Elements
-const elements = {
-  projectName: document.getElementById('projectName'),
-  resolution: document.getElementById('resolution'),
-  fps: document.getElementById('fps'),
-  duration: document.getElementById('duration'),
-  resIndicator: document.getElementById('resIndicator'),
-  
-  lensType: document.getElementById('lensType'),
-  focalLength: document.getElementById('focalLength'),
-  focalLengthVal: document.getElementById('focalLengthVal'),
-  cameraAngle: document.getElementById('cameraAngle'),
-  cameraMovement: document.getElementById('cameraMovement'),
-  aperture: document.getElementById('aperture'),
-  apertureVal: document.getElementById('apertureVal'),
-  dof: document.getElementById('dof'),
-  
-  keyLight: document.getElementById('keyLight'),
-  lightIntensity: document.getElementById('lightIntensity'),
-  lightIntensityVal: document.getElementById('lightIntensityVal'),
-  lightingStyle: document.getElementById('lightingStyle'),
-  timeOfDay: document.getElementById('timeOfDay'),
-  colorTemp: document.getElementById('colorTemp'),
-  colorTempVal: document.getElementById('colorTempVal'),
-  atmosphere: document.getElementById('atmosphere'),
-  
-  motionIntensity: document.getElementById('motionIntensity'),
-  subjectAction: document.getElementById('subjectAction'),
-  stabilization: document.getElementById('stabilization'),
-  stabVal: document.getElementById('stabVal'),
-  motionBlur: document.getElementById('motionBlur'),
-  
-  promptInput: document.getElementById('promptInput'),
-  generateBtn: document.getElementById('generateBtn'),
-  saveBtn: document.getElementById('saveBtn'),
-  loadBtn: document.getElementById('loadBtn'),
-  exportBtn: document.getElementById('exportBtn'),
-  
-  previewContent: document.getElementById('previewContent'),
-  loadingState: document.getElementById('loadingState'),
-  progressText: document.getElementById('progressText'),
-  
-  shotList: document.getElementById('shotList'),
-  shotCount: document.getElementById('shotCount'),
-  addShotBtn: document.getElementById('addShotBtn'),
-  
-  mobileControlsBtn: document.getElementById('mobileControlsBtn'),
-  mobileDrawer: document.getElementById('mobileDrawer'),
-  drawerOverlay: document.getElementById('drawerOverlay'),
-  closeMobileDrawer: document.getElementById('closeMobileDrawer'),
-  
-  toast: document.getElementById('toast'),
-  toastMessage: document.getElementById('toastMessage')
-};
-
-// Initialize
-function init() {
-  renderShotList();
-  attachEventListeners();
-  updateResolutionIndicator();
-}
-
-// Event Listeners
-function attachEventListeners() {
-  // Project controls
-  elements.projectName.addEventListener('input', e => {
-    state.project.name = e.target.value;
-  });
-  elements.resolution.addEventListener('change', e => {
-    state.project.resolution = e.target.value;
-    updateResolutionIndicator();
-  });
-  elements.fps.addEventListener('change', e => {
-    state.project.fps = parseInt(e.target.value);
-    updateResolutionIndicator();
-  });
-  elements.duration.addEventListener('input', e => {
-    state.project.duration = parseInt(e.target.value) || 5;
-  });
-
-  // Camera controls
-  elements.lensType.addEventListener('change', e => state.camera.lensType = e.target.value);
-  elements.focalLength.addEventListener('input', e => {
-    state.camera.focalLength = parseInt(e.target.value);
-    elements.focalLengthVal.textContent = e.target.value + 'mm';
-  });
-  elements.cameraAngle.addEventListener('change', e => state.camera.angle = e.target.value);
-  elements.cameraMovement.addEventListener('change', e => state.camera.movement = e.target.value);
-  elements.aperture.addEventListener('input', e => {
-    state.camera.aperture = parseFloat(e.target.value);
-    elements.apertureVal.textContent = 'f/' + e.target.value;
-  });
-  elements.dof.addEventListener('change', e => state.camera.dof = e.target.value);
-
-  // Lighting controls
-  elements.keyLight.addEventListener('change', e => state.lighting.keyLight = e.target.value);
-  elements.lightIntensity.addEventListener('input', e => {
-    state.lighting.intensity = parseInt(e.target.value);
-    elements.lightIntensityVal.textContent = e.target.value + '%';
-  });
-  elements.lightingStyle.addEventListener('change', e => state.lighting.style = e.target.value);
-  elements.timeOfDay.addEventListener('change', e => state.lighting.timeOfDay = e.target.value);
-  elements.colorTemp.addEventListener('input', e => {
-    state.lighting.colorTemp = parseInt(e.target.value);
-    elements.colorTempVal.textContent = e.target.value + 'K';
-  });
-  elements.atmosphere.addEventListener('change', e => state.lighting.atmosphere = e.target.value);
-
-  // Motion controls
-  elements.motionIntensity.addEventListener('change', e => state.motion.intensity = e.target.value);
-  elements.subjectAction.addEventListener('change', e => state.motion.subjectAction = e.target.value);
-  elements.stabilization.addEventListener('input', e => {
-    state.motion.stabilization = parseInt(e.target.value);
-    elements.stabVal.textContent = e.target.value + '%';
-  });
-  elements.motionBlur.addEventListener('change', e => state.motion.motionBlur = e.target.value);
-
-  // Prompt
-  elements.promptInput.addEventListener('input', e => state.prompt = e.target.value);
-
-  // Actions
-  elements.generateBtn.addEventListener('click', handleGenerate);
-  elements.saveBtn.addEventListener('click', handleSave);
-  elements.loadBtn.addEventListener('click', handleLoad);
-  elements.exportBtn.addEventListener('click', handleExport);
-  elements.addShotBtn.addEventListener('click', handleAddShot);
-
-  // Mobile
-  elements.mobileControlsBtn.addEventListener('click', () => {
-    elements.mobileDrawer.classList.remove('hidden');
-  });
-  elements.drawerOverlay.addEventListener('click', () => {
-    elements.mobileDrawer.classList.add('hidden');
-  });
-  elements.closeMobileDrawer.addEventListener('click', () => {
-    elements.mobileDrawer.classList.add('hidden');
-  });
-}
-
-// Update Resolution Indicator
-function updateResolutionIndicator() {
-  const [w, h] = state.project.resolution.split('x');
-  elements.resIndicator.textContent = `${w}×${h} @ ${state.project.fps}fps`;
-}
-
-// Render Shot List
-function renderShotList() {
-  elements.shotList.innerHTML = state.shots.map(shot => `
-    <div class="shot-item relative flex-shrink-0 w-40 group cursor-pointer" data-shot-id="${shot.id}">
-      <div class="timeline-thumb ${shot.active ? 'active' : ''} aspect-video bg-surface-700 rounded-lg border-2 ${shot.active ? 'border-brand-500' : 'border-surface-600'} overflow-hidden transition-all hover:border-brand-400">
-        <div class="w-full h-full bg-gradient-to-br from-surface-600 to-surface-700 flex items-center justify-center">
-          <svg class="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-          </svg>
-        </div>
-        <div class="shot-overlay absolute inset-0 bg-black/60 opacity-0 transition-opacity flex items-center justify-center gap-2">
-          <button class="p-2 bg-surface-800 hover:bg-brand-600 rounded-lg transition-all edit-shot" data-id="${shot.id}">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-            </svg>
-          </button>
-          <button class="p-2 bg-surface-800 hover:bg-red-600 rounded-lg transition-all delete-shot" data-id="${shot.id}">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-            </svg>
-          </button>
-        </div>
-      </div>
-      <div class="mt-2 flex items-center justify-between">
-        <span class="text-xs font-medium text-gray-300">${shot.name}</span>
-        <span class="text-xs text-gray-500">${shot.duration}s</span>
-      </div>
-    </div>
-  `).join('');
-  
-  elements.shotCount.textContent = `${state.shots.length} shot${state.shots.length !== 1 ? 's' : ''}`;
-  
-  // Add click listeners
-  document.querySelectorAll('.shot-item').forEach(el => {
-    el.addEventListener('click', e => {
-      if (!e.target.closest('.edit-shot') && !e.target.closest('.delete-shot')) {
-        selectShot(parseInt(el.dataset.shotId));
-      }
-    });
-  });
-  
-  document.querySelectorAll('.delete-shot').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      deleteShot(parseInt(btn.dataset.id));
-    });
-  });
-}
-
-// Select Shot
-function selectShot(id) {
-  state.shots.forEach(s => s.active = s.id === id);
-  state.currentShot = id;
-  renderShotList();
-  showToast(`Switched to Shot ${id}`);
-}
-
-// Delete Shot
-function deleteShot(id) {
-  if (state.shots.length === 1) {
-    showToast('Cannot delete the last shot', 'error');
-    return;
-  }
-  state.shots = state.shots.filter(s => s.id !== id);
-  if (state.currentShot === id) {
-    state.currentShot = state.shots[0].id;
-    state.shots[0].active = true;
-  }
-  renderShotList();
-  showToast('Shot deleted');
-}
-
-// Add Shot
-function handleAddShot() {
-  const newId = Math.max(...state.shots.map(s => s.id)) + 1;
-  state.shots.push({
-    id: newId,
-    name: `Shot ${String(newId).padStart(2, '0')}`,
-    duration: 5,
-    thumbnail: null,
-    active: false
-  });
-  renderShotList();
-  showToast('New shot added');
-}
-
-// Generate Video
-async function handleGenerate() {
-  if (!state.prompt.trim()) {
-    showToast('Please enter a prompt first', 'error');
-    return;
-  }
-  
-  elements.loadingState.classList.remove('hidden');
-  elements.previewContent.classList.add('hidden');
-  elements.generateBtn.disabled = true;
-  
-  // Simulate generation progress
-  const totalFrames = state.project.duration * state.project.fps;
-  let currentFrame = 0;
-  
-  const interval = setInterval(() => {
-    currentFrame += Math.floor(totalFrames / 20);
-    if (currentFrame >= totalFrames) {
-      currentFrame = totalFrames;
-      clearInterval(interval);
+  <!-- ==================== SETTINGS MODAL (Integrated) ==================== -->
+  <div id="settingsModal" onclick="if (event.target.id === 'settingsModal') hideSettingsModal()" class="hidden fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div onclick="event.stopImmediatePropagation()" class="glass w-full max-w-6xl max-h-[92vh] rounded-3xl border border-surface-700 overflow-hidden flex flex-col modal">
       
-      setTimeout(() => {
-        elements.loadingState.classList.add('hidden');
-        elements.previewContent.classList.remove('hidden');
-        elements.generateBtn.disabled = false;
+      <!-- Settings Modal Header -->
+      <div class="px-6 py-5 border-b border-surface-700 flex items-center justify-between flex-shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 002.572 1.065c1.755.426 1.755 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-2.572-1.065c-1.755-.426-1.755-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+          </div>
+          <div>
+            <div class="font-semibold text-xl">AI Provider Settings</div>
+            <div class="text-xs text-gray-400">Manage providers, models &amp; API keys • Stored locally in your browser</div>
+          </div>
+        </div>
+        <button onclick="hideSettingsModal()" class="p-2 hover:bg-surface-700 rounded-xl transition-all">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-6 space-y-8">
         
-        // Update preview with "generated" content
-        elements.previewContent.innerHTML = `
-          <div class="relative w-full h-full bg-gradient-to-br from-brand-500/20 via-surface-700 to-brand-600/20 flex items-center justify-center animate-fade-in">
-            <div class="text-center p-8">
-              <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-brand-500/20 flex items-center justify-center">
-                <svg class="w-8 h-8 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        <!-- Default Provider -->
+        <div class="glass rounded-3xl p-6 border border-surface-700">
+          <div class="flex flex-col md:flex-row md:items-center gap-4">
+            <div class="flex-1">
+              <div class="flex items-center gap-3 mb-1">
+                <svg class="w-5 h-5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
                 </svg>
+                <h2 class="font-semibold text-lg">Default Provider &amp; Model</h2>
               </div>
-              <p class="text-sm text-gray-300 font-medium">Video Generated Successfully</p>
-              <p class="text-xs text-gray-500 mt-2 max-w-md mx-auto line-clamp-2">${state.prompt}</p>
+              <p class="text-sm text-gray-400">Used for new generations unless overridden per shot.</p>
+            </div>
+            <div class="w-full md:w-80">
+              <select id="defaultProviderSelect" onchange="updateDefaultProviderFromModal()" 
+                      class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
+              </select>
             </div>
           </div>
-        `;
-        
-        showToast('Video generation complete!');
-      }, 500);
-    }
-    elements.progressText.textContent = `Processing frame ${currentFrame} of ${totalFrames}`;
-  }, 150);
-}
+        </div>
 
-// Save Project
-function handleSave() {
-  const projectData = {
-    project: state.project,
-    camera: state.camera,
-    lighting: state.lighting,
-    motion: state.motion,
-    prompt: state.prompt,
-    shots: state.shots
-  };
-  
-  const dataStr = JSON.stringify(projectData, null, 2);
-  const dataBlob = new Blob([dataStr], { type: 'application/json' });
-  const url = URL.createObjectURL(dataBlob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `${state.project.name}.json`;
-  link.click();
-  URL.revokeObjectURL(url);
-  
-  showToast('Project saved successfully');
-}
+        <!-- Built-in Providers -->
+        <div>
+          <div class="flex items-center justify-between mb-5">
+            <div class="flex items-center gap-3">
+              <svg class="w-5 h-5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2"></path>
+              </svg>
+              <h2 class="font-semibold text-2xl tracking-tight">Built-in Providers</h2>
+            </div>
+            <div class="text-xs px-3 py-1 rounded-full bg-surface-800 text-gray-400 border border-surface-700">15 providers ready</div>
+          </div>
+          
+          <div id="settingsProvidersGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <!-- Populated by JS -->
+          </div>
+        </div>
 
-// Load Project
-function handleLoad() {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.json';
-  input.onchange = e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    const reader = new FileReader();
-    reader.onload = event => {
-      try {
-        const data = JSON.parse(event.target.result);
-        Object.assign(state, data);
-        
-        // Update UI
-        elements.projectName.value = state.project.name;
-        elements.resolution.value = state.project.resolution;
-        elements.fps.value = state.project.fps;
-        elements.duration.value = state.project.duration;
-        elements.promptInput.value = state.prompt;
-        
-        renderShotList();
-        updateResolutionIndicator();
-        showToast('Project loaded successfully');
-      } catch (err) {
-        showToast('Failed to load project', 'error');
-      }
-    };
-    reader.readAsText(file);
-  };
-  input.click();
-}
+        <!-- Custom Providers -->
+        <div>
+          <div class="flex items-center justify-between mb-5">
+            <div class="flex items-center gap-3">
+              <svg class="w-5 h-5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+              </svg>
+              <h2 class="font-semibold text-2xl tracking-tight">Custom Providers</h2>
+            </div>
+            <button onclick="openAddCustomModalFromSettings()" 
+                    class="flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-2xl bg-surface-700 hover:bg-surface-600 border border-surface-600 active:bg-surface-500 transition-all">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
+              </svg>
+              Add Custom Provider
+            </button>
+          </div>
+          
+          <div id="settingsCustomGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Populated by JS -->
+          </div>
+          <div id="settingsNoCustomMsg" class="hidden col-span-full text-center py-8">
+            <p class="text-gray-400 text-sm">No custom providers yet. Add one above to support additional services.</p>
+          </div>
+        </div>
 
-// Export Video
-function handleExport() {
-  showToast('Export started... Video will be ready shortly');
-  
-  setTimeout(() => {
-    const link = document.createElement('a');
-    link.href = '#';
-    link.download = `${state.project.name}.mp4`;
-    showToast('Video exported successfully!');
-  }, 2000);
-}
+      </div>
 
-// Show Toast
-function showToast(message, type = 'success') {
-  elements.toastMessage.textContent = message;
-  elements.toast.classList.remove('hidden');
-  
-  const icon = elements.toast.querySelector('svg');
-  if (type === 'error') {
-    icon.classList.remove('text-green-400');
-    icon.classList.add('text-red-400');
-  } else {
-    icon.classList.remove('text-red-400');
-    icon.classList.add('text-green-400');
-  }
-  
-  setTimeout(() => {
-    elements.toast.classList.add('hidden');
-  }, 3000);
-}
+      <div class="px-6 py-4 border-t border-surface-700 flex justify-end gap-3 flex-shrink-0">
+        <button onclick="hideSettingsModal()" class="px-6 py-2.5 rounded-2xl border border-surface-600 hover:bg-surface-700 transition-all text-sm font-medium">Close</button>
+        <button onclick="saveAllSettingsFromModal()" class="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-500 text-sm font-semibold">Save Changes</button>
+      </div>
+    </div>
+  </div>
 
-// Initialize app
-init();
-</script>
+  <!-- Provider Edit Modal (inside settings) -->
+  <div id="providerEditModal" onclick="if (event.target.id === 'providerEditModal') hideProviderEditModal()" class="hidden fixed inset-0 z-[250] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div onclick="event.stopImmediatePropagation()" class="glass w-full max-w-md rounded-3xl border border-surface-700 overflow-hidden modal">
+      
+      <div class="px-6 py-5 border-b border-surface-700 flex items-center justify-between">
+        <div class="flex items-center gap-3" id="providerEditHeader"></div>
+        <button onclick="hideProviderEditModal()" class="p-2 hover:bg-surface-700 rounded-xl">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-5">
+        <div id="providerEditInfo" class="hidden text-sm text-gray-400"></div>
+
+        <div id="providerEditCustomFields" class="hidden space-y-4">
+          <div>
+            <label class="text-xs uppercase tracking-wider text-gray-400 block mb-1.5">Provider Name</label>
+            <input type="text" id="editCustomName" class="w-full bg-surface-700 border border-surface-600 rounded-2xl px-4 py-3 text-sm outline-none">
+          </div>
+          <div>
+            <label class="text-xs uppercase tracking-wider text-gray-400 block mb-1.5">Description</label>
+            <input type="text" id="editCustomDesc" class="w-full bg-surface-700 border border-surface-600 rounded-2xl px-4 py-3 text-sm outline-none">
+          </div>
+          <div>
+            <label class="text-xs uppercase tracking-wider text-gray-400 block mb-1.5">Base URL</label>
+            <input type="url" id="editCustomBaseUrl" class="w-full bg-surface-700 border border-surface-600 rounded-2xl px-4 py-3 text-sm outline-none font-mono text-xs">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs uppercase tracking-wider text-gray-400 block mb-1.5">API Key</label>
+          <div class="relative">
+            <input type="password" id="editApiKey" class="w-full bg-surface-700 border border-surface-600 rounded-2xl px-4 py-3 pr-12 text-sm outline-none font-mono">
+            <button onclick="toggleEditKeyVisibility()" type="button" class="absolute right-4 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-200">
+              <svg id="editEyeIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="pt-2 flex gap-3">
+          <button onclick="testProviderConnection()" id="testProviderBtn"
+                  class="flex-1 px-5 py-3 rounded-2xl border border-surface-600 hover:bg-surface-700 text-sm font-medium flex items-center justify-center gap-2">
+            Test Connection
+          </button>
+          <button onclick="saveProviderFromEditModal()" 
+                  class="flex-1 px-5 py-3 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 text-sm font-semibold flex items-center justify-center gap-2">
+            Save Key
+          </button>
+        </div>
+
+        <button onclick="deleteCustomProviderFromEdit()" id="deleteCustomFromEditBtn"
+                class="hidden w-full text-sm py-2.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-2xl border border-red-500/30 transition-all flex items-center justify-center gap-2">
+          Remove this custom provider
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="js/app.js"></script>
 </body>
 </html>
