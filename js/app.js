@@ -2,6 +2,7 @@ const state = {
   project: {
     name: 'Untitled_Project_01',
     resolution: '1920x1080',
+    aspectRatio: '16:9',
     fps: 30,
     duration: 5
   },
@@ -29,9 +30,9 @@ const state = {
   },
   prompt: '',
   shots: [
-    { id: 1, name: 'Shot 01', duration: 5, thumbnail: null, active: true },
-    { id: 2, name: 'Shot 02', duration: 3, thumbnail: null, active: false },
-    { id: 3, name: 'Shot 03', duration: 7, thumbnail: null, active: false }
+    { id: 1, name: 'Shot 01', duration: 5, thumbnail: null, active: true, references: [null, null, null], referenceRoles: ['Subject', 'Style', 'Motion'] },
+    { id: 2, name: 'Shot 02', duration: 3, thumbnail: null, active: false, references: [null, null, null], referenceRoles: ['Subject', 'Style', 'Motion'] },
+    { id: 3, name: 'Shot 03', duration: 7, thumbnail: null, active: false, references: [null, null, null], referenceRoles: ['Subject', 'Style', 'Motion'] }
   ],
   currentShot: 1
 };
@@ -67,6 +68,7 @@ let currentEditingProvider = null;
 const elements = {
   projectName: document.getElementById('projectName'),
   resolution: document.getElementById('resolution'),
+  aspectRatio: document.getElementById('aspectRatio'),
   fps: document.getElementById('fps'),
   duration: document.getElementById('duration'),
   resIndicator: document.getElementById('resIndicator'),
@@ -96,6 +98,7 @@ const elements = {
   motionBlur: document.getElementById('motionBlur'),
   
   promptInput: document.getElementById('promptInput'),
+  promptTip: document.getElementById('promptTip'),
   generateBtn: document.getElementById('generateBtn'),
   saveBtn: document.getElementById('saveBtn'),
   loadBtn: document.getElementById('loadBtn'),
@@ -117,7 +120,8 @@ const elements = {
   toast: document.getElementById('toast'),
   toastMessage: document.getElementById('toastMessage'),
   
-  currentProvider: document.getElementById('currentProvider')
+  currentProvider: document.getElementById('currentProvider'),
+  referenceSlots: document.getElementById('referenceSlots')
 };
 
 // Initialize
@@ -126,7 +130,141 @@ function init() {
   updateCurrentProviderDisplay();
   renderShotList();
   attachEventListeners();
+  initReferenceSlots();
   updateResolutionIndicator();
+}
+
+// Reference Slots Logic
+function initReferenceSlots() {
+  const slots = document.querySelectorAll('.reference-slot');
+  slots.forEach((slot, index) => {
+    const input = slot.querySelector('input');
+    
+    slot.addEventListener('click', (e) => {
+      if (!e.target.closest('.reference-label') && !e.target.closest('.reference-remove')) {
+        input.click();
+      }
+    });
+
+    input.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) handleReferenceUpload(index, file);
+    });
+
+    // Drag & Drop
+    slot.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      slot.classList.add('border-brand-500', 'bg-surface-700/50');
+    });
+
+    slot.addEventListener('dragleave', () => {
+      if (!slot.classList.contains('has-image')) {
+        slot.classList.remove('border-brand-500', 'bg-surface-700/50');
+      }
+    });
+
+    slot.addEventListener('drop', (e) => {
+      e.preventDefault();
+      slot.classList.remove('border-brand-500', 'bg-surface-700/50');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) {
+        handleReferenceUpload(index, file);
+      }
+    });
+  });
+  updateReferenceUI();
+}
+
+function handleReferenceUpload(index, file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const currentShot = state.shots.find(s => s.id === state.currentShot);
+    if (currentShot) {
+      currentShot.references[index] = e.target.result;
+      updateReferenceUI();
+      showToast('Reference image added');
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeReference(index, event) {
+  event.stopPropagation();
+  const currentShot = state.shots.find(s => s.id === state.currentShot);
+  if (currentShot) {
+    currentShot.references[index] = null;
+    updateReferenceUI();
+  }
+}
+
+const ROLES = ['Subject', 'Style', 'Motion', 'Depth', 'Canny', 'None'];
+function cycleReferenceRole(index, event) {
+  event.stopPropagation();
+  const currentShot = state.shots.find(s => s.id === state.currentShot);
+  if (currentShot) {
+    const currentRole = currentShot.referenceRoles[index];
+    const nextIdx = (ROLES.indexOf(currentRole) + 1) % ROLES.length;
+    currentShot.referenceRoles[index] = ROLES[nextIdx];
+    updateReferenceUI();
+  }
+}
+
+function updateReferenceUI() {
+  const currentShot = state.shots.find(s => s.id === state.currentShot);
+  if (!currentShot) return;
+
+  const slots = document.querySelectorAll('.reference-slot');
+  let hasAnyImage = false;
+
+  slots.forEach((slot, index) => {
+    const imgData = currentShot.references[index];
+    const role = currentShot.referenceRoles[index];
+    const label = slot.querySelector('.reference-label');
+    const content = slot.querySelector('div');
+    
+    label.textContent = role;
+    
+    if (imgData) {
+      hasAnyImage = true;
+      slot.classList.add('has-image');
+      slot.innerHTML = `
+        <span class="reference-label" onclick="cycleReferenceRole(${index}, event)">${role}</span>
+        <button class="reference-remove" onclick="removeReference(${index}, event)">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+        <img src="${imgData}" class="reference-preview">
+      `;
+    } else {
+      slot.classList.remove('has-image');
+      slot.innerHTML = `
+        <span class="reference-label" onclick="cycleReferenceRole(${index}, event)">${role}</span>
+        <div class="flex flex-col items-center text-gray-500 group-hover:text-gray-400 transition-colors">
+          <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          </svg>
+          <span class="text-[8px] uppercase font-bold tracking-tighter">Add Ref</span>
+        </div>
+        <input type="file" class="hidden reference-input" accept="image/*">
+      `;
+      // Re-attach listener to the new input
+      const input = slot.querySelector('input');
+      input.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) handleReferenceUpload(index, file);
+      });
+    }
+  });
+
+  // Update prompt tip and placeholder
+  if (hasAnyImage) {
+    elements.promptTip.classList.remove('hidden');
+    elements.promptInput.placeholder = "Describe how to use these references... e.g., A cinematic shot of the subject in this style...";
+  } else {
+    elements.promptTip.classList.add('hidden');
+    elements.promptInput.placeholder = "Describe your scene... e.g., A cinematic shot of a person walking through a neon-lit cyberpunk city at night";
+  }
 }
 
 // Event Listeners
@@ -137,6 +275,10 @@ function attachEventListeners() {
   });
   elements.resolution.addEventListener('change', e => {
     state.project.resolution = e.target.value;
+    updateResolutionIndicator();
+  });
+  elements.aspectRatio.addEventListener('change', e => {
+    state.project.aspectRatio = e.target.value;
     updateResolutionIndicator();
   });
   elements.fps.addEventListener('change', e => {
@@ -209,7 +351,8 @@ function attachEventListeners() {
 // Update Resolution Indicator
 function updateResolutionIndicator() {
   const [w, h] = state.project.resolution.split('x');
-  elements.resIndicator.textContent = `${w}×${h} @ ${state.project.fps}fps`;
+  const ar = state.project.aspectRatio || '16:9';
+  elements.resIndicator.textContent = `${w}×${h} (${ar}) @ ${state.project.fps}fps`;
 }
 
 // Render Shot List
@@ -266,6 +409,7 @@ function selectShot(id) {
   state.shots.forEach(s => s.active = s.id === id);
   state.currentShot = id;
   renderShotList();
+  updateReferenceUI();
   showToast(`Switched to Shot ${id}`);
 }
 
@@ -292,7 +436,9 @@ function handleAddShot() {
     name: `Shot ${String(newId).padStart(2, '0')}`,
     duration: 5,
     thumbnail: null,
-    active: false
+    active: false,
+    references: [null, null, null],
+    referenceRoles: ['Subject', 'Style', 'Motion']
   });
   renderShotList();
   showToast('New shot added');
@@ -386,14 +532,23 @@ function handleLoad() {
         const data = JSON.parse(event.target.result);
         Object.assign(state, data);
         
+        // Ensure new fields exist in loaded shots
+        state.shots.forEach(shot => {
+          if (!shot.references) shot.references = [null, null, null];
+          if (!shot.referenceRoles) shot.referenceRoles = ['Subject', 'Style', 'Motion'];
+        });
+        if (!state.project.aspectRatio) state.project.aspectRatio = '16:9';
+
         // Update UI
         elements.projectName.value = state.project.name;
         elements.resolution.value = state.project.resolution;
+        elements.aspectRatio.value = state.project.aspectRatio;
         elements.fps.value = state.project.fps;
         elements.duration.value = state.project.duration;
         elements.promptInput.value = state.prompt;
         
         renderShotList();
+        updateReferenceUI();
         updateResolutionIndicator();
         showToast('Project loaded successfully');
       } catch (err) {
