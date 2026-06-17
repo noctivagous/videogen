@@ -141,3 +141,91 @@ input[type="range"]::-moz-range-thumb:hover {
   background: white !important;
   border: 2px solid #6366f1;
 }
+
+/* Frame Composition */
+.placement-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  max-width: 120px;
+}
+
+.placement-cell {
+  aspect-ratio: 1;
+  min-height: 28px;
+  border-radius: 6px;
+  border: 1px solid #3f3f46;
+  background: #27272d;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.placement-cell:hover {
+  border-color: #6366f1;
+  background: #32323a;
+}
+
+.placement-cell.active {
+  border-color: #6366f1;
+  background: rgba(99, 102, 241, 0.35);
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.5);
+}
+
+.placement-cell:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.composition-toggle {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  border-radius: 11px;
+  background: #3f3f46;
+  border: 1px solid #52525b;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.composition-toggle.active {
+  background: #6366f1;
+  border-color: #818cf8;
+}
+
+.composition-toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.15s ease;
+}
+
+.composition-toggle.active .composition-toggle-knob {
+  transform: translateX(18px);
+}
+
+.composition-placement-marker {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #6366f1;
+  border: 2px solid white;
+  box-shadow: 0 0 6px rgba(99, 102, 241, 0.8);
+  transform: translate(-50%, -50%);
+}
+
+#compositionGuideSvg line,
+#compositionGuideSvg rect {
+  stroke: rgba(99, 102, 241, 0.45);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+#compositionOverlay.hidden {
+  display: none;
+}

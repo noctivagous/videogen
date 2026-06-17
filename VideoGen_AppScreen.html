@@ -125,6 +125,101 @@
         
         <div class="space-y-4">
           <div class="parameter-enclosure">
+            <label class="text-xs text-gray-400 mb-2 block">Field Size</label>
+            <select id="fieldSize" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
+              <option value="ecu">ECU - Extreme Close-Up</option>
+              <option value="cu">CU - Close-Up</option>
+              <option value="mcu">MCU - Medium Close-Up</option>
+              <option value="close-shot">CS - Close Shot</option>
+              <option value="ms" selected>MS - Medium Shot</option>
+              <option value="fs">FS - Full Shot</option>
+              <option value="ls">LS - Long Shot</option>
+              <option value="els">ELS - Extreme Long Shot</option>
+              <option value="vls">VLS - Very Long Shot</option>
+              <option value="ws">WS - Wide Shot</option>
+              <option value="mws">MWS - Medium Wide Shot</option>
+              <option value="bcu">BCU - Big Close-Up</option>
+              <option value="xls">XLS - Extreme Long Shot</option>
+              <option value="cowboy">CS - Cowboy Shot (American Shot)</option>
+              <option value="ch">CH - Choker Shot</option>
+              <option value="gv">GV - General View</option>
+            </select>
+          </div>
+
+          <div class="parameter-enclosure">
+            <label class="text-xs text-gray-400 mb-2 block">Subject Count</label>
+            <select id="subjectCount" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
+              <option value="1s" selected>1S - One Shot (Single)</option>
+              <option value="2s">2S - Two Shot</option>
+              <option value="3s">3S - Three Shot</option>
+              <option value="group">Group - Ensemble Shot (4+)</option>
+              <option value="crowd">Crowd - Crowd Shot</option>
+            </select>
+          </div>
+
+          <div id="coverageEnclosure" class="parameter-enclosure">
+            <label class="text-xs text-gray-400 mb-2 block">Coverage</label>
+            <select id="coverage" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
+              <option value="clean" selected>Clean Single</option>
+              <option value="dirty-single">Dirty Single</option>
+              <option value="ots">Over The Shoulder (OTS)</option>
+              <option value="one-half">1½ Shot (One and a Half)</option>
+              <option value="pov">Point Of View (POV)</option>
+            </select>
+          </div>
+
+          <p id="cameraCompositionLabel" class="text-xs text-brand-400 font-medium px-1 -mt-1">MS · 1S · Clean Single</p>
+
+          <div class="border-t border-surface-700 pt-3 space-y-4">
+            <div class="flex items-center justify-between px-1">
+              <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Frame Composition</span>
+              <span id="frameCompositionShotBadge" class="text-[10px] font-medium text-brand-400 bg-brand-500/10 border border-brand-500/20 rounded px-1.5 py-0.5">Shot 01</span>
+            </div>
+
+            <div class="parameter-enclosure">
+              <label class="text-xs text-gray-400 mb-2 block">Composition Guide</label>
+              <select id="compositionGuide" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
+                <option value="none">None</option>
+                <option value="rule-of-thirds" selected>Rule of Thirds</option>
+                <option value="golden-ratio">Golden Ratio</option>
+                <option value="center">Center / Symmetry</option>
+                <option value="fill-frame">Fill Frame</option>
+              </select>
+            </div>
+
+            <div id="placementEnclosure" class="parameter-enclosure">
+              <label class="text-xs text-gray-400 mb-2 block">Subject Placement</label>
+              <div id="placementGrid" class="placement-grid">
+                <button type="button" class="placement-cell" data-placement="top-left" title="Top Left"></button>
+                <button type="button" class="placement-cell" data-placement="top-center" title="Top Center"></button>
+                <button type="button" class="placement-cell" data-placement="top-right" title="Top Right"></button>
+                <button type="button" class="placement-cell" data-placement="middle-left" title="Left Third"></button>
+                <button type="button" class="placement-cell" data-placement="center" title="Center"></button>
+                <button type="button" class="placement-cell" data-placement="middle-right" title="Right Third"></button>
+                <button type="button" class="placement-cell" data-placement="bottom-left" title="Bottom Left"></button>
+                <button type="button" class="placement-cell" data-placement="bottom-center" title="Bottom Center"></button>
+                <button type="button" class="placement-cell" data-placement="bottom-right" title="Bottom Right"></button>
+              </div>
+            </div>
+
+            <div id="headroomEnclosure" class="parameter-enclosure">
+              <label class="text-xs text-gray-400 mb-2 block">Headroom</label>
+              <select id="compositionHeadroom" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
+                <option value="tight">Tight</option>
+                <option value="normal" selected>Normal</option>
+                <option value="generous">Generous</option>
+              </select>
+            </div>
+
+            <div class="parameter-enclosure flex items-center justify-between">
+              <label class="text-xs text-gray-400">Show Guides</label>
+              <button type="button" id="showCompositionOverlay" class="composition-toggle active" aria-pressed="true" title="Toggle composition guides on preview">
+                <span class="composition-toggle-knob"></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="parameter-enclosure">
             <label class="text-xs text-gray-400 mb-2 block">Lens Type</label>
             <select id="lensType" class="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none">
               <option value="wide">Wide Angle (14-35mm)</option>
@@ -274,9 +369,20 @@
                 </div>
               </div>
             </div>
+
+            <div id="compositionOverlay" class="absolute inset-0 pointer-events-none z-10">
+              <svg id="compositionGuideSvg" class="w-full h-full" preserveAspectRatio="none"></svg>
+              <div id="compositionPlacementMarker" class="composition-placement-marker hidden"></div>
+            </div>
             
             <!-- Preview Overlay Controls -->
-            <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-surface-900/80 backdrop-blur-md rounded-xl px-4 py-2 border border-surface-700 opacity-0 group-hover:opacity-100 transition-all">
+            <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-surface-900/80 backdrop-blur-md rounded-xl px-4 py-2 border border-surface-700 opacity-0 group-hover:opacity-100 transition-all z-20">
+              <button type="button" id="toggleCompositionOverlayBtn" class="p-2 hover:bg-surface-700 rounded-lg transition-all text-brand-400" title="Toggle composition guides">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path>
+                </svg>
+              </button>
+              <div class="h-6 w-px bg-surface-600"></div>
               <button class="p-2 hover:bg-surface-700 rounded-lg transition-all">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
