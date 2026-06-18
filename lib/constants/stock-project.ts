@@ -40,7 +40,7 @@ export const STOCK_LIGHTING: LightingSettings = {
   intensity: 75,
   style: 'cinematic',
   timeOfDay: 'afternoon',
-  colorTemp: 5200,
+  colorTemp: 5800,
   atmosphere: 'clear',
 };
 
@@ -126,14 +126,7 @@ export const STOCK_SHOTS: Shot[] = [
     withReferences: true,
     thumbnail: STOCK_ASSETS.ms,
     camera: STOCK_CAMERA,
-    sceneSetup:
-      'Use the exact same matte gray male mannequin identity from the reference. ' +
-      'Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, ' +
-      'captions, labels, watermarks, logos, signage, UI overlays. ' +
-      'Smooth sculpted gray dress shirt, belt at waist — hard-surface gray sculpt. ' +
-      'Neutral gray studio, cinematic 35mm lens. Medium shot waist up ONLY: bottom edge cuts exactly at belt line — ' +
-      'NO trousers visible below belt, NO thighs. Frame ends at waist. Rule of thirds, subject on the right third. ' +
-      'Soft cinematic key light, shallow depth of field.',
+    sceneSetup: STOCK_MS_PROMPT,
     shotActivity: 'Facing camera, arms at sides. Still pose.',
   }),
   createStockShot(2, 'Shot 02', false, {

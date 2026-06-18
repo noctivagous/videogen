@@ -19,11 +19,10 @@ export const STOCK_ASSETS = {
 export const STOCK_MS_PROMPT =
   'Use the exact same matte gray male mannequin identity from the reference. ' +
   'Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, ' +
-  'captions, labels, watermarks, logos, signage, UI overlays. Facing camera, arms at sides. ' +
+  'captions, labels, watermarks, logos, signage, UI overlays. ' +
   'Smooth sculpted gray dress shirt, belt at waist — hard-surface gray sculpt. ' +
-  'Neutral gray studio, cinematic 35mm lens. Medium shot waist up ONLY: bottom edge cuts exactly at belt line — ' +
-  'NO trousers visible below belt, NO thighs. Frame ends at waist. Rule of thirds, subject on the right third. ' +
-  'Soft cinematic key light, shallow depth of field.';
+  'Neutral gray studio environment. Medium shot waist up ONLY: bottom edge cuts exactly at belt line — ' +
+  'NO trousers visible below belt, NO thighs. Frame ends at waist.';
 
 /** Map field sizes to cinematography preview chip files when available. */
 const FIELD_SIZE_PREVIEW: Partial<Record<FieldSize, string>> = {

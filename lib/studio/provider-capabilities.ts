@@ -46,7 +46,7 @@ export function getProviderCapabilities(providerId: string, isCustom: boolean): 
       settings: [
         { id: 'prompt', label: 'Scene prompt', channel: 'api', note: 'Primary text input' },
         { id: 'refs-subject', label: 'Subject reference', channel: 'api', note: IMAGE_NOTE },
-        { id: 'refs-backdrop', label: 'Backdrop reference', channel: 'prompt', note: 'Used in prompt text; image when provider supports it' },
+        { id: 'refs-backdrop', label: 'Backdrop reference', channel: 'api', note: 'Sent as reference image when provider supports it (e.g. xAI)' },
         { id: 'field-size', label: 'Field size / coverage', channel: 'prompt', note: PROMPT_NOTE },
         { id: 'composition', label: 'Frame composition', channel: 'prompt', note: PROMPT_NOTE },
         { id: 'lens', label: 'Lens (type + focal length)', channel: 'prompt', note: PROMPT_NOTE },

@@ -1,6 +1,10 @@
-import { formatLensForPrompt } from '@/lib/constants/lens';
 import { getCurrentProviderName } from '@/lib/storage/ai-settings';
-import { getFullCameraPrompt, getShotFrameComposition } from '@/lib/studio/composition';
+import { getShotFrameComposition } from '@/lib/studio/composition';
+import {
+  augmentPromptForXAI,
+  buildGenerationPrompt,
+  buildGenerationRefs,
+} from '@/lib/studio/generation-prompt';
 import { CHANNEL_LABELS, getProviderCapabilities } from '@/lib/studio/provider-capabilities';
 import type {
   AIState,
@@ -36,44 +40,6 @@ export function buildShotPrompt(sceneSetup: string, shotActivity: string): strin
   return `${setup} ${activity}`;
 }
 
-function buildCombinedPrompt(input: {
-  sceneSetup: string;
-  shotActivity: string;
-  compositionPrompt: string;
-  camera: CameraSettings;
-  lighting: LightingSettings;
-  motion: MotionSettings;
-  refs: { role: ReferenceRole; url: string }[];
-}): string {
-  const { sceneSetup, shotActivity, compositionPrompt, camera, lighting, motion, refs } = input;
-  const prompt = buildShotPrompt(sceneSetup, shotActivity);
-
-  const cameraLine = [
-    compositionPrompt,
-    formatLensForPrompt(camera),
-    `${camera.angle.replace(/-/g, ' ')}, ${camera.movement.replace(/-/g, ' ')}`,
-  ].filter(Boolean).join('. ');
-
-  const lightingLine = [
-    `${lighting.style} ${lighting.keyLight} key`,
-    `${lighting.timeOfDay}, ${lighting.colorTemp}K`,
-    lighting.atmosphere !== 'clear' ? `${lighting.atmosphere} atmosphere` : '',
-  ].filter(Boolean).join('. ');
-
-  const motionLine =
-    motion.subjectAction === 'still'
-      ? ''
-      : `${motion.subjectAction} subject, ${motion.intensity} intensity`;
-
-  const refLine = refs.length
-    ? `Reference images (${refs.map((r) => r.role).join(', ')}) guide subject and environment.`
-    : '';
-
-  return [prompt.trim(), cameraLine, lightingLine, motionLine, refLine]
-    .filter(Boolean)
-    .join(' ');
-}
-
 export function buildModelPayloadStack(input: {
   project: ProjectSettings;
   camera: CameraSettings;
@@ -85,25 +51,25 @@ export function buildModelPayloadStack(input: {
   ai: AIState;
 }): ModelPayloadStack {
   const { project, camera, lighting, motion, sceneSetup, shotActivity, shot, ai } = input;
-  const frame = getShotFrameComposition(shot);
-  const compositionPrompt = getFullCameraPrompt(camera, frame);
+  getShotFrameComposition(shot);
   const provider = getCurrentProviderName(ai);
   const isCustom = ai.customProviders.some((p) => p.id === ai.defaultProvider);
   const capabilities = getProviderCapabilities(ai.defaultProvider, isCustom);
 
-  const refs = (shot?.references ?? [])
-    .map((url, i) => ({ url, role: shot?.referenceRoles[i] ?? 'None' }))
-    .filter((r): r is { role: ReferenceRole; url: string } => Boolean(r.url));
+  const refs = buildGenerationRefs(shot);
 
-  const combinedPrompt = buildCombinedPrompt({
+  let combinedPrompt = buildGenerationPrompt({
     sceneSetup,
     shotActivity,
-    compositionPrompt,
     camera,
     lighting,
     motion,
-    refs,
+    shot,
   });
+
+  if (ai.defaultProvider === 'xai' && refs.length > 0) {
+    combinedPrompt = augmentPromptForXAI(combinedPrompt, refs);
+  }
 
   const blocks: PayloadStackBlock[] = [
     {
