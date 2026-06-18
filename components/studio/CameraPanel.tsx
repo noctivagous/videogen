@@ -1,6 +1,6 @@
 'use client';
 
-import { PLACEMENTS } from '@/lib/constants/camera';
+import { PlacementGrid } from '@/components/studio/PlacementGrid';
 import {
   FOCAL_LENGTH_TICKS,
   formatLensLabel,
@@ -122,26 +122,21 @@ export function CameraPanel() {
             }}
           >
             <option value="none">None</option>
-            <option value="rule-of-thirds">Rule of Thirds</option>
-            <option value="golden-ratio">Golden Ratio</option>
+            <option value="grid-3x3">3x3 Positions</option>
             <option value="center">Center / Symmetry</option>
             <option value="fill-frame">Fill Frame</option>
           </Select>
 
           {placementVisible && (
             <div className="parameter-enclosure">
-              <label className="text-xs text-gray-400 mb-2 block">Subject Placement</label>
-              <div className="placement-grid">
-                {PLACEMENTS.map((placement) => (
-                  <button
-                    key={placement}
-                    type="button"
-                    className={`placement-cell ${frame.placement === placement ? 'active' : ''}`}
-                    title={placement}
-                    onClick={() => setShotFrameComposition({ placement })}
-                  />
-                ))}
-              </div>
+              <label className="text-xs text-gray-400 mb-1 block">Subject Placement</label>
+              <p className="text-[10px] text-gray-500 mb-2 leading-snug">
+                Tap a cell for center placement, or a dot for a grid intersection (including edges).
+              </p>
+              <PlacementGrid
+                value={frame.placement}
+                onChange={(placement) => setShotFrameComposition({ placement })}
+              />
             </div>
           )}
 

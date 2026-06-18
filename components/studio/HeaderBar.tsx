@@ -3,7 +3,8 @@
 import { useRef, useState } from 'react';
 import { RESOLUTION_PRESETS } from '@/lib/constants/resolutions';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
-import { getCurrentProviderName, isProviderConnected } from '@/lib/storage/ai-settings';
+import { getProviderStatus, getSelectedModelDisplay } from '@/lib/studio/provider-modalities';
+import { isProviderConnected } from '@/lib/storage/ai-settings';
 import type { AspectRatio } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
 
@@ -22,9 +23,10 @@ export function HeaderBar() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   const presets = RESOLUTION_PRESETS[project.aspectRatio as AspectRatio] || RESOLUTION_PRESETS['16:9'];
-  const providerName = getCurrentProviderName(ai);
+  const { providerName, modelLabel } = getSelectedModelDisplay(ai);
   const isCustom = ai.customProviders.some((p) => p.id === ai.defaultProvider);
   const connected = isProviderConnected(ai.defaultProvider, isCustom, ai);
+  const providerStatus = getProviderStatus(ai.defaultProvider, isCustom, ai);
 
   return (
     <header
@@ -79,14 +81,28 @@ export function HeaderBar() {
         <button
           type="button"
           onClick={openSettings}
-          className="hidden md:flex items-center gap-2 ml-1 px-3 py-1 bg-surface-800 hover:bg-surface-700 border border-surface-600 rounded-lg cursor-pointer transition-all text-xs"
+          className="flex items-center gap-2 ml-1 px-3 py-1.5 bg-surface-800 hover:bg-surface-700 border border-surface-600 rounded-lg cursor-pointer transition-all text-xs max-w-[220px] lg:max-w-none"
           title="Click to manage AI providers & models"
           {...uiSectionProps(UI_SECTIONS.studioHeaderProviderBadge)}
         >
-          <div className="flex items-center gap-1.5">
-            <div className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-400' : 'bg-amber-500'}`} />
-            <span className="font-medium text-gray-300">{providerName}</span>
-            {!connected && <span className="text-gray-500">· setup</span>}
+          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+            providerStatus === 'verified'
+              ? 'bg-emerald-400'
+              : providerStatus === 'configured' || providerStatus === 'failed'
+                ? 'bg-amber-500'
+                : 'bg-gray-500'
+          }`} />
+          <div className="min-w-0 text-left leading-tight">
+            <div className="font-medium text-gray-300 truncate">{providerName}</div>
+            <div className="text-[10px] text-gray-500 truncate">
+              {!connected
+                ? 'Setup required'
+                : modelLabel
+                  ? `${modelLabel}${providerStatus === 'configured' ? ' · unverified' : ''}`
+                  : providerStatus === 'configured'
+                    ? 'Unverified'
+                    : 'No model selected'}
+            </div>
           </div>
         </button>
       </div>

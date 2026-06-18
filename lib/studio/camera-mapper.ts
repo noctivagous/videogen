@@ -1,20 +1,10 @@
 import * as THREE from 'three';
-import { DEFAULT_FRAME_COMPOSITION } from '@/lib/constants/camera';
+import { DEFAULT_FRAME_COMPOSITION, PLACEMENT_POSITIONS } from '@/lib/constants/camera';
 import { FIELD_SIZE_FRAMING } from '@/lib/constants/framing';
 import type { FrameComposition, ScenePreviewPayload } from '@/lib/types/studio';
 import type { Object3D, PerspectiveCamera } from 'three';
 
-const PLACEMENT_OFFSETS: Record<string, { x: number; z: number }> = {
-  'top-left': { x: -0.55, z: 0.35 },
-  'top-center': { x: 0, z: 0.35 },
-  'top-right': { x: 0.55, z: 0.35 },
-  'middle-left': { x: -0.55, z: 0 },
-  center: { x: 0, z: 0 },
-  'middle-right': { x: 0.55, z: 0 },
-  'bottom-left': { x: -0.55, z: -0.35 },
-  'bottom-center': { x: 0, z: -0.35 },
-  'bottom-right': { x: 0.55, z: 0.35 },
-};
+const PLACEMENT_OFFSET_SCALE = { x: 0.55, z: 0.35 };
 
 const ANGLE_PRESETS: Record<string, { camAim: number; targetAim: number; pitch: number; roll?: number }> = {
   'eye-level': { camAim: 0.82, targetAim: 0.6, pitch: 0 },
@@ -109,7 +99,11 @@ function kelvinToRgb(kelvin: number): { r: number; g: number; b: number } {
 
 export function getPlacementOffset(frameComposition?: FrameComposition) {
   const placement = frameComposition?.placement || 'center';
-  return PLACEMENT_OFFSETS[placement] || PLACEMENT_OFFSETS.center;
+  const pos = PLACEMENT_POSITIONS[placement] || PLACEMENT_POSITIONS['cell-1-1'];
+  return {
+    x: ((pos.x - 50) / 50) * PLACEMENT_OFFSET_SCALE.x,
+    z: ((50 - pos.y) / 50) * PLACEMENT_OFFSET_SCALE.z,
+  };
 }
 
 export function applyCameraFromState(

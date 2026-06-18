@@ -1,12 +1,16 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { CompositionOverlay } from '@/components/studio/CompositionOverlay';
-import { FrameViewSegment, type FrameView } from '@/components/studio/FrameViewSegment';
+import { FrameViewSegment } from '@/components/studio/FrameViewSegment';
+import { ModelPreviewScene } from '@/components/studio/ModelPreviewScene';
+import { PreviewSubModeSegment } from '@/components/studio/PreviewSubModeSegment';
 import { PromptStackView } from '@/components/studio/PromptStackView';
 import { ReferencePreviewScene } from '@/components/studio/ReferencePreviewScene';
+import { previewFramingFingerprint } from '@/lib/constants/subject-cutouts';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { formatDuration } from '@/lib/studio/shot-display';
+import { isPreviewFrameSupported } from '@/lib/studio/generation/preview-frame-supported';
 import { useStudioStore } from '@/store/useStudioStore';
 
 function fitPreviewFrame(frame: HTMLElement, aspectRatio: string) {
@@ -38,23 +42,31 @@ function fitPreviewFrame(frame: HTMLElement, aspectRatio: string) {
 
 export function PreviewPanel() {
   const previewFrameRef = useRef<HTMLDivElement>(null);
-  const [frameView, setFrameView] = useState<FrameView>('preview');
+  const frameView = useStudioStore((s) => s.frameView);
+  const setFrameView = useStudioStore((s) => s.setFrameView);
   const project = useStudioStore((s) => s.project);
   const camera = useStudioStore((s) => s.camera);
   const lighting = useStudioStore((s) => s.lighting);
   const motion = useStudioStore((s) => s.motion);
   const isGenerating = useStudioStore((s) => s.isGenerating);
+  const isPreviewFrameGenerating = useStudioStore((s) => s.isPreviewFrameGenerating);
   const progressText = useStudioStore((s) => s.progressText);
+  const previewFrameProgress = useStudioStore((s) => s.previewFrameProgress);
   const showPreviewSuccess = useStudioStore((s) => s.showPreviewSuccess);
   const previewSuccessProvider = useStudioStore((s) => s.previewSuccessProvider);
   const previewSuccessPrompt = useStudioStore((s) => s.previewSuccessPrompt);
   const toggleCompositionOverlay = useStudioStore((s) => s.toggleCompositionOverlay);
   const shots = useStudioStore((s) => s.shots);
   const currentShot = useStudioStore((s) => s.currentShot);
+  const previewSubMode = useStudioStore((s) => s.previewSubMode);
+  const setPreviewSubMode = useStudioStore((s) => s.setPreviewSubMode);
+  const generatePreviewFrame = useStudioStore((s) => s.generatePreviewFrame);
+  const ai = useStudioStore((s) => s.ai);
 
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
   const showOverlay = shot?.frameComposition?.showOverlay ?? true;
   const generatedVideo = shot?.videoUrl ?? null;
+  const modelPreviewUrl = shot?.previewFrameUrl ?? null;
   const shotDuration = shot?.duration ?? project.duration;
   const timecode = `00:00 / ${formatDuration(shotDuration)}`;
 
@@ -68,6 +80,19 @@ export function PreviewPanel() {
     }),
     [project, camera, lighting, motion, shot],
   );
+
+  const currentFingerprint = previewFramingFingerprint(
+    shot?.camera ?? camera,
+    project.aspectRatio || '16:9',
+  );
+  const modelStale = Boolean(
+    modelPreviewUrl &&
+    shot?.previewFrameFingerprint &&
+    shot.previewFrameFingerprint !== currentFingerprint,
+  );
+
+  const isCustom = ai.customProviders.some((p) => p.id === ai.defaultProvider);
+  const canQuickPreview = isPreviewFrameSupported(ai.defaultProvider, isCustom);
 
   useEffect(() => {
     const frame = previewFrameRef.current;
@@ -85,6 +110,35 @@ export function PreviewPanel() {
 
   const resIndicator = `${project.resolution} — ${project.aspectRatio} @ ${project.fps}fps`;
 
+  const previewBadge = generatedVideo
+    ? 'Generated video'
+    : previewSubMode === 'model' && modelPreviewUrl
+      ? 'AI model preview'
+      : 'Framing guide';
+
+  const showFramingGuides =
+    frameView === 'preview' && !generatedVideo && previewSubMode === 'framing';
+
+  const renderPreviewContent = () => {
+    if (generatedVideo) {
+      return (
+        <video
+          src={generatedVideo}
+          className="absolute inset-0 w-full h-full object-cover"
+          controls
+          playsInline
+          loop
+        />
+      );
+    }
+    if (previewSubMode === 'model' && modelPreviewUrl) {
+      return (
+        <ModelPreviewScene payload={payload} imageUrl={modelPreviewUrl} stale={modelStale} />
+      );
+    }
+    return <ReferencePreviewScene payload={payload} />;
+  };
+
   return (
     <div className="flex-1 flex items-center justify-center p-4 md:p-8 min-h-0" {...uiSectionProps(UI_SECTIONS.studioPreviewPanel)}>
       <div className="relative w-full h-full max-w-5xl flex items-center justify-center">
@@ -99,21 +153,7 @@ export function PreviewPanel() {
           {...uiSectionProps(UI_SECTIONS.studioPreviewFrame)}
         >
           <div className="absolute inset-0 bg-surface-900" {...uiSectionProps(UI_SECTIONS.studioPreviewContent)}>
-            {frameView === 'preview' ? (
-              generatedVideo ? (
-                <video
-                  src={generatedVideo}
-                  className="absolute inset-0 w-full h-full object-cover"
-                  controls
-                  playsInline
-                  loop
-                />
-              ) : (
-                <ReferencePreviewScene payload={payload} />
-              )
-            ) : (
-              <PromptStackView />
-            )}
+            {frameView === 'preview' ? renderPreviewContent() : <PromptStackView />}
 
             {showPreviewSuccess && (
               <div
@@ -145,12 +185,30 @@ export function PreviewPanel() {
                 </div>
               </div>
             )}
+
+            {isPreviewFrameGenerating && (
+              <div className="absolute inset-0 z-20 bg-surface-900/90 flex items-center justify-center backdrop-blur-sm">
+                <div className="text-center">
+                  <div className="w-12 h-12 border-4 border-surface-600 border-t-brand-500 rounded-full animate-spin mx-auto mb-3" />
+                  <p className="text-sm text-gray-300 font-medium">Generating preview frame...</p>
+                  <p className="text-xs text-gray-500 mt-1">{previewFrameProgress}</p>
+                </div>
+              </div>
+            )}
           </div>
 
-          {frameView === 'preview' && !generatedVideo && <CompositionOverlay />}
+          {showFramingGuides && <CompositionOverlay />}
 
-          <div className="absolute top-3 left-3 z-30">
+          <div className="absolute top-3 left-3 z-30 flex flex-col gap-2">
             <FrameViewSegment value={frameView} onChange={setFrameView} />
+            {frameView === 'preview' && !generatedVideo && (
+              <PreviewSubModeSegment
+                value={previewSubMode}
+                onChange={setPreviewSubMode}
+                hasModelPreview={Boolean(modelPreviewUrl)}
+                modelStale={modelStale}
+              />
+            )}
           </div>
 
           <div
@@ -162,22 +220,38 @@ export function PreviewPanel() {
               onClick={toggleCompositionOverlay}
               className={`p-2 hover:bg-surface-700 rounded-lg transition-all ${showOverlay ? 'text-brand-400' : 'text-gray-500'}`}
               title="Toggle composition guides"
+              disabled={!showFramingGuides}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
               </svg>
             </button>
             <div className="h-6 w-px bg-surface-600" />
+            {frameView === 'preview' && !generatedVideo && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => generatePreviewFrame()}
+                  disabled={!canQuickPreview || isPreviewFrameGenerating || isGenerating}
+                  className="px-3 py-1.5 text-xs font-medium rounded-lg bg-brand-600 hover:bg-brand-500 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors"
+                  title={canQuickPreview ? 'Generate a single AI preview frame' : 'Configure xAI, OpenAI, or Replicate in Settings'}
+                >
+                  Quick Preview (1 gen)
+                </button>
+                <div className="h-6 w-px bg-surface-600" />
+              </>
+            )}
             <span
               className={`px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-lg border ${
                 generatedVideo
                   ? 'text-brand-300 bg-brand-500/20 border-brand-500/40'
-                  : 'text-gray-400 bg-surface-700/80 border-surface-600'
+                  : previewSubMode === 'model' && modelPreviewUrl
+                    ? 'text-brand-300 bg-brand-500/15 border-brand-500/30'
+                    : 'text-gray-400 bg-surface-700/80 border-surface-600'
               }`}
-              title={generatedVideo ? 'AI-generated video for this shot' : 'Shows shot framing and composition — not reference-based posing'}
               {...uiSectionProps(UI_SECTIONS.studioPreviewBlockingLabel)}
             >
-              {generatedVideo ? 'Generated' : 'Blocking preview'}
+              {previewBadge}
             </span>
             <div className="h-6 w-px bg-surface-600" />
             <span className="text-xs text-gray-400">{timecode}</span>

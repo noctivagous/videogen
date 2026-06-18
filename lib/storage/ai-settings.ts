@@ -1,4 +1,5 @@
 import { BUILT_IN_PROVIDERS } from '@/lib/constants/providers';
+import { getProviderStatus, hasApiKey } from '@/lib/studio/provider-modalities';
 import type { AIState, CustomProvider } from '@/lib/types/studio';
 
 /** Browser-only storage — API keys never belong in git or project JSON files. */
@@ -20,6 +21,7 @@ export function loadAIState(): AIState {
         configured: data.configured || {},
         customProviders: data.customProviders || [],
         defaultProvider: data.defaultProvider || 'replicate',
+        defaultModelId: data.defaultModelId,
       };
     }
   } catch {
@@ -49,12 +51,15 @@ export function isProviderConnected(
   isCustom: boolean,
   ai: AIState,
 ): boolean {
-  if (isCustom) {
-    const prov = ai.customProviders.find((p) => p.id === id);
-    return !!(prov?.apiKey && prov.apiKey.length > 4);
-  }
-  const conf = ai.configured[id];
-  return !!(conf?.apiKey && conf.apiKey.length > 4);
+  return hasApiKey(id, isCustom, ai);
+}
+
+export function isProviderVerified(
+  id: string,
+  isCustom: boolean,
+  ai: AIState,
+): boolean {
+  return getProviderStatus(id, isCustom, ai) === 'verified';
 }
 
 export function getProviderApiKey(

@@ -1,6 +1,9 @@
-export const SUPPORTED_GENERATION_PROVIDERS = new Set(['replicate']);
+import { hasGenerationAdapter, listGenerationProviderIds } from '@/lib/studio/generation/capabilities';
 
 export function isGenerationSupported(providerId: string, isCustom: boolean): boolean {
-  if (isCustom) return true;
-  return SUPPORTED_GENERATION_PROVIDERS.has(providerId);
+  return hasGenerationAdapter(providerId, isCustom);
+}
+
+export function getSupportedGenerationProviderIds(): string[] {
+  return listGenerationProviderIds();
 }

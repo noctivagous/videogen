@@ -54,8 +54,8 @@ export const STOCK_MOTION: MotionSettings = {
 export const STOCK_PROMPT = STOCK_MS_PROMPT;
 
 export const STOCK_SHOT_COMPOSITION: FrameComposition = {
-  guide: 'rule-of-thirds',
-  placement: 'middle-right',
+  guide: 'grid-3x3',
+  placement: 'ix-mid-r',
   headroom: 'normal',
   showOverlay: true,
 };
@@ -84,7 +84,7 @@ export function createStockShot(
 ): Shot {
   const {
     duration = 5,
-    placement = 'middle-right',
+    placement = 'ix-mid-r',
     withReferences = false,
     thumbnail = null,
     camera = STOCK_CAMERA,
@@ -122,7 +122,7 @@ export function createStockShot(
 export const STOCK_SHOTS: Shot[] = [
   createStockShot(1, 'Shot 01', true, {
     duration: 5,
-    placement: 'middle-right',
+    placement: 'ix-mid-r',
     withReferences: true,
     thumbnail: STOCK_ASSETS.ms,
     camera: STOCK_CAMERA,
@@ -138,7 +138,7 @@ export const STOCK_SHOTS: Shot[] = [
   }),
   createStockShot(2, 'Shot 02', false, {
     duration: 3,
-    placement: 'center',
+    placement: 'cell-1-1',
     thumbnail: STOCK_ASSETS.ms,
     camera: { ...STOCK_CAMERA, fieldSize: 'cu' },
     lighting: { ...STOCK_LIGHTING, timeOfDay: 'golden-hour', colorTemp: 4500 },
@@ -147,7 +147,7 @@ export const STOCK_SHOTS: Shot[] = [
   }),
   createStockShot(3, 'Shot 03', false, {
     duration: 7,
-    placement: 'middle-left',
+    placement: 'ix-mid-l',
     thumbnail: STOCK_ASSETS.ms,
     camera: { ...STOCK_CAMERA, fieldSize: 'ls', focalLength: 35 },
     lighting: { ...STOCK_LIGHTING, timeOfDay: 'evening', colorTemp: 3200, atmosphere: 'hazy' },
@@ -166,5 +166,5 @@ export const EMPTY_PROJECT: ProjectSettings = {
 };
 
 export const EMPTY_SHOTS: Shot[] = [
-  createStockShot(1, 'Shot 01', true, { duration: 5, placement: 'center', sceneSetup: '', shotActivity: '' }),
+  createStockShot(1, 'Shot 01', true, { duration: 5, placement: 'cell-1-1', sceneSetup: '', shotActivity: '' }),
 ];

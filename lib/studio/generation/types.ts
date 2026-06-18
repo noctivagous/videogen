@@ -1,3 +1,5 @@
+import type { Modality, ProviderModel } from '@/lib/types/studio';
+
 export interface GenerationRef {
   role: string;
   url: string;
@@ -8,6 +10,8 @@ export interface GenerationRequest {
   isCustom: boolean;
   apiKey: string;
   customBaseUrl?: string;
+  /** Provider-specific model id from catalog or connection test */
+  modelId?: string;
   prompt: string;
   duration: number;
   fps: number;
@@ -34,4 +38,8 @@ export interface ProviderTestRequest {
 export interface ProviderTestResult {
   ok: boolean;
   message: string;
+  models?: ProviderModel[];
+  modalities?: Modality[];
+  purposes?: string[];
+  latencyMs?: number;
 }

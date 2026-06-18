@@ -1,5 +1,32 @@
 {
-  "version": 3,
+  "version": 4,
+  "subjectCutouts": {
+    "purpose": "Transparent Subject stand-ins for scene preview compositing over user Backdrop. Runtime aspect-ratio reframing uses 16:9 masters.",
+    "outputSpec": {
+      "format": "png",
+      "alpha": true,
+      "masterAspectRatio": "16:9",
+      "targetWidth": 1280,
+      "targetHeight": 720,
+      "grokModel": "grok-imagine-image",
+      "background": "Fully transparent — no studio, floor, or cast shadows"
+    },
+    "male": {
+      "inherits": "Global conventions subject, wardrobe, standardPose",
+      "identityFile": "subjects/male/mannequin-identity.png"
+    },
+    "female": {
+      "type": "matte gray female display mannequin",
+      "wardrobe": "Sculpted blouse with collar, sculpted skirt or tailored pants, sculpted flats — unified matte gray hard-surface sculpt",
+      "identityFile": "subjects/female/mannequin-identity.png"
+    },
+    "ots": {
+      "framing": "Medium shot waist-up",
+      "variants": ["male-over-male", "male-over-female", "female-over-male"]
+    },
+    "fieldSizeAliases": { "ls": "fs", "xls": "els", "ws": "gv" },
+    "appWiring": "lib/constants/subject-cutouts.ts → getSubjectCutoutUrl; lib/studio/subject-framing.ts for aspect crop"
+  },
   "conventions": {
     "purpose": "Static preview thumbnails for the Camera, Lighting & Atmosphere panel. Each chip shows a generic visual example of one cinematography concept — not project-specific art.",
     "subject": {

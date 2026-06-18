@@ -116,6 +116,94 @@ input[type="range"]::-moz-range-thumb:hover {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
+.provider-card--active {
+  background: linear-gradient(145deg, rgba(16, 185, 129, 0.08), rgba(99, 102, 241, 0.05));
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.25), 0 12px 32px rgba(16, 185, 129, 0.12);
+}
+
+.provider-card--configured {
+  background: rgba(245, 158, 11, 0.04);
+}
+
+.chip-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.chip-stack--compact {
+  gap: 4px;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.purpose-chip {
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(63, 63, 70, 0.6);
+  color: #d4d4d8;
+  border: 1px solid rgba(113, 113, 122, 0.35);
+  letter-spacing: 0.02em;
+}
+
+.modality-chip {
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.modality-chip--video {
+  background: rgba(99, 102, 241, 0.18);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+}
+
+.modality-chip--image {
+  background: rgba(236, 72, 153, 0.15);
+  color: #f9a8d4;
+  border: 1px solid rgba(236, 72, 153, 0.3);
+}
+
+.modality-chip--llm {
+  background: rgba(34, 197, 94, 0.15);
+  color: #86efac;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.modality-chip--tts {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fcd34d;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.test-result-alert {
+  font-size: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  line-height: 1.4;
+}
+
+.test-result-alert--success {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #6ee7b7;
+}
+
+.test-result-alert--error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  color: #fca5a5;
+}
+
 .modal {
   animation: fadeIn 0.2s ease-out;
 }
@@ -181,37 +269,101 @@ input[type="range"]::-moz-range-thumb:hover {
   border: 2px solid #6366f1;
 }
 
-.placement-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
-  max-width: 120px;
-}
-
-.placement-cell {
-  aspect-ratio: 1;
-  min-height: 28px;
-  border-radius: 6px;
+.placement-grid-frame {
+  position: relative;
+  width: 168px;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
   border: 1px solid #3f3f46;
-  background: #27272d;
+  background: #1c1c22;
+  overflow: visible;
+}
+
+.placement-grid-lines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.placement-grid-line {
+  position: absolute;
+  background: rgba(99, 102, 241, 0.22);
+}
+
+.placement-grid-line-v {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  transform: translateX(-50%);
+}
+
+.placement-grid-line-h {
+  left: 0;
+  right: 0;
+  height: 1px;
+  transform: translateY(-50%);
+}
+
+.placement-grid-cell {
+  position: absolute;
+  width: 33.33%;
+  height: 33.33%;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: rgba(39, 39, 45, 0.55);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  z-index: 1;
 }
 
-.placement-cell:hover {
-  border-color: #6366f1;
-  background: #32323a;
+.placement-grid-cell:hover {
+  background: rgba(50, 50, 58, 0.85);
+  border-color: rgba(99, 102, 241, 0.35);
 }
 
-.placement-cell.active {
-  border-color: #6366f1;
-  background: rgba(99, 102, 241, 0.35);
-  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.5);
+.placement-grid-cell.active {
+  background: rgba(99, 102, 241, 0.22);
+  border-color: rgba(99, 102, 241, 0.75);
+  box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.45);
 }
 
-.placement-cell:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
+.placement-grid-ix {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid #52525b;
+  background: #27272d;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+  z-index: 2;
+  padding: 0;
+}
+
+.placement-grid-ix::before {
+  content: '';
+  position: absolute;
+  inset: -7px;
+}
+
+.placement-grid-ix:hover {
+  border-color: #818cf8;
+  background: #3f3f46;
+  transform: translate(-50%, -50%) scale(1.2);
+}
+
+.placement-grid-marker {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid white;
+  background: #6366f1;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 6px rgba(99, 102, 241, 0.85);
+  z-index: 3;
+  pointer-events: none;
 }
 
 .composition-toggle {

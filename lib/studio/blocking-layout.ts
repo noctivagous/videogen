@@ -55,7 +55,7 @@ function baseFigure(
 
 function anchorFromPlacement(payload: ScenePreviewPayload) {
   const frame = payload.shot?.frameComposition || DEFAULT_FRAME_COMPOSITION;
-  const pos = PLACEMENT_POSITIONS[frame.placement] || PLACEMENT_POSITIONS.center;
+  const pos = PLACEMENT_POSITIONS[frame.placement] || PLACEMENT_POSITIONS['cell-1-1'];
   const headroom = HEADROOM_Y_OFFSET[frame.headroom] || 0;
   const heightPct = FIELD_SIZE_HEIGHT_PCT[payload.camera.fieldSize] || FIELD_SIZE_HEIGHT_PCT.ms;
   const feetY = 92 - headroom;

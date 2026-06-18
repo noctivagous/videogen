@@ -1,4 +1,10 @@
-import { DEFAULT_FRAME_COMPOSITION, LEGACY_FIELD_SIZE_MIGRATION, normalizeReferenceRole } from '@/lib/constants/camera';
+import {
+  DEFAULT_FRAME_COMPOSITION,
+  LEGACY_FIELD_SIZE_MIGRATION,
+  normalizeCompositionGuide,
+  normalizePlacement,
+  normalizeReferenceRole,
+} from '@/lib/constants/camera';
 import { normalizeLensCamera } from '@/lib/constants/lens';
 import { STOCK_CAMERA, STOCK_LIGHTING, STOCK_MOTION, STOCK_PROMPT, STOCK_REFERENCE_ROLES } from '@/lib/constants/stock-project';
 import type {
@@ -102,7 +108,11 @@ export function migrateShot(
     frameComposition: {
       ...DEFAULT_FRAME_COMPOSITION,
       ...shot.frameComposition,
+      guide: normalizeCompositionGuide(shot.frameComposition?.guide),
+      placement: normalizePlacement(shot.frameComposition?.placement),
     },
+    previewFrameUrl: shot.previewFrameUrl ?? null,
+    previewFrameFingerprint: shot.previewFrameFingerprint ?? null,
   };
 }
 

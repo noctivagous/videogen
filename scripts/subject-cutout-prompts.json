@@ -1,0 +1,38 @@
+{
+  "cutoutSuffix": "Matte gray mannequin subject centered on neutral mid-gray seamless studio backdrop. Soft even studio lighting, no cast shadows on floor. Photographic film-school reference still. Centered for compositing. Zero typography.",
+  "male": [
+    { "fieldSize": "ms", "file": "subjects/male/ms.png", "reference": "shot-types/ms.jpg", "prompt": "Use the exact same matte gray male mannequin from the reference. Pure photographic film-school reference still. Medium shot waist up ONLY: bottom edge cuts exactly at belt line — NO trousers below belt. Facing camera, arms at sides. Smooth sculpted gray dress shirt, belt at waist." },
+    { "fieldSize": "ecu", "file": "subjects/male/ecu.png", "reference": "subjects/male/ms.png", "prompt": "Use the exact same matte gray male mannequin face from the reference. Extreme close-up ONLY: both eyes and brow fill the entire frame, cropped extremely tight. Frame cuts above hairline and below nose bridge. No shirt, no collar." },
+    { "fieldSize": "cu", "file": "subjects/male/cu.png", "reference": "subjects/male/ms.png", "prompt": "Use the exact same matte gray male mannequin identity from the reference. Close-up framing ONLY: face and hair from top of hair to chin, tight portrait — no torso. Tiny sliver of gray shirt collar at bottom edge at most." },
+    { "fieldSize": "mcu", "file": "subjects/male/mcu.png", "reference": "subjects/male/ms.png", "prompt": "Use the exact same matte gray male mannequin from the reference. Medium close-up chest up, arms at sides. Smooth hard-surface gray dress shirt sculpt, collar and button placket." },
+    { "fieldSize": "close-shot", "file": "subjects/male/close-shot.png", "reference": "subjects/male/mcu.png", "prompt": "Use the exact same matte gray male mannequin from the reference. Close shot chest up, slightly tighter than medium close-up." },
+    { "fieldSize": "cowboy", "file": "subjects/male/cowboy.png", "reference": "subjects/male/ms.png", "prompt": "Use the exact same matte gray male mannequin from the reference. Cowboy shot framed from mid-thigh up. Gray dress shirt, chino pants, belt. No holster." },
+    { "fieldSize": "mws", "file": "subjects/male/mws.png", "reference": "subjects/male/cowboy.png", "prompt": "Use the exact same matte gray male mannequin from the reference. Medium wide shot from knees up." },
+    { "fieldSize": "fs", "file": "subjects/male/fs.png", "reference": "shot-types/ms.jpg", "prompt": "Matte gray male display mannequin full body head to toe, facing camera, arms at sides. Full shot: entire standing body fills 90% of frame height. Gray dress shirt, pants, belt, shoes — unified gray sculpt." },
+    { "fieldSize": "els", "file": "subjects/male/els.png", "reference": "subjects/male/fs.png", "prompt": "Use the exact same full-length matte gray male mannequin from the reference. Extreme long shot: same mannequin small in frame with generous empty space around figure." },
+    { "fieldSize": "vls", "file": "subjects/male/vls.png", "reference": "subjects/male/els.png", "prompt": "Use the exact same matte gray male mannequin from the reference. Very long shot: figure even smaller, vast empty space." },
+    { "fieldSize": "gv", "file": "subjects/male/gv.png", "reference": "subjects/male/els.png", "prompt": "Use the exact same matte gray male mannequin from the reference. General view wide shot with subject small in environment." },
+    { "fieldSize": "bcu", "file": "subjects/male/bcu.png", "reference": "subjects/male/cu.png", "prompt": "Use the exact same matte gray male mannequin face from the reference. Big close-up: forehead to chin, tighter than standard close-up." },
+    { "fieldSize": "ch", "file": "subjects/male/ch.png", "reference": "subjects/male/ecu.png", "prompt": "Use the exact same matte gray male mannequin from the reference. Choker shot: very tight close-up cutting at neck or above eyebrows." }
+  ],
+  "female": [
+    { "fieldSize": "ms", "file": "subjects/female/ms.png", "reference": null, "prompt": "Matte gray female display mannequin with sculpted facial features, clean bob hairstyle. Sculpted blouse with collar, sculpted skirt, unified gray hard-surface sculpt. Medium shot waist up, facing camera, arms at sides." },
+    { "fieldSize": "ecu", "file": "subjects/female/ecu.png", "reference": "subjects/female/ms.png", "prompt": "Use the exact same matte gray female mannequin face from the reference. Extreme close-up: eyes and brow fill frame." },
+    { "fieldSize": "cu", "file": "subjects/female/cu.png", "reference": "subjects/female/ms.png", "prompt": "Use the exact same matte gray female mannequin from the reference. Close-up face and hair to chin." },
+    { "fieldSize": "mcu", "file": "subjects/female/mcu.png", "reference": "subjects/female/ms.png", "prompt": "Use the exact same matte gray female mannequin from the reference. Medium close-up chest up." },
+    { "fieldSize": "close-shot", "file": "subjects/female/close-shot.png", "reference": "subjects/female/mcu.png", "prompt": "Use the exact same matte gray female mannequin from the reference. Close shot chest up." },
+    { "fieldSize": "cowboy", "file": "subjects/female/cowboy.png", "reference": "subjects/female/ms.png", "prompt": "Use the exact same matte gray female mannequin from the reference. Cowboy shot mid-thigh up." },
+    { "fieldSize": "mws", "file": "subjects/female/mws.png", "reference": "subjects/female/cowboy.png", "prompt": "Use the exact same matte gray female mannequin from the reference. Medium wide knees up." },
+    { "fieldSize": "fs", "file": "subjects/female/fs.png", "reference": "subjects/female/ms.png", "prompt": "Use the exact same matte gray female mannequin from the reference. Full body head to toe full shot." },
+    { "fieldSize": "els", "file": "subjects/female/els.png", "reference": "subjects/female/fs.png", "prompt": "Use the exact same matte gray female mannequin from the reference. Extreme long shot, small figure in frame." },
+    { "fieldSize": "vls", "file": "subjects/female/vls.png", "reference": "subjects/female/els.png", "prompt": "Use the exact same matte gray female mannequin from the reference. Very long shot, tiny figure." },
+    { "fieldSize": "gv", "file": "subjects/female/gv.png", "reference": "subjects/female/els.png", "prompt": "Use the exact same matte gray female mannequin from the reference. General view wide." },
+    { "fieldSize": "bcu", "file": "subjects/female/bcu.png", "reference": "subjects/female/cu.png", "prompt": "Use the exact same matte gray female mannequin face from the reference. Big close-up forehead to chin." },
+    { "fieldSize": "ch", "file": "subjects/female/ch.png", "reference": "subjects/female/ecu.png", "prompt": "Use the exact same matte gray female mannequin from the reference. Choker shot very tight." }
+  ],
+  "ots": [
+    { "variant": "male-over-male", "file": "subjects/ots/male-over-male.png", "reference": "subjects/male/ms.png", "prompt": "Over-the-shoulder shot. Foreground: back and shoulder of first matte gray male mannequin in gray dress shirt, soft blur. Facing camera: second distinct matte gray male mannequin, medium shot waist up, facing camera." },
+    { "variant": "male-over-female", "file": "subjects/ots/male-over-female.png", "reference": "subjects/male/ms.png", "prompt": "Over-the-shoulder shot. Foreground: male mannequin shoulder blur. Facing camera: matte gray female mannequin in blouse, medium shot waist up." },
+    { "variant": "female-over-male", "file": "subjects/ots/female-over-male.png", "reference": "subjects/female/ms.png", "prompt": "Over-the-shoulder shot. Foreground: female mannequin shoulder blur. Facing camera: matte gray male mannequin, medium shot waist up." }
+  ]
+}

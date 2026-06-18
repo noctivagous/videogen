@@ -9,8 +9,13 @@
     "build:clean": "rm -rf .next && next build",
     "start": "next start",
     "clean": "rm -rf .next",
-    "lint": "next lint",
-    "check:secrets": "git grep -nE 'r8_[A-Za-z0-9]{10,}|sk-[A-Za-z0-9]{20,}|hf_[A-Za-z0-9]{20,}' -- ':!package-lock.json' && exit 1 || exit 0"
+    "lint": "eslint .",
+    "check:secrets": "git grep -nE 'r8_[A-Za-z0-9]{10,}|sk-[A-Za-z0-9]{20,}|hf_[A-Za-z0-9]{20,}' -- ':!package-lock.json' && exit 1 || exit 0",
+    "stock:cutouts": "node scripts/generate-subject-cutouts.mjs",
+    "stock:cutouts:import": "bash scripts/import-cutout.sh",
+    "stock:generate": "node scripts/generate-mannequin-cutouts.mjs",
+    "stock:matte": "node scripts/matte-cutouts.mjs",
+    "stock:pipeline": "node scripts/generate-mannequin-cutouts.mjs && node scripts/matte-cutouts.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
@@ -22,12 +27,15 @@
     "zustand": "^5.0.5"
   },
   "devDependencies": {
+    "@huggingface/transformers": "^3.4.2",
+    "sharp": "^0.34.2",
     "@types/node": "^22.15.21",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
     "@types/three": "^0.170.0",
     "eslint": "^9.28.0",
     "eslint-config-next": "^15.3.3",
+    "playwright": "^1.61.0",
     "postcss": "^8.5.4",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3"

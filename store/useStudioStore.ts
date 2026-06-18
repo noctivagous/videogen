@@ -15,7 +15,15 @@ import {
   STOCK_REFERENCE_ROLES,
   STOCK_SHOTS,
 } from '@/lib/constants/stock-project';
+import { isPreviewFrameSupported } from '@/lib/studio/generation/preview-frame-supported';
 import { isGenerationSupported } from '@/lib/studio/generation/supported';
+import { buildPreviewFramePrompt, buildPreviewFrameRefs } from '@/lib/studio/preview-frame-prompt';
+import { previewFramingFingerprint } from '@/lib/constants/subject-cutouts';
+import {
+  getBuiltInProvider,
+  getEffectiveModelId,
+  resolveModelSelectionForProvider,
+} from '@/lib/studio/provider-modalities';
 import { buildModelPayloadStack, buildShotPrompt } from '@/lib/studio/model-payload';
 import { applyFrameCompositionSmartDefaults } from '@/lib/studio/composition';
 import {
@@ -55,8 +63,10 @@ import type {
   Shot,
   StudioProject,
   PreviewMode,
+  PreviewSubMode,
   ToastType,
 } from '@/lib/types/studio';
+import type { FrameView } from '@/components/studio/FrameViewSegment';
 
 const PREVIEW_MODE_KEY = 'videogen_preview_mode';
 
@@ -149,8 +159,15 @@ interface StudioStore {
   mobileDrawerOpen: boolean;
   initialized: boolean;
   previewMode: PreviewMode;
+  frameView: FrameView;
+  previewSubMode: PreviewSubMode;
+  isPreviewFrameGenerating: boolean;
+  previewFrameProgress: string;
 
   init: () => void;
+  setFrameView: (view: FrameView) => void;
+  setPreviewSubMode: (mode: PreviewSubMode) => void;
+  generatePreviewFrame: () => Promise<void>;
   setPreviewMode: (mode: PreviewMode) => void;
   togglePreviewMode: () => void;
   showToast: (message: string, type?: ToastType) => void;
@@ -184,9 +201,22 @@ interface StudioStore {
   openSettings: () => void;
   closeSettings: () => void;
   setDefaultProvider: (id: string) => void;
+  setDefaultModel: (modelId: string) => void;
   openProviderEdit: (id: string, isCustom: boolean) => void;
   closeProviderEdit: () => void;
   saveProviderEdit: (apiKey: string, customFields?: { name: string; desc: string; baseUrl: string }) => void;
+  applyProviderTestResult: (
+    id: string,
+    isCustom: boolean,
+    result: {
+      ok: boolean;
+      message: string;
+      models?: import('@/lib/types/studio').ProviderModel[];
+      modalities?: import('@/lib/types/studio').Modality[];
+      purposes?: string[];
+    },
+    apiKey?: string,
+  ) => void;
   deleteCustomProvider: (id: string) => void;
   addCustomProvider: (name: string, baseUrl: string) => void;
   setMobileDrawerOpen: (open: boolean) => void;
@@ -215,6 +245,18 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   mobileDrawerOpen: false,
   initialized: false,
   previewMode: 'vector',
+  frameView: 'preview',
+  previewSubMode: 'framing',
+  isPreviewFrameGenerating: false,
+  previewFrameProgress: '',
+
+  setFrameView(view) {
+    set({ frameView: view });
+  },
+
+  setPreviewSubMode(mode) {
+    set({ previewSubMode: mode });
+  },
 
   init() {
     if (get().initialized) return;
@@ -352,7 +394,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 
   handleCameraCompositionChange(changed) {
     const { camera, shots, currentShot } = get();
-    let next = { ...camera };
+    const next = { ...camera };
 
     if (changed === 'coverage' && SINGLE_ONLY_COVERAGE.has(camera.coverage)) {
       next.subjectCount = '1s';
@@ -380,6 +422,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const shot = get().shots.find((s) => s.id === id);
     set((s) => ({
       currentShot: id,
+      previewSubMode: 'framing',
       shots: s.shots.map((sh) => ({ ...sh, active: sh.id === id })),
       ...(shot ? shotActiveView(shot) : {}),
     }));
@@ -459,6 +502,78 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     }));
   },
 
+  async generatePreviewFrame() {
+    const state = get();
+    const { project, ai, shots, currentShot } = state;
+    const shot = getCurrentShotFromList(shots, currentShot);
+    if (!shot) return;
+
+    const isCustom = ai.customProviders.some((p) => p.id === ai.defaultProvider);
+    if (!isProviderConnected(ai.defaultProvider, isCustom, ai)) {
+      get().showToast('Configure your AI provider API key in Settings first', 'error');
+      return;
+    }
+    if (!isPreviewFrameSupported(ai.defaultProvider, isCustom)) {
+      get().showToast('Quick preview requires xAI, OpenAI, or Replicate. Change your default provider in Settings.', 'error');
+      return;
+    }
+
+    const payload = {
+      project,
+      camera: shot.camera,
+      lighting: shot.lighting,
+      motion: shot.motion,
+      shot,
+    };
+    const prompt = buildPreviewFramePrompt(payload);
+    const refs = buildPreviewFrameRefs(payload);
+    const apiKey = getProviderApiKey(ai.defaultProvider, isCustom, ai);
+    const customBaseUrl = isCustom
+      ? ai.customProviders.find((p) => p.id === ai.defaultProvider)?.baseUrl
+      : undefined;
+    const modelId = getEffectiveModelId(ai);
+    const providerName = getCurrentProviderName(ai);
+    const fingerprint = previewFramingFingerprint(shot.camera, project.aspectRatio);
+
+    set({ isPreviewFrameGenerating: true, previewFrameProgress: `Submitting to ${providerName}...` });
+
+    try {
+      const res = await fetch('/api/preview-frame', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          providerId: ai.defaultProvider,
+          isCustom,
+          apiKey,
+          customBaseUrl,
+          modelId,
+          prompt,
+          aspectRatio: project.aspectRatio,
+          refs,
+        }),
+      });
+
+      const result = await res.json();
+      if (!res.ok || result.status === 'error') {
+        throw new Error(result.error || 'Preview frame generation failed');
+      }
+
+      set((s) => ({
+        shots: patchCurrentShot(s.shots, s.currentShot, {
+          previewFrameUrl: result.imageUrl ?? null,
+          previewFrameFingerprint: fingerprint,
+        }),
+        isPreviewFrameGenerating: false,
+        previewSubMode: 'model',
+        previewFrameProgress: '',
+      }));
+      get().showToast('Preview frame generated');
+    } catch (e) {
+      set({ isPreviewFrameGenerating: false, previewFrameProgress: '' });
+      get().showToast(e instanceof Error ? e.message : 'Preview frame failed', 'error');
+    }
+  },
+
   async generate() {
     const state = get();
     const { project, ai, shots, currentShot } = state;
@@ -477,7 +592,10 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       return;
     }
     if (!isGenerationSupported(ai.defaultProvider, isCustom)) {
-      get().showToast('Switch to Replicate or a Custom provider to generate', 'error');
+      const name = isCustom
+        ? ai.customProviders.find((p) => p.id === ai.defaultProvider)?.name ?? 'This provider'
+        : getBuiltInProvider(ai.defaultProvider)?.name ?? 'This provider';
+      get().showToast(`${name} does not support video generation yet. Pick another default provider in Settings.`, 'error');
       return;
     }
 
@@ -495,8 +613,10 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const customBaseUrl = isCustom
       ? ai.customProviders.find((p) => p.id === ai.defaultProvider)?.baseUrl
       : undefined;
+    const modelId = getEffectiveModelId(ai);
+    const providerName = getCurrentProviderName(ai);
 
-    set({ isGenerating: true, showPreviewSuccess: false, progressText: 'Submitting to provider...' });
+    set({ isGenerating: true, showPreviewSuccess: false, progressText: `Submitting to ${providerName}...` });
 
     try {
       const res = await fetch('/api/generate', {
@@ -507,6 +627,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
           isCustom,
           apiKey,
           customBaseUrl,
+          modelId,
           prompt: stack.combinedPrompt,
           duration: project.duration,
           fps: project.fps,
@@ -585,10 +706,19 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   },
 
   setDefaultProvider(id) {
-    const ai = { ...get().ai, defaultProvider: id };
+    const current = get().ai;
+    const isCustom = current.customProviders.some((p) => p.id === id);
+    const defaultModelId = resolveModelSelectionForProvider(id, isCustom, current);
+    const ai = { ...current, defaultProvider: id, defaultModelId };
     saveAIState(ai);
     set({ ai });
     get().showToast('Default provider updated');
+  },
+
+  setDefaultModel(modelId) {
+    const ai = { ...get().ai, defaultModelId: modelId };
+    saveAIState(ai);
+    set({ ai });
   },
 
   openProviderEdit(id, isCustom) {
@@ -621,7 +751,12 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
           : p,
       );
     } else {
-      ai.configured[edit.id] = { apiKey, connected: true, lastTested: Date.now() };
+      const existing = ai.configured[edit.id];
+      ai.configured[edit.id] = {
+        ...existing,
+        apiKey,
+        connected: true,
+      };
     }
 
     saveAIState(ai);
@@ -629,10 +764,54 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     get().showToast('Provider settings saved');
   },
 
+  applyProviderTestResult(id, isCustom, result, apiKey) {
+    const ai = { ...get().ai };
+    const patch = {
+      lastTested: Date.now(),
+      lastTestOk: result.ok,
+      lastTestMessage: result.message,
+      models: result.models,
+      modalities: result.modalities,
+      purposes: result.purposes,
+    };
+
+    if (isCustom) {
+      ai.customProviders = ai.customProviders.map((p) =>
+        p.id === id
+          ? {
+              ...p,
+              ...patch,
+              apiKey: apiKey?.trim() || p.apiKey,
+              connected: result.ok || !!(apiKey?.trim() || (p.apiKey && p.apiKey.length > 4)),
+            }
+          : p,
+      );
+    } else {
+      const existing = ai.configured[id] ?? { apiKey: '', connected: false };
+      const resolvedKey = apiKey?.trim() || existing.apiKey;
+      ai.configured[id] = {
+        ...existing,
+        ...patch,
+        apiKey: resolvedKey,
+        connected: result.ok || !!(resolvedKey && resolvedKey.length > 4),
+      };
+    }
+
+    if (ai.defaultProvider === id) {
+      ai.defaultModelId = resolveModelSelectionForProvider(id, isCustom, ai, ai.defaultModelId);
+    }
+
+    saveAIState(ai);
+    set({ ai });
+  },
+
   deleteCustomProvider(id) {
     const ai = { ...get().ai };
     ai.customProviders = ai.customProviders.filter((p) => p.id !== id);
-    if (ai.defaultProvider === id) ai.defaultProvider = 'replicate';
+    if (ai.defaultProvider === id) {
+      ai.defaultProvider = 'replicate';
+      ai.defaultModelId = resolveModelSelectionForProvider('replicate', false, ai);
+    }
     saveAIState(ai);
     set({ ai, providerEdit: null });
     get().showToast('Custom provider removed');

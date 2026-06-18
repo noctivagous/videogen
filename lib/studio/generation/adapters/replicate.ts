@@ -1,11 +1,9 @@
-import fs from 'fs';
-import path from 'path';
+import { pickImageInput, resolveRefUrl } from '@/lib/studio/generation/adapters/refs.server';
+import { MAX_POLLS, POLL_INTERVAL_MS, sleep } from '@/lib/studio/generation/adapters/shared';
 import type { GenerationRequest, GenerationResult } from '@/lib/studio/generation/types';
 
-const MODEL_OWNER = 'minimax';
-const MODEL_NAME = 'video-01';
-const POLL_INTERVAL_MS = 2000;
-const MAX_POLLS = 90;
+const DEFAULT_MODEL_OWNER = 'minimax';
+const DEFAULT_MODEL_NAME = 'video-01';
 
 async function replicateFetch(path: string, apiKey: string, init?: RequestInit) {
   const res = await fetch(`https://api.replicate.com/v1${path}`, {
@@ -23,27 +21,10 @@ async function replicateFetch(path: string, apiKey: string, init?: RequestInit) 
   return res.json();
 }
 
-function pickImageInput(refs: GenerationRequest['refs']): string | undefined {
-  const subject = refs.find((r) => r.role === 'Subject');
-  if (subject?.url) return subject.url;
-  const backdrop = refs.find((r) => r.role === 'Backdrop');
-  if (backdrop?.url) return backdrop.url;
-  return refs[0]?.url;
-}
-
-function resolveRefUrl(url: string): string {
-  if (url.startsWith('http') || url.startsWith('data:')) return url;
-  if (url.startsWith('/')) {
-    const filePath = path.join(process.cwd(), 'public', url);
-    if (fs.existsSync(filePath)) {
-      const buf = fs.readFileSync(filePath);
-      const ext = path.extname(url).slice(1).toLowerCase() || 'jpeg';
-      const mime = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : `image/${ext}`;
-      return `data:${mime};base64,${buf.toString('base64')}`;
-    }
-  }
-  const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
+function resolveModelPath(modelId?: string): string {
+  if (!modelId) return `/models/${DEFAULT_MODEL_OWNER}/${DEFAULT_MODEL_NAME}/predictions`;
+  if (modelId.includes('/')) return `/models/${modelId}/predictions`;
+  return `/models/${DEFAULT_MODEL_OWNER}/${modelId}/predictions`;
 }
 
 export async function generateWithReplicate(req: GenerationRequest): Promise<GenerationResult> {
@@ -57,7 +38,7 @@ export async function generateWithReplicate(req: GenerationRequest): Promise<Gen
   }
 
   const prediction = await replicateFetch(
-    `/models/${MODEL_OWNER}/${MODEL_NAME}/predictions`,
+    resolveModelPath(req.modelId),
     req.apiKey,
     { method: 'POST', body: JSON.stringify({ input }) },
   );
@@ -70,7 +51,7 @@ export async function generateWithReplicate(req: GenerationRequest): Promise<Gen
     result.status !== 'canceled' &&
     polls < MAX_POLLS
   ) {
-    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+    await sleep(POLL_INTERVAL_MS);
     result = await replicateFetch(`/predictions/${prediction.id}`, req.apiKey);
     polls++;
   }
@@ -97,11 +78,54 @@ export async function generateWithReplicate(req: GenerationRequest): Promise<Gen
   };
 }
 
-export async function testReplicate(apiKey: string): Promise<{ ok: boolean; message: string }> {
+export async function testReplicate(apiKey: string) {
+  const start = Date.now();
   try {
     await replicateFetch('/account', apiKey);
-    return { ok: true, message: 'Replicate API key is valid' };
+
+    const searchRes = await fetch(
+      'https://api.replicate.com/v1/models?query=video',
+      { headers: { Authorization: `Bearer ${apiKey}` } },
+    );
+
+    let models: Array<{ id: string; name: string; modalities: Array<'video' | 'image' | 'llm' | 'tts'> }> = [];
+
+    if (searchRes.ok) {
+      const data = (await searchRes.json()) as {
+        results?: Array<{ owner: string; name: string; description?: string }>;
+      };
+      models = (data.results ?? [])
+        .slice(0, 12)
+        .map((m) => ({
+          id: `${m.owner}/${m.name}`,
+          name: m.name,
+          modalities: /video|animate|motion|hailuo|minimax|luma|kling/i.test(`${m.owner}/${m.name}`)
+            ? (['video'] as const)
+            : (['image'] as const),
+        }));
+    }
+
+    if (models.length === 0) {
+      models = [
+        { id: `${DEFAULT_MODEL_OWNER}/${DEFAULT_MODEL_NAME}`, name: DEFAULT_MODEL_NAME, modalities: ['video'] },
+      ];
+    }
+
+    const modalities = [...new Set(models.flatMap((m) => m.modalities))] as Array<'video' | 'image' | 'llm' | 'tts'>;
+
+    return {
+      ok: true,
+      message: `Replicate API key verified — ${models.length} model${models.length === 1 ? '' : 's'} found`,
+      models,
+      modalities,
+      purposes: ['Community Models', 'Open Weights'],
+      latencyMs: Date.now() - start,
+    };
   } catch (e) {
-    return { ok: false, message: e instanceof Error ? e.message : 'Connection failed' };
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : 'Connection failed',
+      latencyMs: Date.now() - start,
+    };
   }
 }

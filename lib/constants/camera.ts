@@ -7,6 +7,25 @@ import type {
   Placement,
   SubjectCount,
 } from '@/lib/types/studio';
+import {
+  DEFAULT_GRID_PLACEMENT,
+  PLACEMENT_LABELS,
+  PLACEMENT_POSITIONS,
+  normalizePlacement,
+} from '@/lib/constants/placement-grid';
+
+export {
+  DEFAULT_GRID_PLACEMENT,
+  GRID_CELLS,
+  GRID_INTERSECTIONS,
+  PLACEMENT_LABELS,
+  PLACEMENT_POSITIONS,
+  PLACEMENT_SPECS,
+  normalizePlacement,
+  placementPrompt,
+  getPlacementSpec,
+} from '@/lib/constants/placement-grid';
+export type { PlacementKind, PlacementSpec } from '@/lib/constants/placement-grid';
 
 export const CAMERA_FIELD_SIZE_SHORT: Record<FieldSize, string> = {
   ecu: 'ECU', cu: 'CU', mcu: 'MCU', 'close-shot': 'CS', ms: 'MS', fs: 'FS',
@@ -65,53 +84,33 @@ export const LEGACY_FIELD_SIZE_MIGRATION: Record<string, Partial<{
 };
 
 export const DEFAULT_FRAME_COMPOSITION: FrameComposition = {
-  guide: 'rule-of-thirds',
-  placement: 'middle-right',
+  guide: 'grid-3x3',
+  placement: DEFAULT_GRID_PLACEMENT,
   headroom: 'normal',
   showOverlay: true,
 };
 
-export const PLACEMENT_POSITIONS: Record<Placement, { x: number; y: number }> = {
-  'top-left': { x: 16.67, y: 16.67 },
-  'top-center': { x: 50, y: 16.67 },
-  'top-right': { x: 83.33, y: 16.67 },
-  'middle-left': { x: 16.67, y: 50 },
-  center: { x: 50, y: 50 },
-  'middle-right': { x: 83.33, y: 50 },
-  'bottom-left': { x: 16.67, y: 83.33 },
-  'bottom-center': { x: 50, y: 83.33 },
-  'bottom-right': { x: 83.33, y: 83.33 },
-};
-
 export const FRAME_GUIDE_LABELS: Record<string, string> = {
   none: 'None',
-  'rule-of-thirds': 'Rule of Thirds',
-  'golden-ratio': 'Golden Ratio',
+  'grid-3x3': '3x3 Positions',
   center: 'Center',
   'fill-frame': 'Fill Frame',
 };
 
-export const PLACEMENT_LABELS: Record<Placement, string> = {
-  'top-left': 'Top Left',
-  'top-center': 'Top Center',
-  'top-right': 'Top Right',
-  'middle-left': 'Left Third',
-  center: 'Center',
-  'middle-right': 'Right Third',
-  'bottom-left': 'Bottom Left',
-  'bottom-center': 'Bottom Center',
-  'bottom-right': 'Bottom Right',
-};
+/** Migrate persisted rule-of-thirds / golden-ratio guides to grid-3x3. */
+export function normalizeCompositionGuide(guide: string | undefined): FrameComposition['guide'] {
+  if (guide === 'rule-of-thirds' || guide === 'golden-ratio' || guide === 'grid-3x3') {
+    return 'grid-3x3';
+  }
+  if (guide === 'none' || guide === 'center' || guide === 'fill-frame') {
+    return guide;
+  }
+  return 'none';
+}
 
 export const HEADROOM_FIELD_SIZES = new Set<FieldSize>([
   'ecu', 'cu', 'mcu', 'close-shot', 'ms', 'bcu', 'ch', 'cowboy',
 ]);
-
-export const PLACEMENTS: Placement[] = [
-  'top-left', 'top-center', 'top-right',
-  'middle-left', 'center', 'middle-right',
-  'bottom-left', 'bottom-center', 'bottom-right',
-];
 
 export const REFERENCE_ROLES = [
   'Subject', 'Backdrop', 'Motion', 'Depth', 'Canny', 'None',

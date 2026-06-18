@@ -19,12 +19,10 @@ export type CameraMovement =
 
 export type DepthOfField = 'shallow' | 'medium' | 'deep';
 
-export type CompositionGuide = 'none' | 'rule-of-thirds' | 'golden-ratio' | 'center' | 'fill-frame';
+export type CompositionGuide = 'none' | 'grid-3x3' | 'center' | 'fill-frame';
 
-export type Placement =
-  | 'top-left' | 'top-center' | 'top-right'
-  | 'middle-left' | 'center' | 'middle-right'
-  | 'bottom-left' | 'bottom-center' | 'bottom-right';
+/** 4×4 line intersections, edge/center mids, or 3×3 cell centers — see placement-grid.ts */
+export type Placement = string;
 
 export type Headroom = 'tight' | 'normal' | 'generous';
 
@@ -90,6 +88,10 @@ export interface Shot {
   references: (string | null)[];
   referenceRoles: ReferenceRole[];
   frameComposition: FrameComposition;
+  /** AI-generated quick preview still for this shot */
+  previewFrameUrl?: string | null;
+  /** Fingerprint of camera/aspect when previewFrameUrl was generated */
+  previewFrameFingerprint?: string | null;
 }
 
 export interface StudioProject {
@@ -104,13 +106,32 @@ export interface StudioProject {
   prompt?: string;
 }
 
-export interface ProviderConfig {
-  apiKey: string;
-  connected: boolean;
-  lastTested?: number;
+export type Modality = 'llm' | 'image' | 'video' | 'tts';
+
+export type ProviderStatus = 'not_configured' | 'configured' | 'verified' | 'failed';
+
+export interface ProviderModel {
+  id: string;
+  name: string;
+  modalities: Modality[];
+  purposes?: string[];
 }
 
-export interface CustomProvider {
+export interface ProviderDiscovery {
+  lastTested?: number;
+  lastTestOk?: boolean;
+  lastTestMessage?: string;
+  models?: ProviderModel[];
+  modalities?: Modality[];
+  purposes?: string[];
+}
+
+export interface ProviderConfig extends ProviderDiscovery {
+  apiKey: string;
+  connected: boolean;
+}
+
+export interface CustomProvider extends ProviderDiscovery {
   id: string;
   name: string;
   desc: string;
@@ -123,6 +144,8 @@ export interface AIState {
   configured: Record<string, ProviderConfig>;
   customProviders: CustomProvider[];
   defaultProvider: string;
+  /** Video model id for the current default provider */
+  defaultModelId?: string;
 }
 
 export interface BuiltInProvider {
@@ -131,6 +154,8 @@ export interface BuiltInProvider {
   desc: string;
   icon: string;
   hint: string;
+  purposes: string[];
+  modalities: Modality[];
 }
 
 export interface ScenePreviewPayload {
@@ -144,3 +169,5 @@ export interface ScenePreviewPayload {
 export type ToastType = 'success' | 'error';
 
 export type PreviewMode = 'vector' | '3d';
+
+export type PreviewSubMode = 'framing' | 'model';
