@@ -8,21 +8,30 @@ const STORAGE_KEY = 'vgen_ai_settings';
 export const DEFAULT_AI_STATE: AIState = {
   configured: {},
   customProviders: [],
-  defaultProvider: 'replicate',
+  defaultVideoProvider: 'replicate',
+  defaultImageProvider: 'xai',
 };
+
+function migrateAIState(data: Partial<AIState> & { defaultProvider?: string; defaultModelId?: string }): AIState {
+  const legacyProvider = data.defaultProvider;
+  const legacyModelId = data.defaultModelId;
+
+  return {
+    configured: data.configured || {},
+    customProviders: data.customProviders || [],
+    defaultVideoProvider: data.defaultVideoProvider ?? legacyProvider ?? 'replicate',
+    defaultVideoModelId: data.defaultVideoModelId ?? legacyModelId,
+    defaultImageProvider: data.defaultImageProvider ?? legacyProvider ?? 'xai',
+    defaultImageModelId: data.defaultImageModelId,
+  };
+}
 
 export function loadAIState(): AIState {
   if (typeof window === 'undefined') return { ...DEFAULT_AI_STATE };
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
-      const data = JSON.parse(saved) as Partial<AIState>;
-      return {
-        configured: data.configured || {},
-        customProviders: data.customProviders || [],
-        defaultProvider: data.defaultProvider || 'replicate',
-        defaultModelId: data.defaultModelId,
-      };
+      return migrateAIState(JSON.parse(saved) as Partial<AIState> & { defaultProvider?: string; defaultModelId?: string });
     }
   } catch {
     // ignore
@@ -39,11 +48,28 @@ export function saveAIState(state: AIState): void {
   }
 }
 
-export function getCurrentProviderName(ai: AIState): string {
-  const prov = BUILT_IN_PROVIDERS.find((p) => p.id === ai.defaultProvider);
+export function isCustomProvider(providerId: string, ai: AIState): boolean {
+  return ai.customProviders.some((p) => p.id === providerId);
+}
+
+export function getProviderName(providerId: string, ai: AIState): string {
+  const prov = BUILT_IN_PROVIDERS.find((p) => p.id === providerId);
   if (prov) return prov.name;
-  const custom = ai.customProviders.find((p) => p.id === ai.defaultProvider);
-  return custom ? custom.name : 'xAI';
+  const custom = ai.customProviders.find((p) => p.id === providerId);
+  return custom?.name ?? providerId;
+}
+
+export function getVideoProviderName(ai: AIState): string {
+  return getProviderName(ai.defaultVideoProvider, ai);
+}
+
+export function getImageProviderName(ai: AIState): string {
+  return getProviderName(ai.defaultImageProvider, ai);
+}
+
+/** @deprecated Use getVideoProviderName */
+export function getCurrentProviderName(ai: AIState): string {
+  return getVideoProviderName(ai);
 }
 
 export function isProviderConnected(

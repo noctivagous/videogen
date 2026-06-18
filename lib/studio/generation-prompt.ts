@@ -3,7 +3,7 @@ import {
   CAMERA_COVERAGE_LABELS,
   HEADROOM_FIELD_SIZES,
   normalizeReferenceRole,
-  PLACEMENT_POSITIONS,
+  placementFramingPrompt,
 } from '@/lib/constants/camera';
 import { formatLensForPrompt } from '@/lib/constants/lens';
 import {
@@ -15,84 +15,16 @@ import type {
   FrameComposition,
   LightingSettings,
   MotionSettings,
-  Placement,
   ReferenceRole,
   Shot,
 } from '@/lib/types/studio';
 import { getShotFrameComposition } from '@/lib/studio/composition';
-
-const FIELD_SIZE_PROMPTS: Record<string, string> = {
-  ecu: 'extreme close-up',
-  cu: 'close-up',
-  mcu: 'medium close-up',
-  'close-shot': 'close shot',
-  ms: 'medium shot',
-  fs: 'full shot',
-  ls: 'long shot',
-  els: 'extreme long shot',
-  vls: 'very long shot',
-  ws: 'wide shot',
-  mws: 'medium wide shot',
-  bcu: 'big close-up',
-  xls: 'extreme long shot',
-  cowboy: 'cowboy shot',
-  ch: 'choker shot',
-  gv: 'general view',
-};
-
-const SUBJECT_COUNT_PROMPTS: Record<string, string> = {
-  '1s': 'single subject',
-  '2s': 'two-shot',
-  '3s': 'three-shot',
-  group: 'group shot',
-  crowd: 'crowd shot',
-};
-
-const MOVEMENT_PROMPTS: Record<string, string> = {
-  static: 'locked-off static camera',
-  'pan-left': 'slow pan left',
-  'pan-right': 'slow pan right',
-  'tilt-up': 'tilt up',
-  'tilt-down': 'tilt down',
-  'dolly-in': 'dolly in',
-  'dolly-out': 'dolly out',
-  'truck-left': 'truck left',
-  'truck-right': 'truck right',
-  orbit: 'orbiting camera move',
-  handheld: 'handheld camera',
-  drone: 'aerial drone move',
-};
-
-function horizontalThird(x: number): 'left third' | 'center' | 'right third' {
-  if (x < 33) return 'left third';
-  if (x > 66) return 'right third';
-  return 'center';
-}
-
-function verticalThird(y: number): 'upper' | 'middle' | 'lower' {
-  if (y < 33) return 'upper';
-  if (y > 66) return 'lower';
-  return 'middle';
-}
-
-/** Natural framing language for video models — no internal grid UI jargon. */
-export function placementFramingPrompt(placement: Placement): string {
-  const pos = PLACEMENT_POSITIONS[placement];
-  if (!pos) return 'balanced subject placement';
-
-  const h = horizontalThird(pos.x);
-  const v = verticalThird(pos.y);
-
-  if (placement.startsWith('cell-')) {
-    if (h === 'center' && v === 'middle') return 'subject centered in frame';
-    return `subject centered in the ${v} ${h} of the frame`;
-  }
-
-  if (h === 'center' && v === 'middle') return 'subject centered in frame';
-  if (h === 'center') return `subject on the ${v} center line`;
-  if (v === 'middle') return `subject on the ${h}`;
-  return `subject on the ${v} ${h}, rule of thirds composition`;
-}
+import {
+  FIELD_SIZE_PROMPTS,
+  MOVEMENT_PROMPTS,
+  SUBJECT_COUNT_PROMPTS,
+} from '@/lib/studio/generation-prompt-constants';
+import { sanitizeSceneTextForGeneration } from '@/lib/studio/prompt-sanitize';
 
 export function getGenerationFramePrompt(
   fieldSize: string,
@@ -103,11 +35,12 @@ export function getGenerationFramePrompt(
   const parts: string[] = [];
 
   if (frame.guide === 'grid-3x3') {
+    parts.push('rule of thirds composition');
     parts.push(placementFramingPrompt(frame.placement));
   } else if (frame.guide === 'center') {
-    parts.push('symmetrical centered composition');
+    parts.push('symmetrical centered composition with subject in the exact center of the frame');
   } else if (frame.guide === 'fill-frame') {
-    parts.push('subject fills the frame');
+    parts.push('subject fills the frame edge to edge');
   }
 
   if (HEADROOM_FIELD_SIZES.has(fieldSize as never) && frame.headroom !== 'normal') {
@@ -227,16 +160,24 @@ export function buildGenerationPrompt(input: {
   lighting: LightingSettings;
   motion: MotionSettings;
   shot: Shot | undefined;
+  refs?: { role: ReferenceRole; url: string }[];
 }): string {
-  const { sceneSetup, shotActivity, camera, lighting, motion, shot } = input;
+  const { sceneSetup, shotActivity, camera, lighting, motion, shot, refs = [] } = input;
   const frame = getShotFrameComposition(shot);
 
-  const sceneParts = [sceneSetup.trim(), shotActivity.trim()].filter(Boolean);
+  const sanitized = sanitizeSceneTextForGeneration(sceneSetup, shotActivity, {
+    refs,
+    camera,
+    lighting,
+    frame,
+  });
+  const sceneParts = [sanitized.sceneSetup, sanitized.shotActivity].filter(Boolean);
+  const sceneBlock = sceneParts.join('. ');
   const cameraLine = getGenerationCameraPrompt(camera, frame);
   const lightingLine = buildLightingPrompt(lighting);
   const motionLine = buildMotionPrompt(motion);
 
-  return [sceneParts.join(' '), cameraLine, lightingLine, motionLine]
+  return [sceneBlock, cameraLine, lightingLine, motionLine]
     .filter(Boolean)
     .join('. ')
     .replace(/\.\s*\./g, '.')

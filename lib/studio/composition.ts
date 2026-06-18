@@ -9,7 +9,7 @@ import {
   PLACEMENT_POSITIONS,
   normalizeCompositionGuide,
   normalizePlacement,
-  placementPrompt,
+  placementFramingPrompt,
 } from '@/lib/constants/camera';
 import type {
   CameraSettings,
@@ -142,18 +142,15 @@ export function getFullCameraPrompt(camera: CameraSettings, frame: FrameComposit
 function getFrameCompositionPrompt(fieldSize: string, frame: FrameComposition): string {
   if (frame.guide === 'none') return '';
 
-  const guidePrompts: Record<string, string> = {
-    'grid-3x3': '3x3 grid composition',
-    center: 'symmetrical centered composition',
-    'fill-frame': 'subject fills the frame',
-  };
-
   const parts: string[] = [];
-  const guidePart = guidePrompts[frame.guide];
-  if (guidePart) parts.push(guidePart);
 
-  if (frame.guide !== 'fill-frame' && frame.guide !== 'center') {
-    parts.push(placementPrompt(frame.placement));
+  if (frame.guide === 'grid-3x3') {
+    parts.push('rule of thirds composition');
+    parts.push(placementFramingPrompt(frame.placement));
+  } else if (frame.guide === 'center') {
+    parts.push('symmetrical centered composition with subject in the exact center of the frame');
+  } else if (frame.guide === 'fill-frame') {
+    parts.push('subject fills the frame edge to edge');
   }
 
   if (HEADROOM_FIELD_SIZES.has(fieldSize as never) && frame.headroom !== 'normal') {

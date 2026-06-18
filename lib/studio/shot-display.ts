@@ -7,10 +7,13 @@ import {
 } from '@/lib/constants/camera';
 import { LENS_PRESETS } from '@/lib/constants/lens';
 import { getPreviewImageUrl, getSubjectReference } from '@/lib/constants/stock-demo';
+import { getActiveGeneratedVideo } from '@/lib/studio/shot-videos';
 import type { CameraSettings, Shot } from '@/lib/types/studio';
 
 export function getShotThumbnailUrl(shot: Shot | undefined): string | null {
   if (!shot) return null;
+  const activePoster = getActiveGeneratedVideo(shot)?.posterUrl;
+  if (activePoster) return activePoster;
   if (shot.thumbnail) return shot.thumbnail;
   const subject = getSubjectReference(shot);
   if (subject) return subject;

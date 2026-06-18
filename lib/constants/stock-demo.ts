@@ -15,14 +15,13 @@ export const STOCK_ASSETS = {
   studioBackdrop: '/stock/studio-backdrop.jpg',
 } as const;
 
-/** MS demo prompt from prompts.json sample shot-types-ms. */
+/**
+ * Demo scene content only — identity, studio, framing, and lighting come from
+ * reference images and camera / lighting / composition panels.
+ */
 export const STOCK_MS_PROMPT =
-  'Use the exact same matte gray male mannequin identity from the reference. ' +
-  'Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, ' +
-  'captions, labels, watermarks, logos, signage, UI overlays. ' +
-  'Smooth sculpted gray dress shirt, belt at waist — hard-surface gray sculpt. ' +
-  'Neutral gray studio environment. Medium shot waist up ONLY: bottom edge cuts exactly at belt line — ' +
-  'NO trousers visible below belt, NO thighs. Frame ends at waist.';
+  'Matte gray male mannequin in a smooth sculpted gray dress shirt with belt at the waist. ' +
+  'Hard-surface gray sculpt.';
 
 /** Map field sizes to cinematography preview chip files when available. */
 const FIELD_SIZE_PREVIEW: Partial<Record<FieldSize, string>> = {

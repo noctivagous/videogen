@@ -223,19 +223,23 @@ export function resolveImageModelSelectionForProvider(
 }
 
 export function getEffectiveModelId(ai: AIState): string | undefined {
-  const isCustom = ai.customProviders.some((p) => p.id === ai.defaultProvider);
+  const isCustom = ai.customProviders.some((p) => p.id === ai.defaultVideoProvider);
   return resolveModelSelectionForProvider(
-    ai.defaultProvider,
+    ai.defaultVideoProvider,
     isCustom,
     ai,
-    ai.defaultModelId,
+    ai.defaultVideoModelId,
   );
 }
 
 export function getEffectivePreviewModelId(ai: AIState): string | undefined {
-  const isCustom = ai.customProviders.some((p) => p.id === ai.defaultProvider);
-  // Preview uses verified image models only — not the selected video model.
-  return resolveImageModelSelectionForProvider(ai.defaultProvider, isCustom, ai);
+  const isCustom = ai.customProviders.some((p) => p.id === ai.defaultImageProvider);
+  return resolveImageModelSelectionForProvider(
+    ai.defaultImageProvider,
+    isCustom,
+    ai,
+    ai.defaultImageModelId,
+  );
 }
 
 export function getModelLabel(modelId: string | undefined, models: ProviderModel[]): string | null {
@@ -246,17 +250,49 @@ export function getModelLabel(modelId: string | undefined, models: ProviderModel
   return shortId ?? modelId;
 }
 
-export function getSelectedModelDisplay(ai: AIState): { providerName: string; modelLabel: string | null } {
-  const isCustom = ai.customProviders.some((p) => p.id === ai.defaultProvider);
-  const builtIn = getBuiltInProvider(ai.defaultProvider);
-  const custom = isCustom ? ai.customProviders.find((p) => p.id === ai.defaultProvider) : null;
-  const providerName = custom?.name ?? builtIn?.name ?? ai.defaultProvider;
-  const models = getAvailableVideoModels(ai.defaultProvider, isCustom, ai);
-  const modelId = getEffectiveModelId(ai);
+export interface ProviderModelDisplay {
+  providerName: string;
+  modelLabel: string | null;
+}
+
+function getProviderModelDisplay(
+  providerId: string,
+  ai: AIState,
+  models: ProviderModel[],
+  modelId: string | undefined,
+): ProviderModelDisplay {
+  const isCustom = ai.customProviders.some((p) => p.id === providerId);
+  const builtIn = getBuiltInProvider(providerId);
+  const custom = isCustom ? ai.customProviders.find((p) => p.id === providerId) : null;
   return {
-    providerName,
+    providerName: custom?.name ?? builtIn?.name ?? providerId,
     modelLabel: getModelLabel(modelId, models),
   };
+}
+
+export function getSelectedVideoModelDisplay(ai: AIState): ProviderModelDisplay {
+  const isCustom = ai.customProviders.some((p) => p.id === ai.defaultVideoProvider);
+  return getProviderModelDisplay(
+    ai.defaultVideoProvider,
+    ai,
+    getAvailableVideoModels(ai.defaultVideoProvider, isCustom, ai),
+    getEffectiveModelId(ai),
+  );
+}
+
+export function getSelectedImageModelDisplay(ai: AIState): ProviderModelDisplay {
+  const isCustom = ai.customProviders.some((p) => p.id === ai.defaultImageProvider);
+  return getProviderModelDisplay(
+    ai.defaultImageProvider,
+    ai,
+    getAvailableImageModels(ai.defaultImageProvider, isCustom, ai),
+    getEffectivePreviewModelId(ai),
+  );
+}
+
+/** @deprecated Use getSelectedVideoModelDisplay */
+export function getSelectedModelDisplay(ai: AIState): ProviderModelDisplay {
+  return getSelectedVideoModelDisplay(ai);
 }
 
 /** @deprecated Use getEffectiveModelId */

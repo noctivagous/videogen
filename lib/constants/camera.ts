@@ -23,6 +23,7 @@ export {
   PLACEMENT_SPECS,
   normalizePlacement,
   placementPrompt,
+  placementFramingPrompt,
   getPlacementSpec,
 } from '@/lib/constants/placement-grid';
 export type { PlacementKind, PlacementSpec } from '@/lib/constants/placement-grid';
@@ -113,12 +114,12 @@ export const HEADROOM_FIELD_SIZES = new Set<FieldSize>([
 ]);
 
 export const REFERENCE_ROLES = [
-  'Subject', 'Backdrop', 'Motion', 'Depth', 'Canny', 'None',
+  'Subject', 'Backdrop', 'Style', 'Depth', 'Canny', 'None',
 ] as const;
 
-/** Maps legacy persisted roles to current labels (Style → Backdrop). */
+/** Maps legacy persisted roles to current labels. */
 export function normalizeReferenceRole(role: string): (typeof REFERENCE_ROLES)[number] {
-  if (role === 'Style') return 'Backdrop';
+  if (role === 'Motion') return 'Style';
   if ((REFERENCE_ROLES as readonly string[]).includes(role)) {
     return role as (typeof REFERENCE_ROLES)[number];
   }

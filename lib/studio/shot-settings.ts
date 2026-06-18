@@ -7,6 +7,7 @@ import {
 } from '@/lib/constants/camera';
 import { normalizeLensCamera } from '@/lib/constants/lens';
 import { STOCK_CAMERA, STOCK_LIGHTING, STOCK_MOTION, STOCK_PROMPT, STOCK_REFERENCE_ROLES } from '@/lib/constants/stock-project';
+import { migrateShotGeneratedVideos } from '@/lib/studio/shot-videos';
 import type {
   CameraSettings,
   FrameComposition,
@@ -58,7 +59,9 @@ export function patchCurrentShot(
   return shots.map((sh) => (sh.id === shotId ? { ...sh, ...patch } : sh));
 }
 
-export function cloneInheritedShotSettings(source: Shot): Omit<Shot, 'id' | 'name' | 'active' | 'thumbnail' | 'videoUrl'> {
+export function cloneInheritedShotSettings(
+  source: Shot,
+): Omit<Shot, 'id' | 'name' | 'active' | 'thumbnail' | 'videoUrl' | 'generatedVideos' | 'activeVideoIndex'> {
   return {
     duration: source.duration,
     camera: normalizeLensCamera(migrateCamera({ ...source.camera })),
@@ -89,12 +92,14 @@ export function migrateShot(
     coverage: shot.camera?.coverage ?? shot.coverage ?? defaults.camera.coverage,
   };
 
+  const generated = migrateShotGeneratedVideos(shot);
+
   return {
     id: shot.id,
     name: shot.name,
     duration: shot.duration ?? 5,
     thumbnail: shot.thumbnail ?? null,
-    videoUrl: shot.videoUrl ?? null,
+    ...generated,
     active: shot.active ?? false,
     camera: normalizeLensCamera(migrateCamera(legacyCamera)),
     lighting: { ...defaults.lighting, ...shot.lighting },

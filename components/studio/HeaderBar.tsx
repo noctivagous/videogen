@@ -3,10 +3,65 @@
 import { useRef, useState } from 'react';
 import { RESOLUTION_PRESETS } from '@/lib/constants/resolutions';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
-import { getProviderStatus, getSelectedModelDisplay } from '@/lib/studio/provider-modalities';
-import { isProviderConnected } from '@/lib/storage/ai-settings';
+import {
+  getProviderStatus,
+  getSelectedImageModelDisplay,
+  getSelectedVideoModelDisplay,
+} from '@/lib/studio/provider-modalities';
+import { isCustomProvider, isProviderConnected } from '@/lib/storage/ai-settings';
 import type { AspectRatio } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
+
+function ProviderBadge({
+  kind,
+  providerName,
+  modelLabel,
+  connected,
+  status,
+  sectionId,
+}: {
+  kind: 'Video' | 'Image';
+  providerName: string;
+  modelLabel: string | null;
+  connected: boolean;
+  status: ReturnType<typeof getProviderStatus>;
+  sectionId: string;
+}) {
+  const openSettings = useStudioStore((s) => s.openSettings);
+
+  return (
+    <button
+      type="button"
+      onClick={openSettings}
+      className="flex items-center gap-2 px-3 py-1.5 bg-surface-800 hover:bg-surface-700 border border-surface-600 rounded-lg cursor-pointer transition-all text-xs max-w-[200px] lg:max-w-[220px]"
+      title={`${kind} provider & model — click to manage`}
+      id={sectionId}
+      data-ui-section={sectionId}
+      data-ui-section-name={`${kind} Provider Badge`}
+    >
+      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+        status === 'verified'
+          ? 'bg-emerald-400'
+          : status === 'configured' || status === 'failed'
+            ? 'bg-amber-500'
+            : 'bg-gray-500'
+      }`} />
+      <div className="min-w-0 text-left leading-tight">
+        <div className="text-[9px] uppercase tracking-wider text-gray-500 font-semibold">{kind}</div>
+        <div className="font-medium text-gray-300 truncate">{providerName}</div>
+        <div className="text-[10px] text-gray-500 truncate">
+          {!connected
+            ? 'Setup required'
+            : modelLabel
+              ? `${modelLabel}${status === 'configured' ? ' · unverified' : ''}`
+              : status === 'configured'
+                ? 'Unverified'
+                : 'No model selected'}
+        </div>
+      </div>
+    </button>
+  );
+}
 
 export function HeaderBar() {
   const project = useStudioStore((s) => s.project);
@@ -23,18 +78,22 @@ export function HeaderBar() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   const presets = RESOLUTION_PRESETS[project.aspectRatio as AspectRatio] || RESOLUTION_PRESETS['16:9'];
-  const { providerName, modelLabel } = getSelectedModelDisplay(ai);
-  const isCustom = ai.customProviders.some((p) => p.id === ai.defaultProvider);
-  const connected = isProviderConnected(ai.defaultProvider, isCustom, ai);
-  const providerStatus = getProviderStatus(ai.defaultProvider, isCustom, ai);
+  const videoDisplay = getSelectedVideoModelDisplay(ai);
+  const imageDisplay = getSelectedImageModelDisplay(ai);
+  const isCustomVideo = isCustomProvider(ai.defaultVideoProvider, ai);
+  const isCustomImage = isCustomProvider(ai.defaultImageProvider, ai);
+  const videoConnected = isProviderConnected(ai.defaultVideoProvider, isCustomVideo, ai);
+  const imageConnected = isProviderConnected(ai.defaultImageProvider, isCustomImage, ai);
+  const videoStatus = getProviderStatus(ai.defaultVideoProvider, isCustomVideo, ai);
+  const imageStatus = getProviderStatus(ai.defaultImageProvider, isCustomImage, ai);
 
   return (
     <header
       className="glass border-b border-surface-700 h-16 flex items-center justify-between px-4 md:px-6 z-50"
       {...uiSectionProps(UI_SECTIONS.studioHeader)}
     >
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2" {...uiSectionProps(UI_SECTIONS.studioHeaderBrand)}>
+      <div className="flex items-center gap-4 min-w-0">
+        <div className="flex items-center gap-2 flex-shrink-0" {...uiSectionProps(UI_SECTIONS.studioHeaderBrand)}>
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -43,9 +102,9 @@ export function HeaderBar() {
           <span className="font-semibold text-lg hidden sm:block">VideoGen</span>
         </div>
 
-        <div className="h-8 w-px bg-surface-600 hidden md:block" />
+        <div className="h-8 w-px bg-surface-600 hidden md:block flex-shrink-0" />
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <label className="text-[10px] uppercase tracking-wider text-gray-500 hidden sm:block">Project</label>
           <input
             type="text"
@@ -78,33 +137,24 @@ export function HeaderBar() {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={openSettings}
-          className="flex items-center gap-2 ml-1 px-3 py-1.5 bg-surface-800 hover:bg-surface-700 border border-surface-600 rounded-lg cursor-pointer transition-all text-xs max-w-[220px] lg:max-w-none"
-          title="Click to manage AI providers & models"
-          {...uiSectionProps(UI_SECTIONS.studioHeaderProviderBadge)}
-        >
-          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-            providerStatus === 'verified'
-              ? 'bg-emerald-400'
-              : providerStatus === 'configured' || providerStatus === 'failed'
-                ? 'bg-amber-500'
-                : 'bg-gray-500'
-          }`} />
-          <div className="min-w-0 text-left leading-tight">
-            <div className="font-medium text-gray-300 truncate">{providerName}</div>
-            <div className="text-[10px] text-gray-500 truncate">
-              {!connected
-                ? 'Setup required'
-                : modelLabel
-                  ? `${modelLabel}${providerStatus === 'configured' ? ' · unverified' : ''}`
-                  : providerStatus === 'configured'
-                    ? 'Unverified'
-                    : 'No model selected'}
-            </div>
-          </div>
-        </button>
+        <div className="hidden sm:flex items-center gap-2 min-w-0" {...uiSectionProps(UI_SECTIONS.studioHeaderProviderBadge)}>
+          <ProviderBadge
+            kind="Video"
+            providerName={videoDisplay.providerName}
+            modelLabel={videoDisplay.modelLabel}
+            connected={videoConnected}
+            status={videoStatus}
+            sectionId={UI_SECTIONS.studioHeaderVideoProviderBadge.id}
+          />
+          <ProviderBadge
+            kind="Image"
+            providerName={imageDisplay.providerName}
+            modelLabel={imageDisplay.modelLabel}
+            connected={imageConnected}
+            status={imageStatus}
+            sectionId={UI_SECTIONS.studioHeaderImageProviderBadge.id}
+          />
+        </div>
       </div>
 
       <div className="hidden lg:flex items-center gap-2" {...uiSectionProps(UI_SECTIONS.studioHeaderProjectSettings)}>
@@ -163,7 +213,7 @@ export function HeaderBar() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2" {...uiSectionProps(UI_SECTIONS.studioHeaderActions)}>
+      <div className="flex items-center gap-2 flex-shrink-0" {...uiSectionProps(UI_SECTIONS.studioHeaderActions)}>
         <button type="button" onClick={saveProject} title="Save project as JSON" className="p-2 hover:bg-surface-700 rounded-lg transition-all group">
           <svg className="w-5 h-5 text-gray-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />

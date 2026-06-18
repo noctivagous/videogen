@@ -26,7 +26,7 @@ export type Placement = string;
 
 export type Headroom = 'tight' | 'normal' | 'generous';
 
-export type ReferenceRole = 'Subject' | 'Backdrop' | 'Motion' | 'Depth' | 'Canny' | 'None';
+export type ReferenceRole = 'Subject' | 'Backdrop' | 'Style' | 'Depth' | 'Canny' | 'None';
 
 export interface FrameComposition {
   guide: CompositionGuide;
@@ -71,12 +71,23 @@ export interface MotionSettings {
   motionBlur: string;
 }
 
+export interface GeneratedVideo {
+  id: string;
+  url: string;
+  posterUrl?: string | null;
+  createdAt: number;
+  providerJobId?: string;
+}
+
 export interface Shot {
   id: number;
   name: string;
   duration: number;
   thumbnail: string | null;
+  /** Active generated video URL — kept in sync with generatedVideos[activeVideoIndex] */
   videoUrl: string | null;
+  generatedVideos?: GeneratedVideo[];
+  activeVideoIndex?: number;
   active: boolean;
   camera: CameraSettings;
   lighting: LightingSettings;
@@ -143,9 +154,12 @@ export interface CustomProvider extends ProviderDiscovery {
 export interface AIState {
   configured: Record<string, ProviderConfig>;
   customProviders: CustomProvider[];
-  defaultProvider: string;
-  /** Video model id for the current default provider */
-  defaultModelId?: string;
+  defaultVideoProvider: string;
+  /** Video model id for the selected video provider */
+  defaultVideoModelId?: string;
+  defaultImageProvider: string;
+  /** Image model id for quick preview / image generation */
+  defaultImageModelId?: string;
 }
 
 export interface BuiltInProvider {

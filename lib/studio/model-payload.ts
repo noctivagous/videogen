@@ -1,4 +1,4 @@
-import { getCurrentProviderName } from '@/lib/storage/ai-settings';
+import { getVideoProviderName, isCustomProvider } from '@/lib/storage/ai-settings';
 import { getShotFrameComposition } from '@/lib/studio/composition';
 import {
   augmentPromptForXAI,
@@ -52,9 +52,10 @@ export function buildModelPayloadStack(input: {
 }): ModelPayloadStack {
   const { project, camera, lighting, motion, sceneSetup, shotActivity, shot, ai } = input;
   getShotFrameComposition(shot);
-  const provider = getCurrentProviderName(ai);
-  const isCustom = ai.customProviders.some((p) => p.id === ai.defaultProvider);
-  const capabilities = getProviderCapabilities(ai.defaultProvider, isCustom);
+  const videoProviderId = ai.defaultVideoProvider;
+  const provider = getVideoProviderName(ai);
+  const isCustom = isCustomProvider(videoProviderId, ai);
+  const capabilities = getProviderCapabilities(videoProviderId, isCustom);
 
   const refs = buildGenerationRefs(shot);
 
@@ -65,9 +66,10 @@ export function buildModelPayloadStack(input: {
     lighting,
     motion,
     shot,
+    refs,
   });
 
-  if (ai.defaultProvider === 'xai' && refs.length > 0) {
+  if (videoProviderId === 'xai' && refs.length > 0) {
     combinedPrompt = augmentPromptForXAI(combinedPrompt, refs);
   }
 

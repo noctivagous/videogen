@@ -25,6 +25,7 @@ import {
   getEffectivePreviewModelId,
   hasVerifiedImageModels,
   hasVerifiedVideoModels,
+  resolveImageModelSelectionForProvider,
   resolveModelSelectionForProvider,
 } from '@/lib/studio/provider-modalities';
 import { buildModelPayloadStack, buildShotPrompt } from '@/lib/studio/model-payload';
@@ -39,10 +40,17 @@ import {
   type ShotProjectDefaults,
 } from '@/lib/studio/shot-settings';
 import {
+  appendGeneratedVideo,
+  deleteGeneratedVideoById,
+  selectGeneratedVideoIndex,
+} from '@/lib/studio/shot-videos';
+import {
   createCustomProvider,
   DEFAULT_AI_STATE,
-  getCurrentProviderName,
+  getImageProviderName,
   getProviderApiKey,
+  getVideoProviderName,
+  isCustomProvider,
   isProviderConnected,
   loadAIState,
   saveAIState,
@@ -191,6 +199,8 @@ interface StudioStore {
   selectShot: (id: number) => void;
   deleteShot: (id: number) => void;
   addShot: () => void;
+  selectGeneratedVideo: (index: number) => void;
+  deleteGeneratedVideo: (id: string) => void;
   setReference: (index: number, dataUrl: string | null) => void;
   cycleReferenceRole: (index: number) => void;
 
@@ -203,8 +213,10 @@ interface StudioStore {
 
   openSettings: () => void;
   closeSettings: () => void;
-  setDefaultProvider: (id: string) => void;
-  setDefaultModel: (modelId: string) => void;
+  setDefaultVideoProvider: (id: string) => void;
+  setDefaultVideoModel: (modelId: string) => void;
+  setDefaultImageProvider: (id: string) => void;
+  setDefaultImageModel: (modelId: string) => void;
   openProviderEdit: (id: string, isCustom: boolean) => void;
   closeProviderEdit: () => void;
   saveProviderEdit: (apiKey: string, customFields?: { name: string; desc: string; baseUrl: string }) => void;
@@ -474,11 +486,34 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       active: false,
       thumbnail: null,
       videoUrl: null,
+      generatedVideos: [],
+      activeVideoIndex: 0,
       ...inherited,
     };
 
     set({ shots: [...shots, newShot] });
     get().showToast('New shot added — inherited settings from current shot');
+  },
+
+  selectGeneratedVideo(index) {
+    const shot = get().getCurrentShot();
+    if (!shot) return;
+    const patch = selectGeneratedVideoIndex(shot, index);
+    if (!Object.keys(patch).length) return;
+    set((s) => ({
+      shots: patchCurrentShot(s.shots, s.currentShot, patch),
+    }));
+  },
+
+  deleteGeneratedVideo(id) {
+    const shot = get().getCurrentShot();
+    if (!shot) return;
+    const patch = deleteGeneratedVideoById(shot, id);
+    if (!Object.keys(patch).length) return;
+    set((s) => ({
+      shots: patchCurrentShot(s.shots, s.currentShot, patch),
+    }));
+    get().showToast(patch.videoUrl ? 'Video removed' : 'All generated videos removed');
   },
 
   setReference(index, dataUrl) {
@@ -495,7 +530,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   cycleReferenceRole(index) {
     const shot = get().getCurrentShot();
     if (!shot) return;
-    const roles = ['Subject', 'Backdrop', 'Motion', 'Depth', 'Canny', 'None'] as const;
+    const roles = ['Subject', 'Backdrop', 'Style', 'Depth', 'Canny', 'None'] as const;
     const current = normalizeReferenceRole(shot.referenceRoles[index] ?? 'None');
     const nextIdx = (roles.indexOf(current) + 1) % roles.length;
     const referenceRoles = [...shot.referenceRoles];
@@ -511,17 +546,18 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const shot = getCurrentShotFromList(shots, currentShot);
     if (!shot) return;
 
-    const isCustom = ai.customProviders.some((p) => p.id === ai.defaultProvider);
-    if (!isProviderConnected(ai.defaultProvider, isCustom, ai)) {
-      get().showToast('Configure your AI provider API key in Settings first', 'error');
+    const imageProviderId = ai.defaultImageProvider;
+    const isCustom = isCustomProvider(imageProviderId, ai);
+    if (!isProviderConnected(imageProviderId, isCustom, ai)) {
+      get().showToast('Configure your image provider API key in Settings first', 'error');
       return;
     }
-    if (!isPreviewFrameSupported(ai.defaultProvider, isCustom)) {
-      get().showToast('Quick preview requires xAI, OpenAI, or Replicate. Change your default provider in Settings.', 'error');
+    if (!isPreviewFrameSupported(imageProviderId, isCustom)) {
+      get().showToast('Quick preview requires xAI, OpenAI, or Replicate. Change your image provider in Settings.', 'error');
       return;
     }
-    if (!hasVerifiedImageModels(ai.defaultProvider, isCustom, ai)) {
-      get().showToast('Test your provider connection in Settings to load image models first', 'error');
+    if (!hasVerifiedImageModels(imageProviderId, isCustom, ai)) {
+      get().showToast('Test your image provider connection in Settings to load image models first', 'error');
       return;
     }
 
@@ -534,16 +570,16 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     };
     const prompt = buildPreviewFramePrompt(payload);
     const refs = buildPreviewFrameRefs(payload);
-    const apiKey = getProviderApiKey(ai.defaultProvider, isCustom, ai);
+    const apiKey = getProviderApiKey(imageProviderId, isCustom, ai);
     const customBaseUrl = isCustom
-      ? ai.customProviders.find((p) => p.id === ai.defaultProvider)?.baseUrl
+      ? ai.customProviders.find((p) => p.id === imageProviderId)?.baseUrl
       : undefined;
     const modelId = getEffectivePreviewModelId(ai);
     if (!modelId) {
-      get().showToast('No image model available — re-test your provider in Settings', 'error');
+      get().showToast('No image model available — re-test your image provider in Settings', 'error');
       return;
     }
-    const providerName = getCurrentProviderName(ai);
+    const providerName = getImageProviderName(ai);
     const fingerprint = previewFramingFingerprint(shot.camera, project.aspectRatio);
 
     set({ isPreviewFrameGenerating: true, previewFrameProgress: `Submitting to ${providerName}...` });
@@ -553,7 +589,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          providerId: ai.defaultProvider,
+          providerId: imageProviderId,
           isCustom,
           apiKey,
           customBaseUrl,
@@ -597,20 +633,21 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       return;
     }
 
-    const isCustom = ai.customProviders.some((p) => p.id === ai.defaultProvider);
-    if (!isProviderConnected(ai.defaultProvider, isCustom, ai)) {
-      get().showToast('Configure your AI provider API key in Settings first', 'error');
+    const videoProviderId = ai.defaultVideoProvider;
+    const isCustom = isCustomProvider(videoProviderId, ai);
+    if (!isProviderConnected(videoProviderId, isCustom, ai)) {
+      get().showToast('Configure your video provider API key in Settings first', 'error');
       return;
     }
-    if (!isGenerationSupported(ai.defaultProvider, isCustom)) {
+    if (!isGenerationSupported(videoProviderId, isCustom)) {
       const name = isCustom
-        ? ai.customProviders.find((p) => p.id === ai.defaultProvider)?.name ?? 'This provider'
-        : getBuiltInProvider(ai.defaultProvider)?.name ?? 'This provider';
-      get().showToast(`${name} does not support video generation yet. Pick another default provider in Settings.`, 'error');
+        ? ai.customProviders.find((p) => p.id === videoProviderId)?.name ?? 'This provider'
+        : getBuiltInProvider(videoProviderId)?.name ?? 'This provider';
+      get().showToast(`${name} does not support video generation yet. Pick another video provider in Settings.`, 'error');
       return;
     }
-    if (!isCustom && !hasVerifiedVideoModels(ai.defaultProvider, isCustom, ai)) {
-      get().showToast('Test your provider connection in Settings to load video models first', 'error');
+    if (!isCustom && !hasVerifiedVideoModels(videoProviderId, isCustom, ai)) {
+      get().showToast('Test your video provider connection in Settings to load video models first', 'error');
       return;
     }
 
@@ -624,16 +661,16 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       shot,
       ai,
     });
-    const apiKey = getProviderApiKey(ai.defaultProvider, isCustom, ai);
+    const apiKey = getProviderApiKey(videoProviderId, isCustom, ai);
     const customBaseUrl = isCustom
-      ? ai.customProviders.find((p) => p.id === ai.defaultProvider)?.baseUrl
+      ? ai.customProviders.find((p) => p.id === videoProviderId)?.baseUrl
       : undefined;
     const modelId = getEffectiveModelId(ai);
     if (!isCustom && !modelId) {
-      get().showToast('No video model available — re-test your provider in Settings', 'error');
+      get().showToast('No video model available — re-test your video provider in Settings', 'error');
       return;
     }
-    const providerName = getCurrentProviderName(ai);
+    const providerName = getVideoProviderName(ai);
 
     set({ isGenerating: true, showPreviewSuccess: false, progressText: `Submitting to ${providerName}...` });
 
@@ -642,7 +679,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          providerId: ai.defaultProvider,
+          providerId: videoProviderId,
           isCustom,
           apiKey,
           customBaseUrl,
@@ -661,14 +698,20 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         throw new Error(result.error || 'Generation failed');
       }
 
+      const videoUrl = result.videoUrl ?? null;
+      if (!videoUrl) {
+        throw new Error('Generation completed without a video URL');
+      }
+
       set((s) => ({
-        shots: patchCurrentShot(s.shots, s.currentShot, {
-          videoUrl: result.videoUrl ?? null,
-          thumbnail: result.posterUrl ?? shot.thumbnail,
-        }),
+        shots: patchCurrentShot(s.shots, s.currentShot, appendGeneratedVideo(shot, {
+          url: videoUrl,
+          posterUrl: result.posterUrl ?? shot.thumbnail,
+          providerJobId: result.providerJobId,
+        })),
         isGenerating: false,
         showPreviewSuccess: true,
-        previewSuccessProvider: `${getCurrentProviderName(ai)}${result.providerJobId ? ` · Job ${result.providerJobId}` : ''}`,
+        previewSuccessProvider: `${getVideoProviderName(ai)}${result.providerJobId ? ` · Job ${result.providerJobId}` : ''}`,
         previewSuccessPrompt: combinedPrompt,
         progressText: '',
       }));
@@ -724,18 +767,34 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     set({ settingsOpen: false });
   },
 
-  setDefaultProvider(id) {
+  setDefaultVideoProvider(id) {
     const current = get().ai;
-    const isCustom = current.customProviders.some((p) => p.id === id);
-    const defaultModelId = resolveModelSelectionForProvider(id, isCustom, current);
-    const ai = { ...current, defaultProvider: id, defaultModelId };
+    const isCustom = isCustomProvider(id, current);
+    const defaultVideoModelId = resolveModelSelectionForProvider(id, isCustom, current);
+    const ai = { ...current, defaultVideoProvider: id, defaultVideoModelId };
     saveAIState(ai);
     set({ ai });
-    get().showToast('Default provider updated');
+    get().showToast('Video provider updated');
   },
 
-  setDefaultModel(modelId) {
-    const ai = { ...get().ai, defaultModelId: modelId };
+  setDefaultVideoModel(modelId) {
+    const ai = { ...get().ai, defaultVideoModelId: modelId };
+    saveAIState(ai);
+    set({ ai });
+  },
+
+  setDefaultImageProvider(id) {
+    const current = get().ai;
+    const isCustom = isCustomProvider(id, current);
+    const defaultImageModelId = resolveImageModelSelectionForProvider(id, isCustom, current);
+    const ai = { ...current, defaultImageProvider: id, defaultImageModelId };
+    saveAIState(ai);
+    set({ ai });
+    get().showToast('Image provider updated');
+  },
+
+  setDefaultImageModel(modelId) {
+    const ai = { ...get().ai, defaultImageModelId: modelId };
     saveAIState(ai);
     set({ ai });
   },
@@ -816,8 +875,11 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       };
     }
 
-    if (ai.defaultProvider === id) {
-      ai.defaultModelId = resolveModelSelectionForProvider(id, isCustom, ai, ai.defaultModelId);
+    if (ai.defaultVideoProvider === id) {
+      ai.defaultVideoModelId = resolveModelSelectionForProvider(id, isCustom, ai, ai.defaultVideoModelId);
+    }
+    if (ai.defaultImageProvider === id) {
+      ai.defaultImageModelId = resolveImageModelSelectionForProvider(id, isCustom, ai, ai.defaultImageModelId);
     }
 
     saveAIState(ai);
@@ -827,9 +889,13 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   deleteCustomProvider(id) {
     const ai = { ...get().ai };
     ai.customProviders = ai.customProviders.filter((p) => p.id !== id);
-    if (ai.defaultProvider === id) {
-      ai.defaultProvider = 'replicate';
-      ai.defaultModelId = resolveModelSelectionForProvider('replicate', false, ai);
+    if (ai.defaultVideoProvider === id) {
+      ai.defaultVideoProvider = 'replicate';
+      ai.defaultVideoModelId = resolveModelSelectionForProvider('replicate', false, ai);
+    }
+    if (ai.defaultImageProvider === id) {
+      ai.defaultImageProvider = 'xai';
+      ai.defaultImageModelId = resolveImageModelSelectionForProvider('xai', false, ai);
     }
     saveAIState(ai);
     set({ ai, providerEdit: null });

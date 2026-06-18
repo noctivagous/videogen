@@ -2,6 +2,7 @@
 
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { getShotThumbnailOverlayLines, getShotThumbnailUrl } from '@/lib/studio/shot-display';
+import { getGeneratedVideoCount, getShotActiveVideoUrl } from '@/lib/studio/shot-videos';
 import { useStudioStore } from '@/store/useStudioStore';
 
 export function ShotTimeline() {
@@ -39,6 +40,8 @@ export function ShotTimeline() {
         {shots.map((shot) => {
           const thumbUrl = getShotThumbnailUrl(shot);
           const [overlayLine1, overlayLine2] = getShotThumbnailOverlayLines(shot);
+          const genCount = getGeneratedVideoCount(shot);
+          const hasGeneratedVideo = Boolean(getShotActiveVideoUrl(shot));
           return (
             <div
               key={shot.id}
@@ -71,8 +74,13 @@ export function ShotTimeline() {
                   </span>
                 </div>
 
-                {shot.videoUrl && (
-                  <span className="absolute top-1 right-1 z-10 text-[8px] bg-brand-500/90 text-white px-1.5 py-0.5 rounded font-bold uppercase">Gen</span>
+                {hasGeneratedVideo && (
+                  <span className="absolute top-1 right-1 z-10 text-[8px] bg-brand-500/90 text-white px-1.5 py-0.5 rounded font-bold uppercase flex items-center gap-0.5">
+                    Gen
+                    {genCount > 1 && (
+                      <span className="text-orange-300">{genCount}</span>
+                    )}
+                  </span>
                 )}
 
                 <div className="shot-overlay absolute inset-0 z-20 bg-black/60 opacity-0 transition-opacity flex items-center justify-center gap-2">

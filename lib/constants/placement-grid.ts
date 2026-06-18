@@ -229,13 +229,79 @@ export function getPlacementSpec(placement: Placement): PlacementSpec | undefine
   return PLACEMENT_SPECS.find((s) => s.id === placement);
 }
 
-export function placementPrompt(placement: Placement): string {
-  const spec = getPlacementSpec(placement);
-  if (!spec) return 'subject positioned in frame';
-  if (spec.kind === 'cell') {
-    return `subject centered in the ${spec.label.replace(' cell', '')} grid cell`;
+function cellFramingPrompt(row: number, col: number): string {
+  if (row === 1 && col === 1) {
+    return 'subject centered in the frame';
   }
-  return `subject at ${spec.label.toLowerCase()}`;
+
+  const vertical = ['upper', 'middle', 'lower'][row] ?? 'middle';
+  const horizontal = ['left', 'center', 'right'][col] ?? 'center';
+
+  if (col === 1) {
+    return `subject in the ${vertical} center of the frame`;
+  }
+  if (row === 1) {
+    return `subject in the ${horizontal} center of the frame`;
+  }
+  return `subject in the ${vertical} ${horizontal} portion of the frame`;
+}
+
+function intersectionFramingPrompt(spec: PlacementSpec): string {
+  const { id, label } = spec;
+  const lower = label.toLowerCase();
+
+  if (id === 'ix-0-0') return 'subject anchored at the top-left corner of the frame';
+  if (id === 'ix-0-3') return 'subject anchored at the top-right corner of the frame';
+  if (id === 'ix-3-0') return 'subject anchored at the bottom-left corner of the frame';
+  if (id === 'ix-3-3') return 'subject anchored at the bottom-right corner of the frame';
+
+  if (id === 'ix-edge-t') return 'subject centered along the top edge of the frame';
+  if (id === 'ix-edge-b') return 'subject centered along the bottom edge of the frame';
+  if (id === 'ix-edge-l') return 'subject centered along the left edge of the frame';
+  if (id === 'ix-edge-r') return 'subject centered along the right edge of the frame';
+
+  if (id === 'ix-mid-t') return 'subject at the upper-center power point on the vertical midline';
+  if (id === 'ix-mid-b') return 'subject at the lower-center power point on the vertical midline';
+  if (id === 'ix-mid-l') return 'subject at the left-center power point on the horizontal midline';
+  if (id === 'ix-mid-r') return 'subject at the right-center power point on the horizontal midline';
+
+  if (lower.includes('corner')) {
+    return `subject anchored at the ${lower} of the frame`;
+  }
+
+  if (lower.includes('edge') && lower.includes('segment')) {
+    return `subject along the ${lower}`;
+  }
+
+  if (lower.includes('edge')) {
+    return `subject positioned at the ${lower} of the frame`;
+  }
+
+  if (lower.includes('intersection') || lower.includes('grid line')) {
+    return `subject at the ${lower}, rule of thirds composition`;
+  }
+
+  return `subject at the ${lower}`;
+}
+
+/** Natural cinematic framing language for a specific 3×3 placement target. */
+export function placementFramingPrompt(placement: Placement): string {
+  const spec = getPlacementSpec(placement);
+  if (!spec) return 'balanced subject placement in frame';
+
+  if (spec.kind === 'cell') {
+    const match = spec.id.match(/^cell-(\d)-(\d)$/);
+    if (match) {
+      return cellFramingPrompt(Number(match[1]), Number(match[2]));
+    }
+  }
+
+  return intersectionFramingPrompt(spec);
+}
+
+/** @deprecated Use placementFramingPrompt for generation prompts */
+export function placementPrompt(placement: Placement): string {
+  return placementFramingPrompt(placement);
 }
 
 /** Map a frame-relative pointer position (0–100%) to the nearest placement target. */

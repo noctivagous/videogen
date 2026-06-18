@@ -60,7 +60,7 @@ export const STOCK_SHOT_COMPOSITION: FrameComposition = {
   showOverlay: true,
 };
 
-export const STOCK_REFERENCE_ROLES: ReferenceRole[] = ['Subject', 'Backdrop', 'Motion'];
+export const STOCK_REFERENCE_ROLES: ReferenceRole[] = ['Subject', 'Backdrop', 'Style'];
 
 export interface CreateStockShotOptions {
   duration?: number;
@@ -101,6 +101,8 @@ export function createStockShot(
     duration,
     thumbnail: thumbnail ?? (withReferences ? STOCK_ASSETS.ms : null),
     videoUrl: null,
+    generatedVideos: [],
+    activeVideoIndex: 0,
     active,
     camera: { ...camera },
     lighting: { ...lighting },
@@ -135,7 +137,7 @@ export const STOCK_SHOTS: Shot[] = [
     thumbnail: STOCK_ASSETS.ms,
     camera: { ...STOCK_CAMERA, fieldSize: 'cu' },
     lighting: { ...STOCK_LIGHTING, timeOfDay: 'golden-hour', colorTemp: 4500 },
-    sceneSetup: 'Close-up of the matte gray mannequin subject. Neutral studio, soft key light, shallow depth of field.',
+    sceneSetup: 'Matte gray mannequin subject.',
     shotActivity: 'Still pose, neutral expression.',
   }),
   createStockShot(3, 'Shot 03', false, {
@@ -145,7 +147,7 @@ export const STOCK_SHOTS: Shot[] = [
     camera: { ...STOCK_CAMERA, fieldSize: 'ls', focalLength: 35 },
     lighting: { ...STOCK_LIGHTING, timeOfDay: 'evening', colorTemp: 3200, atmosphere: 'hazy' },
     motion: { ...STOCK_MOTION, subjectAction: 'walking', intensity: 'moderate' },
-    sceneSetup: 'Long shot of the mannequin subject in a neutral gray studio. Wide framing, cinematic atmosphere.',
+    sceneSetup: 'Mannequin subject in the studio.',
     shotActivity: 'Walking through the studio at a moderate pace.',
   }),
 ];

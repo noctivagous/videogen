@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import { CompositionOverlay } from '@/components/studio/CompositionOverlay';
+import { GeneratedVideoStrip } from '@/components/studio/GeneratedVideoStrip';
 import { FrameViewSegment } from '@/components/studio/FrameViewSegment';
 import { ModelPreviewScene } from '@/components/studio/ModelPreviewScene';
 import { PreviewSubModeSegment } from '@/components/studio/PreviewSubModeSegment';
@@ -10,7 +11,9 @@ import { ReferencePreviewScene } from '@/components/studio/ReferencePreviewScene
 import { previewFramingFingerprint } from '@/lib/constants/subject-cutouts';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { formatDuration } from '@/lib/studio/shot-display';
+import { getShotActiveVideoUrl } from '@/lib/studio/shot-videos';
 import { isPreviewFrameSupported } from '@/lib/studio/generation/preview-frame-supported';
+import { isCustomProvider } from '@/lib/storage/ai-settings';
 import { useStudioStore } from '@/store/useStudioStore';
 
 function fitPreviewFrame(frame: HTMLElement, aspectRatio: string) {
@@ -65,7 +68,7 @@ export function PreviewPanel() {
 
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
   const showOverlay = shot?.frameComposition?.showOverlay ?? true;
-  const generatedVideo = shot?.videoUrl ?? null;
+  const generatedVideo = getShotActiveVideoUrl(shot);
   const modelPreviewUrl = shot?.previewFrameUrl ?? null;
   const shotDuration = shot?.duration ?? project.duration;
   const timecode = `00:00 / ${formatDuration(shotDuration)}`;
@@ -91,8 +94,9 @@ export function PreviewPanel() {
     shot.previewFrameFingerprint !== currentFingerprint,
   );
 
-  const isCustom = ai.customProviders.some((p) => p.id === ai.defaultProvider);
-  const canQuickPreview = isPreviewFrameSupported(ai.defaultProvider, isCustom);
+  const imageProviderId = ai.defaultImageProvider;
+  const isCustom = isCustomProvider(imageProviderId, ai);
+  const canQuickPreview = isPreviewFrameSupported(imageProviderId, isCustom);
 
   useEffect(() => {
     const frame = previewFrameRef.current;
@@ -123,6 +127,7 @@ export function PreviewPanel() {
     if (generatedVideo) {
       return (
         <video
+          key={generatedVideo}
           src={generatedVideo}
           className="absolute inset-0 w-full h-full object-cover"
           controls
@@ -234,7 +239,7 @@ export function PreviewPanel() {
                   onClick={() => generatePreviewFrame()}
                   disabled={!canQuickPreview || isPreviewFrameGenerating || isGenerating}
                   className="px-3 py-1.5 text-xs font-medium rounded-lg bg-brand-600 hover:bg-brand-500 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors"
-                  title={canQuickPreview ? 'Generate a single AI preview frame' : 'Configure xAI, OpenAI, or Replicate in Settings'}
+                  title={canQuickPreview ? 'Generate a single AI preview frame' : 'Configure an image provider (xAI, OpenAI, or Replicate) in Settings'}
                 >
                   Quick Preview (1 gen)
                 </button>
@@ -253,6 +258,12 @@ export function PreviewPanel() {
             >
               {previewBadge}
             </span>
+            {frameView === 'preview' && generatedVideo && shot && (
+              <>
+                <div className="h-6 w-px bg-surface-600" />
+                <GeneratedVideoStrip shot={shot} />
+              </>
+            )}
             <div className="h-6 w-px bg-surface-600" />
             <span className="text-xs text-gray-400">{timecode}</span>
           </div>

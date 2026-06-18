@@ -16,7 +16,9 @@ export const UI_SECTIONS = {
 
   studioHeaderBrand: { id: 'studio-header-brand', name: 'Header Brand' },
   studioHeaderProjectName: { id: 'studio-header-project-name', name: 'Project Name' },
-  studioHeaderProviderBadge: { id: 'studio-header-provider-badge', name: 'Provider Badge' },
+  studioHeaderProviderBadge: { id: 'studio-header-provider-badge', name: 'Provider Badges' },
+  studioHeaderVideoProviderBadge: { id: 'studio-header-video-provider-badge', name: 'Video Provider Badge' },
+  studioHeaderImageProviderBadge: { id: 'studio-header-image-provider-badge', name: 'Image Provider Badge' },
   studioHeaderProjectSettings: { id: 'studio-header-project-settings', name: 'Project Settings' },
   studioHeaderActions: { id: 'studio-header-actions', name: 'Header Actions' },
 
@@ -31,6 +33,7 @@ export const UI_SECTIONS = {
   studioPreviewCompositionOverlay: { id: 'studio-preview-composition-overlay', name: 'Composition Overlay' },
   studioPreviewFrameViewSegment: { id: 'studio-preview-frame-view-segment', name: 'Frame View Segment' },
   studioPreviewHoverBar: { id: 'studio-preview-hover-bar', name: 'Preview Hover Bar' },
+  studioPreviewVideoVersions: { id: 'studio-preview-video-versions', name: 'Generated Video Versions' },
   studioPreviewBlockingLabel: { id: 'studio-preview-blocking-label', name: 'Blocking Preview Label' },
   studioPreviewResolutionBadge: { id: 'studio-preview-resolution-badge', name: 'Resolution Badge' },
 

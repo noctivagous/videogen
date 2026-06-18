@@ -1,19 +1,20 @@
 import { CAMERA_FIELD_SIZE_SHORT } from '@/lib/constants/camera';
 import { STOCK_ASSETS } from '@/lib/constants/stock-demo';
-import { getCameraCompositionLabel, getShotFrameComposition } from '@/lib/studio/composition';
+import { getShotFrameComposition } from '@/lib/studio/composition';
+import { getGenerationFramePrompt } from '@/lib/studio/generation-prompt';
 import type { ScenePreviewPayload } from '@/lib/types/studio';
 
 export function buildPreviewFramePrompt(payload: ScenePreviewPayload): string {
   const shot = payload.shot;
   const frame = getShotFrameComposition(shot);
   const fieldLabel = CAMERA_FIELD_SIZE_SHORT[payload.camera.fieldSize] || payload.camera.fieldSize.toUpperCase();
-  const composition = getCameraCompositionLabel(payload.camera, frame);
+  const composition = getGenerationFramePrompt(payload.camera.fieldSize, frame);
   const scene = shot?.sceneSetup?.trim() || 'Neutral cinematic studio scene';
   const activity = shot?.shotActivity?.trim();
 
   const parts = [
     'Single cinematic still frame photograph.',
-    `Framing: ${fieldLabel} (${composition}).`,
+    `Framing: ${fieldLabel}${composition ? `. ${composition}` : ''}.`,
     `Scene: ${scene}.`,
   ];
   if (activity) parts.push(`Action: ${activity}.`);
