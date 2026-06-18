@@ -131,7 +131,7 @@ export function CameraPanel() {
             <div className="parameter-enclosure">
               <label className="text-xs text-gray-400 mb-1 block">Subject Placement</label>
               <p className="text-[10px] text-gray-500 mb-2 leading-snug">
-                Tap a cell for center placement, or a dot for a grid intersection (including edges).
+                Tap a cell or dot below, or click/drag on the framing preview to reposition the subject.
               </p>
               <PlacementGrid
                 value={frame.placement}

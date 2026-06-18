@@ -1,8 +1,10 @@
 import type { Placement } from '@/lib/types/studio';
 
 const THIRD = 100 / 3;
+const LATTICE = [0, THIRD, THIRD * 2, 100] as const;
 
 export type PlacementKind = 'intersection' | 'cell';
+export type PlacementDotSize = 'sm' | 'md';
 
 export interface PlacementSpec {
   id: Placement;
@@ -10,6 +12,7 @@ export interface PlacementSpec {
   x: number;
   y: number;
   label: string;
+  dotSize?: PlacementDotSize;
 }
 
 function ix(row: number, col: number): { x: number; y: number } {
@@ -24,6 +27,10 @@ function cell(row: number, col: number): { x: number; y: number } {
     x: (col + 0.5) * THIRD,
     y: (row + 0.5) * THIRD,
   };
+}
+
+function posKey(x: number, y: number): string {
+  return `${Math.round(x * 100) / 100},${Math.round(y * 100) / 100}`;
 }
 
 const ROW_LABELS = ['Top', 'Upper', 'Lower', 'Bottom'] as const;
@@ -47,35 +54,126 @@ function ixLabel(row: number, col: number): string {
   return `${ROW_LABELS[row]} ${COL_LABELS[col]} intersection`;
 }
 
+/** Stable ids for well-known segment midpoints (backward compatible). */
+const NAMED_SEGMENT_IDS: Record<string, Placement> = {
+  [posKey(50, 0)]: 'ix-edge-t',
+  [posKey(50, 100)]: 'ix-edge-b',
+  [posKey(0, 50)]: 'ix-edge-l',
+  [posKey(100, 50)]: 'ix-edge-r',
+  [posKey(50, THIRD)]: 'ix-mid-t',
+  [posKey(50, THIRD * 2)]: 'ix-mid-b',
+  [posKey(THIRD, 50)]: 'ix-mid-l',
+  [posKey(THIRD * 2, 50)]: 'ix-mid-r',
+};
+
+const NAMED_SEGMENT_LABELS: Record<string, string> = {
+  [posKey(50, 0)]: 'Top edge center',
+  [posKey(50, 100)]: 'Bottom edge center',
+  [posKey(0, 50)]: 'Left edge center',
+  [posKey(100, 50)]: 'Right edge center',
+  [posKey(50, THIRD)]: 'Upper center intersection',
+  [posKey(50, THIRD * 2)]: 'Lower center intersection',
+  [posKey(THIRD, 50)]: 'Left center intersection',
+  [posKey(THIRD * 2, 50)]: 'Right center intersection',
+};
+
+function latticeCoord(index: number): number {
+  return index === 3 ? 100 : index * THIRD;
+}
+
+function segmentBand(index: number): string {
+  if (index === 0) return 'upper';
+  if (index === 1) return 'middle';
+  return 'lower';
+}
+
+function segmentMidLabelVertical(col: number, seg: number, x: number, y: number): string {
+  const key = posKey(x, y);
+  if (NAMED_SEGMENT_LABELS[key]) return NAMED_SEGMENT_LABELS[key];
+
+  const band = segmentBand(seg);
+  if (col === 0) return `Left edge, ${band} segment`;
+  if (col === 3) return `Right edge, ${band} segment`;
+  if (col === 1) return `Left grid line, ${band} segment`;
+  return `Right grid line, ${band} segment`;
+}
+
+function segmentMidLabelHorizontal(row: number, seg: number, x: number, y: number): string {
+  const key = posKey(x, y);
+  if (NAMED_SEGMENT_LABELS[key]) return NAMED_SEGMENT_LABELS[key];
+
+  const band = seg === 0 ? 'left' : seg === 1 ? 'center' : 'right';
+  if (row === 0) return `Top edge, ${band} segment`;
+  if (row === 3) return `Bottom edge, ${band} segment`;
+  if (row === 1) return `Upper grid line, ${band} segment`;
+  return `Lower grid line, ${band} segment`;
+}
+
 function buildSpecs(): PlacementSpec[] {
-  const specs: PlacementSpec[] = [];
+  const intersectionMap = new Map<string, PlacementSpec>();
 
   for (let row = 0; row < 4; row++) {
     for (let col = 0; col < 4; col++) {
       const pos = ix(row, col);
-      specs.push({
+      intersectionMap.set(posKey(pos.x, pos.y), {
         id: `ix-${row}-${col}` as Placement,
         kind: 'intersection',
         x: pos.x,
         y: pos.y,
         label: ixLabel(row, col),
+        dotSize: 'md',
       });
     }
   }
 
-  const mids: Array<{ id: Placement; x: number; y: number; label: string }> = [
-    { id: 'ix-edge-t', x: 50, y: 0, label: 'Top edge center' },
-    { id: 'ix-edge-b', x: 50, y: 100, label: 'Bottom edge center' },
-    { id: 'ix-edge-l', x: 0, y: 50, label: 'Left edge center' },
-    { id: 'ix-edge-r', x: 100, y: 50, label: 'Right edge center' },
-    { id: 'ix-mid-t', x: 50, y: THIRD, label: 'Upper center intersection' },
-    { id: 'ix-mid-b', x: 50, y: THIRD * 2, label: 'Lower center intersection' },
-    { id: 'ix-mid-l', x: THIRD, y: 50, label: 'Left center intersection' },
-    { id: 'ix-mid-r', x: THIRD * 2, y: 50, label: 'Right center intersection' },
-  ];
-  for (const m of mids) {
-    specs.push({ id: m.id, kind: 'intersection', x: m.x, y: m.y, label: m.label });
+  const addSegmentMid = (
+    x: number,
+    y: number,
+    fallbackId: Placement,
+    label: string,
+  ) => {
+    const key = posKey(x, y);
+    if (intersectionMap.has(key)) return;
+
+    const id = NAMED_SEGMENT_IDS[key] ?? fallbackId;
+    const named = Boolean(NAMED_SEGMENT_IDS[key]);
+    intersectionMap.set(key, {
+      id,
+      kind: 'intersection',
+      x,
+      y,
+      label: NAMED_SEGMENT_LABELS[key] ?? label,
+      dotSize: named ? 'md' : 'sm',
+    });
+  };
+
+  for (let col = 0; col < 4; col++) {
+    const x = latticeCoord(col);
+    for (let seg = 0; seg < 3; seg++) {
+      const y = (LATTICE[seg] + LATTICE[seg + 1]) / 2;
+      addSegmentMid(
+        x,
+        y,
+        `ix-seg-v${col}-${seg}` as Placement,
+        segmentMidLabelVertical(col, seg, x, y),
+      );
+    }
   }
+
+  for (let row = 0; row < 4; row++) {
+    const y = latticeCoord(row);
+    for (let seg = 0; seg < 3; seg++) {
+      const x = (LATTICE[seg] + LATTICE[seg + 1]) / 2;
+      addSegmentMid(
+        x,
+        y,
+        `ix-seg-h${row}-${seg}` as Placement,
+        segmentMidLabelHorizontal(row, seg, x, y),
+      );
+    }
+  }
+
+  const specs: PlacementSpec[] = [...intersectionMap.values()];
 
   for (let row = 0; row < 3; row++) {
     for (let col = 0; col < 3; col++) {
@@ -138,4 +236,39 @@ export function placementPrompt(placement: Placement): string {
     return `subject centered in the ${spec.label.replace(' cell', '')} grid cell`;
   }
   return `subject at ${spec.label.toLowerCase()}`;
+}
+
+/** Map a frame-relative pointer position (0–100%) to the nearest placement target. */
+export function findNearestPlacement(x: number, y: number): Placement {
+  const clampedX = Math.max(0, Math.min(100, x));
+  const clampedY = Math.max(0, Math.min(100, y));
+
+  let best: Placement = DEFAULT_GRID_PLACEMENT;
+  let bestDist = Infinity;
+
+  for (const spec of PLACEMENT_SPECS) {
+    const dx = spec.x - clampedX;
+    const dy = spec.y - clampedY;
+    const dist = dx * dx + dy * dy;
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = spec.id;
+    }
+  }
+
+  return best;
+}
+
+export function percentFromElementRect(
+  rect: DOMRectReadOnly,
+  clientX: number,
+  clientY: number,
+): { x: number; y: number } {
+  if (rect.width === 0 || rect.height === 0) {
+    return { x: 50, y: 50 };
+  }
+  return {
+    x: Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100)),
+    y: Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100)),
+  };
 }

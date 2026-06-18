@@ -49,7 +49,7 @@ export function PlacementGrid({ value, onChange }: PlacementGridProps) {
         <button
           key={ix.id}
           type="button"
-          className="placement-grid-ix"
+          className={`placement-grid-ix ${ix.dotSize === 'sm' ? 'placement-grid-ix-sm' : ''}`}
           style={{ left: `${ix.x}%`, top: `${ix.y}%` }}
           title={ix.label}
           aria-label={ix.label}

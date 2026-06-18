@@ -347,6 +347,16 @@ input[type="range"]::-moz-range-thumb:hover {
   inset: -7px;
 }
 
+.placement-grid-ix-sm {
+  width: 5px;
+  height: 5px;
+  border-width: 1px;
+}
+
+.placement-grid-ix-sm::before {
+  inset: -5px;
+}
+
 .placement-grid-ix:hover {
   border-color: #818cf8;
   background: #3f3f46;
@@ -398,6 +408,11 @@ input[type="range"]::-moz-range-thumb:hover {
   transform: translateX(18px);
 }
 
+.composition-overlay-interactive {
+  cursor: crosshair;
+  touch-action: none;
+}
+
 .composition-placement-marker {
   position: absolute;
   width: 10px;
@@ -407,6 +422,27 @@ input[type="range"]::-moz-range-thumb:hover {
   border: 2px solid white;
   box-shadow: 0 0 6px rgba(99, 102, 241, 0.8);
   transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.composition-overlay-interactive .composition-placement-marker-draggable {
+  width: 14px;
+  height: 14px;
+  z-index: 2;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.composition-overlay-interactive:hover .composition-placement-marker-draggable {
+  transform: translate(-50%, -50%) scale(1.1);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.95);
+}
+
+.composition-overlay-interactive:active {
+  cursor: grabbing;
+}
+
+.composition-overlay-interactive:active .composition-placement-marker-draggable {
+  transform: translate(-50%, -50%) scale(1.2);
 }
 
 .composition-guide-svg line,
