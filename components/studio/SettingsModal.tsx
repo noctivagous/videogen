@@ -1,6 +1,7 @@
 'use client';
 
 import { BUILT_IN_PROVIDERS } from '@/lib/constants/providers';
+import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { isProviderConnected } from '@/lib/storage/ai-settings';
 import { useStudioStore } from '@/store/useStudioStore';
 
@@ -31,6 +32,7 @@ export function SettingsModal() {
     <div
       className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
       onClick={(e) => { if (e.target === e.currentTarget) closeSettings(); }}
+      {...uiSectionProps(UI_SECTIONS.studioSettingsModal)}
     >
       <div className="glass w-full max-w-6xl max-h-[92vh] rounded-3xl border border-surface-700 overflow-hidden flex flex-col modal" onClick={(e) => e.stopPropagation()}>
         <div className="px-6 py-5 border-b border-surface-700 flex items-center justify-between flex-shrink-0">
@@ -54,7 +56,7 @@ export function SettingsModal() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-8">
-          <div className="glass rounded-3xl p-6 border border-surface-700">
+          <div className="glass rounded-3xl p-6 border border-surface-700" {...uiSectionProps(UI_SECTIONS.studioSettingsDefaultProvider)}>
             <div className="flex flex-col md:flex-row md:items-center gap-4">
               <div className="flex-1">
                 <h2 className="font-semibold text-lg">Default Provider & Model</h2>
@@ -77,7 +79,7 @@ export function SettingsModal() {
             </div>
           </div>
 
-          <div>
+          <div {...uiSectionProps(UI_SECTIONS.studioSettingsBuiltInProviders)}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-semibold text-2xl tracking-tight">Built-in Providers</h2>
               <div className="text-xs px-3 py-1 rounded-full bg-surface-800 text-gray-400 border border-surface-700">
@@ -121,7 +123,7 @@ export function SettingsModal() {
             </div>
           </div>
 
-          <div>
+          <div {...uiSectionProps(UI_SECTIONS.studioSettingsCustomProviders)}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-semibold text-2xl tracking-tight">Custom Providers</h2>
               <button
@@ -171,7 +173,7 @@ export function SettingsModal() {
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-surface-700 flex justify-end gap-3 flex-shrink-0">
+        <div className="px-6 py-4 border-t border-surface-700 flex justify-end gap-3 flex-shrink-0" {...uiSectionProps(UI_SECTIONS.studioSettingsFooter)}>
           <button type="button" onClick={closeSettings} className="px-6 py-2.5 rounded-2xl border border-surface-600 hover:bg-surface-700 text-sm font-medium">Close</button>
           <button type="button" onClick={handleSaveAll} className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 text-sm font-semibold">Save Changes</button>
         </div>

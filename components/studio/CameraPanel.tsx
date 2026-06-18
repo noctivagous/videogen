@@ -1,6 +1,7 @@
 'use client';
 
 import { PLACEMENTS } from '@/lib/constants/camera';
+import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import {
   getCameraCompositionLabel,
   getShotFrameComposition,
@@ -30,7 +31,7 @@ export function CameraPanel() {
   const headroomVisible = showHeadroomControl(camera.fieldSize);
 
   return (
-    <div className="p-4">
+    <div className="p-4" {...uiSectionProps(UI_SECTIONS.studioCameraControls, { id: false })}>
       <div className="flex items-center gap-2 mb-4">
         <svg className="w-5 h-5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -97,7 +98,7 @@ export function CameraPanel() {
 
         <p className="text-xs text-brand-400 font-medium px-1 -mt-1">{compositionLabel}</p>
 
-        <div className="border-t border-surface-700 pt-3 space-y-4">
+        <div className="border-t border-surface-700 pt-3 space-y-4" {...uiSectionProps(UI_SECTIONS.studioCameraFrameComposition, { id: false })}>
           <div className="flex items-center justify-between px-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Frame Composition</span>
             <span className="text-[10px] font-medium text-brand-400 bg-brand-500/10 border border-brand-500/20 rounded px-1.5 py-0.5">
@@ -221,7 +222,7 @@ export function CameraPanel() {
           <option value="deep">Deep Focus</option>
         </Select>
 
-        <div className="pt-4 border-t border-surface-700">
+        <div className="pt-4 border-t border-surface-700" {...uiSectionProps(UI_SECTIONS.studioCameraMotionSubject, { id: false })}>
           <div className="flex items-center gap-2 mb-4">
             <svg className="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />

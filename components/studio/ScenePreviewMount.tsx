@@ -1,17 +1,11 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { createScenePreviewController } from '@/lib/studio/scene-preview';
+import { useMemo } from 'react';
+import { ScenePreviewCanvas } from '@/components/studio/ScenePreviewCanvas';
+import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { useStudioStore } from '@/store/useStudioStore';
 
-interface ScenePreviewMountProps {
-  observeRef?: React.RefObject<HTMLElement | null>;
-}
-
-export function ScenePreviewMount({ observeRef }: ScenePreviewMountProps) {
-  const mountRef = useRef<HTMLDivElement>(null);
-  const controllerRef = useRef<ReturnType<typeof createScenePreviewController> | null>(null);
-
+export function ScenePreviewMount() {
   const project = useStudioStore((s) => s.project);
   const camera = useStudioStore((s) => s.camera);
   const lighting = useStudioStore((s) => s.lighting);
@@ -19,26 +13,16 @@ export function ScenePreviewMount({ observeRef }: ScenePreviewMountProps) {
   const shots = useStudioStore((s) => s.shots);
   const currentShot = useStudioStore((s) => s.currentShot);
 
-  useEffect(() => {
-    if (!mountRef.current) return;
-    controllerRef.current = createScenePreviewController(
-      mountRef.current,
-      observeRef?.current,
-    );
-    return () => {
-      controllerRef.current?.dispose();
-      controllerRef.current = null;
-    };
-  }, [observeRef]);
+  const shot = shots.find((s) => s.id === currentShot) || shots[0];
 
-  useEffect(() => {
-    const shot = shots.find((s) => s.id === currentShot) || shots[0];
-    controllerRef.current?.sync({ project, camera, lighting, motion, shot });
-  }, [project, camera, lighting, motion, shots, currentShot]);
+  const payload = useMemo(
+    () => ({ project, camera, lighting, motion, shot }),
+    [project, camera, lighting, motion, shot],
+  );
 
-  useEffect(() => {
-    controllerRef.current?.resize();
-  }, [project.aspectRatio]);
-
-  return <div ref={mountRef} className="scene-mount absolute inset-0" />;
+  return (
+    <div className="scene-mount absolute inset-0" {...uiSectionProps(UI_SECTIONS.studioPreview3dScene)}>
+      <ScenePreviewCanvas payload={payload} />
+    </div>
+  );
 }

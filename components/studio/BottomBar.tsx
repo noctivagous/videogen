@@ -1,6 +1,7 @@
 'use client';
 
 import { ReferenceSlots } from '@/components/studio/ReferenceSlots';
+import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { ShotTimeline } from '@/components/studio/ShotTimeline';
 import { useStudioStore } from '@/store/useStudioStore';
 
@@ -16,12 +17,12 @@ export function BottomBar() {
   const hasAnyImage = shot?.references.some(Boolean) ?? false;
 
   return (
-    <div className="glass border-t border-surface-700">
+    <div className="glass border-t border-surface-700" {...uiSectionProps(UI_SECTIONS.studioBottomBar)}>
       <div className="p-4 space-y-4">
         <div className="flex gap-4 items-end">
           <ReferenceSlots />
 
-          <div className="flex-1 flex flex-col parameter-enclosure">
+          <div className="flex-1 flex flex-col parameter-enclosure" {...uiSectionProps(UI_SECTIONS.studioBottomPrompt)}>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <svg className="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -50,6 +51,7 @@ export function BottomBar() {
             onClick={generate}
             disabled={isGenerating}
             className="bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-500 disabled:opacity-50 px-6 h-[80px] rounded-xl font-bold text-base transition-all shadow-lg shadow-brand-500/30 flex flex-col items-center justify-center gap-1 group"
+            {...uiSectionProps(UI_SECTIONS.studioBottomGenerate)}
           >
             <svg className="w-6 h-6 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -58,7 +60,9 @@ export function BottomBar() {
           </button>
         </div>
 
-        <ShotTimeline />
+        <div {...uiSectionProps(UI_SECTIONS.studioBottomShotTimeline)}>
+          <ShotTimeline />
+        </div>
       </div>
     </div>
   );

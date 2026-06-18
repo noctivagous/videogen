@@ -1,5 +1,6 @@
 'use client';
 
+import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import {
   getCompositionSvgLines,
   getPlacementMarkerPosition,
@@ -25,7 +26,10 @@ export function CompositionOverlay() {
   const markerPos = showMarker ? getPlacementMarkerPosition(frame.placement) : null;
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-10 composition-overlay">
+    <div
+      className="absolute inset-0 pointer-events-none z-10 composition-overlay"
+      {...uiSectionProps(UI_SECTIONS.studioPreviewCompositionOverlay)}
+    >
       <svg
         className="composition-guide-svg w-full h-full"
         preserveAspectRatio="none"

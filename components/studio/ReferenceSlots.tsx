@@ -1,6 +1,8 @@
 'use client';
 
 import { useRef } from 'react';
+import { normalizeReferenceRole } from '@/lib/constants/camera';
+import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { useStudioStore } from '@/store/useStudioStore';
 
 export function ReferenceSlots() {
@@ -23,15 +25,16 @@ export function ReferenceSlots() {
   };
 
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2" {...uiSectionProps(UI_SECTIONS.studioBottomReferences)}>
       {[0, 1, 2].map((index) => {
         const imgData = shot.references[index];
-        const role = shot.referenceRoles[index];
+        const role = normalizeReferenceRole(shot.referenceRoles[index] ?? 'None');
 
         return (
           <div
             key={index}
             className={`reference-slot group ${imgData ? 'has-image' : ''}`}
+            {...uiSectionProps(UI_SECTIONS.studioReferenceSlot, { suffix: index })}
             onClick={(e) => {
               if (!(e.target as HTMLElement).closest('.reference-label') &&
                   !(e.target as HTMLElement).closest('.reference-remove')) {

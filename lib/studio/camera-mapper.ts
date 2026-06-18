@@ -1,13 +1,8 @@
 import * as THREE from 'three';
 import { DEFAULT_FRAME_COMPOSITION } from '@/lib/constants/camera';
+import { FIELD_SIZE_FRAMING } from '@/lib/constants/framing';
 import type { FrameComposition, ScenePreviewPayload } from '@/lib/types/studio';
-import type { PerspectiveCamera } from 'three';
-
-const FIELD_SIZE_DISTANCE: Record<string, number> = {
-  ecu: 0.85, cu: 1.2, mcu: 1.6, 'close-shot': 1.8, ms: 2.4, fs: 4.5,
-  ls: 7, els: 10, vls: 11, ws: 8, mws: 3.2, bcu: 1.0, xls: 10,
-  cowboy: 2.8, ch: 0.95, gv: 9,
-};
+import type { Object3D, PerspectiveCamera } from 'three';
 
 const PLACEMENT_OFFSETS: Record<string, { x: number; z: number }> = {
   'top-left': { x: -0.55, z: 0.35 },
@@ -18,35 +13,81 @@ const PLACEMENT_OFFSETS: Record<string, { x: number; z: number }> = {
   'middle-right': { x: 0.55, z: 0 },
   'bottom-left': { x: -0.55, z: -0.35 },
   'bottom-center': { x: 0, z: -0.35 },
-  'bottom-right': { x: 0.55, z: -0.35 },
+  'bottom-right': { x: 0.55, z: 0.35 },
 };
 
-const ANGLE_PRESETS: Record<string, { camY: number; targetY: number; pitch: number; roll?: number }> = {
-  'eye-level': { camY: 1.55, targetY: 1.4, pitch: 0 },
-  'high-angle': { camY: 2.6, targetY: 1.1, pitch: -18 },
-  'low-angle': { camY: 0.55, targetY: 1.55, pitch: 12 },
-  'birds-eye': { camY: 6.5, targetY: 0, pitch: -72 },
-  'worms-eye': { camY: 0.25, targetY: 1.65, pitch: 22 },
-  dutch: { camY: 1.55, targetY: 1.4, pitch: 0, roll: 14 },
+const ANGLE_PRESETS: Record<string, { camAim: number; targetAim: number; pitch: number; roll?: number }> = {
+  'eye-level': { camAim: 0.82, targetAim: 0.6, pitch: 0 },
+  'high-angle': { camAim: 0.95, targetAim: 0.52, pitch: -14 },
+  'low-angle': { camAim: 0.35, targetAim: 0.68, pitch: 10 },
+  'birds-eye': { camAim: 1.6, targetAim: 0.4, pitch: -52 },
+  'worms-eye': { camAim: 0.1, targetAim: 0.75, pitch: 16 },
+  dutch: { camAim: 0.82, targetAim: 0.6, pitch: 0, roll: 14 },
 };
 
-const HEADROOM_TARGET_Y: Record<string, number> = {
-  tight: 1.25,
-  normal: 1.4,
-  generous: 1.55,
+const HEADROOM_OFFSET: Record<string, number> = {
+  tight: -0.04,
+  normal: 0,
+  generous: 0.06,
 };
 
 const LENS_FOV_SCALE: Record<string, number> = {
-  wide: 1.35,
+  wide: 1.15,
   standard: 1,
-  telephoto: 0.72,
-  macro: 0.55,
-  fisheye: 1.85,
-  anamorphic: 0.95,
+  telephoto: 0.82,
+  macro: 0.68,
+  fisheye: 1.35,
+  anamorphic: 0.92,
 };
 
-function focalLengthToFov(focalLength: number): number {
-  return 2 * Math.atan(12 / focalLength) * (180 / Math.PI);
+const SENSOR_HEIGHT_MM = 24;
+const DISTANCE_PULLBACK = 1.25;
+export interface FigureBounds {
+  min: { x: number; y: number; z: number };
+  max: { x: number; y: number; z: number };
+  height: number;
+  center: { x: number; y: number; z: number };
+}
+
+const _box = new THREE.Box3();
+
+export function measureFigureBounds(figures: Object3D[]): FigureBounds | null {
+  const visible = figures.filter((f) => f.visible !== false);
+  if (!visible.length) return null;
+
+  _box.makeEmpty();
+  for (const fig of visible) {
+    _box.expandByObject(fig);
+  }
+
+  if (_box.isEmpty()) return null;
+
+  const { min, max } = _box;
+  const height = Math.max(max.y - min.y, 1);
+  return {
+    min: { x: min.x, y: min.y, z: min.z },
+    max: { x: max.x, y: max.y, z: max.z },
+    height,
+    center: {
+      x: (min.x + max.x) / 2,
+      y: min.y + height / 2,
+      z: (min.z + max.z) / 2,
+    },
+  };
+}
+
+function focalLengthToVerticalFov(focalLength: number): number {
+  return 2 * Math.atan(SENSOR_HEIGHT_MM / (2 * focalLength)) * (180 / Math.PI);
+}
+
+function distanceForFraming(spanM: number, fill: number, fovDeg: number): number {
+  const effectiveSpan = spanM / Math.max(fill, 0.15);
+  const dist = effectiveSpan / (2 * Math.tan((fovDeg * Math.PI) / 360));
+  return dist * DISTANCE_PULLBACK;
+}
+
+function aimY(bounds: FigureBounds, fraction: number, headroom = 0): number {
+  return bounds.min.y + bounds.height * fraction + bounds.height * headroom;
 }
 
 function kelvinToRgb(kelvin: number): { r: number; g: number; b: number } {
@@ -71,42 +112,59 @@ export function getPlacementOffset(frameComposition?: FrameComposition) {
   return PLACEMENT_OFFSETS[placement] || PLACEMENT_OFFSETS.center;
 }
 
-export function applyCameraFromState(threeCamera: PerspectiveCamera, payload: ScenePreviewPayload) {
+export function applyCameraFromState(
+  threeCamera: PerspectiveCamera,
+  payload: ScenePreviewPayload,
+  viewportAspect?: number,
+  figureBounds?: FigureBounds | null,
+) {
   const { camera: cam, shot } = payload;
   const frame = shot?.frameComposition || DEFAULT_FRAME_COMPOSITION;
   const angle = ANGLE_PRESETS[cam.angle] || ANGLE_PRESETS['eye-level'];
-  const distance = FIELD_SIZE_DISTANCE[cam.fieldSize] || FIELD_SIZE_DISTANCE.ms;
+  const framing = FIELD_SIZE_FRAMING[cam.fieldSize] || FIELD_SIZE_FRAMING.ms;
   const placement = getPlacementOffset(frame);
 
-  let fov = focalLengthToFov(cam.focalLength || 50);
+  const bounds: FigureBounds = figureBounds ?? {
+    min: { x: -0.3, y: -0.7, z: -0.2 },
+    max: { x: 0.3, y: 1.1, z: 0.2 },
+    height: 1.8,
+    center: { x: 0, y: 0.2, z: 0 },
+  };
+
+  let fov = focalLengthToVerticalFov(cam.focalLength || 50);
   fov *= LENS_FOV_SCALE[cam.lensType] || 1;
-  fov = Math.min(Math.max(fov, 12), 110);
+  fov = Math.min(Math.max(fov, 20), 85);
 
-  const targetY = HEADROOM_TARGET_Y[frame.headroom] || HEADROOM_TARGET_Y.normal;
-  const target = { x: placement.x, y: targetY, z: placement.z };
+  const headroom = HEADROOM_OFFSET[frame.headroom] || 0;
+  const spanM = bounds.height * framing.spanRatio * (1 + Math.max(headroom, 0) * 0.5);
+  const distance = distanceForFraming(spanM, framing.fill, fov);
 
-  let camX = placement.x * 0.15;
-  let camY = angle.camY;
-  let camZ = distance;
-  let lookX = target.x;
-  let lookY = angle.targetY ?? targetY;
-  const lookZ = target.z;
+  const subjectX = bounds.center.x + placement.x;
+  const subjectZ = bounds.center.z + placement.z;
+
+  let camX = subjectX + placement.x * 0.08;
+  let camY = aimY(bounds, angle.camAim, headroom * 0.5);
+  let camZ = subjectZ + distance;
+  let lookX = subjectX;
+  let lookZ = subjectZ;
+  let lookY = aimY(bounds, angle.targetAim, headroom);
 
   if (cam.coverage === 'ots') {
-    camX = -0.45;
-    camZ = distance * 0.85;
-    lookX = 0.35;
-    lookY = 1.45;
+    camX = subjectX - 0.45;
+    camZ = subjectZ + distance * 0.92;
+    lookX = subjectX + 0.35;
+    lookY = aimY(bounds, 0.76);
   } else if (cam.coverage === 'pov') {
-    camY = 1.6;
-    camZ = 0.15;
-    lookX = 0;
-    lookY = 1.55;
+    camY = aimY(bounds, 0.88);
+    camZ = subjectZ + 0.2;
+    lookX = subjectX;
+    lookY = aimY(bounds, 0.86);
+    lookZ = subjectZ + distance;
   }
 
   const pitchRad = (angle.pitch || 0) * (Math.PI / 180);
-  camY += Math.sin(pitchRad) * distance * 0.08;
-  lookY += Math.sin(pitchRad) * 0.25;
+  camY += Math.sin(pitchRad) * distance * 0.05;
+  lookY += Math.sin(pitchRad) * bounds.height * 0.08;
 
   threeCamera.fov = fov;
   threeCamera.position.set(camX, camY, camZ);
@@ -118,11 +176,17 @@ export function applyCameraFromState(threeCamera: PerspectiveCamera, payload: Sc
     threeCamera.rotation.z = 0;
   }
 
-  const aspect = parseAspect(payload.project?.aspectRatio || '16:9');
+  const aspect = viewportAspect ?? parseAspect(payload.project?.aspectRatio || '16:9');
   threeCamera.aspect = aspect;
   threeCamera.updateProjectionMatrix();
 
-  return { target, distance, fov };
+  return {
+    target: { x: lookX, y: lookY, z: lookZ },
+    distance,
+    fov,
+    bounds,
+    spanM,
+  };
 }
 
 function parseAspect(ar: string): number {

@@ -1,5 +1,6 @@
 'use client';
 
+import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { useStudioStore } from '@/store/useStudioStore';
 
 export function Toast() {
@@ -8,7 +9,10 @@ export function Toast() {
   if (!toast) return null;
 
   return (
-    <div className="fixed top-20 right-4 bg-surface-700 border border-surface-600 rounded-lg px-4 py-3 shadow-xl z-50 animate-fade-in">
+    <div
+      className="fixed top-20 right-4 bg-surface-700 border border-surface-600 rounded-lg px-4 py-3 shadow-xl z-50 animate-fade-in"
+      {...uiSectionProps(UI_SECTIONS.studioToast)}
+    >
       <div className="flex items-center gap-3">
         <svg
           className={`w-5 h-5 ${toast.type === 'error' ? 'text-red-400' : 'text-green-400'}`}

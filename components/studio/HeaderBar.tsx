@@ -1,6 +1,7 @@
 'use client';
 
 import { RESOLUTION_PRESETS } from '@/lib/constants/resolutions';
+import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { getCurrentProviderName } from '@/lib/storage/ai-settings';
 import type { AspectRatio } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
@@ -18,9 +19,12 @@ export function HeaderBar() {
   const providerName = getCurrentProviderName(ai);
 
   return (
-    <header className="glass border-b border-surface-700 h-16 flex items-center justify-between px-4 md:px-6 z-50">
+    <header
+      className="glass border-b border-surface-700 h-16 flex items-center justify-between px-4 md:px-6 z-50"
+      {...uiSectionProps(UI_SECTIONS.studioHeader)}
+    >
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" {...uiSectionProps(UI_SECTIONS.studioHeaderBrand)}>
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -36,6 +40,7 @@ export function HeaderBar() {
           value={project.name}
           onChange={(e) => setProject({ name: e.target.value })}
           className="bg-surface-700 hover:bg-surface-600 focus:bg-surface-600 border-surface-600 rounded-lg px-3 py-1.5 text-sm font-medium outline-none focus:ring-2 focus:ring-brand-500 transition-all w-32 md:w-48"
+          {...uiSectionProps(UI_SECTIONS.studioHeaderProjectName)}
         />
 
         <button
@@ -43,6 +48,7 @@ export function HeaderBar() {
           onClick={openSettings}
           className="hidden md:flex items-center gap-2 ml-2 px-3 py-1 bg-surface-800 hover:bg-surface-700 border border-surface-600 rounded-lg cursor-pointer transition-all text-xs"
           title="Click to manage AI providers & models"
+          {...uiSectionProps(UI_SECTIONS.studioHeaderProviderBadge)}
         >
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 bg-emerald-400 rounded-full" />
@@ -51,7 +57,7 @@ export function HeaderBar() {
         </button>
       </div>
 
-      <div className="hidden lg:flex items-center gap-2">
+      <div className="hidden lg:flex items-center gap-2" {...uiSectionProps(UI_SECTIONS.studioHeaderProjectSettings)}>
         <div className="flex items-center gap-2 bg-surface-800 rounded-lg px-3 py-2 border border-surface-700">
           <select
             value={project.aspectRatio}
@@ -104,7 +110,7 @@ export function HeaderBar() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2" {...uiSectionProps(UI_SECTIONS.studioHeaderActions)}>
         <button type="button" onClick={saveProject} className="p-2 hover:bg-surface-700 rounded-lg transition-all group">
           <svg className="w-5 h-5 text-gray-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />

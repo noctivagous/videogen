@@ -1,5 +1,6 @@
 'use client';
 
+import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { useStudioStore } from '@/store/useStudioStore';
 
 export function ShotTimeline() {
@@ -9,7 +10,7 @@ export function ShotTimeline() {
   const addShot = useStudioStore((s) => s.addShot);
 
   return (
-    <div>
+    <div {...uiSectionProps(UI_SECTIONS.studioShotTimeline)}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <svg className="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -38,6 +39,7 @@ export function ShotTimeline() {
             key={shot.id}
             className="shot-item relative flex-shrink-0 w-40 group cursor-pointer"
             onClick={() => selectShot(shot.id)}
+            {...uiSectionProps(UI_SECTIONS.studioShotItem, { suffix: shot.id })}
           >
             <div className={`timeline-thumb ${shot.active ? 'active' : ''} aspect-video bg-surface-700 rounded-lg border-2 ${shot.active ? 'border-brand-500' : 'border-surface-600'} overflow-hidden transition-all hover:border-brand-400`}>
               <div className="w-full h-full bg-gradient-to-br from-surface-600 to-surface-700 flex items-center justify-center">

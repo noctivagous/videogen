@@ -9,6 +9,7 @@ import { PreviewPanel } from '@/components/studio/PreviewPanel';
 import { ProviderEditModal } from '@/components/studio/ProviderEditModal';
 import { SettingsModal } from '@/components/studio/SettingsModal';
 import { Toast } from '@/components/studio/Toast';
+import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { useStudioStore } from '@/store/useStudioStore';
 
 export function StudioShell() {
@@ -21,26 +22,35 @@ export function StudioShell() {
   }, [init]);
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className="h-screen flex flex-col overflow-hidden" {...uiSectionProps(UI_SECTIONS.studioRoot)}>
       <HeaderBar />
 
-      <div className="flex-1 flex overflow-hidden">
-        <aside className="hidden lg:block w-72 glass border-r border-surface-700 overflow-y-auto control-panel">
+      <div className="flex-1 flex overflow-hidden" {...uiSectionProps(UI_SECTIONS.studioWorkspace)}>
+        <aside
+          className="hidden lg:block w-72 glass border-r border-surface-700 overflow-y-auto control-panel"
+          {...uiSectionProps(UI_SECTIONS.studioCameraPanel)}
+        >
           <CameraPanel />
         </aside>
 
-        <main className="flex-1 flex flex-col bg-surface-900 min-h-0">
+        <main
+          className="flex-1 flex flex-col bg-surface-900 min-h-0"
+          {...uiSectionProps(UI_SECTIONS.studioPreviewMain)}
+        >
           <PreviewPanel />
         </main>
 
-        <aside className="hidden lg:block w-72 glass border-l border-surface-700 overflow-y-auto control-panel">
+        <aside
+          className="hidden lg:block w-72 glass border-l border-surface-700 overflow-y-auto control-panel"
+          {...uiSectionProps(UI_SECTIONS.studioLightingPanel)}
+        >
           <LightingPanel />
         </aside>
       </div>
 
       <BottomBar />
 
-      <div className="lg:hidden fixed bottom-4 right-4 z-50">
+      <div className="lg:hidden fixed bottom-4 right-4 z-50" {...uiSectionProps(UI_SECTIONS.studioMobileFab)}>
         <button
           type="button"
           onClick={() => setMobileDrawerOpen(true)}
@@ -53,10 +63,11 @@ export function StudioShell() {
       </div>
 
       {mobileDrawerOpen && (
-        <div className="lg:hidden fixed inset-0 z-40">
+        <div className="lg:hidden fixed inset-0 z-40" {...uiSectionProps(UI_SECTIONS.studioMobileDrawer)}>
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setMobileDrawerOpen(false)}
+            {...uiSectionProps(UI_SECTIONS.studioMobileDrawerBackdrop)}
           />
           <div className="absolute bottom-0 left-0 right-0 bg-surface-800 rounded-t-2xl border-t border-surface-700 max-h-[80vh] overflow-y-auto animate-slide-up">
             <div className="p-4">

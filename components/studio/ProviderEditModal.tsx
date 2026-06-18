@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { BUILT_IN_PROVIDERS } from '@/lib/constants/providers';
+import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { getProviderApiKey } from '@/lib/storage/ai-settings';
 import { useStudioStore } from '@/store/useStudioStore';
 
@@ -64,6 +65,7 @@ export function ProviderEditModal() {
     <div
       className="fixed inset-0 z-[250] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
       onClick={(e) => { if (e.target === e.currentTarget) closeProviderEdit(); }}
+      {...uiSectionProps(UI_SECTIONS.studioProviderEditModal)}
     >
       <div className="glass w-full max-w-md rounded-3xl border border-surface-700 overflow-hidden modal" onClick={(e) => e.stopPropagation()}>
         <div className="px-6 py-5 border-b border-surface-700 flex items-center justify-between">
@@ -81,7 +83,7 @@ export function ProviderEditModal() {
           </button>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="p-6 space-y-5" {...uiSectionProps(UI_SECTIONS.studioProviderEditForm)}>
           {!providerEdit.isCustom && builtIn && (
             <div className="text-sm text-gray-400">
               <div className="flex items-start gap-2">

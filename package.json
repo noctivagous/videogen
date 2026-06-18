@@ -4,12 +4,16 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:clean": "sh -c 'lsof -ti:3000,3001 | xargs kill -9 2>/dev/null; rm -rf .next && next dev \"$@\"' --",
     "build": "next build",
+    "build:clean": "rm -rf .next && next build",
     "start": "next start",
+    "clean": "rm -rf .next",
     "lint": "next lint"
   },
   "dependencies": {
-    "mannequin-js": "^5.2.3",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
     "next": "^15.3.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

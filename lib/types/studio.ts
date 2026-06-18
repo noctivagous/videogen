@@ -28,7 +28,7 @@ export type Placement =
 
 export type Headroom = 'tight' | 'normal' | 'generous';
 
-export type ReferenceRole = 'Subject' | 'Style' | 'Motion' | 'Depth' | 'Canny' | 'None';
+export type ReferenceRole = 'Subject' | 'Backdrop' | 'Motion' | 'Depth' | 'Canny' | 'None';
 
 export interface FrameComposition {
   guide: CompositionGuide;
@@ -132,3 +132,5 @@ export interface ScenePreviewPayload {
 }
 
 export type ToastType = 'success' | 'error';
+
+export type PreviewMode = 'vector' | '3d';

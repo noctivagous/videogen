@@ -4,9 +4,20 @@ import { create } from 'zustand';
 import {
   DEFAULT_FRAME_COMPOSITION,
   LEGACY_FIELD_SIZE_MIGRATION,
+  normalizeReferenceRole,
   SINGLE_ONLY_COVERAGE,
 } from '@/lib/constants/camera';
 import { RESOLUTION_PRESETS } from '@/lib/constants/resolutions';
+import {
+  STOCK_CAMERA,
+  STOCK_LIGHTING,
+  STOCK_MOTION,
+  STOCK_PROJECT,
+  STOCK_PROMPT,
+  STOCK_REFERENCE_ROLES,
+  STOCK_SHOTS,
+  createStockShot,
+} from '@/lib/constants/stock-project';
 import { applyFrameCompositionSmartDefaults } from '@/lib/studio/composition';
 import {
   createCustomProvider,
@@ -26,14 +37,11 @@ import type {
   ProjectSettings,
   Shot,
   StudioProject,
+  PreviewMode,
   ToastType,
 } from '@/lib/types/studio';
 
-const INITIAL_SHOTS: Shot[] = [
-  { id: 1, name: 'Shot 01', duration: 5, thumbnail: null, active: true, references: [null, null, null], referenceRoles: ['Subject', 'Style', 'Motion'], frameComposition: { guide: 'rule-of-thirds', placement: 'middle-right', headroom: 'normal', showOverlay: true } },
-  { id: 2, name: 'Shot 02', duration: 3, thumbnail: null, active: false, references: [null, null, null], referenceRoles: ['Subject', 'Style', 'Motion'], frameComposition: { guide: 'rule-of-thirds', placement: 'center', headroom: 'normal', showOverlay: true } },
-  { id: 3, name: 'Shot 03', duration: 7, thumbnail: null, active: false, references: [null, null, null], referenceRoles: ['Subject', 'Style', 'Motion'], frameComposition: { guide: 'rule-of-thirds', placement: 'middle-left', headroom: 'normal', showOverlay: true } },
-];
+const PREVIEW_MODE_KEY = 'videogen_preview_mode';
 
 function migrateCamera(camera: CameraSettings): CameraSettings {
   const legacy = LEGACY_FIELD_SIZE_MIGRATION[camera.fieldSize];
@@ -47,7 +55,9 @@ function migrateShots(shots: Shot[]): Shot[] {
   return shots.map((shot) => ({
     ...shot,
     references: shot.references || [null, null, null],
-    referenceRoles: shot.referenceRoles || ['Subject', 'Style', 'Motion'],
+    referenceRoles: (shot.referenceRoles || [...STOCK_REFERENCE_ROLES]).map((role) =>
+      normalizeReferenceRole(role as string),
+    ),
     frameComposition: {
       ...DEFAULT_FRAME_COMPOSITION,
       ...shot.frameComposition,
@@ -87,8 +97,11 @@ interface StudioStore {
   providerEdit: { id: string; isCustom: boolean } | null;
   mobileDrawerOpen: boolean;
   initialized: boolean;
+  previewMode: PreviewMode;
 
   init: () => void;
+  setPreviewMode: (mode: PreviewMode) => void;
+  togglePreviewMode: () => void;
   showToast: (message: string, type?: ToastType) => void;
   clearToast: () => void;
   getCurrentShot: () => Shot | undefined;
@@ -128,40 +141,12 @@ interface StudioStore {
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const useStudioStore = create<StudioStore>((set, get) => ({
-  project: {
-    name: 'Untitled_Project_01',
-    resolution: '854x480',
-    aspectRatio: '16:9',
-    fps: 30,
-    duration: 5,
-  },
-  camera: migrateCamera({
-    fieldSize: 'ms',
-    subjectCount: '1s',
-    coverage: 'clean',
-    lensType: 'standard',
-    focalLength: 50,
-    angle: 'eye-level',
-    movement: 'static',
-    aperture: 2.8,
-    dof: 'shallow',
-  }),
-  lighting: {
-    keyLight: 'soft',
-    intensity: 80,
-    style: 'natural',
-    timeOfDay: 'noon',
-    colorTemp: 5500,
-    atmosphere: 'clear',
-  },
-  motion: {
-    intensity: 'subtle',
-    subjectAction: 'still',
-    stabilization: 70,
-    motionBlur: 'low',
-  },
-  prompt: '',
-  shots: migrateShots(INITIAL_SHOTS),
+  project: { ...STOCK_PROJECT },
+  camera: migrateCamera({ ...STOCK_CAMERA }),
+  lighting: { ...STOCK_LIGHTING },
+  motion: { ...STOCK_MOTION },
+  prompt: STOCK_PROMPT,
+  shots: migrateShots(STOCK_SHOTS),
   currentShot: 1,
   ai: { ...DEFAULT_AI_STATE },
   toast: null,
@@ -174,11 +159,25 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   providerEdit: null,
   mobileDrawerOpen: false,
   initialized: false,
+  previewMode: 'vector',
 
   init() {
     if (get().initialized) return;
     const ai = loadAIState();
-    set({ ai, initialized: true });
+    // v1: vector blocking preview only — 3D toggle deferred until ref-based posing ships
+    set({ ai, previewMode: 'vector', initialized: true });
+  },
+
+  setPreviewMode(mode) {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(PREVIEW_MODE_KEY, mode);
+    }
+    set({ previewMode: mode });
+  },
+
+  togglePreviewMode() {
+    const next = get().previewMode === 'vector' ? '3d' : 'vector';
+    get().setPreviewMode(next);
   },
 
   showToast(message, type = 'success') {
@@ -300,18 +299,21 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const { shots } = get();
     const current = get().getCurrentShot();
     const newId = Math.max(...shots.map((s) => s.id)) + 1;
-    const newShot: Shot = {
-      id: newId,
-      name: `Shot ${String(newId).padStart(2, '0')}`,
-      duration: 5,
-      thumbnail: null,
-      active: false,
-      references: [null, null, null],
-      referenceRoles: ['Subject', 'Style', 'Motion'],
-      frameComposition: current
-        ? { ...current.frameComposition }
-        : { ...DEFAULT_FRAME_COMPOSITION },
-    };
+    const newShot: Shot = createStockShot(
+      newId,
+      `Shot ${String(newId).padStart(2, '0')}`,
+      false,
+      5,
+      current?.frameComposition.placement ?? 'center',
+      Boolean(current?.references.some(Boolean)),
+    );
+    if (current?.references.some(Boolean)) {
+      newShot.references = [...current.references];
+      newShot.referenceRoles = [...current.referenceRoles];
+    }
+    newShot.frameComposition = current
+      ? { ...current.frameComposition }
+      : { ...DEFAULT_FRAME_COMPOSITION };
     set({ shots: [...shots, newShot] });
     get().showToast('New shot added');
   },
@@ -327,8 +329,8 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   cycleReferenceRole(index) {
     const shot = get().getCurrentShot();
     if (!shot) return;
-    const roles = ['Subject', 'Style', 'Motion', 'Depth', 'Canny', 'None'] as const;
-    const current = shot.referenceRoles[index];
+    const roles = ['Subject', 'Backdrop', 'Motion', 'Depth', 'Canny', 'None'] as const;
+    const current = normalizeReferenceRole(shot.referenceRoles[index] ?? 'None');
     const nextIdx = (roles.indexOf(current) + 1) % roles.length;
     shot.referenceRoles[index] = roles[nextIdx];
     set({ shots: [...get().shots] });

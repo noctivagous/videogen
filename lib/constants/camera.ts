@@ -88,5 +88,14 @@ export const PLACEMENTS: Placement[] = [
 ];
 
 export const REFERENCE_ROLES = [
-  'Subject', 'Style', 'Motion', 'Depth', 'Canny', 'None',
+  'Subject', 'Backdrop', 'Motion', 'Depth', 'Canny', 'None',
 ] as const;
+
+/** Maps legacy persisted roles to current labels (Style → Backdrop). */
+export function normalizeReferenceRole(role: string): (typeof REFERENCE_ROLES)[number] {
+  if (role === 'Style') return 'Backdrop';
+  if ((REFERENCE_ROLES as readonly string[]).includes(role)) {
+    return role as (typeof REFERENCE_ROLES)[number];
+  }
+  return 'None';
+}
