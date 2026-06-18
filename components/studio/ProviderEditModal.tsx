@@ -46,19 +46,30 @@ export function ProviderEditModal() {
   const displayIcon = providerEdit.isCustom ? '🛠️' : builtIn?.icon;
   const displayHint = providerEdit.isCustom ? custom?.baseUrl : builtIn?.hint;
 
-  const testConnection = () => {
+  const testConnection = async () => {
     if (!apiKey.trim()) {
       showToast('Please enter an API key', 'error');
       return;
     }
     setTesting(true);
-    setTimeout(() => {
+    try {
+      const res = await fetch('/api/providers/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          providerId: providerEdit.id,
+          isCustom: providerEdit.isCustom,
+          apiKey,
+          customBaseUrl: providerEdit.isCustom ? customBaseUrl : undefined,
+        }),
+      });
+      const result = await res.json();
+      showToast(result.message, result.ok ? 'success' : 'error');
+    } catch {
+      showToast('Connection test failed', 'error');
+    } finally {
       setTesting(false);
-      showToast(
-        apiKey.length >= 12 ? 'Connection successful — API key is valid' : 'Connection failed. Check key format.',
-        apiKey.length >= 12 ? 'success' : 'error',
-      );
-    }, 1200);
+    }
   };
 
   return (

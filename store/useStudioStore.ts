@@ -1,14 +1,12 @@
 'use client';
 
 import { create } from 'zustand';
-import {
-  DEFAULT_FRAME_COMPOSITION,
-  LEGACY_FIELD_SIZE_MIGRATION,
-  normalizeReferenceRole,
-  SINGLE_ONLY_COVERAGE,
-} from '@/lib/constants/camera';
+import { DEFAULT_FRAME_COMPOSITION, normalizeReferenceRole, SINGLE_ONLY_COVERAGE } from '@/lib/constants/camera';
+import { applyLensCameraPatch } from '@/lib/constants/lens';
 import { RESOLUTION_PRESETS } from '@/lib/constants/resolutions';
 import {
+  EMPTY_PROJECT,
+  EMPTY_SHOTS,
   STOCK_CAMERA,
   STOCK_LIGHTING,
   STOCK_MOTION,
@@ -16,17 +14,36 @@ import {
   STOCK_PROMPT,
   STOCK_REFERENCE_ROLES,
   STOCK_SHOTS,
-  createStockShot,
 } from '@/lib/constants/stock-project';
+import { isGenerationSupported } from '@/lib/studio/generation/supported';
+import { buildModelPayloadStack, buildShotPrompt } from '@/lib/studio/model-payload';
 import { applyFrameCompositionSmartDefaults } from '@/lib/studio/composition';
+import {
+  cloneInheritedShotSettings,
+  DEFAULT_SHOT_DEFAULTS,
+  migrateAllShots,
+  migrateCamera,
+  patchCurrentShot,
+  shotActiveView,
+  type ShotProjectDefaults,
+} from '@/lib/studio/shot-settings';
 import {
   createCustomProvider,
   DEFAULT_AI_STATE,
   getCurrentProviderName,
+  getProviderApiKey,
+  isProviderConnected,
   loadAIState,
   saveAIState,
 } from '@/lib/storage/ai-settings';
 import { downloadProject, pickAndLoadProject } from '@/lib/storage/project-io';
+import {
+  buildStudioProject,
+  clearStudioDraft,
+  loadStudioDraft,
+  saveStudioDraft,
+  scheduleStudioAutosave,
+} from '@/lib/storage/studio-state';
 import type {
   AIState,
   AspectRatio,
@@ -43,26 +60,57 @@ import type {
 
 const PREVIEW_MODE_KEY = 'videogen_preview_mode';
 
-function migrateCamera(camera: CameraSettings): CameraSettings {
-  const legacy = LEGACY_FIELD_SIZE_MIGRATION[camera.fieldSize];
-  const migrated = legacy ? { ...camera, ...legacy } : { ...camera };
-  if (!migrated.subjectCount) migrated.subjectCount = '1s';
-  if (!migrated.coverage) migrated.coverage = 'clean';
-  return migrated;
+function projectDefaultsFromData(data: StudioProject): ShotProjectDefaults {
+  return {
+    camera: migrateCamera(data.camera ?? STOCK_CAMERA),
+    lighting: data.lighting ?? STOCK_LIGHTING,
+    motion: data.motion ?? STOCK_MOTION,
+    sceneSetup: data.prompt ?? '',
+    shotActivity: '',
+  };
 }
 
-function migrateShots(shots: Shot[]): Shot[] {
-  return shots.map((shot) => ({
-    ...shot,
-    references: shot.references || [null, null, null],
-    referenceRoles: (shot.referenceRoles || [...STOCK_REFERENCE_ROLES]).map((role) =>
-      normalizeReferenceRole(role as string),
-    ),
-    frameComposition: {
-      ...DEFAULT_FRAME_COMPOSITION,
-      ...shot.frameComposition,
-    },
-  }));
+function getStockDefaults() {
+  const shots = migrateAllShots(STOCK_SHOTS, DEFAULT_SHOT_DEFAULTS);
+  const active = shots.find((s) => s.active) || shots[0];
+  return {
+    project: { ...STOCK_PROJECT },
+    shots,
+    currentShot: active?.id ?? 1,
+    ...shotActiveView(active),
+  };
+}
+
+function getEmptyDefaults() {
+  const shots = migrateAllShots(EMPTY_SHOTS, {
+    ...DEFAULT_SHOT_DEFAULTS,
+    sceneSetup: '',
+    shotActivity: '',
+  });
+  const active = shots[0];
+  return {
+    project: { ...EMPTY_PROJECT },
+    shots,
+    currentShot: active?.id ?? 1,
+    ...shotActiveView(active),
+  };
+}
+
+function applyStudioProject(data: StudioProject) {
+  const project = {
+    ...data.project,
+    aspectRatio: data.project.aspectRatio || '16:9',
+  };
+  const defaults = projectDefaultsFromData(data);
+  const shots = migrateAllShots(data.shots, defaults);
+  const currentShot = data.currentShot || shots[0]?.id || 1;
+  const active = shots.find((s) => s.id === currentShot) || shots[0];
+  return {
+    project: ensureResolution(project),
+    shots,
+    currentShot,
+    ...shotActiveView(active),
+  };
 }
 
 function getCurrentShotFromList(shots: Shot[], currentShot: number): Shot | undefined {
@@ -78,12 +126,15 @@ function ensureResolution(project: ProjectSettings): ProjectSettings {
   return project;
 }
 
+const stockState = getStockDefaults();
+
 interface StudioStore {
   project: ProjectSettings;
   camera: CameraSettings;
   lighting: LightingSettings;
   motion: MotionSettings;
-  prompt: string;
+  sceneSetup: string;
+  shotActivity: string;
   shots: Shot[];
   currentShot: number;
   ai: AIState;
@@ -111,7 +162,8 @@ interface StudioStore {
   setCamera: (patch: Partial<CameraSettings>) => void;
   setLighting: (patch: Partial<LightingSettings>) => void;
   setMotion: (patch: Partial<MotionSettings>) => void;
-  setPrompt: (prompt: string) => void;
+  setSceneSetup: (sceneSetup: string) => void;
+  setShotActivity: (shotActivity: string) => void;
   setShotFrameComposition: (patch: Partial<FrameComposition>) => void;
   toggleCompositionOverlay: () => void;
   handleCameraCompositionChange: (changed: 'subjectCount' | 'coverage') => void;
@@ -122,9 +174,11 @@ interface StudioStore {
   setReference: (index: number, dataUrl: string | null) => void;
   cycleReferenceRole: (index: number) => void;
 
-  generate: () => void;
+  generate: () => Promise<void>;
   saveProject: () => void;
   loadProject: () => Promise<void>;
+  newProject: () => void;
+  resetToDemo: () => void;
   exportVideo: () => void;
 
   openSettings: () => void;
@@ -141,13 +195,14 @@ interface StudioStore {
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const useStudioStore = create<StudioStore>((set, get) => ({
-  project: { ...STOCK_PROJECT },
-  camera: migrateCamera({ ...STOCK_CAMERA }),
-  lighting: { ...STOCK_LIGHTING },
-  motion: { ...STOCK_MOTION },
-  prompt: STOCK_PROMPT,
-  shots: migrateShots(STOCK_SHOTS),
-  currentShot: 1,
+  project: stockState.project,
+  camera: stockState.camera,
+  lighting: stockState.lighting,
+  motion: stockState.motion,
+  sceneSetup: stockState.sceneSetup,
+  shotActivity: stockState.shotActivity,
+  shots: stockState.shots,
+  currentShot: stockState.currentShot,
   ai: { ...DEFAULT_AI_STATE },
   toast: null,
   isGenerating: false,
@@ -164,8 +219,13 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   init() {
     if (get().initialized) return;
     const ai = loadAIState();
-    // v1: vector blocking preview only — 3D toggle deferred until ref-based posing ships
-    set({ ai, previewMode: 'vector', initialized: true });
+    const draft = loadStudioDraft();
+    if (draft) {
+      set({ ...applyStudioProject(draft), ai, previewMode: 'vector', initialized: true });
+      get().showToast('Restored your last session');
+    } else {
+      set({ ai, previewMode: 'vector', initialized: true });
+    }
   },
 
   setPreviewMode(mode) {
@@ -196,15 +256,17 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 
   getScenePayload() {
     const state = get();
+    const shot = getCurrentShotFromList(state.shots, state.currentShot);
     return {
       project: state.project,
-      camera: state.camera,
-      lighting: state.lighting,
-      motion: state.motion,
-      prompt: state.prompt,
       shots: state.shots,
       currentShot: state.currentShot,
-      shot: getCurrentShotFromList(state.shots, state.currentShot),
+      shot,
+      camera: shot?.camera ?? state.camera,
+      lighting: shot?.lighting ?? state.lighting,
+      motion: shot?.motion ?? state.motion,
+      sceneSetup: shot?.sceneSetup ?? state.sceneSetup,
+      shotActivity: shot?.shotActivity ?? state.shotActivity,
     };
   },
 
@@ -219,37 +281,77 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   },
 
   setCamera(patch) {
-    set((s) => ({ camera: { ...s.camera, ...patch } }));
+    set((s) => {
+      const current = getCurrentShotFromList(s.shots, s.currentShot);
+      const base = current?.camera ?? s.camera;
+      const camera = { ...base, ...applyLensCameraPatch(base, patch) };
+      return {
+        camera,
+        shots: patchCurrentShot(s.shots, s.currentShot, { camera }),
+      };
+    });
   },
 
   setLighting(patch) {
-    set((s) => ({ lighting: { ...s.lighting, ...patch } }));
+    set((s) => {
+      const lighting = { ...s.lighting, ...patch };
+      const current = getCurrentShotFromList(s.shots, s.currentShot);
+      const shots = patchCurrentShot(s.shots, s.currentShot, {
+        lighting: { ...current?.lighting ?? lighting, ...patch },
+      });
+      return { lighting, shots };
+    });
   },
 
   setMotion(patch) {
-    set((s) => ({ motion: { ...s.motion, ...patch } }));
+    set((s) => {
+      const motion = { ...s.motion, ...patch };
+      const current = getCurrentShotFromList(s.shots, s.currentShot);
+      const shots = patchCurrentShot(s.shots, s.currentShot, {
+        motion: { ...current?.motion ?? motion, ...patch },
+      });
+      return { motion, shots };
+    });
   },
 
-  setPrompt(prompt) {
-    set({ prompt });
+  setSceneSetup(sceneSetup) {
+    set((s) => ({
+      sceneSetup,
+      shots: patchCurrentShot(s.shots, s.currentShot, { sceneSetup }),
+    }));
+  },
+
+  setShotActivity(shotActivity) {
+    set((s) => ({
+      shotActivity,
+      shots: patchCurrentShot(s.shots, s.currentShot, { shotActivity }),
+    }));
   },
 
   setShotFrameComposition(patch) {
     const shot = get().getCurrentShot();
     if (!shot) return;
-    Object.assign(shot.frameComposition, patch);
-    set({ shots: [...get().shots] });
+    const frameComposition = { ...shot.frameComposition, ...patch };
+    set((s) => ({
+      shots: patchCurrentShot(s.shots, s.currentShot, { frameComposition }),
+    }));
   },
 
   toggleCompositionOverlay() {
     const shot = get().getCurrentShot();
     if (!shot) return;
-    shot.frameComposition.showOverlay = !shot.frameComposition.showOverlay;
-    set({ shots: [...get().shots] });
+    set((s) => ({
+      shots: patchCurrentShot(s.shots, s.currentShot, {
+        frameComposition: {
+          ...shot.frameComposition,
+          showOverlay: !shot.frameComposition.showOverlay,
+        },
+      }),
+    }));
   },
 
   handleCameraCompositionChange(changed) {
-    const { camera } = get();
+    const { camera, shots, currentShot } = get();
     let next = { ...camera };
 
     if (changed === 'coverage' && SINGLE_ONLY_COVERAGE.has(camera.coverage)) {
@@ -262,21 +364,26 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       }
     }
 
-    set({ camera: next });
-
-    const shot = get().getCurrentShot();
-    if (shot) {
-      applyFrameCompositionSmartDefaults(next, shot.frameComposition);
-      set({ shots: [...get().shots] });
+    let updatedShots = patchCurrentShot(shots, currentShot, { camera: next });
+    const updatedShot = getCurrentShotFromList(updatedShots, currentShot);
+    if (updatedShot) {
+      const frameComposition = { ...updatedShot.frameComposition };
+      applyFrameCompositionSmartDefaults(next, frameComposition);
+      updatedShots = patchCurrentShot(updatedShots, currentShot, { frameComposition });
     }
+
+    set({ camera: next, shots: updatedShots });
   },
 
   selectShot(id) {
+    if (get().currentShot === id) return;
+    const shot = get().shots.find((s) => s.id === id);
     set((s) => ({
       currentShot: id,
-      shots: s.shots.map((shot) => ({ ...shot, active: shot.id === id })),
+      shots: s.shots.map((sh) => ({ ...sh, active: sh.id === id })),
+      ...(shot ? shotActiveView(shot) : {}),
     }));
-    get().showToast(`Switched to Shot ${id}`);
+    get().showToast(`Switched to ${shot?.name ?? `Shot ${id}`}`);
   },
 
   deleteShot(id) {
@@ -290,8 +397,11 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     if (currentShot === id) {
       nextCurrent = nextShots[0].id;
       nextShots[0] = { ...nextShots[0], active: true };
+      const active = nextShots[0];
+      set({ shots: nextShots, currentShot: nextCurrent, ...shotActiveView(active) });
+    } else {
+      set({ shots: nextShots, currentShot: nextCurrent });
     }
-    set({ shots: nextShots, currentShot: nextCurrent });
     get().showToast('Shot deleted');
   },
 
@@ -299,30 +409,40 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const { shots } = get();
     const current = get().getCurrentShot();
     const newId = Math.max(...shots.map((s) => s.id)) + 1;
-    const newShot: Shot = createStockShot(
-      newId,
-      `Shot ${String(newId).padStart(2, '0')}`,
-      false,
-      5,
-      current?.frameComposition.placement ?? 'center',
-      Boolean(current?.references.some(Boolean)),
-    );
-    if (current?.references.some(Boolean)) {
-      newShot.references = [...current.references];
-      newShot.referenceRoles = [...current.referenceRoles];
-    }
-    newShot.frameComposition = current
-      ? { ...current.frameComposition }
-      : { ...DEFAULT_FRAME_COMPOSITION };
+
+    const inherited = current ? cloneInheritedShotSettings(current) : {
+      duration: 5,
+      camera: migrateCamera({ ...STOCK_CAMERA }),
+      lighting: { ...STOCK_LIGHTING },
+      motion: { ...STOCK_MOTION },
+      sceneSetup: STOCK_PROMPT,
+      shotActivity: '',
+      frameComposition: { ...DEFAULT_FRAME_COMPOSITION },
+      references: [null, null, null] as (string | null)[],
+      referenceRoles: [...STOCK_REFERENCE_ROLES],
+    };
+
+    const newShot: Shot = {
+      id: newId,
+      name: `Shot ${String(newId).padStart(2, '0')}`,
+      active: false,
+      thumbnail: null,
+      videoUrl: null,
+      ...inherited,
+    };
+
     set({ shots: [...shots, newShot] });
-    get().showToast('New shot added');
+    get().showToast('New shot added — inherited settings from current shot');
   },
 
   setReference(index, dataUrl) {
     const shot = get().getCurrentShot();
     if (!shot) return;
-    shot.references[index] = dataUrl;
-    set({ shots: [...get().shots] });
+    const references = [...shot.references];
+    references[index] = dataUrl;
+    set((s) => ({
+      shots: patchCurrentShot(s.shots, s.currentShot, { references }),
+    }));
     if (dataUrl) get().showToast('Reference image added');
   },
 
@@ -332,86 +452,128 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const roles = ['Subject', 'Backdrop', 'Motion', 'Depth', 'Canny', 'None'] as const;
     const current = normalizeReferenceRole(shot.referenceRoles[index] ?? 'None');
     const nextIdx = (roles.indexOf(current) + 1) % roles.length;
-    shot.referenceRoles[index] = roles[nextIdx];
-    set({ shots: [...get().shots] });
+    const referenceRoles = [...shot.referenceRoles];
+    referenceRoles[index] = roles[nextIdx];
+    set((s) => ({
+      shots: patchCurrentShot(s.shots, s.currentShot, { referenceRoles }),
+    }));
   },
 
-  generate() {
-    const { prompt, project } = get();
-    if (!prompt.trim()) {
-      get().showToast('Please enter a prompt first', 'error');
+  async generate() {
+    const state = get();
+    const { project, ai, shots, currentShot } = state;
+    const shot = getCurrentShotFromList(shots, currentShot);
+    if (!shot) return;
+
+    const combinedPrompt = buildShotPrompt(shot.sceneSetup, shot.shotActivity);
+    if (!combinedPrompt.trim()) {
+      get().showToast('Please enter scene setup or shot activity first', 'error');
       return;
     }
 
-    set({ isGenerating: true, showPreviewSuccess: false });
-    const totalFrames = project.duration * project.fps;
-    let currentFrame = 0;
+    const isCustom = ai.customProviders.some((p) => p.id === ai.defaultProvider);
+    if (!isProviderConnected(ai.defaultProvider, isCustom, ai)) {
+      get().showToast('Configure your AI provider API key in Settings first', 'error');
+      return;
+    }
+    if (!isGenerationSupported(ai.defaultProvider, isCustom)) {
+      get().showToast('Switch to Replicate or a Custom provider to generate', 'error');
+      return;
+    }
 
-    const interval = setInterval(() => {
-      currentFrame += Math.floor(totalFrames / 20);
-      if (currentFrame >= totalFrames) {
-        currentFrame = totalFrames;
-        clearInterval(interval);
+    const stack = buildModelPayloadStack({
+      project,
+      camera: shot.camera,
+      lighting: shot.lighting,
+      motion: shot.motion,
+      sceneSetup: shot.sceneSetup,
+      shotActivity: shot.shotActivity,
+      shot,
+      ai,
+    });
+    const apiKey = getProviderApiKey(ai.defaultProvider, isCustom, ai);
+    const customBaseUrl = isCustom
+      ? ai.customProviders.find((p) => p.id === ai.defaultProvider)?.baseUrl
+      : undefined;
 
-        setTimeout(() => {
-          const ai = get().ai;
-          set({
-            isGenerating: false,
-            showPreviewSuccess: true,
-            previewSuccessProvider: `Using ${getCurrentProviderName(ai)}`,
-            previewSuccessPrompt: get().prompt,
-          });
-          get().showToast('Video generation complete!');
+    set({ isGenerating: true, showPreviewSuccess: false, progressText: 'Submitting to provider...' });
 
-          setTimeout(() => set({ showPreviewSuccess: false }), 3500);
-        }, 500);
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          providerId: ai.defaultProvider,
+          isCustom,
+          apiKey,
+          customBaseUrl,
+          prompt: stack.combinedPrompt,
+          duration: project.duration,
+          fps: project.fps,
+          resolution: project.resolution,
+          aspectRatio: project.aspectRatio,
+          refs: stack.blocks.find((b) => b.id === 'references')?.refs ?? [],
+        }),
+      });
+
+      const result = await res.json();
+      if (!res.ok || result.status === 'error') {
+        throw new Error(result.error || 'Generation failed');
       }
-      set({ progressText: `Processing frame ${currentFrame} of ${totalFrames}` });
-    }, 150);
+
+      set((s) => ({
+        shots: patchCurrentShot(s.shots, s.currentShot, {
+          videoUrl: result.videoUrl ?? null,
+          thumbnail: result.posterUrl ?? shot.thumbnail,
+        }),
+        isGenerating: false,
+        showPreviewSuccess: true,
+        previewSuccessProvider: `${getCurrentProviderName(ai)}${result.providerJobId ? ` · Job ${result.providerJobId}` : ''}`,
+        previewSuccessPrompt: combinedPrompt,
+        progressText: '',
+      }));
+      get().showToast('Video generation complete!');
+
+      setTimeout(() => set({ showPreviewSuccess: false }), 5000);
+    } catch (e) {
+      set({ isGenerating: false, progressText: '' });
+      get().showToast(e instanceof Error ? e.message : 'Generation failed', 'error');
+    }
   },
 
   saveProject() {
-    const state = get();
-    const project: StudioProject = {
-      project: state.project,
-      camera: state.camera,
-      lighting: state.lighting,
-      motion: state.motion,
-      prompt: state.prompt,
-      shots: state.shots,
-      currentShot: state.currentShot,
-    };
-    downloadProject(project);
+    downloadProject(buildStudioProject(get()));
     get().showToast('Project saved successfully');
   },
 
   async loadProject() {
-    const data = await pickAndLoadProject();
-    if (!data) {
-      get().showToast('Failed to load project', 'error');
+    const result = await pickAndLoadProject();
+    if (result.status === 'cancelled') return;
+    if (result.status === 'error') {
+      get().showToast(result.message, 'error');
       return;
     }
-
-    const project = {
-      ...data.project,
-      aspectRatio: data.project.aspectRatio || '16:9',
-    };
-
-    set({
-      project: ensureResolution(project),
-      camera: migrateCamera(data.camera),
-      lighting: data.lighting,
-      motion: data.motion,
-      prompt: data.prompt || '',
-      shots: migrateShots(data.shots),
-      currentShot: data.currentShot || data.shots[0]?.id || 1,
-    });
+    const applied = applyStudioProject(result.data);
+    set(applied);
+    clearStudioDraft();
+    saveStudioDraft(buildStudioProject(applied));
     get().showToast('Project loaded successfully');
   },
 
+  newProject() {
+    set({ ...getEmptyDefaults(), showPreviewSuccess: false });
+    clearStudioDraft();
+    get().showToast('New project created');
+  },
+
+  resetToDemo() {
+    set({ ...getStockDefaults(), showPreviewSuccess: false });
+    clearStudioDraft();
+    get().showToast('Demo project restored');
+  },
+
   exportVideo() {
-    get().showToast('Export started... Video will be ready shortly');
-    setTimeout(() => get().showToast('Video exported successfully!'), 2000);
+    get().showToast('Export coming soon — generate a video first', 'error');
   },
 
   openSettings() {
@@ -470,7 +632,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   deleteCustomProvider(id) {
     const ai = { ...get().ai };
     ai.customProviders = ai.customProviders.filter((p) => p.id !== id);
-    if (ai.defaultProvider === id) ai.defaultProvider = 'xai';
+    if (ai.defaultProvider === id) ai.defaultProvider = 'replicate';
     saveAIState(ai);
     set({ ai, providerEdit: null });
     get().showToast('Custom provider removed');
@@ -488,3 +650,8 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     set({ mobileDrawerOpen: open });
   },
 }));
+
+useStudioStore.subscribe((state) => {
+  if (!state.initialized) return;
+  scheduleStudioAutosave(buildStudioProject(state));
+});

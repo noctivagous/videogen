@@ -1,5 +1,7 @@
+import { formatLensForPrompt } from '@/lib/constants/lens';
 import { getCurrentProviderName } from '@/lib/storage/ai-settings';
 import { getFullCameraPrompt, getShotFrameComposition } from '@/lib/studio/composition';
+import { CHANNEL_LABELS, getProviderCapabilities } from '@/lib/studio/provider-capabilities';
 import type {
   AIState,
   CameraSettings,
@@ -25,21 +27,31 @@ export interface ModelPayloadStack {
   combinedPrompt: string;
 }
 
+export function buildShotPrompt(sceneSetup: string, shotActivity: string): string {
+  const setup = sceneSetup.trim();
+  const activity = shotActivity.trim();
+  if (!setup && !activity) return '';
+  if (!setup) return activity;
+  if (!activity) return setup;
+  return `${setup} ${activity}`;
+}
+
 function buildCombinedPrompt(input: {
-  prompt: string;
+  sceneSetup: string;
+  shotActivity: string;
   compositionPrompt: string;
   camera: CameraSettings;
   lighting: LightingSettings;
   motion: MotionSettings;
   refs: { role: ReferenceRole; url: string }[];
 }): string {
-  const { prompt, compositionPrompt, camera, lighting, motion, refs } = input;
+  const { sceneSetup, shotActivity, compositionPrompt, camera, lighting, motion, refs } = input;
+  const prompt = buildShotPrompt(sceneSetup, shotActivity);
 
   const cameraLine = [
     compositionPrompt,
-    `${camera.lensType} ${camera.focalLength}mm f/${camera.aperture}`,
+    formatLensForPrompt(camera),
     `${camera.angle.replace(/-/g, ' ')}, ${camera.movement.replace(/-/g, ' ')}`,
-    `${camera.dof} depth of field`,
   ].filter(Boolean).join('. ');
 
   const lightingLine = [
@@ -67,21 +79,25 @@ export function buildModelPayloadStack(input: {
   camera: CameraSettings;
   lighting: LightingSettings;
   motion: MotionSettings;
-  prompt: string;
+  sceneSetup: string;
+  shotActivity: string;
   shot: Shot | undefined;
   ai: AIState;
 }): ModelPayloadStack {
-  const { project, camera, lighting, motion, prompt, shot, ai } = input;
+  const { project, camera, lighting, motion, sceneSetup, shotActivity, shot, ai } = input;
   const frame = getShotFrameComposition(shot);
   const compositionPrompt = getFullCameraPrompt(camera, frame);
   const provider = getCurrentProviderName(ai);
+  const isCustom = ai.customProviders.some((p) => p.id === ai.defaultProvider);
+  const capabilities = getProviderCapabilities(ai.defaultProvider, isCustom);
 
   const refs = (shot?.references ?? [])
     .map((url, i) => ({ url, role: shot?.referenceRoles[i] ?? 'None' }))
     .filter((r): r is { role: ReferenceRole; url: string } => Boolean(r.url));
 
   const combinedPrompt = buildCombinedPrompt({
-    prompt,
+    sceneSetup,
+    shotActivity,
     compositionPrompt,
     camera,
     lighting,
@@ -110,11 +126,23 @@ export function buildModelPayloadStack(input: {
 
   blocks.push(
     {
+      id: 'model-io',
+      title: 'What the model receives',
+      lines: [
+        capabilities.summary,
+        `API fields: ${capabilities.apiFields.join(', ')}`,
+      ],
+      chips: capabilities.settings
+        .filter((s) => s.channel === 'api' || s.channel === 'prompt')
+        .map((s) => `${s.label} · ${CHANNEL_LABELS[s.channel]}`),
+      variant: 'settings',
+    },
+    {
       id: 'assembled-prompt',
       title: 'Assembled Prompt',
       lines: combinedPrompt
         ? [combinedPrompt]
-        : ['(empty — add a scene prompt to generate)'],
+        : ['(empty — add scene setup or shot activity to generate)'],
       variant: 'prompt',
     },
     {

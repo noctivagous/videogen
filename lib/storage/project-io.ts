@@ -1,4 +1,17 @@
+import { PROJECT_SCHEMA_VERSION } from '@/lib/storage/studio-state';
 import type { StudioProject } from '@/lib/types/studio';
+
+export type LoadProjectResult =
+  | { status: 'success'; data: StudioProject }
+  | { status: 'cancelled' }
+  | { status: 'error'; message: string };
+
+export function validateStudioProject(data: unknown): StudioProject | null {
+  if (!data || typeof data !== 'object') return null;
+  const p = data as StudioProject;
+  if (!p.project?.name || !Array.isArray(p.shots) || p.shots.length === 0) return null;
+  return p;
+}
 
 export function downloadProject(project: StudioProject): void {
   const dataStr = JSON.stringify(project, null, 2);
@@ -11,7 +24,7 @@ export function downloadProject(project: StudioProject): void {
   URL.revokeObjectURL(url);
 }
 
-export function pickAndLoadProject(): Promise<StudioProject | null> {
+export function pickAndLoadProject(): Promise<LoadProjectResult> {
   return new Promise((resolve) => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -19,17 +32,22 @@ export function pickAndLoadProject(): Promise<StudioProject | null> {
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) {
-        resolve(null);
+        resolve({ status: 'cancelled' });
         return;
       }
 
       const reader = new FileReader();
       reader.onload = (event) => {
         try {
-          const data = JSON.parse(event.target?.result as string) as StudioProject;
-          resolve(data);
+          const parsed = JSON.parse(event.target?.result as string);
+          const data = validateStudioProject(parsed);
+          if (!data) {
+            resolve({ status: 'error', message: 'Invalid project file — missing project name or shots' });
+            return;
+          }
+          resolve({ status: 'success', data: { ...data, schemaVersion: data.schemaVersion ?? PROJECT_SCHEMA_VERSION } });
         } catch {
-          resolve(null);
+          resolve({ status: 'error', message: 'Could not parse project file — is it valid JSON?' });
         }
       };
       reader.readAsText(file);

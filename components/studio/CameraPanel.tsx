@@ -1,6 +1,13 @@
 'use client';
 
 import { PLACEMENTS } from '@/lib/constants/camera';
+import {
+  FOCAL_LENGTH_TICKS,
+  formatLensLabel,
+  GLOBAL_FOCAL_MAX,
+  GLOBAL_FOCAL_MIN,
+  LENS_PRESETS,
+} from '@/lib/constants/lens';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import {
   getCameraCompositionLabel,
@@ -29,7 +36,6 @@ export function CameraPanel() {
   const showCoverage = camera.subjectCount === '1s';
   const placementVisible = showPlacementGrid(frame.guide);
   const headroomVisible = showHeadroomControl(camera.fieldSize);
-
   return (
     <div className="p-4" {...uiSectionProps(UI_SECTIONS.studioCameraControls, { id: false })}>
       <div className="flex items-center gap-2 mb-4">
@@ -164,23 +170,37 @@ export function CameraPanel() {
           </div>
         </div>
 
-        <Select label="Lens Type" value={camera.lensType} onChange={(e) => setCamera({ lensType: e.target.value as typeof camera.lensType })}>
-          <option value="wide">Wide Angle (14-35mm)</option>
-          <option value="standard">Standard (35-70mm)</option>
-          <option value="telephoto">Telephoto (70-200mm)</option>
-          <option value="macro">Macro</option>
-          <option value="fisheye">Fisheye</option>
-          <option value="anamorphic">Anamorphic</option>
+        <Select
+          label="Lens"
+          value={camera.lensType}
+          onChange={(e) => setCamera({ lensType: e.target.value as typeof camera.lensType })}
+        >
+          <option value="wide">Wide Angle ({LENS_PRESETS.wide.min}–{LENS_PRESETS.wide.max}mm)</option>
+          <option value="standard">Standard ({LENS_PRESETS.standard.min}–{LENS_PRESETS.standard.max}mm)</option>
+          <option value="telephoto">Telephoto ({LENS_PRESETS.telephoto.min}–{LENS_PRESETS.telephoto.max}mm)</option>
+          <option value="macro">Macro ({LENS_PRESETS.macro.min}–{LENS_PRESETS.macro.max}mm)</option>
+          <option value="fisheye">Fisheye ({LENS_PRESETS.fisheye.min}–{LENS_PRESETS.fisheye.max}mm)</option>
+          <option value="anamorphic">Anamorphic ({LENS_PRESETS.anamorphic.min}–{LENS_PRESETS.anamorphic.max}mm)</option>
         </Select>
 
         <RangeSlider
           label="Focal Length"
-          valueLabel={`${camera.focalLength}mm`}
-          min={14}
-          max={200}
+          valueLabel={formatLensLabel(camera)}
+          min={GLOBAL_FOCAL_MIN}
+          max={GLOBAL_FOCAL_MAX}
+          step={1}
+          list="focal-length-ticks"
           value={camera.focalLength}
           onChange={(e) => setCamera({ focalLength: parseInt(e.target.value) })}
         />
+        <datalist id="focal-length-ticks">
+          {FOCAL_LENGTH_TICKS.map((tick) => (
+            <option key={tick} value={tick} />
+          ))}
+        </datalist>
+        <p className="text-[10px] text-gray-500 -mt-2">
+          Slider spans all lens zones (8–200mm). Crossing a range updates the Lens dropdown automatically.
+        </p>
 
         <Select label="Angle" value={camera.angle} onChange={(e) => setCamera({ angle: e.target.value as typeof camera.angle })}>
           <option value="eye-level">Eye Level</option>

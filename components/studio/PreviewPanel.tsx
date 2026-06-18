@@ -6,6 +6,7 @@ import { FrameViewSegment, type FrameView } from '@/components/studio/FrameViewS
 import { PromptStackView } from '@/components/studio/PromptStackView';
 import { ReferencePreviewScene } from '@/components/studio/ReferencePreviewScene';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
+import { formatDuration } from '@/lib/studio/shot-display';
 import { useStudioStore } from '@/store/useStudioStore';
 
 function fitPreviewFrame(frame: HTMLElement, aspectRatio: string) {
@@ -53,9 +54,18 @@ export function PreviewPanel() {
 
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
   const showOverlay = shot?.frameComposition?.showOverlay ?? true;
+  const generatedVideo = shot?.videoUrl ?? null;
+  const shotDuration = shot?.duration ?? project.duration;
+  const timecode = `00:00 / ${formatDuration(shotDuration)}`;
 
   const payload = useMemo(
-    () => ({ project, camera, lighting, motion, shot }),
+    () => ({
+      project,
+      camera: shot?.camera ?? camera,
+      lighting: shot?.lighting ?? lighting,
+      motion: shot?.motion ?? motion,
+      shot,
+    }),
     [project, camera, lighting, motion, shot],
   );
 
@@ -78,6 +88,11 @@ export function PreviewPanel() {
   return (
     <div className="flex-1 flex items-center justify-center p-4 md:p-8 min-h-0" {...uiSectionProps(UI_SECTIONS.studioPreviewPanel)}>
       <div className="relative w-full h-full max-w-5xl flex items-center justify-center">
+        {shot && (
+          <div className="absolute top-0 left-0 z-10 bg-surface-800 border border-surface-700 px-3 py-1 rounded-lg text-xs font-semibold text-gray-300">
+            {shot.name}
+          </div>
+        )}
         <div
           ref={previewFrameRef}
           className="preview-frame relative bg-surface-800 rounded-xl border-2 border-surface-700 overflow-hidden shadow-2xl group shrink-0"
@@ -85,7 +100,17 @@ export function PreviewPanel() {
         >
           <div className="absolute inset-0 bg-surface-900" {...uiSectionProps(UI_SECTIONS.studioPreviewContent)}>
             {frameView === 'preview' ? (
-              <ReferencePreviewScene payload={payload} />
+              generatedVideo ? (
+                <video
+                  src={generatedVideo}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  controls
+                  playsInline
+                  loop
+                />
+              ) : (
+                <ReferencePreviewScene payload={payload} />
+              )
             ) : (
               <PromptStackView />
             )}
@@ -122,7 +147,7 @@ export function PreviewPanel() {
             )}
           </div>
 
-          {frameView === 'preview' && <CompositionOverlay />}
+          {frameView === 'preview' && !generatedVideo && <CompositionOverlay />}
 
           <div className="absolute top-3 left-3 z-30">
             <FrameViewSegment value={frameView} onChange={setFrameView} />
@@ -144,14 +169,18 @@ export function PreviewPanel() {
             </button>
             <div className="h-6 w-px bg-surface-600" />
             <span
-              className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400 rounded-lg bg-surface-700/80 border border-surface-600"
-              title="Shows shot framing and composition — not reference-based posing"
+              className={`px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-lg border ${
+                generatedVideo
+                  ? 'text-brand-300 bg-brand-500/20 border-brand-500/40'
+                  : 'text-gray-400 bg-surface-700/80 border-surface-600'
+              }`}
+              title={generatedVideo ? 'AI-generated video for this shot' : 'Shows shot framing and composition — not reference-based posing'}
               {...uiSectionProps(UI_SECTIONS.studioPreviewBlockingLabel)}
             >
-              Blocking preview
+              {generatedVideo ? 'Generated' : 'Blocking preview'}
             </span>
             <div className="h-6 w-px bg-surface-600" />
-            <span className="text-xs text-gray-400">00:00 / 00:05</span>
+            <span className="text-xs text-gray-400">{timecode}</span>
           </div>
 
           <div

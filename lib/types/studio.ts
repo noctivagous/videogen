@@ -78,20 +78,30 @@ export interface Shot {
   name: string;
   duration: number;
   thumbnail: string | null;
+  videoUrl: string | null;
   active: boolean;
+  camera: CameraSettings;
+  lighting: LightingSettings;
+  motion: MotionSettings;
+  sceneSetup: string;
+  shotActivity: string;
+  /** @deprecated migrated to sceneSetup on load */
+  prompt?: string;
   references: (string | null)[];
   referenceRoles: ReferenceRole[];
   frameComposition: FrameComposition;
 }
 
 export interface StudioProject {
+  schemaVersion?: number;
   project: ProjectSettings;
-  camera: CameraSettings;
-  lighting: LightingSettings;
-  motion: MotionSettings;
-  prompt: string;
   shots: Shot[];
   currentShot: number;
+  /** @deprecated v1 project-level settings — migrated into each shot on load */
+  camera?: CameraSettings;
+  lighting?: LightingSettings;
+  motion?: MotionSettings;
+  prompt?: string;
 }
 
 export interface ProviderConfig {

@@ -21,7 +21,8 @@ export function PromptStackView() {
   const camera = useStudioStore((s) => s.camera);
   const lighting = useStudioStore((s) => s.lighting);
   const motion = useStudioStore((s) => s.motion);
-  const prompt = useStudioStore((s) => s.prompt);
+  const sceneSetup = useStudioStore((s) => s.sceneSetup);
+  const shotActivity = useStudioStore((s) => s.shotActivity);
   const shots = useStudioStore((s) => s.shots);
   const currentShot = useStudioStore((s) => s.currentShot);
   const ai = useStudioStore((s) => s.ai);
@@ -29,8 +30,8 @@ export function PromptStackView() {
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
 
   const stack = useMemo(
-    () => buildModelPayloadStack({ project, camera, lighting, motion, prompt, shot, ai }),
-    [project, camera, lighting, motion, prompt, shot, ai],
+    () => buildModelPayloadStack({ project, camera, lighting, motion, sceneSetup, shotActivity, shot, ai }),
+    [project, camera, lighting, motion, sceneSetup, shotActivity, shot, ai],
   );
 
   return (

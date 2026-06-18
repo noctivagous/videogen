@@ -6,7 +6,7 @@ const STORAGE_KEY = 'vgen_ai_settings';
 export const DEFAULT_AI_STATE: AIState = {
   configured: {},
   customProviders: [],
-  defaultProvider: 'xai',
+  defaultProvider: 'replicate',
 };
 
 export function loadAIState(): AIState {
@@ -18,7 +18,7 @@ export function loadAIState(): AIState {
       return {
         configured: data.configured || {},
         customProviders: data.customProviders || [],
-        defaultProvider: data.defaultProvider || 'xai',
+        defaultProvider: data.defaultProvider || 'replicate',
       };
     }
   } catch {

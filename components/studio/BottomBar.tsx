@@ -6,8 +6,10 @@ import { ShotTimeline } from '@/components/studio/ShotTimeline';
 import { useStudioStore } from '@/store/useStudioStore';
 
 export function BottomBar() {
-  const prompt = useStudioStore((s) => s.prompt);
-  const setPrompt = useStudioStore((s) => s.setPrompt);
+  const sceneSetup = useStudioStore((s) => s.sceneSetup);
+  const shotActivity = useStudioStore((s) => s.shotActivity);
+  const setSceneSetup = useStudioStore((s) => s.setSceneSetup);
+  const setShotActivity = useStudioStore((s) => s.setShotActivity);
   const generate = useStudioStore((s) => s.generate);
   const isGenerating = useStudioStore((s) => s.isGenerating);
   const shots = useStudioStore((s) => s.shots);
@@ -20,7 +22,9 @@ export function BottomBar() {
     <div className="glass border-t border-surface-700" {...uiSectionProps(UI_SECTIONS.studioBottomBar)}>
       <div className="p-4 space-y-4">
         <div className="flex gap-4 items-end">
-          <ReferenceSlots />
+          <div className="flex flex-col gap-1">
+            <ReferenceSlots />
+          </div>
 
           <div className="flex-1 flex flex-col parameter-enclosure" {...uiSectionProps(UI_SECTIONS.studioBottomPrompt)}>
             <div className="flex items-center justify-between mb-2">
@@ -31,19 +35,35 @@ export function BottomBar() {
                 <label className="text-xs uppercase tracking-wider font-semibold text-gray-300">Prompt</label>
               </div>
               {hasAnyImage && (
-                <div className="text-[10px] text-gray-500 italic">Tip: Reference images will guide the generation.</div>
+                <div className="text-[10px] text-gray-500 italic max-w-xs text-right">
+                  References guide generation. Blocking preview shows framing only.
+                </div>
               )}
             </div>
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder={
-                hasAnyImage
-                  ? 'Describe how to use these references... e.g., A cinematic shot of the subject in this style...'
-                  : 'Describe your scene... e.g., A cinematic shot of a person walking through a neon-lit cyberpunk city at night'
-              }
-              className="w-full bg-surface-700 hover:bg-surface-600 focus:bg-surface-600 border border-surface-600 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all resize-none h-[80px]"
-            />
+            <div className="flex gap-3">
+              <div className="flex-1 flex flex-col gap-1 min-w-0">
+                <label className="text-[10px] uppercase tracking-wider font-semibold text-gray-400">Scene Setup</label>
+                <textarea
+                  value={sceneSetup}
+                  onChange={(e) => setSceneSetup(e.target.value)}
+                  placeholder={
+                    hasAnyImage
+                      ? 'Describe the scene, subjects, and environment... e.g., A cinematic medium shot of the subject against this backdrop in a neutral gray studio'
+                      : 'Describe the scene, subjects, and environment... e.g., A person in a neon-lit cyberpunk city at night'
+                  }
+                  className="w-full bg-surface-700 hover:bg-surface-600 focus:bg-surface-600 border border-surface-600 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all resize-none h-[80px]"
+                />
+              </div>
+              <div className="flex-1 flex flex-col gap-1 min-w-0">
+                <label className="text-[10px] uppercase tracking-wider font-semibold text-gray-400">Shot Activity</label>
+                <textarea
+                  value={shotActivity}
+                  onChange={(e) => setShotActivity(e.target.value)}
+                  placeholder="What are the subject(s) and environment doing? e.g., Walking toward camera, wind blowing through hair, rain falling on the street"
+                  className="w-full bg-surface-700 hover:bg-surface-600 focus:bg-surface-600 border border-surface-600 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all resize-none h-[80px]"
+                />
+              </div>
+            </div>
           </div>
 
           <button

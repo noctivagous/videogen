@@ -60,7 +60,7 @@ export function SettingsModal() {
             <div className="flex flex-col md:flex-row md:items-center gap-4">
               <div className="flex-1">
                 <h2 className="font-semibold text-lg">Default Provider & Model</h2>
-                <p className="text-sm text-gray-400">Used for new generations unless overridden per shot.</p>
+                <p className="text-sm text-gray-400">Replicate and Custom providers support Generate today. Others are coming soon.</p>
               </div>
               <div className="w-full md:w-80">
                 <select

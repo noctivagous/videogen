@@ -1,4 +1,6 @@
 import type {
+  CameraAngle,
+  CameraMovement,
   Coverage,
   FieldSize,
   FrameComposition,
@@ -14,6 +16,30 @@ export const CAMERA_FIELD_SIZE_SHORT: Record<FieldSize, string> = {
 
 export const CAMERA_SUBJECT_COUNT_SHORT: Record<SubjectCount, string> = {
   '1s': '1S', '2s': '2S', '3s': '3S', group: 'Group', crowd: 'Crowd',
+};
+
+export const CAMERA_ANGLE_SHORT: Record<CameraAngle, string> = {
+  'eye-level': 'Eye',
+  'high-angle': 'High',
+  'low-angle': 'Low',
+  'birds-eye': "Bird's",
+  'worms-eye': 'Worm',
+  dutch: 'Dutch',
+};
+
+export const CAMERA_MOVEMENT_SHORT: Record<CameraMovement, string> = {
+  static: 'Static',
+  'pan-left': 'Pan L',
+  'pan-right': 'Pan R',
+  'tilt-up': 'Tilt Up',
+  'tilt-down': 'Tilt Down',
+  'dolly-in': 'Dolly In',
+  'dolly-out': 'Dolly Out',
+  'truck-left': 'Truck L',
+  'truck-right': 'Truck R',
+  orbit: 'Orbit',
+  handheld: 'Handheld',
+  drone: 'Drone',
 };
 
 export const CAMERA_COVERAGE_LABELS: Record<Coverage, string> = {
