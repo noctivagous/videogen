@@ -31,9 +31,9 @@ export const BUILT_IN_PROVIDERS: BuiltInProvider[] = [
   {
     id: 'pika',
     name: 'Pika Labs',
-    desc: 'Pika 2.2 • Creative effects, lip sync & stylization',
+    desc: 'Pika on fal.ai • Text/image-to-video, effects & scenes',
     icon: '⚡',
-    hint: 'Access via Pika web or Discord integration',
+    hint: 'Create a fal.ai API key — Pika models run on fal',
     purposes: ['Text-to-Video', 'Image-to-Video', 'Lip Sync', 'Effects'],
     modalities: ['video', 'image'],
   },

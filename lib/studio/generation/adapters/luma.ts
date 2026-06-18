@@ -4,7 +4,9 @@ import {
   lumaResolution,
   mapHttpError,
   MAX_POLLS,
+  NO_MODEL_SELECTED_ERROR,
   POLL_INTERVAL_MS,
+  requireModelId,
   sleep,
   timedFetch,
 } from '@/lib/studio/generation/adapters/shared';
@@ -12,7 +14,6 @@ import type { GenerationRequest, GenerationResult, ProviderTestResult } from '@/
 import { unionModalities } from '@/lib/studio/provider-modalities';
 
 const LUMA_API = 'https://api.lumalabs.ai/dream-machine/v1';
-const DEFAULT_MODEL = 'ray-2';
 
 const LUMA_MODELS = buildModels([
   { id: 'ray-2', name: 'Ray 2', purposes: ['Text-to-Video', 'Image-to-Video'] },
@@ -29,10 +30,15 @@ function lumaHeaders(apiKey: string): HeadersInit {
 
 export async function generateWithLuma(req: GenerationRequest): Promise<GenerationResult> {
   try {
+    const model = requireModelId(req.modelId);
+    if (!model) {
+      return { status: 'error', error: NO_MODEL_SELECTED_ERROR };
+    }
+
     const image = pickImageInput(req.refs);
     const body: Record<string, unknown> = {
       prompt: req.prompt,
-      model: req.modelId || DEFAULT_MODEL,
+      model,
       aspect_ratio: req.aspectRatio,
       resolution: lumaResolution(req.resolution),
       duration: `${Math.min(Math.max(req.duration, 5), 10)}s`,

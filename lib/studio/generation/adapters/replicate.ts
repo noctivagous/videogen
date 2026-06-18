@@ -1,9 +1,12 @@
 import { pickImageInput, resolveRefUrl } from '@/lib/studio/generation/adapters/refs.server';
-import { MAX_POLLS, POLL_INTERVAL_MS, sleep } from '@/lib/studio/generation/adapters/shared';
+import {
+  MAX_POLLS,
+  NO_MODEL_SELECTED_ERROR,
+  POLL_INTERVAL_MS,
+  requireModelId,
+  sleep,
+} from '@/lib/studio/generation/adapters/shared';
 import type { GenerationRequest, GenerationResult } from '@/lib/studio/generation/types';
-
-const DEFAULT_MODEL_OWNER = 'minimax';
-const DEFAULT_MODEL_NAME = 'video-01';
 
 async function replicateFetch(path: string, apiKey: string, init?: RequestInit) {
   const res = await fetch(`https://api.replicate.com/v1${path}`, {
@@ -21,13 +24,16 @@ async function replicateFetch(path: string, apiKey: string, init?: RequestInit) 
   return res.json();
 }
 
-function resolveModelPath(modelId?: string): string {
-  if (!modelId) return `/models/${DEFAULT_MODEL_OWNER}/${DEFAULT_MODEL_NAME}/predictions`;
+function resolveModelPath(modelId: string): string {
   if (modelId.includes('/')) return `/models/${modelId}/predictions`;
-  return `/models/${DEFAULT_MODEL_OWNER}/${modelId}/predictions`;
+  throw new Error(`Replicate model id must be owner/name format (got "${modelId}")`);
 }
 
 export async function generateWithReplicate(req: GenerationRequest): Promise<GenerationResult> {
+  const modelId = requireModelId(req.modelId);
+  if (!modelId) {
+    return { status: 'error', error: NO_MODEL_SELECTED_ERROR };
+  }
   const image = pickImageInput(req.refs);
   const input: Record<string, unknown> = {
     prompt: req.prompt,
@@ -38,7 +44,7 @@ export async function generateWithReplicate(req: GenerationRequest): Promise<Gen
   }
 
   const prediction = await replicateFetch(
-    resolveModelPath(req.modelId),
+    resolveModelPath(modelId),
     req.apiKey,
     { method: 'POST', body: JSON.stringify({ input }) },
   );
@@ -105,13 +111,18 @@ export async function testReplicate(apiKey: string) {
         }));
     }
 
-    if (models.length === 0) {
-      models = [
-        { id: `${DEFAULT_MODEL_OWNER}/${DEFAULT_MODEL_NAME}`, name: DEFAULT_MODEL_NAME, modalities: ['video'] },
-      ];
-    }
-
     const modalities = [...new Set(models.flatMap((m) => m.modalities))] as Array<'video' | 'image' | 'llm' | 'tts'>;
+
+    if (models.length === 0) {
+      return {
+        ok: true,
+        message: 'Replicate API key verified — no video/image models returned from search',
+        models: [],
+        modalities: [],
+        purposes: ['Community Models', 'Open Weights'],
+        latencyMs: Date.now() - start,
+      };
+    }
 
     return {
       ok: true,

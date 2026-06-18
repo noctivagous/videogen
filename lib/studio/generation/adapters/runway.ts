@@ -3,7 +3,9 @@ import {
   buildModels,
   mapHttpError,
   MAX_POLLS,
+  NO_MODEL_SELECTED_ERROR,
   POLL_INTERVAL_MS,
+  requireModelId,
   sleep,
   timedFetch,
 } from '@/lib/studio/generation/adapters/shared';
@@ -12,7 +14,6 @@ import { unionModalities } from '@/lib/studio/provider-modalities';
 
 const RUNWAY_API = 'https://api.dev.runwayml.com/v1';
 const RUNWAY_VERSION = '2024-11-06';
-const DEFAULT_MODEL = 'gen3a_turbo';
 
 const RUNWAY_MODELS = buildModels([
   { id: 'gen3a_turbo', name: 'Gen-3 Alpha Turbo', purposes: ['Text-to-Video'] },
@@ -42,8 +43,12 @@ async function runwayFetch(path: string, apiKey: string, init?: RequestInit) {
 
 export async function generateWithRunway(req: GenerationRequest): Promise<GenerationResult> {
   try {
+    const model = requireModelId(req.modelId);
+    if (!model) {
+      return { status: 'error', error: NO_MODEL_SELECTED_ERROR };
+    }
+
     const image = pickImageInput(req.refs);
-    const model = req.modelId || DEFAULT_MODEL;
     const body: Record<string, unknown> = {
       model,
       promptText: req.prompt.slice(0, 512),

@@ -4,6 +4,14 @@ import { inferModalitiesFromModelId } from '@/lib/studio/provider-modalities';
 export const POLL_INTERVAL_MS = 2000;
 export const MAX_POLLS = 90;
 
+export const NO_MODEL_SELECTED_ERROR =
+  'No model selected — test the provider connection in Settings and choose a model';
+
+export function requireModelId(modelId: string | undefined): string | null {
+  const trimmed = modelId?.trim();
+  return trimmed || null;
+}
+
 export async function sleep(ms: number): Promise<void> {
   await new Promise((r) => setTimeout(r, ms));
 }
@@ -27,6 +35,20 @@ export function mapHttpError(status: number, fallback: string): string {
   if (status === 429) return 'Rate limited — key works but try again shortly';
   if (status >= 500) return 'Provider service unavailable — try again later';
   return fallback;
+}
+
+/** Prefer provider JSON error body over generic HTTP status text. */
+export function formatApiError(status: number, text: string, fallback: string): string {
+  if (text) {
+    try {
+      const json = JSON.parse(text) as { error?: string; message?: string };
+      const detail = json.error || json.message;
+      if (detail && typeof detail === 'string') return detail;
+    } catch {
+      if (text.length < 280 && !text.startsWith('<')) return text;
+    }
+  }
+  return mapHttpError(status, fallback);
 }
 
 export async function timedFetch(

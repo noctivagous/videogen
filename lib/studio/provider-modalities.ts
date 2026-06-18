@@ -1,4 +1,4 @@
-import { PROVIDER_STATIC_MODELS } from '@/lib/constants/provider-models';
+import { LEGACY_MODEL_ALIASES } from '@/lib/constants/provider-models';
 import { BUILT_IN_PROVIDERS } from '@/lib/constants/providers';
 import type {
   AIState,
@@ -23,13 +23,24 @@ export const MODALITY_CONFIG: Record<
 };
 
 const MODEL_MODALITY_RULES: Array<{ test: RegExp; modalities: Modality[] }> = [
+  { test: /grok-imagine-video|imagine-video/i, modalities: ['video'] },
+  { test: /grok-imagine-image|imagine-image/i, modalities: ['image'] },
   { test: /sora|video-01|gen-?3|dream-machine|kling|pika|stable-video|hailuo|runway|luma/i, modalities: ['video'] },
   { test: /dall-e|gpt-image|flux|sdxl|stable-diffusion|leonardo/i, modalities: ['image'] },
   { test: /^tts-|eleven|speech/i, modalities: ['tts'] },
   { test: /^whisper|stt/i, modalities: ['tts'] },
-  { test: /^gpt-|claude|grok|llama|mistral|gemini/i, modalities: ['llm'] },
+  // Chat Grok only — exclude grok-imagine-* (handled by rules above).
+  { test: /^grok(?!-imagine)/i, modalities: ['llm'] },
+  { test: /^gpt-|claude|llama|mistral|gemini/i, modalities: ['llm'] },
   { test: /gpt-4o|gpt-4-turbo|vision/i, modalities: ['llm', 'image'] },
 ];
+
+function hydrateProviderModel(model: ProviderModel): ProviderModel {
+  return {
+    ...model,
+    modalities: inferModalitiesFromModelId(model.id),
+  };
+}
 
 export function inferModalitiesFromModelId(id: string): Modality[] {
   const normalized = id.toLowerCase();
@@ -145,20 +156,44 @@ export function sortCustomProviders(ai: AIState): CustomProvider[] {
   });
 }
 
-export function getAvailableVideoModels(
+/** Models returned by a successful Test connection only — no static catalog fallback. */
+function getVerifiedModels(
   id: string,
   isCustom: boolean,
   ai: AIState,
 ): ProviderModel[] {
   const discovery = getProviderDiscovery(id, isCustom, ai);
-  const discovered = (discovery?.models ?? []).filter((m) => m.modalities.includes('video'));
-  const staticModels = isCustom ? [] : (PROVIDER_STATIC_MODELS[id] ?? []);
+  if (discovery?.lastTestOk !== true) return [];
+  return (discovery.models ?? []).map(hydrateProviderModel);
+}
 
-  const byId = new Map<string, ProviderModel>();
-  staticModels.forEach((m) => byId.set(m.id, m));
-  discovered.forEach((m) => byId.set(m.id, m));
+export function getAvailableVideoModels(
+  id: string,
+  isCustom: boolean,
+  ai: AIState,
+): ProviderModel[] {
+  return getVerifiedModels(id, isCustom, ai).filter((m) => m.modalities.includes('video'));
+}
 
-  return [...byId.values()];
+function normalizeLegacyModelId(modelId?: string): string | undefined {
+  if (!modelId) return undefined;
+  return LEGACY_MODEL_ALIASES[modelId] ?? modelId;
+}
+
+export function getAvailableImageModels(
+  id: string,
+  isCustom: boolean,
+  ai: AIState,
+): ProviderModel[] {
+  return getVerifiedModels(id, isCustom, ai).filter((m) => m.modalities.includes('image'));
+}
+
+export function hasVerifiedVideoModels(id: string, isCustom: boolean, ai: AIState): boolean {
+  return getAvailableVideoModels(id, isCustom, ai).length > 0;
+}
+
+export function hasVerifiedImageModels(id: string, isCustom: boolean, ai: AIState): boolean {
+  return getAvailableImageModels(id, isCustom, ai).length > 0;
 }
 
 export function resolveModelSelectionForProvider(
@@ -169,7 +204,21 @@ export function resolveModelSelectionForProvider(
 ): string | undefined {
   const models = getAvailableVideoModels(id, isCustom, ai);
   if (models.length === 0) return undefined;
-  if (preferredModelId && models.some((m) => m.id === preferredModelId)) return preferredModelId;
+  const normalized = normalizeLegacyModelId(preferredModelId);
+  if (normalized && models.some((m) => m.id === normalized)) return normalized;
+  return models[0].id;
+}
+
+export function resolveImageModelSelectionForProvider(
+  id: string,
+  isCustom: boolean,
+  ai: AIState,
+  preferredModelId?: string,
+): string | undefined {
+  const models = getAvailableImageModels(id, isCustom, ai);
+  if (models.length === 0) return undefined;
+  const normalized = normalizeLegacyModelId(preferredModelId);
+  if (normalized && models.some((m) => m.id === normalized)) return normalized;
   return models[0].id;
 }
 
@@ -181,6 +230,12 @@ export function getEffectiveModelId(ai: AIState): string | undefined {
     ai,
     ai.defaultModelId,
   );
+}
+
+export function getEffectivePreviewModelId(ai: AIState): string | undefined {
+  const isCustom = ai.customProviders.some((p) => p.id === ai.defaultProvider);
+  // Preview uses verified image models only — not the selected video model.
+  return resolveImageModelSelectionForProvider(ai.defaultProvider, isCustom, ai);
 }
 
 export function getModelLabel(modelId: string | undefined, models: ProviderModel[]): string | null {

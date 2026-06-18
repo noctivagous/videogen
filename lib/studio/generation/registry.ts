@@ -8,6 +8,7 @@ import { generateWithReplicate, testReplicate } from '@/lib/studio/generation/ad
 import { generateWithRunway, testRunway } from '@/lib/studio/generation/adapters/runway';
 import { generateWithStability, testStability } from '@/lib/studio/generation/adapters/stability';
 import { generateWithXAI, testXAI } from '@/lib/studio/generation/adapters/xai';
+import { NO_MODEL_SELECTED_ERROR, requireModelId } from '@/lib/studio/generation/adapters/shared';
 import type { GenerationRequest, GenerationResult, ProviderTestResult } from '@/lib/studio/generation/types';
 import { getBuiltInProvider } from '@/lib/studio/provider-modalities';
 
@@ -39,6 +40,10 @@ const TEST_HANDLERS: Record<string, TestHandler> = {
 
 export async function runProviderGeneration(req: GenerationRequest): Promise<GenerationResult> {
   if (req.isCustom) return generateWithCustom(req);
+
+  if (!requireModelId(req.modelId)) {
+    return { status: 'error', error: NO_MODEL_SELECTED_ERROR };
+  }
 
   const handler = GENERATION_HANDLERS[req.providerId];
   if (handler) return handler(req);

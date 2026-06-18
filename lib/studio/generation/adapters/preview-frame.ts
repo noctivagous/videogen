@@ -1,10 +1,17 @@
-import { mapHttpError } from '@/lib/studio/generation/adapters/shared';
+import {
+  formatApiError,
+  mapHttpError,
+  NO_MODEL_SELECTED_ERROR,
+  requireModelId,
+} from '@/lib/studio/generation/adapters/shared';
 import type { PreviewFrameRequest, PreviewFrameResult } from '@/lib/studio/generation/preview-frame-types';
 
 const XAI_API = 'https://api.x.ai/v1';
 const OPENAI_API = 'https://api.openai.com/v1';
 
 async function generateWithXAIImage(req: PreviewFrameRequest): Promise<PreviewFrameResult> {
+  const modelId = requireModelId(req.modelId);
+  if (!modelId) return { status: 'error', error: NO_MODEL_SELECTED_ERROR };
   const res = await fetch(`${XAI_API}/images/generations`, {
     method: 'POST',
     headers: {
@@ -12,16 +19,17 @@ async function generateWithXAIImage(req: PreviewFrameRequest): Promise<PreviewFr
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: req.modelId || 'grok-imagine-image',
+      model: modelId,
       prompt: req.prompt,
       aspect_ratio: req.aspectRatio,
+      resolution: '1k',
       n: 1,
     }),
   });
 
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);
-    return { status: 'error', error: mapHttpError(res.status, text || 'xAI image generation failed') };
+    return { status: 'error', error: formatApiError(res.status, text, 'xAI image generation failed') };
   }
 
   const data = (await res.json()) as {
@@ -37,6 +45,9 @@ async function generateWithXAIImage(req: PreviewFrameRequest): Promise<PreviewFr
 }
 
 async function generateWithOpenAIImage(req: PreviewFrameRequest): Promise<PreviewFrameResult> {
+  const modelId = requireModelId(req.modelId);
+  if (!modelId) return { status: 'error', error: NO_MODEL_SELECTED_ERROR };
+
   const sizeMap: Record<string, string> = {
     '16:9': '1792x1024',
     '9:16': '1024x1792',
@@ -53,7 +64,7 @@ async function generateWithOpenAIImage(req: PreviewFrameRequest): Promise<Previe
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: req.modelId || 'gpt-image-1',
+      model: modelId,
       prompt: req.prompt,
       size,
       n: 1,
@@ -78,7 +89,8 @@ async function generateWithOpenAIImage(req: PreviewFrameRequest): Promise<Previe
 }
 
 async function generateWithReplicateImage(req: PreviewFrameRequest): Promise<PreviewFrameResult> {
-  const model = req.modelId || 'black-forest-labs/flux-schnell';
+  const model = requireModelId(req.modelId);
+  if (!model) return { status: 'error', error: NO_MODEL_SELECTED_ERROR };
   const res = await fetch('https://api.replicate.com/v1/predictions', {
     method: 'POST',
     headers: {
@@ -119,6 +131,9 @@ export async function runPreviewFrameGeneration(req: PreviewFrameRequest): Promi
   if (req.isCustom) {
     return generateWithCustomImage(req);
   }
+  if (!requireModelId(req.modelId)) {
+    return { status: 'error', error: NO_MODEL_SELECTED_ERROR };
+  }
   const handler = IMAGE_PREVIEW_HANDLERS[req.providerId];
   if (!handler) {
     return {
@@ -130,6 +145,9 @@ export async function runPreviewFrameGeneration(req: PreviewFrameRequest): Promi
 }
 
 async function generateWithCustomImage(req: PreviewFrameRequest): Promise<PreviewFrameResult> {
+  const modelId = requireModelId(req.modelId);
+  if (!modelId) return { status: 'error', error: NO_MODEL_SELECTED_ERROR };
+
   const base = req.customBaseUrl?.replace(/\/$/, '') || '';
   const res = await fetch(`${base}/images/generations`, {
     method: 'POST',
@@ -138,7 +156,7 @@ async function generateWithCustomImage(req: PreviewFrameRequest): Promise<Previe
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: req.modelId || 'default',
+      model: modelId,
       prompt: req.prompt,
       aspect_ratio: req.aspectRatio,
       n: 1,

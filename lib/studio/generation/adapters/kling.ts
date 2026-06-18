@@ -3,7 +3,9 @@ import {
   buildModels,
   mapHttpError,
   MAX_POLLS,
+  NO_MODEL_SELECTED_ERROR,
   POLL_INTERVAL_MS,
+  requireModelId,
   sleep,
   timedFetch,
 } from '@/lib/studio/generation/adapters/shared';
@@ -19,10 +21,15 @@ const KLING_MODELS = buildModels([
 
 export async function generateWithKling(req: GenerationRequest): Promise<GenerationResult> {
   try {
+    const model = requireModelId(req.modelId);
+    if (!model) {
+      return { status: 'error', error: NO_MODEL_SELECTED_ERROR };
+    }
+
     const image = pickImageInput(req.refs);
     const endpoint = image ? '/videos/image2video' : '/videos/text2video';
     const body: Record<string, unknown> = {
-      model_name: req.modelId || 'kling-v2',
+      model_name: model,
       prompt: req.prompt,
       aspect_ratio: req.aspectRatio,
       duration: String(Math.min(Math.max(req.duration, 5), 10)),

@@ -22,6 +22,9 @@ import { previewFramingFingerprint } from '@/lib/constants/subject-cutouts';
 import {
   getBuiltInProvider,
   getEffectiveModelId,
+  getEffectivePreviewModelId,
+  hasVerifiedImageModels,
+  hasVerifiedVideoModels,
   resolveModelSelectionForProvider,
 } from '@/lib/studio/provider-modalities';
 import { buildModelPayloadStack, buildShotPrompt } from '@/lib/studio/model-payload';
@@ -517,6 +520,10 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       get().showToast('Quick preview requires xAI, OpenAI, or Replicate. Change your default provider in Settings.', 'error');
       return;
     }
+    if (!hasVerifiedImageModels(ai.defaultProvider, isCustom, ai)) {
+      get().showToast('Test your provider connection in Settings to load image models first', 'error');
+      return;
+    }
 
     const payload = {
       project,
@@ -531,7 +538,11 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const customBaseUrl = isCustom
       ? ai.customProviders.find((p) => p.id === ai.defaultProvider)?.baseUrl
       : undefined;
-    const modelId = getEffectiveModelId(ai);
+    const modelId = getEffectivePreviewModelId(ai);
+    if (!modelId) {
+      get().showToast('No image model available — re-test your provider in Settings', 'error');
+      return;
+    }
     const providerName = getCurrentProviderName(ai);
     const fingerprint = previewFramingFingerprint(shot.camera, project.aspectRatio);
 
@@ -598,6 +609,10 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       get().showToast(`${name} does not support video generation yet. Pick another default provider in Settings.`, 'error');
       return;
     }
+    if (!isCustom && !hasVerifiedVideoModels(ai.defaultProvider, isCustom, ai)) {
+      get().showToast('Test your provider connection in Settings to load video models first', 'error');
+      return;
+    }
 
     const stack = buildModelPayloadStack({
       project,
@@ -614,6 +629,10 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       ? ai.customProviders.find((p) => p.id === ai.defaultProvider)?.baseUrl
       : undefined;
     const modelId = getEffectiveModelId(ai);
+    if (!isCustom && !modelId) {
+      get().showToast('No video model available — re-test your provider in Settings', 'error');
+      return;
+    }
     const providerName = getCurrentProviderName(ai);
 
     set({ isGenerating: true, showPreviewSuccess: false, progressText: `Submitting to ${providerName}...` });
