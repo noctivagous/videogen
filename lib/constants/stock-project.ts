@@ -12,8 +12,9 @@ import type {
 
 export { STOCK_ASSETS, getBackdropReference, getSubjectReference } from '@/lib/constants/stock-demo';
 
-export const STOCK_CHARACTER_REF = STOCK_ASSETS.mannequinIdentity;
-export const STOCK_BACKDROP_REF = STOCK_ASSETS.studioBackdrop;
+/** Default Subject / Backdrop for Shot breakdown (demo-surfer). */
+export const STOCK_CHARACTER_REF = STOCK_ASSETS.demoSurferCharacterSheet;
+export const STOCK_BACKDROP_REF = STOCK_ASSETS.demoSurferBackdrop;
 
 export const STOCK_PROJECT: ProjectSettings = {
   name: 'Demo_MS_Mannequin',
@@ -127,29 +128,10 @@ export const STOCK_SHOTS: Shot[] = [
     duration: 5,
     placement: 'ix-mid-r',
     withReferences: true,
-    thumbnail: STOCK_ASSETS.ms,
+    thumbnail: STOCK_ASSETS.demoSurferCharacterSheet,
     camera: STOCK_CAMERA,
     sceneSetup: STOCK_MS_PROMPT,
-    shotActivity: 'Facing camera, arms at sides. Still pose.',
-  }),
-  createStockShot(2, 'Shot 02', false, {
-    duration: 3,
-    placement: 'cell-1-1',
-    thumbnail: STOCK_ASSETS.ms,
-    camera: { ...STOCK_CAMERA, fieldSize: 'cu' },
-    lighting: { ...STOCK_LIGHTING, timeOfDay: 'golden-hour', colorTemp: 4500 },
-    sceneSetup: '',
-    shotActivity: 'Still pose, neutral expression.',
-  }),
-  createStockShot(3, 'Shot 03', false, {
-    duration: 7,
-    placement: 'ix-mid-l',
-    thumbnail: STOCK_ASSETS.ms,
-    camera: { ...STOCK_CAMERA, fieldSize: 'ls', focalLength: 35 },
-    lighting: { ...STOCK_LIGHTING, timeOfDay: 'evening', colorTemp: 3200, atmosphere: 'hazy' },
-    motion: { ...STOCK_MOTION, subjectAction: 'walking', intensity: 'moderate' },
-    sceneSetup: '',
-    shotActivity: 'Walking through the studio at a moderate pace.',
+    shotActivity: '',
   }),
 ];
 
@@ -162,5 +144,11 @@ export const EMPTY_PROJECT: ProjectSettings = {
 };
 
 export const EMPTY_SHOTS: Shot[] = [
-  createStockShot(1, 'Shot 01', true, { duration: 5, placement: 'cell-1-1', sceneSetup: '', shotActivity: '' }),
+  createStockShot(1, 'Shot 01', true, {
+    duration: 5,
+    placement: 'cell-1-1',
+    withReferences: true,
+    sceneSetup: '',
+    shotActivity: '',
+  }),
 ];

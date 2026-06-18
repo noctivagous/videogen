@@ -7,7 +7,9 @@ import { RESOLUTION_PRESETS } from '@/lib/constants/resolutions';
 import {
   EMPTY_PROJECT,
   EMPTY_SHOTS,
+  STOCK_BACKDROP_REF,
   STOCK_CAMERA,
+  STOCK_CHARACTER_REF,
   STOCK_LIGHTING,
   STOCK_MOTION,
   STOCK_PROJECT,
@@ -483,7 +485,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       sceneSetup: STOCK_PROMPT,
       shotActivity: '',
       frameComposition: { ...DEFAULT_FRAME_COMPOSITION },
-      references: [null, null, null] as (string | null)[],
+      references: [STOCK_CHARACTER_REF, STOCK_BACKDROP_REF, null] as (string | null)[],
       referenceRoles: [...STOCK_REFERENCE_ROLES],
       cinematographyRefs: true,
     };

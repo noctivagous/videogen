@@ -1,5 +1,5 @@
 import { CAMERA_FIELD_SIZE_SHORT } from '@/lib/constants/camera';
-import { getStockMannequinIdentityUrl, STOCK_ASSETS } from '@/lib/constants/stock-demo';
+import { STOCK_BACKDROP_REF, STOCK_CHARACTER_REF } from '@/lib/constants/stock-project';
 import { getShotFrameComposition } from '@/lib/studio/composition';
 import { buildGenerationRefs, getGenerationFramePrompt } from '@/lib/studio/generation-prompt';
 import { expandPromptMentions } from '@/lib/studio/prompt-mentions';
@@ -51,10 +51,10 @@ export function buildPreviewFrameRefs(payload: ScenePreviewPayload): Array<{ rol
 
   if (isCinematographyRefs(shot)) {
     if (!refs.some((r) => r.role === 'Subject')) {
-      refs.unshift({ role: 'Subject', url: getStockMannequinIdentityUrl(payload.camera) });
+      refs.unshift({ role: 'Subject', url: STOCK_CHARACTER_REF });
     }
     if (!refs.some((r) => r.role === 'Backdrop')) {
-      refs.push({ role: 'Backdrop', url: STOCK_ASSETS.studioBackdrop });
+      refs.push({ role: 'Backdrop', url: STOCK_BACKDROP_REF });
     }
   }
 

@@ -234,6 +234,18 @@ input[type="range"]::-moz-range-thumb:hover {
   @apply border-solid border-brand-500/50 bg-surface-700;
 }
 
+.reference-slot.drag-over {
+  @apply border-solid border-brand-400 bg-brand-500/15 shadow-lg shadow-brand-500/25 scale-[1.03];
+}
+
+.reference-slot-drop-hint {
+  @apply absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 rounded-xl bg-brand-500/25 backdrop-blur-[2px] border-2 border-brand-400 pointer-events-none;
+}
+
+.reference-slot-drop-hint span {
+  @apply text-[9px] font-bold uppercase tracking-wider text-brand-400;
+}
+
 .reference-label {
   @apply absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-surface-900/80 backdrop-blur-md text-[10px] font-bold uppercase tracking-wider text-gray-400 border border-surface-700 cursor-pointer hover:text-white hover:border-brand-500 transition-all z-10;
 }

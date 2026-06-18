@@ -1,10 +1,20 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef, useState, type DragEvent } from 'react';
 import { normalizeReferenceRole } from '@/lib/constants/camera';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { getReferenceSlotLabel, isCinematographyRefs } from '@/lib/studio/reference-slots';
 import { useStudioStore } from '@/store/useStudioStore';
+
+function isImageDrag(e: DragEvent): boolean {
+  const types = Array.from(e.dataTransfer.types);
+  return (
+    types.includes('Files') ||
+    types.includes('text/uri-list') ||
+    types.includes('text/html') ||
+    types.includes('application/x-moz-file')
+  );
+}
 
 export function ReferenceSlots() {
   const shots = useStudioStore((s) => s.shots);
@@ -13,8 +23,19 @@ export function ReferenceSlots() {
   const cycleReferenceRole = useStudioStore((s) => s.cycleReferenceRole);
   const toggleCinematographyRefs = useStudioStore((s) => s.toggleCinematographyRefs);
   const fileInputs = useRef<(HTMLInputElement | null)[]>([]);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
+
+  useEffect(() => {
+    const clearDrag = () => setDragOverIndex(null);
+    window.addEventListener('dragend', clearDrag);
+    window.addEventListener('drop', clearDrag);
+    return () => {
+      window.removeEventListener('dragend', clearDrag);
+      window.removeEventListener('drop', clearDrag);
+    };
+  }, []);
   if (!shot) return null;
 
   const cinematographyRefs = isCinematographyRefs(shot);
@@ -57,7 +78,7 @@ export function ReferenceSlots() {
           return (
             <div
               key={index}
-              className={`reference-slot group ${imgData ? 'has-image' : ''}`}
+              className={`reference-slot group ${imgData ? 'has-image' : ''} ${dragOverIndex === index ? 'drag-over' : ''}`}
               {...uiSectionProps(UI_SECTIONS.studioReferenceSlot, { suffix: index })}
               onClick={(e) => {
                 if (!(e.target as HTMLElement).closest('.reference-label') &&
@@ -65,9 +86,25 @@ export function ReferenceSlots() {
                   fileInputs.current[index]?.click();
                 }
               }}
-              onDragOver={(e) => e.preventDefault()}
+              onDragEnter={(e) => {
+                if (!isImageDrag(e)) return;
+                e.preventDefault();
+                setDragOverIndex(index);
+              }}
+              onDragOver={(e) => {
+                if (!isImageDrag(e)) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+                setDragOverIndex(index);
+              }}
+              onDragLeave={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                  setDragOverIndex((prev) => (prev === index ? null : prev));
+                }
+              }}
               onDrop={(e) => {
                 e.preventDefault();
+                setDragOverIndex(null);
                 handleFile(index, e.dataTransfer.files[0]);
               }}
             >
@@ -81,6 +118,18 @@ export function ReferenceSlots() {
               >
                 {label}
               </span>
+
+              {dragOverIndex === index && (
+                <div
+                  className="reference-slot-drop-hint"
+                  aria-hidden
+                >
+                  <svg className="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span>Drop image</span>
+                </div>
+              )}
 
               {imgData ? (
                 <>

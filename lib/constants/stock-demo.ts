@@ -39,6 +39,10 @@ export const STOCK_ASSETS = {
   ms: '/stock/shot-types/ms.jpg',
   mannequinIdentity: stockMannequinIdentityPath('male'),
   studioBackdrop: '/stock/studio-backdrop.jpg',
+  /** Default Shot breakdown Subject — character sheet (public/stock/demo-surfer). */
+  demoSurferCharacterSheet: '/stock/demo-surfer/demo-surfer-character-sheet.jpg',
+  /** Default Shot breakdown Backdrop (public/stock/demo-surfer). */
+  demoSurferBackdrop: '/stock/demo-surfer/demo-surfer-backdrop-chk-stairs.jpg',
 } as const;
 
 /** Demo scene setup — empty; subject identity & wardrobe come from the Subject reference. */
@@ -81,7 +85,7 @@ export function getUserSubjectReference(shot: Shot | undefined): string | null {
 
 /** Subject ref for video/API generation (includes stock identity). */
 export function getGenerationSubjectReference(shot: Shot | undefined): string | null {
-  if (!shot) return getStockMannequinIdentityUrl();
+  if (!shot) return STOCK_ASSETS.demoSurferCharacterSheet;
   for (let i = 0; i < shot.references.length; i++) {
     const ref = shot.references[i];
     const role = normalizeReferenceRole(shot.referenceRoles[i] ?? 'None');
@@ -96,23 +100,35 @@ export function getSubjectReference(shot: Shot | undefined): string | null {
   return getGenerationSubjectReference(shot);
 }
 
-/** Framing preview always uses per-field-size cutouts unless the user uploaded a custom Subject. */
+function getSubjectSlotReference(shot: Shot | undefined): string | null {
+  if (!shot) return null;
+  for (let i = 0; i < shot.references.length; i++) {
+    const ref = shot.references[i];
+    const role = normalizeReferenceRole(shot.referenceRoles[i] ?? 'None');
+    if (ref && role === 'Subject') {
+      return normalizeStockSubjectRef(ref, shot.camera);
+    }
+  }
+  return null;
+}
+
+/** Framing preview uses the Subject slot when filled; otherwise field-size cutouts. */
 export function getPreviewSubjectUrl(shot: Shot | undefined, camera: CameraSettings): string {
-  const userUpload = getUserSubjectReference(shot);
-  if (userUpload) return userUpload;
+  const subjectRef = getSubjectSlotReference(shot);
+  if (subjectRef) return subjectRef;
   return getSubjectCutoutUrl(camera);
 }
 
 export function usesFieldSizeCutout(shot: Shot | undefined): boolean {
-  return !getUserSubjectReference(shot);
+  return !getSubjectSlotReference(shot);
 }
 
 export function getBackdropReference(shot: Shot | undefined): string | null {
-  if (!shot) return STOCK_ASSETS.studioBackdrop;
+  if (!shot) return STOCK_ASSETS.demoSurferBackdrop;
   for (let i = 0; i < shot.references.length; i++) {
     const ref = shot.references[i];
     const role = normalizeReferenceRole(shot.referenceRoles[i] ?? 'None');
     if (ref && (role === 'Backdrop' || role === 'Depth')) return ref;
   }
-  return STOCK_ASSETS.studioBackdrop;
+  return STOCK_ASSETS.demoSurferBackdrop;
 }
