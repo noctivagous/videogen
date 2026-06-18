@@ -26,14 +26,20 @@ export function BottomBar() {
     'w-full bg-surface-700 hover:bg-surface-600 focus:bg-surface-600 border border-surface-600 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all resize-none h-[80px]';
 
   return (
-    <div className="glass border-t border-surface-700" {...uiSectionProps(UI_SECTIONS.studioBottomBar)}>
-      <div className="p-4 space-y-4">
-        <div className="flex gap-4 items-end">
-          <div className="flex flex-col gap-1">
+    <div className="border-t border-surface-700" {...uiSectionProps(UI_SECTIONS.studioBottomBar)}>
+      <div className="p-4 space-y-3">
+        <div className="flex gap-3 items-stretch">
+          <div
+            className="studio-bottom-panel shrink-0 flex flex-col"
+            {...uiSectionProps(UI_SECTIONS.studioBottomReferences)}
+          >
             <ReferenceSlots />
           </div>
 
-          <div className="flex-1 flex flex-col parameter-enclosure" {...uiSectionProps(UI_SECTIONS.studioBottomPrompt)}>
+          <div
+            className="studio-bottom-panel flex-1 flex flex-col min-w-0"
+            {...uiSectionProps(UI_SECTIONS.studioBottomPrompt)}
+          >
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <svg className="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -47,7 +53,7 @@ export function BottomBar() {
                 </div>
               )}
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-1">
               <div className="flex-1 flex flex-col gap-1 min-w-0">
                 <label className="text-[10px] uppercase tracking-wider font-semibold text-gray-400">Scene Setup</label>
                 <MentionTextarea
@@ -75,21 +81,25 @@ export function BottomBar() {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={generate}
-            disabled={isGenerating}
-            className="bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-500 disabled:opacity-50 px-6 h-[80px] rounded-xl font-bold text-base transition-all shadow-lg shadow-brand-500/30 flex flex-col items-center justify-center gap-1 group"
+          <div
+            className="studio-bottom-panel studio-bottom-panel--generate shrink-0 flex"
             {...uiSectionProps(UI_SECTIONS.studioBottomGenerate)}
           >
-            <svg className="w-6 h-6 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-            <span>Generate</span>
-          </button>
+            <button
+              type="button"
+              onClick={generate}
+              disabled={isGenerating}
+              className="w-full min-w-[5.5rem] bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-500 disabled:opacity-50 px-6 rounded-lg font-bold text-base transition-all shadow-lg shadow-brand-500/30 flex flex-col items-center justify-center gap-1 group"
+            >
+              <svg className="w-6 h-6 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <span>Generate</span>
+            </button>
+          </div>
         </div>
 
-        <div {...uiSectionProps(UI_SECTIONS.studioBottomShotTimeline)}>
+        <div className="studio-bottom-panel" {...uiSectionProps(UI_SECTIONS.studioBottomShotTimeline)}>
           <ShotTimeline />
         </div>
       </div>

@@ -1,8 +1,13 @@
 import type { ReferenceRole, Shot } from '@/lib/types/studio';
 
-/** When true (default), slots use Subject/Backdrop/Style and role-aware prompt assembly. */
+/** When true (default), slots use Subject/Backdrop/Other/Style and role-aware prompt assembly. */
 export function isCinematographyRefs(shot: Shot | undefined): boolean {
   return shot?.cinematographyRefs !== false;
+}
+
+export function formatReferenceRoleLabel(role: ReferenceRole): string {
+  if (role === 'Style') return 'Other/Style';
+  return role;
 }
 
 export function getReferenceSlotLabel(
@@ -13,7 +18,7 @@ export function getReferenceSlotLabel(
   if (!isCinematographyRefs(shot)) {
     return `Image ${slotIndex + 1}`;
   }
-  return role;
+  return formatReferenceRoleLabel(role);
 }
 
 export function getFirstSlotReferenceUrl(shot: Shot | undefined): string | null {

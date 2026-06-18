@@ -98,6 +98,15 @@ export function buildGenerationRefs(
   return buildSlotReferenceRefs(shot);
 }
 
+function xaiReferenceRoleIndices(refs: Array<{ role: string; url: string }>) {
+  return {
+    subjectIdx: refs.findIndex((r) => r.role === 'Subject'),
+    backdropIdx: refs.findIndex((r) => r.role === 'Backdrop'),
+    hasSubject: refs.some((r) => r.role === 'Subject'),
+    hasBackdrop: refs.some((r) => r.role === 'Backdrop'),
+  };
+}
+
 /** Reference instructions for xAI reference-to-video (<IMAGE_N> tags required by API). */
 export function buildXAIReferencePrompt(refs: Array<{ role: string; url: string }>): string {
   const hasSubject = refs.some((r) => r.role === 'Subject');
@@ -116,6 +125,27 @@ export function buildXAIReferencePrompt(refs: Array<{ role: string; url: string 
   }
   if (hasBackdrop) {
     return 'Match the environment, backdrop, and lighting palette from <IMAGE_1>.';
+  }
+  return '';
+}
+
+/** Reference instructions for xAI multi-image edit preview (<IMAGE_0> tags, 0-based). */
+export function buildXAIImageEditReferencePrompt(refs: Array<{ role: string; url: string }>): string {
+  const { subjectIdx, backdropIdx, hasSubject, hasBackdrop } = xaiReferenceRoleIndices(refs);
+
+  if (hasSubject && hasBackdrop && subjectIdx >= 0 && backdropIdx >= 0) {
+    return (
+      `The subject in the still — face, body, wardrobe, and proportions only — comes from <IMAGE_${subjectIdx}>; ` +
+      `ignore any background, floor, or environment in <IMAGE_${subjectIdx}>. ` +
+      `The scene environment, backdrop, floor, and lighting palette come entirely from <IMAGE_${backdropIdx}>. ` +
+      `Place the subject from <IMAGE_${subjectIdx}> in the environment from <IMAGE_${backdropIdx}>.`
+    );
+  }
+  if (hasSubject && subjectIdx >= 0) {
+    return `Use <IMAGE_${subjectIdx}> as the starting frame. Preserve the subject identity and appearance from <IMAGE_${subjectIdx}>.`;
+  }
+  if (hasBackdrop && backdropIdx >= 0) {
+    return `Match the environment, backdrop, and lighting palette from <IMAGE_${backdropIdx}>.`;
   }
   return '';
 }
@@ -173,6 +203,18 @@ export function augmentPromptForXAI(
 ): string {
   if (!cinematographyRefs) return prompt;
   const xaiRef = buildXAIReferencePrompt(refs);
+  if (!xaiRef || hasPromptImageReferences(prompt)) return prompt;
+  return `${xaiRef} ${prompt}`.trim();
+}
+
+/** Prepends xAI <IMAGE_0> edit instructions when the image preview adapter sends reference images. */
+export function augmentPromptForXAIImageEdit(
+  prompt: string,
+  refs: Array<{ role: string; url: string }>,
+  cinematographyRefs = true,
+): string {
+  if (!cinematographyRefs) return prompt;
+  const xaiRef = buildXAIImageEditReferencePrompt(refs);
   if (!xaiRef || hasPromptImageReferences(prompt)) return prompt;
   return `${xaiRef} ${prompt}`.trim();
 }

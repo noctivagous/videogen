@@ -33,6 +33,25 @@ The eventual goal of this is to make it so that the user can
 craft shots in a workflow with a variety of custom settings.
 
 
+--------
+
+Framing
+
+This is the default blocking / composition guide. It renders locally with no API call:
+
+• Layers your Subject and Backdrop reference images (stock cutouts or uploaded refs)
+• Positions the subject using your placement grid, field size, headroom, and camera angle
+• Shows composition overlays (rule of thirds, etc.) when that mode is on
+
+It updates live as you change camera settings. The bottom bar calls this out: "Blocking preview shows framing only."
+
+Model
+
+This is meant to show an AI-generated preview still — a single image from your image provider (xAI, OpenAI, or Replicate) that approximates what a full video generation might look like, using your assembled prompt and references.
+
+
+
+
 ## Reference slots
 
 Use the **Shot breakdown** toggle above the reference slots to switch modes.

@@ -49,7 +49,7 @@ export function ReferenceSlots() {
   };
 
   return (
-    <div className="flex flex-col gap-1.5" {...uiSectionProps(UI_SECTIONS.studioBottomReferences)}>
+    <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between gap-2 min-w-[17rem]">
         <span
           className={`text-[10px] uppercase tracking-wider font-semibold transition-colors ${

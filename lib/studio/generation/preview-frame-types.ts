@@ -9,6 +9,8 @@ export interface PreviewFrameRequest {
   prompt: string;
   aspectRatio: string;
   refs: GenerationRef[];
+  /** When false, skip role-based reference prefix (generic image slots). */
+  cinematographyRefs?: boolean;
 }
 
 export interface PreviewFrameResult {

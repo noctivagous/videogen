@@ -1,3 +1,4 @@
+import { resolveRefUrl } from '@/lib/studio/generation/adapters/refs.server';
 import {
   formatApiError,
   mapHttpError,
@@ -9,22 +10,49 @@ import type { PreviewFrameRequest, PreviewFrameResult } from '@/lib/studio/gener
 const XAI_API = 'https://api.x.ai/v1';
 const OPENAI_API = 'https://api.openai.com/v1';
 
+function parseImageGenerationResponse(
+  data: { data?: Array<{ url?: string; b64_json?: string }> },
+  providerLabel: string,
+): PreviewFrameResult {
+  const item = data.data?.[0];
+  if (!item) return { status: 'error', error: `${providerLabel} returned no image` };
+  if (item.url) return { status: 'complete', imageUrl: item.url };
+  if (item.b64_json) {
+    return { status: 'complete', imageUrl: `data:image/png;base64,${item.b64_json}` };
+  }
+  return { status: 'error', error: `${providerLabel} returned an unsupported image format` };
+}
+
 async function generateWithXAIImage(req: PreviewFrameRequest): Promise<PreviewFrameResult> {
   const modelId = requireModelId(req.modelId);
   if (!modelId) return { status: 'error', error: NO_MODEL_SELECTED_ERROR };
-  const res = await fetch(`${XAI_API}/images/generations`, {
+
+  const refs = req.refs.filter((r) => r.url);
+  const resolved = refs.map((r) => resolveRefUrl(r.url));
+  const useEditEndpoint = resolved.length > 0;
+  const endpoint = useEditEndpoint ? `${XAI_API}/images/edits` : `${XAI_API}/images/generations`;
+
+  const body: Record<string, unknown> = {
+    model: modelId,
+    prompt: req.prompt,
+    aspect_ratio: req.aspectRatio,
+    resolution: '1k',
+    n: 1,
+  };
+
+  if (resolved.length >= 2) {
+    body.images = resolved.map((url) => ({ url, type: 'image_url' }));
+  } else if (resolved.length === 1) {
+    body.image = { url: resolved[0], type: 'image_url' };
+  }
+
+  const res = await fetch(endpoint, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${req.apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      model: modelId,
-      prompt: req.prompt,
-      aspect_ratio: req.aspectRatio,
-      resolution: '1k',
-      n: 1,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
@@ -35,13 +63,7 @@ async function generateWithXAIImage(req: PreviewFrameRequest): Promise<PreviewFr
   const data = (await res.json()) as {
     data?: Array<{ url?: string; b64_json?: string }>;
   };
-  const item = data.data?.[0];
-  if (!item) return { status: 'error', error: 'xAI returned no image' };
-  if (item.url) return { status: 'complete', imageUrl: item.url };
-  if (item.b64_json) {
-    return { status: 'complete', imageUrl: `data:image/png;base64,${item.b64_json}` };
-  }
-  return { status: 'error', error: 'xAI returned an unsupported image format' };
+  return parseImageGenerationResponse(data, 'xAI');
 }
 
 async function generateWithOpenAIImage(req: PreviewFrameRequest): Promise<PreviewFrameResult> {

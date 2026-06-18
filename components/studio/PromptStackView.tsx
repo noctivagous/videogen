@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { buildModelPayloadStack } from '@/lib/studio/model-payload';
+import { formatReferenceRoleLabel } from '@/lib/studio/reference-slots';
 import { useStudioStore } from '@/store/useStudioStore';
 
 const VARIANT_STYLES: Record<string, string> = {
@@ -75,7 +76,7 @@ export function PromptStackView() {
                         <div key={ref.url} className="payload-ref-card">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={ref.url} alt="" className="payload-ref-thumb" />
-                          <span className="payload-ref-role">{ref.role}</span>
+                          <span className="payload-ref-role">{formatReferenceRoleLabel(ref.role)}</span>
                         </div>
                       ))}
                     </div>

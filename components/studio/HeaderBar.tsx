@@ -89,7 +89,7 @@ export function HeaderBar() {
 
   return (
     <header
-      className="glass border-b border-surface-700 h-16 flex items-center justify-between px-4 md:px-6 z-50"
+      className="border-b border-surface-700 h-16 flex items-center justify-between px-4 md:px-6 z-50"
       {...uiSectionProps(UI_SECTIONS.studioHeader)}
     >
       <div className="flex items-center gap-4 min-w-0">

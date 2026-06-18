@@ -85,6 +85,7 @@ export function expandPromptMentions(
   text: string,
   shot: Shot | undefined,
   providerId: string,
+  opts?: { xaiImageIndexOffset?: number },
 ): string {
   if (!text || !shot) return text;
 
@@ -94,7 +95,8 @@ export function expandPromptMentions(
     if (!apiIndex) return match;
 
     if (providerId === 'xai') {
-      return `<IMAGE_${apiIndex}>`;
+      const offset = opts?.xaiImageIndexOffset ?? 0;
+      return `<IMAGE_${apiIndex + offset}>`;
     }
     return match;
   });

@@ -6,7 +6,7 @@ import {
   buildGenerationRefs,
 } from '@/lib/studio/generation-prompt';
 import { expandPromptMentions } from '@/lib/studio/prompt-mentions';
-import { isCinematographyRefs } from '@/lib/studio/reference-slots';
+import { formatReferenceRoleLabel, isCinematographyRefs } from '@/lib/studio/reference-slots';
 import { CHANNEL_LABELS, getProviderCapabilities } from '@/lib/studio/provider-capabilities';
 import type {
   AIState,
@@ -95,7 +95,7 @@ export function buildModelPayloadStack(input: {
       lines: [
         ...refs.map((r) =>
           cinematographyRefs
-            ? `${r.role} (@Image${r.slotIndex + 1})`
+            ? `${formatReferenceRoleLabel(r.role)} (@Image${r.slotIndex + 1})`
             : `Image ${r.slotIndex + 1} (@Image${r.slotIndex + 1})`,
         ),
         cinematographyRefs
@@ -146,7 +146,9 @@ export function buildModelPayloadStack(input: {
 
   let prev = 'provider';
   if (refs.length) {
-    mermaidLines.push(`  refs["References\\n${refs.map((r) => r.role).join(', ')}"]`);
+    mermaidLines.push(
+      `  refs["References\\n${refs.map((r) => formatReferenceRoleLabel(r.role)).join(', ')}"]`,
+    );
     mermaidLines.push(`  ${prev} --> refs`);
     prev = 'refs';
   }

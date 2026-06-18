@@ -20,7 +20,7 @@ import {
 } from '@/lib/constants/stock-project';
 import { isPreviewFrameSupported } from '@/lib/studio/generation/preview-frame-supported';
 import { isGenerationSupported } from '@/lib/studio/generation/supported';
-import { buildPreviewFramePrompt, buildPreviewFrameRefs } from '@/lib/studio/preview-frame-prompt';
+import { buildPreviewFramePayload } from '@/lib/studio/preview-frame-prompt';
 import { previewFramingFingerprint } from '@/lib/constants/subject-cutouts';
 import {
   getBuiltInProvider,
@@ -589,8 +589,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       motion: shot.motion,
       shot,
     };
-    const prompt = buildPreviewFramePrompt(payload, imageProviderId);
-    const refs = buildPreviewFrameRefs(payload);
+    const { prompt, refs } = buildPreviewFramePayload(payload, imageProviderId);
     const apiKey = getProviderApiKey(imageProviderId, isCustom, ai);
     const customBaseUrl = isCustom
       ? ai.customProviders.find((p) => p.id === imageProviderId)?.baseUrl
@@ -618,6 +617,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
           prompt,
           aspectRatio: project.aspectRatio,
           refs,
+          cinematographyRefs: shot.cinematographyRefs !== false,
         }),
       });
 

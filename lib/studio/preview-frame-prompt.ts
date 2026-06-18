@@ -1,62 +1,66 @@
-import { CAMERA_FIELD_SIZE_SHORT } from '@/lib/constants/camera';
-import { STOCK_BACKDROP_REF, STOCK_CHARACTER_REF } from '@/lib/constants/stock-project';
-import { getShotFrameComposition } from '@/lib/studio/composition';
-import { buildGenerationRefs, getGenerationFramePrompt } from '@/lib/studio/generation-prompt';
-import { expandPromptMentions } from '@/lib/studio/prompt-mentions';
+import {
+  augmentPromptForXAIImageEdit,
+  buildGenerationPrompt,
+  buildGenerationRefs,
+  buildReferencePromptLine,
+} from '@/lib/studio/generation-prompt';
+import { expandPromptMentions, hasPromptImageReferences } from '@/lib/studio/prompt-mentions';
 import { isCinematographyRefs } from '@/lib/studio/reference-slots';
-import type { ScenePreviewPayload } from '@/lib/types/studio';
+import type { ReferenceRole, ScenePreviewPayload } from '@/lib/types/studio';
+
+export function buildPreviewFramePayload(
+  payload: ScenePreviewPayload,
+  providerId = 'xai',
+): {
+  prompt: string;
+  refs: Array<{ role: ReferenceRole; url: string; slotIndex: number }>;
+} {
+  const shot = payload.shot;
+  const cinematographyRefs = isCinematographyRefs(shot);
+  const refs = buildGenerationRefs(shot);
+
+  let prompt = buildGenerationPrompt({
+    sceneSetup: shot?.sceneSetup ?? '',
+    shotActivity: shot?.shotActivity ?? '',
+    camera: payload.camera,
+    lighting: payload.lighting,
+    motion: payload.motion,
+    shot,
+  });
+
+  if (!prompt.trim()) {
+    prompt = 'Neutral cinematic studio scene.';
+  }
+
+  prompt = `Single cinematic still frame photograph. ${prompt}. No text, typography, watermarks, or UI overlays.`;
+
+  if (refs.length > 0) {
+    prompt = expandPromptMentions(prompt, shot, providerId, {
+      xaiImageIndexOffset: providerId === 'xai' ? -1 : 0,
+    });
+  }
+
+  if (providerId === 'xai' && refs.length > 0) {
+    prompt = augmentPromptForXAIImageEdit(prompt, refs, cinematographyRefs);
+  } else if (refs.length > 0 && cinematographyRefs) {
+    const refLine = buildReferencePromptLine(refs);
+    if (refLine && !hasPromptImageReferences(prompt)) {
+      prompt = `${refLine} ${prompt}`;
+    }
+  }
+
+  return { prompt: prompt.trim(), refs };
+}
 
 export function buildPreviewFramePrompt(
   payload: ScenePreviewPayload,
   providerId = 'xai',
 ): string {
-  const shot = payload.shot;
-  const frame = getShotFrameComposition(shot);
-  const fieldLabel = CAMERA_FIELD_SIZE_SHORT[payload.camera.fieldSize] || payload.camera.fieldSize.toUpperCase();
-  const composition = getGenerationFramePrompt(payload.camera.fieldSize, frame);
-  const expand = (text: string) => expandPromptMentions(text, shot, providerId);
-  const scene = expand(shot?.sceneSetup?.trim() || 'Neutral cinematic studio scene');
-  const activity = shot?.shotActivity?.trim();
-
-  const parts = [
-    'Single cinematic still frame photograph.',
-    `Framing: ${fieldLabel}${composition ? `. ${composition}` : ''}.`,
-    `Scene: ${scene}.`,
-  ];
-  if (activity) parts.push(`Action: ${expand(activity)}.`);
-  if (isCinematographyRefs(shot)) {
-    parts.push(
-      'Subject identity (face, body, wardrobe only) from the subject reference; ignore any background in the subject reference.',
-    );
-    parts.push('Environment, backdrop, floor, and lighting entirely from the backdrop reference.');
-  }
-  parts.push('No text, typography, watermarks, or UI overlays.');
-
-  return parts.join(' ');
+  return buildPreviewFramePayload(payload, providerId).prompt;
 }
 
-export function buildPreviewFrameRefs(payload: ScenePreviewPayload): Array<{ role: string; url: string }> {
-  const shot = payload.shot;
-  const refs: Array<{ role: string; url: string }> = [];
-
-  if (shot) {
-    for (let i = 0; i < shot.references.length; i++) {
-      const url = shot.references[i];
-      const role = shot.referenceRoles[i];
-      if (url && role && role !== 'None') {
-        refs.push({ role, url });
-      }
-    }
-  }
-
-  if (isCinematographyRefs(shot)) {
-    if (!refs.some((r) => r.role === 'Subject')) {
-      refs.unshift({ role: 'Subject', url: STOCK_CHARACTER_REF });
-    }
-    if (!refs.some((r) => r.role === 'Backdrop')) {
-      refs.push({ role: 'Backdrop', url: STOCK_BACKDROP_REF });
-    }
-  }
-
-  return refs;
+export function buildPreviewFrameRefs(
+  payload: ScenePreviewPayload,
+): Array<{ role: ReferenceRole; url: string; slotIndex: number }> {
+  return buildPreviewFramePayload(payload).refs;
 }
