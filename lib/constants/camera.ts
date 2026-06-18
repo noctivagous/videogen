@@ -18,13 +18,13 @@ export const CAMERA_SUBJECT_COUNT_SHORT: Record<SubjectCount, string> = {
   '1s': '1S', '2s': '2S', '3s': '3S', group: 'Group', crowd: 'Crowd',
 };
 
-export const CAMERA_ANGLE_SHORT: Record<CameraAngle, string> = {
-  'eye-level': 'Eye',
-  'high-angle': 'High',
-  'low-angle': 'Low',
-  'birds-eye': "Bird's",
-  'worms-eye': 'Worm',
-  dutch: 'Dutch',
+export const CAMERA_ANGLE_LABELS: Record<CameraAngle, string> = {
+  'eye-level': 'Eye Level',
+  'high-angle': 'High Angle',
+  'low-angle': 'Low Angle',
+  'birds-eye': "Bird's Eye",
+  'worms-eye': "Worm's Eye",
+  dutch: 'Dutch Tilt',
 };
 
 export const CAMERA_MOVEMENT_SHORT: Record<CameraMovement, string> = {

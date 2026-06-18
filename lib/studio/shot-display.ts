@@ -1,5 +1,5 @@
 import {
-  CAMERA_ANGLE_SHORT,
+  CAMERA_ANGLE_LABELS,
   CAMERA_FIELD_SIZE_SHORT,
   CAMERA_MOVEMENT_SHORT,
   CAMERA_SUBJECT_COUNT_SHORT,
@@ -42,7 +42,7 @@ export function getShotThumbnailOverlayLines(shot: Shot): [string, string] {
   const lensShort = LENS_THUMB_SHORT[camera.lensType] ?? lens.label;
   const line1 = `${framing} · ${camera.focalLength}mm ${lensShort}`;
 
-  const angle = CAMERA_ANGLE_SHORT[camera.angle] ?? camera.angle;
+  const angle = CAMERA_ANGLE_LABELS[camera.angle] ?? camera.angle;
   const line2 =
     camera.movement === 'static'
       ? angle

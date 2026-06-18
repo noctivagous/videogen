@@ -1,3 +1,4 @@
+import { sanitizeProjectForPersistence } from '@/lib/storage/sanitize-secrets';
 import { PROJECT_SCHEMA_VERSION } from '@/lib/storage/studio-state';
 import type { StudioProject } from '@/lib/types/studio';
 
@@ -10,11 +11,16 @@ export function validateStudioProject(data: unknown): StudioProject | null {
   if (!data || typeof data !== 'object') return null;
   const p = data as StudioProject;
   if (!p.project?.name || !Array.isArray(p.shots) || p.shots.length === 0) return null;
-  return p;
+  return sanitizeProjectForPersistence({
+    schemaVersion: p.schemaVersion,
+    project: p.project,
+    shots: p.shots,
+    currentShot: p.currentShot ?? p.shots[0]?.id ?? 1,
+  });
 }
 
 export function downloadProject(project: StudioProject): void {
-  const dataStr = JSON.stringify(project, null, 2);
+  const dataStr = JSON.stringify(sanitizeProjectForPersistence(project), null, 2);
   const dataBlob = new Blob([dataStr], { type: 'application/json' });
   const url = URL.createObjectURL(dataBlob);
   const link = document.createElement('a');

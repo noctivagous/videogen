@@ -1,6 +1,7 @@
 import { BUILT_IN_PROVIDERS } from '@/lib/constants/providers';
 import type { AIState, CustomProvider } from '@/lib/types/studio';
 
+/** Browser-only storage — API keys never belong in git or project JSON files. */
 const STORAGE_KEY = 'vgen_ai_settings';
 
 export const DEFAULT_AI_STATE: AIState = {

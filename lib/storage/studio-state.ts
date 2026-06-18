@@ -1,3 +1,4 @@
+import { sanitizeProjectForPersistence } from '@/lib/storage/sanitize-secrets';
 import type { StudioProject } from '@/lib/types/studio';
 
 export const PROJECT_SCHEMA_VERSION = 3;
@@ -21,12 +22,12 @@ export function buildStudioProject(state: {
   shots: StudioProject['shots'];
   currentShot: number;
 }): StudioProject {
-  return {
+  return sanitizeProjectForPersistence({
     schemaVersion: PROJECT_SCHEMA_VERSION,
     project: state.project,
     shots: state.shots,
     currentShot: state.currentShot,
-  };
+  });
 }
 
 export function saveStudioDraft(project: StudioProject): void {
