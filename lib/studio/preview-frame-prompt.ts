@@ -1,15 +1,21 @@
 import { CAMERA_FIELD_SIZE_SHORT } from '@/lib/constants/camera';
-import { STOCK_ASSETS } from '@/lib/constants/stock-demo';
+import { getStockMannequinIdentityUrl, STOCK_ASSETS } from '@/lib/constants/stock-demo';
 import { getShotFrameComposition } from '@/lib/studio/composition';
-import { getGenerationFramePrompt } from '@/lib/studio/generation-prompt';
+import { buildGenerationRefs, getGenerationFramePrompt } from '@/lib/studio/generation-prompt';
+import { expandPromptMentions } from '@/lib/studio/prompt-mentions';
+import { isCinematographyRefs } from '@/lib/studio/reference-slots';
 import type { ScenePreviewPayload } from '@/lib/types/studio';
 
-export function buildPreviewFramePrompt(payload: ScenePreviewPayload): string {
+export function buildPreviewFramePrompt(
+  payload: ScenePreviewPayload,
+  providerId = 'xai',
+): string {
   const shot = payload.shot;
   const frame = getShotFrameComposition(shot);
   const fieldLabel = CAMERA_FIELD_SIZE_SHORT[payload.camera.fieldSize] || payload.camera.fieldSize.toUpperCase();
   const composition = getGenerationFramePrompt(payload.camera.fieldSize, frame);
-  const scene = shot?.sceneSetup?.trim() || 'Neutral cinematic studio scene';
+  const expand = (text: string) => expandPromptMentions(text, shot, providerId);
+  const scene = expand(shot?.sceneSetup?.trim() || 'Neutral cinematic studio scene');
   const activity = shot?.shotActivity?.trim();
 
   const parts = [
@@ -17,9 +23,13 @@ export function buildPreviewFramePrompt(payload: ScenePreviewPayload): string {
     `Framing: ${fieldLabel}${composition ? `. ${composition}` : ''}.`,
     `Scene: ${scene}.`,
   ];
-  if (activity) parts.push(`Action: ${activity}.`);
-  parts.push('Match subject identity and wardrobe from the subject reference.');
-  parts.push('Match environment, lighting, and palette from the backdrop reference.');
+  if (activity) parts.push(`Action: ${expand(activity)}.`);
+  if (isCinematographyRefs(shot)) {
+    parts.push(
+      'Subject identity (face, body, wardrobe only) from the subject reference; ignore any background in the subject reference.',
+    );
+    parts.push('Environment, backdrop, floor, and lighting entirely from the backdrop reference.');
+  }
   parts.push('No text, typography, watermarks, or UI overlays.');
 
   return parts.join(' ');
@@ -39,11 +49,13 @@ export function buildPreviewFrameRefs(payload: ScenePreviewPayload): Array<{ rol
     }
   }
 
-  if (!refs.some((r) => r.role === 'Subject')) {
-    refs.unshift({ role: 'Subject', url: STOCK_ASSETS.mannequinIdentity });
-  }
-  if (!refs.some((r) => r.role === 'Backdrop')) {
-    refs.push({ role: 'Backdrop', url: STOCK_ASSETS.studioBackdrop });
+  if (isCinematographyRefs(shot)) {
+    if (!refs.some((r) => r.role === 'Subject')) {
+      refs.unshift({ role: 'Subject', url: getStockMannequinIdentityUrl(payload.camera) });
+    }
+    if (!refs.some((r) => r.role === 'Backdrop')) {
+      refs.push({ role: 'Backdrop', url: STOCK_ASSETS.studioBackdrop });
+    }
   }
 
   return refs;

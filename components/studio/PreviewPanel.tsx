@@ -112,19 +112,36 @@ export function PreviewPanel() {
     return () => observer.disconnect();
   }, [project.aspectRatio]);
 
+  useEffect(() => {
+    if (frameView === 'generated' && !generatedVideo) {
+      setFrameView('preview');
+    }
+  }, [frameView, generatedVideo, setFrameView]);
+
   const resIndicator = `${project.resolution} — ${project.aspectRatio} @ ${project.fps}fps`;
 
-  const previewBadge = generatedVideo
-    ? 'Generated video'
-    : previewSubMode === 'model' && modelPreviewUrl
-      ? 'AI model preview'
-      : 'Framing guide';
+  const previewBadge =
+    frameView === 'generated' && generatedVideo
+      ? 'Generated video'
+      : previewSubMode === 'model' && modelPreviewUrl
+        ? 'AI model preview'
+        : 'Framing guide';
 
   const showFramingGuides =
-    frameView === 'preview' && !generatedVideo && previewSubMode === 'framing';
+    frameView === 'preview' && previewSubMode === 'framing';
 
   const renderPreviewContent = () => {
-    if (generatedVideo) {
+    if (previewSubMode === 'model' && modelPreviewUrl) {
+      return (
+        <ModelPreviewScene payload={payload} imageUrl={modelPreviewUrl} stale={modelStale} />
+      );
+    }
+    return <ReferencePreviewScene payload={payload} />;
+  };
+
+  const renderMainContent = () => {
+    if (frameView === 'prompt') return <PromptStackView />;
+    if (frameView === 'generated' && generatedVideo) {
       return (
         <video
           key={generatedVideo}
@@ -136,12 +153,7 @@ export function PreviewPanel() {
         />
       );
     }
-    if (previewSubMode === 'model' && modelPreviewUrl) {
-      return (
-        <ModelPreviewScene payload={payload} imageUrl={modelPreviewUrl} stale={modelStale} />
-      );
-    }
-    return <ReferencePreviewScene payload={payload} />;
+    return renderPreviewContent();
   };
 
   return (
@@ -158,7 +170,7 @@ export function PreviewPanel() {
           {...uiSectionProps(UI_SECTIONS.studioPreviewFrame)}
         >
           <div className="absolute inset-0 bg-surface-900" {...uiSectionProps(UI_SECTIONS.studioPreviewContent)}>
-            {frameView === 'preview' ? renderPreviewContent() : <PromptStackView />}
+            {renderMainContent()}
 
             {showPreviewSuccess && (
               <div
@@ -205,8 +217,12 @@ export function PreviewPanel() {
           {showFramingGuides && <CompositionOverlay />}
 
           <div className="absolute top-3 left-3 z-30 flex flex-col gap-2">
-            <FrameViewSegment value={frameView} onChange={setFrameView} />
-            {frameView === 'preview' && !generatedVideo && (
+            <FrameViewSegment
+              value={frameView}
+              onChange={setFrameView}
+              hasGeneratedVideo={Boolean(generatedVideo)}
+            />
+            {frameView === 'preview' && (
               <PreviewSubModeSegment
                 value={previewSubMode}
                 onChange={setPreviewSubMode}
@@ -232,7 +248,7 @@ export function PreviewPanel() {
               </svg>
             </button>
             <div className="h-6 w-px bg-surface-600" />
-            {frameView === 'preview' && !generatedVideo && (
+            {frameView === 'preview' && (
               <>
                 <button
                   type="button"
@@ -248,9 +264,9 @@ export function PreviewPanel() {
             )}
             <span
               className={`px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-lg border ${
-                generatedVideo
+                frameView === 'generated' && generatedVideo
                   ? 'text-brand-300 bg-brand-500/20 border-brand-500/40'
-                  : previewSubMode === 'model' && modelPreviewUrl
+                  : previewSubMode === 'model' && modelPreviewUrl && frameView === 'preview'
                     ? 'text-brand-300 bg-brand-500/15 border-brand-500/30'
                     : 'text-gray-400 bg-surface-700/80 border-surface-600'
               }`}
@@ -258,7 +274,7 @@ export function PreviewPanel() {
             >
               {previewBadge}
             </span>
-            {frameView === 'preview' && generatedVideo && shot && (
+            {frameView === 'generated' && generatedVideo && shot && (
               <>
                 <div className="h-6 w-px bg-surface-600" />
                 <GeneratedVideoStrip shot={shot} />

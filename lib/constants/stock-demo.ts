@@ -5,23 +5,44 @@ import {
   subjectCutoutPath,
   otsCutoutPath,
   getOtsVariant,
+  type SubjectGender,
 } from '@/lib/constants/subject-cutouts';
 import type { CameraSettings, FieldSize, Shot } from '@/lib/types/studio';
+
+/** JPG anchor for stock regeneration pipeline only — not sent to video APIs. */
+export const STOCK_MANNEQUIN_IDENTITY_JPG = '/stock/shot-types/mannequin-identity.jpg';
+
+const LEGACY_STOCK_SUBJECT_REFS = new Set([
+  STOCK_MANNEQUIN_IDENTITY_JPG,
+  '/stock/subjects/shot-types/mannequin-identity.jpg',
+]);
+
+export function stockMannequinIdentityPath(gender: SubjectGender = 'male'): string {
+  return `/stock/subjects/${gender}/mannequin-identity.png`;
+}
+
+export function getStockMannequinIdentityUrl(camera?: CameraSettings): string {
+  const gender = camera ? getStockSubjectGender(camera) : 'male';
+  return stockMannequinIdentityPath(gender);
+}
+
+/** Normalize legacy JPG stock subject refs to matted PNG cutouts. */
+export function normalizeStockSubjectRef(url: string, camera?: CameraSettings): string {
+  if (LEGACY_STOCK_SUBJECT_REFS.has(url) || url.endsWith('/mannequin-identity.jpg')) {
+    return getStockMannequinIdentityUrl(camera);
+  }
+  return url;
+}
 
 /** Stock asset paths aligned with public/stock/prompts.json conventions. */
 export const STOCK_ASSETS = {
   ms: '/stock/shot-types/ms.jpg',
-  mannequinIdentity: '/stock/shot-types/mannequin-identity.jpg',
+  mannequinIdentity: stockMannequinIdentityPath('male'),
   studioBackdrop: '/stock/studio-backdrop.jpg',
 } as const;
 
-/**
- * Demo scene content only — identity, studio, framing, and lighting come from
- * reference images and camera / lighting / composition panels.
- */
-export const STOCK_MS_PROMPT =
-  'Matte gray male mannequin in a smooth sculpted gray dress shirt with belt at the waist. ' +
-  'Hard-surface gray sculpt.';
+/** Demo scene setup — empty; subject identity & wardrobe come from the Subject reference. */
+export const STOCK_MS_PROMPT = '';
 
 /** Map field sizes to cinematography preview chip files when available. */
 const FIELD_SIZE_PREVIEW: Partial<Record<FieldSize, string>> = {
@@ -60,11 +81,13 @@ export function getUserSubjectReference(shot: Shot | undefined): string | null {
 
 /** Subject ref for video/API generation (includes stock identity). */
 export function getGenerationSubjectReference(shot: Shot | undefined): string | null {
-  if (!shot) return STOCK_ASSETS.mannequinIdentity;
+  if (!shot) return getStockMannequinIdentityUrl();
   for (let i = 0; i < shot.references.length; i++) {
     const ref = shot.references[i];
     const role = normalizeReferenceRole(shot.referenceRoles[i] ?? 'None');
-    if (ref && role === 'Subject') return ref;
+    if (ref && role === 'Subject') {
+      return isUserSubjectReference(ref) ? ref : normalizeStockSubjectRef(ref, shot.camera);
+    }
   }
   return null;
 }

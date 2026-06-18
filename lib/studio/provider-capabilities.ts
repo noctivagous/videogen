@@ -37,16 +37,26 @@ export function getProviderCapabilities(providerId: string, isCustom: boolean): 
   const generates = hasGenerationAdapter(providerId, false);
 
   if (generates) {
+    const isXAI = providerId === 'xai';
+    const subjectRefNote = isXAI
+      ? 'Subject ref — with Backdrop, sent as <IMAGE_1> (reference-to-video; does not lock first frame)'
+      : IMAGE_NOTE;
+    const backdropRefNote = isXAI
+      ? 'Backdrop ref — with Subject, sent as <IMAGE_2> (reference-to-video)'
+      : 'Sent as reference image when provider supports it (e.g. xAI)';
+    const summary = isXAI
+      ? `${label} BYOK adapter: Subject + Backdrop use reference-to-video (both refs influence output without locking the first frame). Subject-only or Backdrop-only uses image-to-video (locks starting frame). Other providers send one image (Subject preferred). Camera, lighting, and motion are folded into the prompt.`
+      : `${label} BYOK adapter sends your prompt and reference images using your API key. Only one reference image is sent (Subject preferred over Backdrop). Camera, lighting, and motion controls are folded into the assembled prompt.`;
+
     return {
       providerId,
       providerLabel: label,
       apiFields: ['prompt', 'refs', 'duration', 'resolution', 'aspectRatio'],
-      summary:
-        `${label} BYOK adapter sends your prompt and reference images using your API key. Camera, lighting, and motion controls are folded into the assembled prompt.`,
+      summary,
       settings: [
         { id: 'prompt', label: 'Scene prompt', channel: 'api', note: 'Primary text input' },
-        { id: 'refs-subject', label: 'Subject reference', channel: 'api', note: IMAGE_NOTE },
-        { id: 'refs-backdrop', label: 'Backdrop reference', channel: 'api', note: 'Sent as reference image when provider supports it (e.g. xAI)' },
+        { id: 'refs-subject', label: 'Subject reference', channel: 'api', note: subjectRefNote },
+        { id: 'refs-backdrop', label: 'Backdrop reference', channel: 'api', note: backdropRefNote },
         { id: 'field-size', label: 'Field size / coverage', channel: 'prompt', note: PROMPT_NOTE },
         { id: 'composition', label: 'Frame composition', channel: 'prompt', note: PROMPT_NOTE },
         { id: 'lens', label: 'Lens (type + focal length)', channel: 'prompt', note: PROMPT_NOTE },

@@ -2,14 +2,15 @@
 
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 
-export type FrameView = 'preview' | 'prompt';
+export type FrameView = 'preview' | 'prompt' | 'generated';
 
 interface FrameViewSegmentProps {
   value: FrameView;
   onChange: (view: FrameView) => void;
+  hasGeneratedVideo?: boolean;
 }
 
-export function FrameViewSegment({ value, onChange }: FrameViewSegmentProps) {
+export function FrameViewSegment({ value, onChange, hasGeneratedVideo = false }: FrameViewSegmentProps) {
   return (
     <div
       className="frame-view-segment"
@@ -35,6 +36,17 @@ export function FrameViewSegment({ value, onChange }: FrameViewSegmentProps) {
       >
         Prompt
       </button>
+      {hasGeneratedVideo && (
+        <button
+          type="button"
+          role="tab"
+          aria-selected={value === 'generated'}
+          className={`frame-view-segment-btn ${value === 'generated' ? 'active' : ''}`}
+          onClick={() => onChange('generated')}
+        >
+          Generated
+        </button>
+      )}
     </div>
   );
 }

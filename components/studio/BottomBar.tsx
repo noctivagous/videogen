@@ -1,7 +1,10 @@
 'use client';
 
+import { useMemo } from 'react';
 import { ReferenceSlots } from '@/components/studio/ReferenceSlots';
+import { MentionTextarea } from '@/components/ui/MentionTextarea';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
+import { buildPromptMentionOptions } from '@/lib/studio/prompt-mentions';
 import { ShotTimeline } from '@/components/studio/ShotTimeline';
 import { useStudioStore } from '@/store/useStudioStore';
 
@@ -17,6 +20,10 @@ export function BottomBar() {
 
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
   const hasAnyImage = shot?.references.some(Boolean) ?? false;
+  const mentionOptions = useMemo(() => buildPromptMentionOptions(shot), [shot]);
+
+  const textareaClass =
+    'w-full bg-surface-700 hover:bg-surface-600 focus:bg-surface-600 border border-surface-600 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all resize-none h-[80px]';
 
   return (
     <div className="glass border-t border-surface-700" {...uiSectionProps(UI_SECTIONS.studioBottomBar)}>
@@ -43,24 +50,26 @@ export function BottomBar() {
             <div className="flex gap-3">
               <div className="flex-1 flex flex-col gap-1 min-w-0">
                 <label className="text-[10px] uppercase tracking-wider font-semibold text-gray-400">Scene Setup</label>
-                <textarea
+                <MentionTextarea
                   value={sceneSetup}
-                  onChange={(e) => setSceneSetup(e.target.value)}
+                  onChange={setSceneSetup}
+                  mentionOptions={mentionOptions}
                   placeholder={
                     hasAnyImage
-                      ? 'Describe the scene, subjects, and environment... e.g., A cinematic medium shot of the subject against this backdrop in a neutral gray studio'
-                      : 'Describe the scene, subjects, and environment... e.g., A person in a neon-lit cyberpunk city at night'
+                      ? 'Optional scene context. Type @ to insert a reference from a filled slot.'
+                      : 'Describe the scene… Type @ to reference a filled slot image'
                   }
-                  className="w-full bg-surface-700 hover:bg-surface-600 focus:bg-surface-600 border border-surface-600 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all resize-none h-[80px]"
+                  className={textareaClass}
                 />
               </div>
               <div className="flex-1 flex flex-col gap-1 min-w-0">
                 <label className="text-[10px] uppercase tracking-wider font-semibold text-gray-400">Shot Activity</label>
-                <textarea
+                <MentionTextarea
                   value={shotActivity}
-                  onChange={(e) => setShotActivity(e.target.value)}
-                  placeholder="What are the subject(s) and environment doing? e.g., Walking toward camera, wind blowing through hair, rain falling on the street"
-                  className="w-full bg-surface-700 hover:bg-surface-600 focus:bg-surface-600 border border-surface-600 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all resize-none h-[80px]"
+                  onChange={setShotActivity}
+                  mentionOptions={mentionOptions}
+                  placeholder="Shot activity… Type @ to reference a filled slot image."
+                  className={textareaClass}
                 />
               </div>
             </div>

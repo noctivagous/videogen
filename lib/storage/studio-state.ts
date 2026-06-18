@@ -1,7 +1,7 @@
 import { sanitizeProjectForPersistence } from '@/lib/storage/sanitize-secrets';
 import type { StudioProject } from '@/lib/types/studio';
 
-export const PROJECT_SCHEMA_VERSION = 3;
+export const PROJECT_SCHEMA_VERSION = 4;
 export const STUDIO_STATE_KEY = 'vgen_studio_draft';
 
 const MAX_REF_BYTES = 200_000;

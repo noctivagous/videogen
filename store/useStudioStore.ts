@@ -203,6 +203,7 @@ interface StudioStore {
   deleteGeneratedVideo: (id: string) => void;
   setReference: (index: number, dataUrl: string | null) => void;
   cycleReferenceRole: (index: number) => void;
+  toggleCinematographyRefs: () => void;
 
   generate: () => Promise<void>;
   saveProject: () => void;
@@ -278,7 +279,13 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const ai = loadAIState();
     const draft = loadStudioDraft();
     if (draft) {
-      set({ ...applyStudioProject(draft), ai, previewMode: 'vector', initialized: true });
+      const applied = applyStudioProject(draft);
+      set({ ...applied, ai, previewMode: 'vector', initialized: true });
+      saveStudioDraft(buildStudioProject({
+        project: applied.project,
+        shots: applied.shots,
+        currentShot: applied.currentShot,
+      }));
       get().showToast('Restored your last session');
     } else {
       set({ ai, previewMode: 'vector', initialized: true });
@@ -478,6 +485,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       frameComposition: { ...DEFAULT_FRAME_COMPOSITION },
       references: [null, null, null] as (string | null)[],
       referenceRoles: [...STOCK_REFERENCE_ROLES],
+      cinematographyRefs: true,
     };
 
     const newShot: Shot = {
@@ -540,6 +548,16 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     }));
   },
 
+  toggleCinematographyRefs() {
+    const shot = get().getCurrentShot();
+    if (!shot) return;
+    const next = shot.cinematographyRefs === false;
+    set((s) => ({
+      shots: patchCurrentShot(s.shots, s.currentShot, { cinematographyRefs: next }),
+    }));
+    get().showToast(next ? 'Shot breakdown refs on' : 'Generic image slots');
+  },
+
   async generatePreviewFrame() {
     const state = get();
     const { project, ai, shots, currentShot } = state;
@@ -568,7 +586,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       motion: shot.motion,
       shot,
     };
-    const prompt = buildPreviewFramePrompt(payload);
+    const prompt = buildPreviewFramePrompt(payload, imageProviderId);
     const refs = buildPreviewFrameRefs(payload);
     const apiKey = getProviderApiKey(imageProviderId, isCustom, ai);
     const customBaseUrl = isCustom
@@ -690,6 +708,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
           resolution: project.resolution,
           aspectRatio: project.aspectRatio,
           refs: stack.blocks.find((b) => b.id === 'references')?.refs ?? [],
+          cinematographyRefs: shot.cinematographyRefs !== false,
         }),
       });
 
@@ -710,6 +729,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
           providerJobId: result.providerJobId,
         })),
         isGenerating: false,
+        frameView: 'generated',
         showPreviewSuccess: true,
         previewSuccessProvider: `${getVideoProviderName(ai)}${result.providerJobId ? ` · Job ${result.providerJobId}` : ''}`,
         previewSuccessPrompt: combinedPrompt,
@@ -750,8 +770,14 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   },
 
   resetToDemo() {
-    set({ ...getStockDefaults(), showPreviewSuccess: false });
+    const demo = getStockDefaults();
+    set({ ...demo, showPreviewSuccess: false });
     clearStudioDraft();
+    saveStudioDraft(buildStudioProject({
+      project: demo.project,
+      shots: demo.shots,
+      currentShot: demo.currentShot,
+    }));
     get().showToast('Demo project restored');
   },
 

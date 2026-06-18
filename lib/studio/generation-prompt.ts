@@ -2,14 +2,10 @@ import {
   CAMERA_ANGLE_LABELS,
   CAMERA_COVERAGE_LABELS,
   HEADROOM_FIELD_SIZES,
-  normalizeReferenceRole,
   placementFramingPrompt,
 } from '@/lib/constants/camera';
 import { formatLensForPrompt } from '@/lib/constants/lens';
-import {
-  getBackdropReference,
-  getGenerationSubjectReference,
-} from '@/lib/constants/stock-demo';
+import { buildSlotReferenceRefs } from '@/lib/studio/prompt-mentions';
 import type {
   CameraSettings,
   FrameComposition,
@@ -24,7 +20,8 @@ import {
   MOVEMENT_PROMPTS,
   SUBJECT_COUNT_PROMPTS,
 } from '@/lib/studio/generation-prompt-constants';
-import { sanitizeSceneTextForGeneration } from '@/lib/studio/prompt-sanitize';
+import { prepareSceneTextForGeneration } from '@/lib/studio/legacy-scene-boilerplate';
+import { hasPromptImageReferences } from '@/lib/studio/prompt-mentions';
 
 export function getGenerationFramePrompt(
   fieldSize: string,
@@ -35,7 +32,6 @@ export function getGenerationFramePrompt(
   const parts: string[] = [];
 
   if (frame.guide === 'grid-3x3') {
-    parts.push('rule of thirds composition');
     parts.push(placementFramingPrompt(frame.placement));
   } else if (frame.guide === 'center') {
     parts.push('symmetrical centered composition with subject in the exact center of the frame');
@@ -98,26 +94,8 @@ function buildMotionPrompt(motion: MotionSettings): string {
 
 export function buildGenerationRefs(
   shot: Shot | undefined,
-): { role: ReferenceRole; url: string }[] {
-  const refs: { role: ReferenceRole; url: string }[] = [];
-
-  const subject = getGenerationSubjectReference(shot);
-  const backdrop = getBackdropReference(shot);
-  if (subject) refs.push({ role: 'Subject', url: subject });
-  if (backdrop) refs.push({ role: 'Backdrop', url: backdrop });
-
-  if (shot) {
-    for (let i = 0; i < shot.references.length; i++) {
-      const url = shot.references[i];
-      const role = normalizeReferenceRole(shot.referenceRoles[i] ?? 'None');
-      if (!url || role === 'None' || role === 'Subject' || role === 'Backdrop') continue;
-      if (!refs.some((r) => r.role === role && r.url === url)) {
-        refs.push({ role, url });
-      }
-    }
-  }
-
-  return refs;
+): Array<{ role: ReferenceRole; url: string; slotIndex: number }> {
+  return buildSlotReferenceRefs(shot);
 }
 
 /** Reference instructions for xAI reference-to-video (<IMAGE_N> tags required by API). */
@@ -126,13 +104,18 @@ export function buildXAIReferencePrompt(refs: Array<{ role: string; url: string 
   const hasBackdrop = refs.some((r) => r.role === 'Backdrop');
 
   if (hasSubject && hasBackdrop) {
-    return 'Match the subject identity and appearance from <IMAGE_1>. Match the environment, background, and lighting palette from <IMAGE_2>.';
+    return (
+      'The subject in the video — face, body, wardrobe, and proportions only — comes from <IMAGE_1>; ' +
+      'ignore any background, floor, or environment in <IMAGE_1>. ' +
+      'The scene environment, backdrop, floor, and lighting palette come entirely from <IMAGE_2>. ' +
+      'The subject from <IMAGE_1> appears in the environment from <IMAGE_2>.'
+    );
   }
   if (hasSubject) {
-    return 'Use <IMAGE_1> as the starting frame and preserve the subject identity.';
+    return 'Use <IMAGE_1> as the starting frame. Preserve the subject identity and appearance from <IMAGE_1>.';
   }
   if (hasBackdrop) {
-    return 'Match the environment and lighting palette from <IMAGE_1>.';
+    return 'Match the environment, backdrop, and lighting palette from <IMAGE_1>.';
   }
   return '';
 }
@@ -142,13 +125,17 @@ export function buildReferencePromptLine(refs: { role: ReferenceRole; url: strin
   const hasBackdrop = refs.some((r) => r.role === 'Backdrop');
 
   if (hasSubject && hasBackdrop) {
-    return 'Match the subject identity from the subject reference image and the environment from the backdrop reference image.';
+    return (
+      'Subject identity (face, body, wardrobe only) from the subject reference; ' +
+      'ignore any background in the subject reference. ' +
+      'Environment, backdrop, floor, and lighting entirely from the backdrop reference.'
+    );
   }
   if (hasSubject) {
-    return 'Match the subject identity and appearance from the subject reference image.';
+    return 'Use the subject reference as the starting frame; preserve subject identity and appearance.';
   }
   if (hasBackdrop) {
-    return 'Match the environment, background, and lighting from the backdrop reference image.';
+    return 'Match the environment, backdrop, and lighting palette from the backdrop reference.';
   }
   return '';
 }
@@ -160,18 +147,12 @@ export function buildGenerationPrompt(input: {
   lighting: LightingSettings;
   motion: MotionSettings;
   shot: Shot | undefined;
-  refs?: { role: ReferenceRole; url: string }[];
 }): string {
-  const { sceneSetup, shotActivity, camera, lighting, motion, shot, refs = [] } = input;
+  const { sceneSetup, shotActivity, camera, lighting, motion, shot } = input;
   const frame = getShotFrameComposition(shot);
 
-  const sanitized = sanitizeSceneTextForGeneration(sceneSetup, shotActivity, {
-    refs,
-    camera,
-    lighting,
-    frame,
-  });
-  const sceneParts = [sanitized.sceneSetup, sanitized.shotActivity].filter(Boolean);
+  const prepared = prepareSceneTextForGeneration(sceneSetup, shotActivity);
+  const sceneParts = [prepared.sceneSetup, prepared.shotActivity].filter(Boolean);
   const sceneBlock = sceneParts.join('. ');
   const cameraLine = getGenerationCameraPrompt(camera, frame);
   const lightingLine = buildLightingPrompt(lighting);
@@ -188,8 +169,10 @@ export function buildGenerationPrompt(input: {
 export function augmentPromptForXAI(
   prompt: string,
   refs: Array<{ role: string; url: string }>,
+  cinematographyRefs = true,
 ): string {
+  if (!cinematographyRefs) return prompt;
   const xaiRef = buildXAIReferencePrompt(refs);
-  if (!xaiRef || prompt.includes('<IMAGE_1>')) return prompt;
+  if (!xaiRef || hasPromptImageReferences(prompt)) return prompt;
   return `${xaiRef} ${prompt}`.trim();
 }

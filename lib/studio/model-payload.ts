@@ -5,6 +5,8 @@ import {
   buildGenerationPrompt,
   buildGenerationRefs,
 } from '@/lib/studio/generation-prompt';
+import { expandPromptMentions } from '@/lib/studio/prompt-mentions';
+import { isCinematographyRefs } from '@/lib/studio/reference-slots';
 import { CHANNEL_LABELS, getProviderCapabilities } from '@/lib/studio/provider-capabilities';
 import type {
   AIState,
@@ -58,6 +60,7 @@ export function buildModelPayloadStack(input: {
   const capabilities = getProviderCapabilities(videoProviderId, isCustom);
 
   const refs = buildGenerationRefs(shot);
+  const cinematographyRefs = isCinematographyRefs(shot);
 
   let combinedPrompt = buildGenerationPrompt({
     sceneSetup,
@@ -66,11 +69,14 @@ export function buildModelPayloadStack(input: {
     lighting,
     motion,
     shot,
-    refs,
   });
 
+  if (refs.length > 0) {
+    combinedPrompt = expandPromptMentions(combinedPrompt, shot, videoProviderId);
+  }
+
   if (videoProviderId === 'xai' && refs.length > 0) {
-    combinedPrompt = augmentPromptForXAI(combinedPrompt, refs);
+    combinedPrompt = augmentPromptForXAI(combinedPrompt, refs, cinematographyRefs);
   }
 
   const blocks: PayloadStackBlock[] = [
@@ -86,7 +92,16 @@ export function buildModelPayloadStack(input: {
     blocks.push({
       id: 'references',
       title: 'Reference Images',
-      lines: refs.map((r) => `${r.role}`),
+      lines: [
+        ...refs.map((r) =>
+          cinematographyRefs
+            ? `${r.role} (@Image${r.slotIndex + 1})`
+            : `Image ${r.slotIndex + 1} (@Image${r.slotIndex + 1})`,
+        ),
+        cinematographyRefs
+          ? 'Type @ in Scene Setup or Shot Activity to insert a reference token.'
+          : 'Generic image slots — describe each image in your prompt or use @ImageN.',
+      ],
       refs,
       variant: 'references',
     });

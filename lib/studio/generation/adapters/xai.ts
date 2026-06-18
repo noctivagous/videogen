@@ -82,9 +82,8 @@ export async function generateWithXAI(req: GenerationRequest): Promise<Generatio
     const model = normalizeVideoModel(selected);
     const duration = Math.min(Math.max(Math.round(req.duration), 1), 15);
 
-    const subject = req.refs.find((r) => r.role === 'Subject');
-    const backdrop = req.refs.find((r) => r.role === 'Backdrop');
-    const prompt = augmentPromptForXAI(req.prompt, req.refs);
+    const refs = req.refs.filter((r) => r.url);
+    const prompt = augmentPromptForXAI(req.prompt, refs, req.cinematographyRefs !== false);
 
     const body: Record<string, unknown> = {
       model,
@@ -94,15 +93,10 @@ export async function generateWithXAI(req: GenerationRequest): Promise<Generatio
       resolution: xaiVideoResolution(req.resolution),
     };
 
-    if (subject && backdrop) {
-      body.reference_images = [
-        { url: resolveRefUrl(subject.url) },
-        { url: resolveRefUrl(backdrop.url) },
-      ];
-    } else if (subject) {
-      body.image = { url: resolveRefUrl(subject.url) };
-    } else if (backdrop) {
-      body.image = { url: resolveRefUrl(backdrop.url) };
+    if (refs.length >= 2) {
+      body.reference_images = refs.map((r) => ({ url: resolveRefUrl(r.url) }));
+    } else if (refs.length === 1) {
+      body.image = { url: resolveRefUrl(refs[0].url) };
     }
 
     const res = await fetch(`${XAI_API}/videos/generations`, {

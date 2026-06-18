@@ -113,6 +113,7 @@ export function createStockShot(
       ? [STOCK_CHARACTER_REF, STOCK_BACKDROP_REF, null]
       : [null, null, null],
     referenceRoles: [...STOCK_REFERENCE_ROLES],
+    cinematographyRefs: true,
     frameComposition: {
       ...DEFAULT_FRAME_COMPOSITION,
       ...STOCK_SHOT_COMPOSITION,
@@ -137,7 +138,7 @@ export const STOCK_SHOTS: Shot[] = [
     thumbnail: STOCK_ASSETS.ms,
     camera: { ...STOCK_CAMERA, fieldSize: 'cu' },
     lighting: { ...STOCK_LIGHTING, timeOfDay: 'golden-hour', colorTemp: 4500 },
-    sceneSetup: 'Matte gray mannequin subject.',
+    sceneSetup: '',
     shotActivity: 'Still pose, neutral expression.',
   }),
   createStockShot(3, 'Shot 03', false, {
@@ -147,7 +148,7 @@ export const STOCK_SHOTS: Shot[] = [
     camera: { ...STOCK_CAMERA, fieldSize: 'ls', focalLength: 35 },
     lighting: { ...STOCK_LIGHTING, timeOfDay: 'evening', colorTemp: 3200, atmosphere: 'hazy' },
     motion: { ...STOCK_MOTION, subjectAction: 'walking', intensity: 'moderate' },
-    sceneSetup: 'Mannequin subject in the studio.',
+    sceneSetup: '',
     shotActivity: 'Walking through the studio at a moderate pace.',
   }),
 ];

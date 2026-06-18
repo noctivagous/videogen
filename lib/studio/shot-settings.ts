@@ -6,7 +6,9 @@ import {
   normalizeReferenceRole,
 } from '@/lib/constants/camera';
 import { normalizeLensCamera } from '@/lib/constants/lens';
+import { isUserSubjectReference, normalizeStockSubjectRef } from '@/lib/constants/stock-demo';
 import { STOCK_CAMERA, STOCK_LIGHTING, STOCK_MOTION, STOCK_PROMPT, STOCK_REFERENCE_ROLES } from '@/lib/constants/stock-project';
+import { stripLegacySceneBoilerplate } from '@/lib/studio/legacy-scene-boilerplate';
 import { migrateShotGeneratedVideos } from '@/lib/studio/shot-videos';
 import type {
   CameraSettings,
@@ -72,6 +74,7 @@ export function cloneInheritedShotSettings(
     frameComposition: { ...source.frameComposition },
     references: [...source.references],
     referenceRoles: [...source.referenceRoles],
+    cinematographyRefs: source.cinematographyRefs,
   };
 }
 
@@ -104,9 +107,16 @@ export function migrateShot(
     camera: normalizeLensCamera(migrateCamera(legacyCamera)),
     lighting: { ...defaults.lighting, ...shot.lighting },
     motion: { ...defaults.motion, ...shot.motion },
-    sceneSetup: shot.sceneSetup ?? shot.prompt ?? defaults.sceneSetup,
+    sceneSetup: stripLegacySceneBoilerplate(shot.sceneSetup ?? shot.prompt ?? defaults.sceneSetup),
     shotActivity: shot.shotActivity ?? '',
-    references: shot.references ?? [null, null, null],
+    references: (shot.references ?? [null, null, null]).map((ref, i) => {
+      if (!ref) return ref;
+      const role = normalizeReferenceRole(shot.referenceRoles?.[i] ?? 'None');
+      if (role === 'Subject' && !isUserSubjectReference(ref)) {
+        return normalizeStockSubjectRef(ref, legacyCamera);
+      }
+      return ref;
+    }),
     referenceRoles: (shot.referenceRoles ?? [...STOCK_REFERENCE_ROLES]).map((role) =>
       normalizeReferenceRole(role as string),
     ),
@@ -118,6 +128,7 @@ export function migrateShot(
     },
     previewFrameUrl: shot.previewFrameUrl ?? null,
     previewFrameFingerprint: shot.previewFrameFingerprint ?? null,
+    cinematographyRefs: shot.cinematographyRefs,
   };
 }
 

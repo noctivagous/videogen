@@ -18,6 +18,8 @@ export interface GenerationRequest {
   resolution: string;
   aspectRatio: string;
   refs: GenerationRef[];
+  /** When false, skip role-based xAI reference prefix (generic image slots). */
+  cinematographyRefs?: boolean;
 }
 
 export interface GenerationResult {

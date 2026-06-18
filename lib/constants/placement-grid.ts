@@ -246,42 +246,53 @@ function cellFramingPrompt(row: number, col: number): string {
   return `subject in the ${vertical} ${horizontal} portion of the frame`;
 }
 
-function intersectionFramingPrompt(spec: PlacementSpec): string {
-  const { id, label } = spec;
+/** Turn UI placement labels into specific cinematic framing instructions. */
+function promptFromPlacementLabel(label: string): string {
   const lower = label.toLowerCase();
 
-  if (id === 'ix-0-0') return 'subject anchored at the top-left corner of the frame';
-  if (id === 'ix-0-3') return 'subject anchored at the top-right corner of the frame';
-  if (id === 'ix-3-0') return 'subject anchored at the bottom-left corner of the frame';
-  if (id === 'ix-3-3') return 'subject anchored at the bottom-right corner of the frame';
-
-  if (id === 'ix-edge-t') return 'subject centered along the top edge of the frame';
-  if (id === 'ix-edge-b') return 'subject centered along the bottom edge of the frame';
-  if (id === 'ix-edge-l') return 'subject centered along the left edge of the frame';
-  if (id === 'ix-edge-r') return 'subject centered along the right edge of the frame';
-
-  if (id === 'ix-mid-t') return 'subject at the upper-center power point on the vertical midline';
-  if (id === 'ix-mid-b') return 'subject at the lower-center power point on the vertical midline';
-  if (id === 'ix-mid-l') return 'subject at the left-center power point on the horizontal midline';
-  if (id === 'ix-mid-r') return 'subject at the right-center power point on the horizontal midline';
-
-  if (lower.includes('corner')) {
+  if (lower.endsWith(' corner')) {
     return `subject anchored at the ${lower} of the frame`;
   }
 
-  if (lower.includes('edge') && lower.includes('segment')) {
-    return `subject along the ${lower}`;
+  const edgeCenter = lower.match(/^(top|bottom|left|right) edge center$/);
+  if (edgeCenter) {
+    return `subject centered on the ${edgeCenter[1]} edge of the frame`;
   }
 
-  if (lower.includes('edge')) {
-    return `subject positioned at the ${lower} of the frame`;
+  const edgeThird = lower.match(/^(top|bottom|left|right) edge, (left third|right third|upper third|lower third)$/);
+  if (edgeThird) {
+    return `subject on the ${edgeThird[1]} edge of the frame, at the ${edgeThird[2]}`;
   }
 
-  if (lower.includes('intersection') || lower.includes('grid line')) {
-    return `subject at the ${lower}, rule of thirds composition`;
+  const edgeSegment = lower.match(/^(top|bottom|left|right) edge, (upper|middle|lower|left|center|right) segment$/);
+  if (edgeSegment) {
+    return `subject on the ${edgeSegment[1]} edge of the frame, ${edgeSegment[2]} segment`;
   }
 
-  return `subject at the ${lower}`;
+  const gridLineSegment = lower.match(/^(left|right|upper|lower) grid line, (upper|middle|lower|left|center|right) segment$/);
+  if (gridLineSegment) {
+    const line =
+      gridLineSegment[1] === 'left' || gridLineSegment[1] === 'right'
+        ? `${gridLineSegment[1]} vertical grid line`
+        : `${gridLineSegment[1]} horizontal grid line`;
+    return `subject aligned to the ${line}, ${gridLineSegment[2]} segment of the frame`;
+  }
+
+  if (lower.endsWith(' intersection')) {
+    const point = lower.replace(/ intersection$/, '');
+    return `subject at the ${point} grid intersection in the frame`;
+  }
+
+  if (lower.endsWith(' cell')) {
+    const zone = lower.replace(/ cell$/, '');
+    return `subject in the ${zone.toLowerCase()} area of the frame`;
+  }
+
+  return `subject positioned at the ${lower}`;
+}
+
+function intersectionFramingPrompt(spec: PlacementSpec): string {
+  return promptFromPlacementLabel(spec.label);
 }
 
 /** Natural cinematic framing language for a specific 3×3 placement target. */

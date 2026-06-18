@@ -145,7 +145,6 @@ function getFrameCompositionPrompt(fieldSize: string, frame: FrameComposition): 
   const parts: string[] = [];
 
   if (frame.guide === 'grid-3x3') {
-    parts.push('rule of thirds composition');
     parts.push(placementFramingPrompt(frame.placement));
   } else if (frame.guide === 'center') {
     parts.push('symmetrical centered composition with subject in the exact center of the frame');

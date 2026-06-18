@@ -98,6 +98,8 @@ export interface Shot {
   prompt?: string;
   references: (string | null)[];
   referenceRoles: ReferenceRole[];
+  /** When true (default), slots use Subject/Backdrop/Style labels and role-aware prompts. */
+  cinematographyRefs?: boolean;
   frameComposition: FrameComposition;
   /** AI-generated quick preview still for this shot */
   previewFrameUrl?: string | null;

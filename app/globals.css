@@ -475,8 +475,8 @@ input[type="range"]::-moz-range-thumb:hover {
 }
 
 .frame-view-segment-btn {
-  padding: 6px 14px;
-  font-size: 11px;
+  padding: 6px 10px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.02em;
   border-radius: 7px;
