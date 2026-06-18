@@ -11,7 +11,7 @@ import { ReferencePreviewScene } from '@/components/studio/ReferencePreviewScene
 import { previewFramingFingerprint } from '@/lib/constants/subject-cutouts';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { formatDuration } from '@/lib/studio/shot-display';
-import { getShotActiveVideoUrl } from '@/lib/studio/shot-videos';
+import { getGeneratedVideoCount, getShotActiveVideoUrl } from '@/lib/studio/shot-videos';
 import { isPreviewFrameSupported } from '@/lib/studio/generation/preview-frame-supported';
 import { isCustomProvider } from '@/lib/storage/ai-settings';
 import { useStudioStore } from '@/store/useStudioStore';
@@ -69,6 +69,7 @@ export function PreviewPanel() {
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
   const showOverlay = shot?.frameComposition?.showOverlay ?? true;
   const generatedVideo = getShotActiveVideoUrl(shot);
+  const generatedVideoCount = getGeneratedVideoCount(shot);
   const modelPreviewUrl = shot?.previewFrameUrl ?? null;
   const shotDuration = shot?.duration ?? project.duration;
   const timecode = `00:00 / ${formatDuration(shotDuration)}`;
@@ -99,6 +100,8 @@ export function PreviewPanel() {
   const canQuickPreview = isPreviewFrameSupported(imageProviderId, isCustom);
 
   useEffect(() => {
+    if (frameView === 'prompt') return;
+
     const frame = previewFrameRef.current;
     if (!frame) return;
 
@@ -110,7 +113,7 @@ export function PreviewPanel() {
     if (container) observer.observe(container);
 
     return () => observer.disconnect();
-  }, [project.aspectRatio]);
+  }, [project.aspectRatio, frameView]);
 
   useEffect(() => {
     if (frameView === 'generated' && !generatedVideo) {
@@ -140,7 +143,6 @@ export function PreviewPanel() {
   };
 
   const renderMainContent = () => {
-    if (frameView === 'prompt') return <PromptStackView />;
     if (frameView === 'generated' && generatedVideo) {
       return (
         <video
@@ -157,18 +159,39 @@ export function PreviewPanel() {
   };
 
   return (
-    <div className="flex-1 flex items-center justify-center p-4 md:p-8 min-h-0" {...uiSectionProps(UI_SECTIONS.studioPreviewPanel)}>
-      <div className="relative w-full h-full max-w-5xl flex items-center justify-center">
+    <div
+      className="relative flex-1 min-h-0 overflow-hidden"
+      {...uiSectionProps(UI_SECTIONS.studioPreviewPanel)}
+    >
+      <div className="absolute inset-0 z-30 pointer-events-none p-4 md:p-8">
+        <div className="pointer-events-auto">
+          <FrameViewSegment
+            value={frameView}
+            onChange={setFrameView}
+            generatedVideoCount={generatedVideoCount}
+          />
+        </div>
         {shot && (
-          <div className="absolute top-0 left-0 z-10 bg-surface-800 border border-surface-700 px-3 py-1 rounded-lg text-xs font-semibold text-gray-300">
+          <div className="absolute top-0 right-0 pointer-events-auto bg-surface-800 border border-surface-700 px-3 py-1 rounded-lg text-xs font-semibold text-gray-300">
             {shot.name}
           </div>
         )}
-        <div
-          ref={previewFrameRef}
-          className="preview-frame relative bg-surface-800 rounded-xl border-2 border-surface-700 overflow-hidden shadow-2xl group shrink-0"
-          {...uiSectionProps(UI_SECTIONS.studioPreviewFrame)}
-        >
+      </div>
+
+      {frameView === 'prompt' && (
+        <div className="absolute inset-0 z-10 min-h-0">
+          <PromptStackView />
+        </div>
+      )}
+
+      {frameView !== 'prompt' && (
+      <div className="absolute inset-0 z-0 p-4 md:p-8">
+        <div className="relative w-full h-full max-w-5xl mx-auto flex items-center justify-center min-h-0">
+          <div
+            ref={previewFrameRef}
+            className="preview-frame relative bg-surface-800 rounded-xl border-2 border-surface-700 overflow-hidden shadow-2xl group shrink-0"
+            {...uiSectionProps(UI_SECTIONS.studioPreviewFrame)}
+          >
           <div className="absolute inset-0 bg-surface-900" {...uiSectionProps(UI_SECTIONS.studioPreviewContent)}>
             {renderMainContent()}
 
@@ -216,21 +239,16 @@ export function PreviewPanel() {
 
           {showFramingGuides && <CompositionOverlay />}
 
-          <div className="absolute top-3 left-3 z-30 flex flex-col gap-2">
-            <FrameViewSegment
-              value={frameView}
-              onChange={setFrameView}
-              hasGeneratedVideo={Boolean(generatedVideo)}
-            />
-            {frameView === 'preview' && (
+          {frameView === 'preview' && (
+            <div className="absolute top-3 left-3 z-30">
               <PreviewSubModeSegment
                 value={previewSubMode}
                 onChange={setPreviewSubMode}
                 hasModelPreview={Boolean(modelPreviewUrl)}
                 modelStale={modelStale}
               />
-            )}
-          </div>
+            </div>
+          )}
 
           <div
             className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-surface-900/80 backdrop-blur-md rounded-xl px-4 py-2 border border-surface-700 opacity-0 group-hover:opacity-100 transition-all z-20"
@@ -291,7 +309,9 @@ export function PreviewPanel() {
             {resIndicator}
           </div>
         </div>
+        </div>
       </div>
+      )}
     </div>
   );
 }

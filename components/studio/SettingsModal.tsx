@@ -9,6 +9,7 @@ import {
   sortBuiltInProviders,
   sortCustomProviders,
 } from '@/lib/studio/provider-modalities';
+import { ENABLED_PROVIDER_IDS, isBuiltInProviderEnabled } from '@/lib/constants/providers';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { isCustomProvider } from '@/lib/storage/ai-settings';
 import { useStudioStore } from '@/store/useStudioStore';
@@ -32,7 +33,6 @@ function ProviderModelFields({
 }) {
   const ai = useStudioStore((s) => s.ai);
   const sortedBuiltIn = sortBuiltInProviders(ai);
-  const sortedCustom = sortCustomProviders(ai);
 
   return (
     <div className="flex-1 min-w-0 space-y-3">
@@ -44,11 +44,8 @@ function ProviderModelFields({
           onChange={(e) => onProviderChange(e.target.value)}
           className="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none"
         >
-          {sortedBuiltIn.map((p) => (
+          {sortedBuiltIn.filter((p) => isBuiltInProviderEnabled(p.id)).map((p) => (
             <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-          {sortedCustom.map((p) => (
-            <option key={p.id} value={p.id}>{p.name} (Custom)</option>
           ))}
         </select>
       </div>
@@ -169,7 +166,7 @@ export function SettingsModal() {
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-semibold text-2xl tracking-tight">Built-in Providers</h2>
               <div className="text-xs px-3 py-1 rounded-full bg-surface-800 text-gray-400 border border-surface-700">
-                {sortedBuiltIn.length} providers ready
+                {ENABLED_PROVIDER_IDS.length} of {sortedBuiltIn.length} available
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -184,8 +181,9 @@ export function SettingsModal() {
               <h2 className="font-semibold text-2xl tracking-tight">Custom Providers</h2>
               <button
                 type="button"
-                onClick={handleAddCustom}
-                className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-2xl bg-surface-700 hover:bg-surface-600 border border-surface-600 transition-all"
+                disabled
+                title="Custom providers not yet available"
+                className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-2xl bg-surface-800 border border-surface-700 text-gray-500 cursor-not-allowed"
               >
                 Add Custom Provider
               </button>

@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { DEFAULT_FRAME_COMPOSITION, normalizeReferenceRole, SINGLE_ONLY_COVERAGE } from '@/lib/constants/camera';
+import { getDefaultEnabledProviderId, isBuiltInProviderEnabled } from '@/lib/constants/providers';
 import { applyLensCameraPatch } from '@/lib/constants/lens';
 import { RESOLUTION_PRESETS } from '@/lib/constants/resolutions';
 import {
@@ -797,6 +798,10 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 
   setDefaultVideoProvider(id) {
     const current = get().ai;
+    if (!isCustomProvider(id, current) && !isBuiltInProviderEnabled(id)) {
+      get().showToast('That provider is not available yet', 'error');
+      return;
+    }
     const isCustom = isCustomProvider(id, current);
     const defaultVideoModelId = resolveModelSelectionForProvider(id, isCustom, current);
     const ai = { ...current, defaultVideoProvider: id, defaultVideoModelId };
@@ -813,6 +818,10 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 
   setDefaultImageProvider(id) {
     const current = get().ai;
+    if (!isCustomProvider(id, current) && !isBuiltInProviderEnabled(id)) {
+      get().showToast('That provider is not available yet', 'error');
+      return;
+    }
     const isCustom = isCustomProvider(id, current);
     const defaultImageModelId = resolveImageModelSelectionForProvider(id, isCustom, current);
     const ai = { ...current, defaultImageProvider: id, defaultImageModelId };
@@ -828,6 +837,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   },
 
   openProviderEdit(id, isCustom) {
+    if (!isCustom && !isBuiltInProviderEnabled(id)) return;
     set({ providerEdit: { id, isCustom } });
   },
 
@@ -917,13 +927,14 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   deleteCustomProvider(id) {
     const ai = { ...get().ai };
     ai.customProviders = ai.customProviders.filter((p) => p.id !== id);
+    const fallback = getDefaultEnabledProviderId();
     if (ai.defaultVideoProvider === id) {
-      ai.defaultVideoProvider = 'replicate';
-      ai.defaultVideoModelId = resolveModelSelectionForProvider('replicate', false, ai);
+      ai.defaultVideoProvider = fallback;
+      ai.defaultVideoModelId = resolveModelSelectionForProvider(fallback, false, ai);
     }
     if (ai.defaultImageProvider === id) {
-      ai.defaultImageProvider = 'xai';
-      ai.defaultImageModelId = resolveImageModelSelectionForProvider('xai', false, ai);
+      ai.defaultImageProvider = fallback;
+      ai.defaultImageModelId = resolveImageModelSelectionForProvider(fallback, false, ai);
     }
     saveAIState(ai);
     set({ ai, providerEdit: null });

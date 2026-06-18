@@ -1,27 +1,49 @@
-import { BUILT_IN_PROVIDERS } from '@/lib/constants/providers';
+import {
+  BUILT_IN_PROVIDERS,
+  getDefaultEnabledProviderId,
+  isBuiltInProviderEnabled,
+} from '@/lib/constants/providers';
 import { getProviderStatus, hasApiKey } from '@/lib/studio/provider-modalities';
 import type { AIState, CustomProvider } from '@/lib/types/studio';
 
 /** Browser-only storage — API keys never belong in git or project JSON files. */
 const STORAGE_KEY = 'vgen_ai_settings';
 
+const DEFAULT_ENABLED_PROVIDER = getDefaultEnabledProviderId();
+
 export const DEFAULT_AI_STATE: AIState = {
   configured: {},
   customProviders: [],
-  defaultVideoProvider: 'replicate',
-  defaultImageProvider: 'xai',
+  defaultVideoProvider: DEFAULT_ENABLED_PROVIDER,
+  defaultImageProvider: DEFAULT_ENABLED_PROVIDER,
 };
+
+function isKnownBuiltInProvider(providerId: string): boolean {
+  return BUILT_IN_PROVIDERS.some((p) => p.id === providerId);
+}
+
+/** Built-in defaults must be enabled; unknown ids (custom) pass through. */
+function coerceDefaultProvider(providerId: string | undefined): string {
+  const fallback = DEFAULT_ENABLED_PROVIDER;
+  if (!providerId) return fallback;
+  if (!isKnownBuiltInProvider(providerId)) return providerId;
+  return isBuiltInProviderEnabled(providerId) ? providerId : fallback;
+}
 
 function migrateAIState(data: Partial<AIState> & { defaultProvider?: string; defaultModelId?: string }): AIState {
   const legacyProvider = data.defaultProvider;
   const legacyModelId = data.defaultModelId;
+  const customProviders = data.customProviders || [];
+
+  const rawVideo = data.defaultVideoProvider ?? legacyProvider ?? DEFAULT_ENABLED_PROVIDER;
+  const rawImage = data.defaultImageProvider ?? legacyProvider ?? DEFAULT_ENABLED_PROVIDER;
 
   return {
     configured: data.configured || {},
-    customProviders: data.customProviders || [],
-    defaultVideoProvider: data.defaultVideoProvider ?? legacyProvider ?? 'replicate',
+    customProviders,
+    defaultVideoProvider: coerceDefaultProvider(rawVideo),
     defaultVideoModelId: data.defaultVideoModelId ?? legacyModelId,
-    defaultImageProvider: data.defaultImageProvider ?? legacyProvider ?? 'xai',
+    defaultImageProvider: coerceDefaultProvider(rawImage),
     defaultImageModelId: data.defaultImageModelId,
   };
 }

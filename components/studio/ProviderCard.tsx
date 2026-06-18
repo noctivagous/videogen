@@ -1,6 +1,7 @@
 'use client';
 
 import { ModalityChips } from '@/components/studio/ModalityChips';
+import { isBuiltInProviderEnabled } from '@/lib/constants/providers';
 import { hasGenerationAdapter } from '@/lib/studio/generation/capabilities';
 import {
   formatRelativeTime,
@@ -43,6 +44,7 @@ export function ProviderCard({ provider, isCustom }: ProviderCardProps) {
   const openProviderEdit = useStudioStore((s) => s.openProviderEdit);
 
   const id = provider.id;
+  const enabled = !isCustom && isBuiltInProviderEnabled(id);
   const status = getProviderStatus(id, isCustom, ai);
   const configured = hasApiKey(id, isCustom, ai);
   const discovery = getProviderDiscovery(id, isCustom, ai);
@@ -65,9 +67,16 @@ export function ProviderCard({ provider, isCustom }: ProviderCardProps) {
 
   return (
     <div
-      className={`provider-card glass rounded-3xl p-5 border flex flex-col ${cardTierClass(status, modelCount)} ${
-        status === 'verified' ? 'border-emerald-500/40' : status === 'configured' || status === 'failed' ? 'border-amber-500/30' : 'border-surface-700'
+      className={`provider-card glass rounded-3xl p-5 border flex flex-col ${enabled ? cardTierClass(status, modelCount) : 'provider-card--disabled'} ${
+        !enabled
+          ? 'border-surface-700'
+          : status === 'verified'
+            ? 'border-emerald-500/40'
+            : status === 'configured' || status === 'failed'
+              ? 'border-amber-500/30'
+              : 'border-surface-700'
       }`}
+      aria-disabled={!enabled}
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
@@ -88,11 +97,23 @@ export function ProviderCard({ provider, isCustom }: ProviderCardProps) {
             </div>
           </div>
         </div>
-        <span className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium ${statusClasses(status)}`}>
+        <span
+          className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium ${
+            enabled ? statusClasses(status) : 'bg-gray-500/10 text-gray-500 ring-1 ring-inset ring-gray-500/20'
+          }`}
+        >
           <span className={`w-1.5 h-1.5 rounded-full ${
-            status === 'verified' ? 'bg-emerald-400' : status === 'configured' ? 'bg-amber-400' : status === 'failed' ? 'bg-red-400' : 'bg-gray-400'
+            !enabled
+              ? 'bg-gray-500'
+              : status === 'verified'
+                ? 'bg-emerald-400'
+                : status === 'configured'
+                  ? 'bg-amber-400'
+                  : status === 'failed'
+                    ? 'bg-red-400'
+                    : 'bg-gray-400'
           }`} />
-          {statusLabel(status, modelCount)}
+          {enabled ? statusLabel(status, modelCount) : 'Not yet available'}
         </span>
       </div>
 
@@ -123,12 +144,17 @@ export function ProviderCard({ provider, isCustom }: ProviderCardProps) {
         <div className="font-mono text-[10px] text-gray-500 truncate flex-1">{masked}</div>
         <button
           type="button"
-          onClick={() => openProviderEdit(id, isCustom)}
+          disabled={!enabled}
+          onClick={() => enabled && openProviderEdit(id, isCustom)}
           className={`text-xs font-semibold px-4 py-1.5 rounded-2xl transition-all ${
-            configured ? 'bg-surface-600 hover:bg-surface-500' : 'bg-brand-500 hover:bg-brand-600 text-white'
+            !enabled
+              ? 'bg-surface-700 text-gray-500 cursor-not-allowed'
+              : configured
+                ? 'bg-surface-600 hover:bg-surface-500'
+                : 'bg-brand-500 hover:bg-brand-600 text-white'
           }`}
         >
-          {configured ? 'Edit' : 'Configure'}
+          {enabled ? (configured ? 'Edit' : 'Configure') : 'Unavailable'}
         </button>
       </div>
     </div>

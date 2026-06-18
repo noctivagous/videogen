@@ -7,10 +7,11 @@ export type FrameView = 'preview' | 'prompt' | 'generated';
 interface FrameViewSegmentProps {
   value: FrameView;
   onChange: (view: FrameView) => void;
-  hasGeneratedVideo?: boolean;
+  generatedVideoCount?: number;
 }
 
-export function FrameViewSegment({ value, onChange, hasGeneratedVideo = false }: FrameViewSegmentProps) {
+export function FrameViewSegment({ value, onChange, generatedVideoCount = 0 }: FrameViewSegmentProps) {
+  const hasGeneratedVideo = generatedVideoCount > 0;
   return (
     <div
       className="frame-view-segment"
@@ -34,7 +35,7 @@ export function FrameViewSegment({ value, onChange, hasGeneratedVideo = false }:
         className={`frame-view-segment-btn ${value === 'prompt' ? 'active' : ''}`}
         onClick={() => onChange('prompt')}
       >
-        Prompt
+        Prompt Payload
       </button>
       {hasGeneratedVideo && (
         <button
@@ -45,6 +46,9 @@ export function FrameViewSegment({ value, onChange, hasGeneratedVideo = false }:
           onClick={() => onChange('generated')}
         >
           Generated
+          <span className="frame-view-segment-count" aria-label={`${generatedVideoCount} videos`}>
+            {generatedVideoCount}
+          </span>
         </button>
       )}
     </div>

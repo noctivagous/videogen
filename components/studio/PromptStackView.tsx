@@ -36,11 +36,11 @@ export function PromptStackView() {
 
   return (
     <div
-      className="prompt-stack-view absolute inset-0 overflow-y-auto overflow-x-hidden bg-surface-900/95 backdrop-blur-sm"
+      className="prompt-stack-view prompt-stack-view--panel h-full overflow-y-auto overflow-x-hidden bg-surface-900"
       {...uiSectionProps(UI_SECTIONS.studioPreviewPromptStack)}
     >
-      <div className="prompt-stack-inner p-4 md:p-6">
-        <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-4 font-semibold">
+      <div className="prompt-stack-inner p-4 md:p-8 pt-16 md:pt-20">
+        <p className="prompt-stack-eyebrow text-xs uppercase tracking-widest text-gray-500 mb-5 font-semibold">
           API payload · assembled from your controls
         </p>
 

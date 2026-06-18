@@ -1,5 +1,21 @@
 import type { BuiltInProvider } from '@/lib/types/studio';
 
+/**
+ * Built-in providers users can configure and select in the app today.
+ * All other built-in cards remain visible in Settings but are grayed out.
+ */
+export const ENABLED_PROVIDER_IDS = ['xai'] as const;
+
+export type EnabledProviderId = (typeof ENABLED_PROVIDER_IDS)[number];
+
+export function isBuiltInProviderEnabled(providerId: string): boolean {
+  return (ENABLED_PROVIDER_IDS as readonly string[]).includes(providerId);
+}
+
+export function getDefaultEnabledProviderId(): EnabledProviderId {
+  return ENABLED_PROVIDER_IDS[0];
+}
+
 export const BUILT_IN_PROVIDERS: BuiltInProvider[] = [
   {
     id: 'runway',
