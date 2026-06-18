@@ -1,1 +1,16 @@
 .DS_Store
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+
+# Environment variables & local secrets (never commit API keys)
+.env
+.env.*
+!.env.example
+
+# Credential files
+secrets/
+credentials/
+*.pem
+*.key
