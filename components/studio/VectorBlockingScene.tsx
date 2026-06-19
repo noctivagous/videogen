@@ -30,7 +30,8 @@ function angleTransform(angle: string): string {
 export function VectorBlockingScene({ payload }: VectorBlockingSceneProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [animTime, setAnimTime] = useState(0);
-  const needsAnim = payload.motion?.subjectAction !== 'still';
+  const action = payload.motion?.subjectAction ?? 'still';
+  const needsAnim = action !== 'still' && action !== 'none';
 
   useEffect(() => {
     if (!needsAnim) return;

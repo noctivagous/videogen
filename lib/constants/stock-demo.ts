@@ -49,6 +49,10 @@ export const STOCK_ASSETS = {
 /** Demo scene setup — empty; subject identity & wardrobe come from the Subject reference. */
 export const STOCK_MS_PROMPT = '';
 
+/** Default Shot Activity for Demo_Surfer. */
+export const STOCK_SURFER_SHOT_ACTIVITY =
+  'Surfer is faced away from camera, starts walking just before stairs and walks up them.';
+
 /** Map field sizes to cinematography preview chip files when available. */
 const FIELD_SIZE_PREVIEW: Partial<Record<FieldSize, string>> = {
   ms: STOCK_ASSETS.ms,

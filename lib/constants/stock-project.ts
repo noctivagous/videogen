@@ -1,6 +1,6 @@
 import { DEFAULT_FRAME_COMPOSITION } from '@/lib/constants/camera';
 import { DEFAULT_COLOR_PALETTE, warmthToKelvin } from '@/lib/constants/color-palette';
-import { STOCK_ASSETS, STOCK_MS_PROMPT } from '@/lib/constants/stock-demo';
+import { STOCK_ASSETS, STOCK_MS_PROMPT, STOCK_SURFER_SHOT_ACTIVITY } from '@/lib/constants/stock-demo';
 import type {
   CameraSettings,
   FrameComposition,
@@ -26,7 +26,7 @@ export const STOCK_PROJECT: ProjectSettings = {
 };
 
 export const STOCK_CAMERA: CameraSettings = {
-  fieldSize: 'ms',
+  fieldSize: 'fs',
   subjectCount: '1s',
   coverage: 'clean',
   lensType: 'standard',
@@ -125,6 +125,12 @@ export function createStockShot(
   };
 }
 
+export const STOCK_DEMO_MOTION: MotionSettings = {
+  ...STOCK_MOTION,
+  subjectAction: 'none',
+  motionBlur: 'off',
+};
+
 export const STOCK_SHOTS: Shot[] = [
   createStockShot(1, 'Shot 01', true, {
     duration: 5,
@@ -132,8 +138,9 @@ export const STOCK_SHOTS: Shot[] = [
     withReferences: true,
     thumbnail: STOCK_ASSETS.demoSurferCharacterSheet,
     camera: STOCK_CAMERA,
+    motion: STOCK_DEMO_MOTION,
     sceneSetup: STOCK_MS_PROMPT,
-    shotActivity: '',
+    shotActivity: STOCK_SURFER_SHOT_ACTIVITY,
   }),
 ];
 

@@ -95,7 +95,7 @@ function buildLightingPrompt(lighting: LightingSettings): string {
 }
 
 function buildMotionPrompt(motion: MotionSettings): string {
-  if (motion.subjectAction === 'still') return '';
+  if (motion.subjectAction === 'still' || motion.subjectAction === 'none') return '';
   return `Subject ${motion.subjectAction.replace(/-/g, ' ')} with ${motion.intensity} motion`;
 }
 

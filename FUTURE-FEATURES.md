@@ -27,7 +27,8 @@ in the multi-column dropdown can be configured controls.
 
 - Add a collapse control to Shot List so that it
 collapses into a title bar and then the rest of the UI
-makes use of the additional space.
+makes use of the additional space.  By default make it
+collapsed.
 
 - We need to think about how to compact the UI.
 
@@ -79,6 +80,9 @@ prompt, inserts text after helper modal is completed:
  	facing direction: [away from camera, etc.]
  	pose: [walking, etc.]
  	expression: [neutral]
+ 	interacting with object: [e.g. staircase]
+ 	beginning of video:
+ 	end of video:
  	
 
 Should we make Characters Activity a separate

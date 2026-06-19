@@ -289,6 +289,7 @@ export function CameraPanel() {
             </Select>
 
             <Select label="Subject Action" value={motion.subjectAction} onChange={(e) => setMotion({ subjectAction: e.target.value })}>
+              <option value="none">None</option>
               <option value="still">Still Pose</option>
               <option value="walking">Walking</option>
               <option value="running">Running</option>
