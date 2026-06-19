@@ -37,6 +37,7 @@ import {
 import { buildModelPayloadStack, buildShotPrompt } from '@/lib/studio/model-payload';
 import { normalizeThemeTransformLighting } from '@/lib/constants/theme-transform-lighting';
 import { normalizeVideoEnvironment } from '@/lib/constants/video-environment';
+import { normalizeVideoLighting } from '@/lib/constants/video-lighting';
 import {
   buildThemeTransformFingerprint,
   defaultThemeTransformRefs,
@@ -47,10 +48,13 @@ import {
   patchThemeTransformInvalidation,
   THEME_TRANSFORM_SLOT_COUNT,
 } from '@/lib/studio/theme-transform';
+import { DEFAULT_REFERENCE_MODE, normalizeReferenceMode } from '@/lib/constants/reference-modes';
+import { isCinematographyRefs } from '@/lib/studio/reference-slots';
 import { restrictsReferenceSlotsToFirst } from '@/lib/studio/xai-video-models';
 import { applyFrameCompositionSmartDefaults } from '@/lib/studio/composition';
 import {
   cloneInheritedShotSettings,
+  createBlankShotSettings,
   DEFAULT_SHOT_DEFAULTS,
   migrateAllShots,
   migrateCamera,
@@ -115,6 +119,7 @@ import type {
   LightingSettings,
   MotionSettings,
   ProjectSettings,
+  ReferenceMode,
   Shot,
   StudioProject,
   PreviewMode,
@@ -262,12 +267,12 @@ interface StudioStore {
 
   selectShot: (id: number) => void;
   deleteShot: (id: number) => void;
-  addShot: () => void;
+  addShot: (mode?: 'duplicate' | 'blank') => void;
   selectGeneratedVideo: (index: number) => void;
   deleteGeneratedVideo: (id: string) => void;
   setReference: (index: number, dataUrl: string | null) => void;
   cycleReferenceRole: (index: number) => void;
-  toggleCinematographyRefs: () => void;
+  setReferenceMode: (mode: ReferenceMode) => void;
   applyThemeTransformSlot: (index: number) => Promise<void>;
 
   generate: () => Promise<void>;
@@ -499,7 +504,11 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         if (clearRecipe && patch.colorPalette.activeLookRecipeId === undefined) {
           base.colorPalette.activeLookRecipeId = null;
         }
-      } else if (Object.keys(patch).some((key) => key !== 'themeTransformLighting' && key !== 'videoEnvironment')) {
+      } else if (
+        Object.keys(patch).some(
+          (key) => key !== 'themeTransformLighting' && key !== 'videoEnvironment' && key !== 'videoLighting',
+        )
+      ) {
         base.colorPalette = { ...base.colorPalette, activeLookRecipeId: null };
       }
       if (patch.colorTemp !== undefined) {
@@ -525,6 +534,14 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       } else if (!s.lighting.videoEnvironment) {
         base.videoEnvironment = normalizeVideoEnvironment();
       }
+      if (patch.videoLighting) {
+        base.videoLighting = normalizeVideoLighting({
+          ...s.lighting.videoLighting,
+          ...patch.videoLighting,
+        });
+      } else if (!s.lighting.videoLighting) {
+        base.videoLighting = normalizeVideoLighting();
+      }
       const current = getCurrentShotFromList(s.shots, s.currentShot);
       const shotLighting = { ...current?.lighting ?? base, ...patch };
       if (patch.themeTransformLighting) {
@@ -537,6 +554,11 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       } else if (!shotLighting.videoEnvironment) {
         shotLighting.videoEnvironment = normalizeVideoEnvironment();
       }
+      if (patch.videoLighting) {
+        shotLighting.videoLighting = base.videoLighting;
+      } else if (!shotLighting.videoLighting) {
+        shotLighting.videoLighting = normalizeVideoLighting();
+      }
       if (patch.colorPalette) {
         shotLighting.colorPalette = { ...current?.lighting?.colorPalette ?? s.lighting.colorPalette, ...patch.colorPalette };
         if (patch.colorPalette.bw) {
@@ -548,7 +570,11 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         if (clearRecipe && patch.colorPalette.activeLookRecipeId === undefined) {
           shotLighting.colorPalette.activeLookRecipeId = null;
         }
-      } else if (Object.keys(patch).some((key) => key !== 'themeTransformLighting' && key !== 'videoEnvironment')) {
+      } else if (
+        Object.keys(patch).some(
+          (key) => key !== 'themeTransformLighting' && key !== 'videoEnvironment' && key !== 'videoLighting',
+        )
+      ) {
         shotLighting.colorPalette = {
           ...shotLighting.colorPalette,
           activeLookRecipeId: null,
@@ -722,23 +748,28 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     get().showToast('Shot deleted');
   },
 
-  addShot() {
+  addShot(mode = 'duplicate') {
     const { shots } = get();
     const current = get().getCurrentShot();
     const newId = Math.max(...shots.map((s) => s.id)) + 1;
 
-    const inherited = current ? cloneInheritedShotSettings(current) : {
-      duration: 5,
-      camera: migrateCamera({ ...STOCK_CAMERA }),
-      lighting: { ...STOCK_LIGHTING },
-      motion: { ...STOCK_MOTION },
-      sceneSetup: STOCK_PROMPT,
-      shotActivity: '',
-      frameComposition: { ...DEFAULT_FRAME_COMPOSITION },
-      references: [STOCK_CHARACTER_REF, STOCK_BACKDROP_REF, null] as (string | null)[],
-      referenceRoles: [...STOCK_REFERENCE_ROLES],
-      cinematographyRefs: true,
-    };
+    const inherited =
+      mode === 'blank'
+        ? createBlankShotSettings()
+        : current
+          ? cloneInheritedShotSettings(current)
+          : {
+              duration: 5,
+              camera: migrateCamera({ ...STOCK_CAMERA }),
+              lighting: { ...STOCK_LIGHTING },
+              motion: { ...STOCK_MOTION },
+              sceneSetup: STOCK_PROMPT,
+              shotActivity: '',
+              frameComposition: { ...DEFAULT_FRAME_COMPOSITION },
+              references: [STOCK_CHARACTER_REF, STOCK_BACKDROP_REF, null] as (string | null)[],
+              referenceRoles: [...STOCK_REFERENCE_ROLES],
+              referenceMode: DEFAULT_REFERENCE_MODE,
+            };
 
     const newShot: Shot = {
       id: newId,
@@ -752,7 +783,11 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     };
 
     set({ shots: [...shots, newShot] });
-    get().showToast('New shot added — inherited settings from current shot');
+    get().showToast(
+      mode === 'blank'
+        ? 'New blank shot added'
+        : 'New shot added — inherited settings from current shot',
+    );
   },
 
   selectGeneratedVideo(index) {
@@ -818,14 +853,13 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     }));
   },
 
-  toggleCinematographyRefs() {
+  setReferenceMode(mode) {
     const shot = get().getCurrentShot();
-    if (!shot) return;
-    const next = shot.cinematographyRefs === false;
+    if (!shot || normalizeReferenceMode(shot) === mode) return;
     set((s) => ({
-      shots: patchCurrentShot(s.shots, s.currentShot, { cinematographyRefs: next }),
+      shots: patchCurrentShot(s.shots, s.currentShot, { referenceMode: mode }),
     }));
-    get().showToast(next ? 'Shot image references on' : 'Generic image slots');
+    get().showToast(mode === 'auto-roles' ? 'Auto-roles reference mode' : 'Manual reference mode');
   },
 
   async generatePreviewFrame() {
@@ -885,7 +919,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
           prompt,
           aspectRatio: project.aspectRatio,
           refs,
-          cinematographyRefs: shot.cinematographyRefs !== false,
+          cinematographyRefs: isCinematographyRefs(shot),
         }),
       });
 
@@ -1153,7 +1187,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
           resolution: project.resolution,
           aspectRatio: project.aspectRatio,
           refs,
-          cinematographyRefs: shot.cinematographyRefs !== false,
+          cinematographyRefs: isCinematographyRefs(shot),
         }),
       });
 

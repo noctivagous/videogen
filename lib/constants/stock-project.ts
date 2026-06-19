@@ -1,8 +1,10 @@
 import { DEFAULT_FRAME_COMPOSITION } from '@/lib/constants/camera';
+import { DEFAULT_REFERENCE_MODE } from '@/lib/constants/reference-modes';
 import { getDefaultResolution } from '@/lib/constants/resolutions';
 import { DEFAULT_COLOR_PALETTE, warmthToKelvin } from '@/lib/constants/color-palette';
 import { DEFAULT_THEME_TRANSFORM_LIGHTING_INCLUSION } from '@/lib/constants/theme-transform-lighting';
 import { DEFAULT_VIDEO_ENVIRONMENT } from '@/lib/constants/video-environment';
+import { DEFAULT_VIDEO_LIGHTING } from '@/lib/constants/video-lighting';
 import { STOCK_ASSETS, STOCK_MS_PROMPT, STOCK_SURFER_SHOT_ACTIVITY } from '@/lib/constants/stock-demo';
 import type {
   CameraSettings,
@@ -29,7 +31,7 @@ export const STOCK_PROJECT: ProjectSettings = {
 };
 
 export const STOCK_CAMERA: CameraSettings = {
-  fieldSize: 'fs',
+  fieldSize: 'ls',
   subjectCount: '1s',
   coverage: 'clean',
   lensType: 'standard',
@@ -50,6 +52,7 @@ export const STOCK_LIGHTING: LightingSettings = {
   colorPalette: { ...DEFAULT_COLOR_PALETTE },
   themeTransformLighting: { ...DEFAULT_THEME_TRANSFORM_LIGHTING_INCLUSION },
   videoEnvironment: { ...DEFAULT_VIDEO_ENVIRONMENT },
+  videoLighting: { ...DEFAULT_VIDEO_LIGHTING },
 };
 
 export const STOCK_MOTION: MotionSettings = {
@@ -121,7 +124,7 @@ export function createStockShot(
       ? [STOCK_CHARACTER_REF, STOCK_BACKDROP_REF, null]
       : [null, null, null],
     referenceRoles: [...STOCK_REFERENCE_ROLES],
-    cinematographyRefs: true,
+    referenceMode: DEFAULT_REFERENCE_MODE,
     frameComposition: {
       ...DEFAULT_FRAME_COMPOSITION,
       ...STOCK_SHOT_COMPOSITION,

@@ -1,8 +1,9 @@
+import { isAutoRolesReferenceMode } from '@/lib/constants/reference-modes';
 import type { ReferenceRole, Shot } from '@/lib/types/studio';
 
-/** When true (default), slots use Subject/Backdrop/Other/Style and role-aware prompt assembly. */
+/** Auto-roles mode: slots use Subject/Backdrop/Style and role-aware prompt assembly. */
 export function isCinematographyRefs(shot: Shot | undefined): boolean {
-  return shot?.cinematographyRefs !== false;
+  return isAutoRolesReferenceMode(shot);
 }
 
 export function formatReferenceRoleLabel(role: ReferenceRole): string {
@@ -16,7 +17,7 @@ export function getReferenceSlotLabel(
   role: ReferenceRole,
 ): string {
   if (!isCinematographyRefs(shot)) {
-    return `Image ${slotIndex + 1}`;
+    return `Image${slotIndex + 1}`;
   }
   return formatReferenceRoleLabel(role);
 }

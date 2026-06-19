@@ -8,6 +8,7 @@ import {
 import { normalizeLensCamera } from '@/lib/constants/lens';
 import { isUserSubjectReference, normalizeStockSubjectRef } from '@/lib/constants/stock-demo';
 import { normalizeColorPalette } from '@/lib/constants/color-palette';
+import { DEFAULT_REFERENCE_MODE, normalizeReferenceMode } from '@/lib/constants/reference-modes';
 import {
   STOCK_BACKDROP_REF,
   STOCK_CAMERA,
@@ -21,6 +22,7 @@ import { stripLegacySceneBoilerplate } from '@/lib/studio/legacy-scene-boilerpla
 import { migrateShotGeneratedVideos } from '@/lib/studio/shot-videos';
 import { normalizeThemeTransformLighting } from '@/lib/constants/theme-transform-lighting';
 import { normalizeVideoEnvironment } from '@/lib/constants/video-environment';
+import { normalizeVideoLighting } from '@/lib/constants/video-lighting';
 import {
   defaultThemeTransformRefs,
   defaultThemeTransformStatus,
@@ -77,9 +79,38 @@ export function patchCurrentShot(
   return shots.map((sh) => (sh.id === shotId ? { ...sh, ...patch } : sh));
 }
 
-export function cloneInheritedShotSettings(
-  source: Shot,
-): Omit<Shot, 'id' | 'name' | 'active' | 'thumbnail' | 'videoUrl' | 'generatedVideos' | 'activeVideoIndex'> {
+type InheritedShotSettings = Omit<
+  Shot,
+  'id' | 'name' | 'active' | 'thumbnail' | 'videoUrl' | 'generatedVideos' | 'activeVideoIndex'
+>;
+
+export function createBlankShotSettings(): InheritedShotSettings {
+  return {
+    duration: 5,
+    camera: normalizeLensCamera(migrateCamera({ ...STOCK_CAMERA })),
+    lighting: {
+      ...STOCK_LIGHTING,
+      colorPalette: normalizeColorPalette(STOCK_LIGHTING.colorPalette),
+      themeTransformLighting: normalizeThemeTransformLighting(STOCK_LIGHTING.themeTransformLighting),
+      videoEnvironment: normalizeVideoEnvironment(STOCK_LIGHTING.videoEnvironment),
+      videoLighting: normalizeVideoLighting(STOCK_LIGHTING.videoLighting),
+    },
+    motion: { ...STOCK_MOTION },
+    sceneSetup: '',
+    shotActivity: '',
+    frameComposition: { ...DEFAULT_FRAME_COMPOSITION },
+    references: [null, null, null],
+    referenceRoles: [...STOCK_REFERENCE_ROLES],
+    referenceMode: DEFAULT_REFERENCE_MODE,
+    transformedReferences: defaultThemeTransformRefs(),
+    themeTransformFingerprint: emptyThemeTransformArray(null),
+    themeTransformStatus: defaultThemeTransformStatus(),
+    themeTransformError: emptyThemeTransformArray(null),
+    themeTransformLinked: emptyThemeTransformArray(false),
+  };
+}
+
+export function cloneInheritedShotSettings(source: Shot): InheritedShotSettings {
   return {
     duration: source.duration,
     camera: normalizeLensCamera(migrateCamera({ ...source.camera })),
@@ -88,6 +119,7 @@ export function cloneInheritedShotSettings(
       colorPalette: normalizeColorPalette(source.lighting.colorPalette),
       themeTransformLighting: normalizeThemeTransformLighting(source.lighting.themeTransformLighting),
       videoEnvironment: normalizeVideoEnvironment(source.lighting.videoEnvironment),
+      videoLighting: normalizeVideoLighting(source.lighting.videoLighting),
     },
     motion: { ...source.motion },
     sceneSetup: source.sceneSetup,
@@ -95,7 +127,7 @@ export function cloneInheritedShotSettings(
     frameComposition: { ...source.frameComposition },
     references: [...source.references],
     referenceRoles: [...source.referenceRoles],
-    cinematographyRefs: source.cinematographyRefs,
+    referenceMode: normalizeReferenceMode(source),
     transformedReferences: [...(source.transformedReferences ?? defaultThemeTransformRefs())],
     themeTransformFingerprint: [...(source.themeTransformFingerprint ?? emptyThemeTransformArray(null))],
     themeTransformStatus: [...(source.themeTransformStatus ?? defaultThemeTransformStatus())],
@@ -169,6 +201,9 @@ export function migrateShot(
       videoEnvironment: normalizeVideoEnvironment(
         shot.lighting?.videoEnvironment ?? defaults.lighting.videoEnvironment,
       ),
+      videoLighting: normalizeVideoLighting(
+        shot.lighting?.videoLighting ?? defaults.lighting.videoLighting,
+      ),
     },
     motion: { ...defaults.motion, ...shot.motion },
     sceneSetup: stripLegacySceneBoilerplate(shot.sceneSetup ?? shot.prompt ?? defaults.sceneSetup),
@@ -193,7 +228,7 @@ export function migrateShot(
     },
     previewFrameUrl: shot.previewFrameUrl ?? null,
     previewFrameFingerprint: shot.previewFrameFingerprint ?? null,
-    cinematographyRefs: shot.cinematographyRefs,
+    referenceMode: normalizeReferenceMode(shot),
     transformedReferences: shot.transformedReferences ?? defaultThemeTransformRefs(),
     themeTransformFingerprint: shot.themeTransformFingerprint ?? emptyThemeTransformArray(null),
     themeTransformStatus: shot.themeTransformStatus ?? defaultThemeTransformStatus(),

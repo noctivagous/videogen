@@ -1,10 +1,90 @@
 FUTURE FEATURES
 
+---------
+
+VIDEOGEN APP SHAPE
+
+App should be shaped in the following way: 
+"Light your backdrop reference first, 
+then describe the lighting technique and atmosphere,
+and effects you want the AI to apply on top."
+
+"Make your character sheet (with our tools) and
+include it"
+
+This respects how the models actually work 
+(strong references + descriptive direction) 
+while giving users a filmmaking-like mental model.
+
+---------
+
+Image Editor
+
+The image references that the
+user provides may not be ready
+and may need image processing,
+so in addition to the current
+Image Transformer we can have
+an image editor.
+
+---------
+
+-----
+
+It might be helpful to have the AI analyze
+the provided image references for what they
+contain. But at the same time, the image
+references may not be ready and need AI
+work. In real world filmmaking, the set
+isn't usually lit and there is an actual
+application of lighting to the set.  
+
+
+Core concept:
+Before generation, run a lightweight vision analysis on the uploaded Subject, Backdrop, and Style references. Extract key lighting information and use it to:
+
+Suggest or auto-apply improvements.
+Inform the prompt with accurate descriptions.
+Guide users on technique choices.
+
+---
+
+But the way the AI models work, you are often
+bringing in a pre-lit backdrop image reference
+and the AI can add atmospheric effects.
+
+Real-World Filmmaking
+
+The set is built and then lit on location (or on stage) with practical lights, motivated sources, gels, flags, bounces, etc.
+Lighting is additive and interactive — it responds to the physical environment, actors, and camera movement in real time.
+The cinematographer shapes light dynamically during the shoot.
+
+AI Video Generation (current reality)
+
+You typically provide pre-lit or pre-styled references (Backdrop, Subject, Style).
+The model then composites and enhances based on the prompt (adding fog, god rays, mood, etc.).
+The AI is good at atmospheric overlays and global grading, but less precise at complex interactive lighting simulation from scratch.
+
+
+
+---------
+
+We want our app technique-oriented, not
+preset oriented. 
+
+Example: chiaroscuro (technique) vs. noir (genre)
+
+---------
+
+Theme transformer can still guide the
+generation of the video.
 
 ---------
 
 pre-processing of image references vs.
 prompt text for the video.
+
+----------
 
 1. 
 The color palette table is the table

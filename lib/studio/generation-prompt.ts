@@ -20,10 +20,11 @@ import {
   MOVEMENT_PROMPTS,
   SUBJECT_COUNT_PROMPTS,
 } from '@/lib/studio/generation-prompt-constants';
-import { isColorPaletteActive } from '@/lib/constants/color-palette';
+
 import { prepareSceneTextForGeneration } from '@/lib/studio/legacy-scene-boilerplate';
-import { hasPromptImageReferences } from '@/lib/studio/prompt-mentions';
+
 import { buildVideoEnvironmentPrompt } from '@/lib/studio/video-environment-prompt';
+import { buildVideoLightingPrompt } from '@/lib/studio/video-lighting-prompt';
 
 export function getGenerationFramePrompt(
   fieldSize: string,
@@ -76,19 +77,6 @@ export function getGenerationCameraPrompt(
   }
 
   return parts.filter(Boolean).join('. ');
-}
-
-function buildLightingPrompt(lighting: LightingSettings): string {
-  const paletteEnabled = isColorPaletteActive(lighting.colorPalette);
-  const parts = [
-    paletteEnabled
-      ? `${lighting.keyLight} key light`
-      : `${lighting.style} lighting with ${lighting.keyLight} key light`,
-    paletteEnabled
-      ? lighting.timeOfDay.replace(/-/g, ' ')
-      : `${lighting.timeOfDay.replace(/-/g, ' ')}, ${lighting.colorTemp}K color temperature`,
-  ];
-  return parts.join('. ');
 }
 
 function buildMotionPrompt(motion: MotionSettings): string {
@@ -185,8 +173,9 @@ export function buildReferencePromptLine(
  * Prompt assembly precedence (xAI video + image reference modes):
  * 1. Reference binding — augmentPromptForXAI; which pixels come from <IMAGE_N>
  * 2. Scene + motion — user story
- * 3. Camera — framing, lens, angle, movement
- * 4. Lighting fill — key light quality, time of day
+ * 3. Video lighting techniques — cinematography presets (multi-select)
+ * 4. Atmosphere / environment — volumetric overlays
+ * 5. Camera — framing, lens, angle, movement
  *
  * Color grading is applied via Theme Transformer reference images, not text prompts.
  */
@@ -197,21 +186,32 @@ export function buildGenerationPrompt(input: {
   lighting: LightingSettings;
   motion: MotionSettings;
   shot: Shot | undefined;
+  includeVideoLighting?: boolean;
   includeVideoEnvironment?: boolean;
 }): string {
-  const { sceneSetup, shotActivity, camera, lighting, motion, shot, includeVideoEnvironment = true } = input;
+  const {
+    sceneSetup,
+    shotActivity,
+    camera,
+    lighting,
+    motion,
+    shot,
+    includeVideoLighting = true,
+    includeVideoEnvironment = true,
+  } = input;
   const frame = getShotFrameComposition(shot);
 
   const prepared = prepareSceneTextForGeneration(sceneSetup, shotActivity);
   const sceneParts = [prepared.sceneSetup, prepared.shotActivity].filter(Boolean);
   const sceneBlock = sceneParts.join('. ');
+  const videoLightingLine =
+    includeVideoLighting ? buildVideoLightingPrompt(lighting) : '';
   const videoEnvironmentLine =
     includeVideoEnvironment ? buildVideoEnvironmentPrompt(lighting) : '';
   const cameraLine = getGenerationCameraPrompt(camera, frame);
-  const lightingLine = buildLightingPrompt(lighting);
   const motionLine = buildMotionPrompt(motion);
 
-  const blocks = [sceneBlock, videoEnvironmentLine, cameraLine, lightingLine, motionLine];
+  const blocks = [sceneBlock, videoLightingLine, videoEnvironmentLine, cameraLine, motionLine];
 
   return blocks
     .filter(Boolean)
@@ -228,7 +228,7 @@ export function augmentPromptForXAI(
 ): string {
   if (!cinematographyRefs) return prompt;
   const xaiRef = buildXAIReferencePrompt(refs);
-  if (!xaiRef || hasPromptImageReferences(prompt)) return prompt;
+  if (!xaiRef) return prompt;
   return `${xaiRef} ${prompt}`.trim();
 }
 
@@ -240,6 +240,6 @@ export function augmentPromptForXAIImageEdit(
 ): string {
   if (!cinematographyRefs) return prompt;
   const xaiRef = buildXAIImageEditReferencePrompt(refs);
-  if (!xaiRef || hasPromptImageReferences(prompt)) return prompt;
+  if (!xaiRef) return prompt;
   return `${xaiRef} ${prompt}`.trim();
 }

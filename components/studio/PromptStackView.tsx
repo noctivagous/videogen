@@ -41,6 +41,37 @@ export function PromptStackView() {
       {...uiSectionProps(UI_SECTIONS.studioPreviewPromptStack)}
     >
       <div className="prompt-stack-inner p-4 md:p-8 pt-16 md:pt-20">
+        <section className="prompt-table-section mb-8" {...uiSectionProps(UI_SECTIONS.studioPromptTable)}>
+          <h3 className="prompt-table-heading text-xs uppercase tracking-widest text-gray-300 mb-3 font-semibold">
+            Prompt Table
+          </h3>
+          <table className="prompt-table">
+            <thead>
+              <tr>
+                <th scope="col" className="prompt-table__source-head">Source</th>
+                <th scope="col" className="prompt-table__text-head">Prompt</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stack.promptTable.length > 0 ? (
+                stack.promptTable.map((row, index) => (
+                  <tr key={`${row.source}-${index}`}>
+                    <td className="prompt-table__source">{row.source}</td>
+                    <td className="prompt-table__text">{row.text}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td className="prompt-table__source prompt-table__source--empty">—</td>
+                  <td className="prompt-table__text prompt-table__text--empty">
+                    Empty — add scene setup or shot activity to generate
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </section>
+
         <p className="prompt-stack-eyebrow text-xs uppercase tracking-widest text-gray-500 mb-5 font-semibold">
           API payload · assembled from your controls
         </p>

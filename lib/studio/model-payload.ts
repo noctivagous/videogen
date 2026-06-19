@@ -8,7 +8,13 @@ import {
 } from '@/lib/studio/generation-prompt';
 import { getLookRecipe } from '@/lib/constants/look-recipes';
 import { getVideoEnvironmentPreset } from '@/lib/constants/video-environment';
+import {
+  getActiveVideoLightingTechniques,
+  getVideoLightingTechnique,
+} from '@/lib/constants/video-lighting';
+import { buildVideoLightingPrompt } from '@/lib/studio/video-lighting-prompt';
 import { needsThemeTransformer } from '@/lib/studio/theme-transform';
+import { buildPromptTable, type PromptTableRow } from '@/lib/studio/prompt-table';
 import { expandPromptMentions } from '@/lib/studio/prompt-mentions';
 import { getEffectiveModelId } from '@/lib/studio/provider-modalities';
 import { formatReferenceRoleLabel, isCinematographyRefs } from '@/lib/studio/reference-slots';
@@ -40,7 +46,10 @@ export interface ModelPayloadStack {
   blocks: PayloadStackBlock[];
   mermaid: string;
   combinedPrompt: string;
+  promptTable: PromptTableRow[];
 }
+
+export type { PromptTableRow };
 
 export function buildShotPrompt(sceneSetup: string, shotActivity: string): string {
   const setup = sceneSetup.trim();
@@ -109,11 +118,11 @@ export function buildModelPayloadStack(input: {
         ...refs.map((r) =>
           cinematographyRefs
             ? `${formatReferenceRoleLabel(r.role)} (@Image${r.slotIndex + 1})`
-            : `Image ${r.slotIndex + 1} (@Image${r.slotIndex + 1})`,
+            : `Image${r.slotIndex + 1} (@Image${r.slotIndex + 1})`,
         ),
         cinematographyRefs
-          ? 'Type @ in Scene Setup or Shot Activity to insert a reference token.'
-          : 'Generic image slots — describe each image in your prompt or use @ImageN.',
+          ? 'Auto-roles — role-aware binding; @ImageN tokens optional.'
+          : 'Manual — describe each image in your prompt or use @ImageN.',
       ],
       refs,
       variant: 'references',
@@ -121,6 +130,8 @@ export function buildModelPayloadStack(input: {
   }
 
   const activeRecipe = getLookRecipe(lighting.colorPalette?.activeLookRecipeId);
+  const activeVideoLightingIds = getActiveVideoLightingTechniques(lighting);
+  const videoLightingPrompt = buildVideoLightingPrompt(lighting);
   const activeVideoEnvironment = getVideoEnvironmentPreset(lighting.videoEnvironment?.presetId);
   const themeOn = needsThemeTransformer(lighting);
   const linkedSlots = shot?.themeTransformLinked
@@ -174,6 +185,19 @@ export function buildModelPayloadStack(input: {
       variant: 'composition',
     },
     {
+      id: 'video-lighting',
+      title: 'Lighting Techniques',
+      lines: activeVideoLightingIds.length
+        ? [
+            activeVideoLightingIds
+              .map((id) => getVideoLightingTechnique(id)?.label ?? id)
+              .join(', '),
+            videoLightingPrompt,
+          ]
+        : ['Off — no lighting techniques in video prompt'],
+      variant: 'composition',
+    },
+    {
       id: 'video-environment',
       title: 'Atmosphere / Environment',
       lines: activeVideoEnvironment
@@ -221,5 +245,17 @@ export function buildModelPayloadStack(input: {
     '  prompt --> out',
   );
 
-  return { blocks, mermaid: mermaidLines.join('\n'), combinedPrompt };
+  const promptTable = buildPromptTable({
+    sceneSetup,
+    shotActivity,
+    camera,
+    lighting,
+    motion,
+    shot,
+    providerId: videoProviderId,
+    refs,
+    cinematographyRefs,
+  });
+
+  return { blocks, mermaid: mermaidLines.join('\n'), combinedPrompt, promptTable };
 }

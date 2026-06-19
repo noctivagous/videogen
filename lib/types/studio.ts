@@ -29,6 +29,9 @@ export type Headroom = 'tight' | 'normal' | 'generous';
 
 export type ReferenceRole = 'Subject' | 'Backdrop' | 'Style' | 'Depth' | 'Canny' | 'None';
 
+/** How shot image reference slots are labeled and described in prompts. */
+export type ReferenceMode = 'auto-roles' | 'manual';
+
 export type ThemeTransformSlotStatus = 'idle' | 'applying' | 'ready' | 'stale' | 'error';
 
 export interface FrameComposition {
@@ -128,6 +131,65 @@ export interface VideoEnvironmentSettings {
   presetId: string | null;
 }
 
+export type VideoLightingTechniqueId =
+  | 'chiaroscuro'
+  | 'rembrandt'
+  | 'split'
+  | 'loop'
+  | 'butterfly'
+  | 'rim-backlight'
+  | 'low-key'
+  | 'high-key'
+  | 'volumetric'
+  | 'practical'
+  | 'color-temperature'
+  | 'three-point';
+
+export type VideoLightingAngle =
+  | 'left'
+  | 'right'
+  | 'above'
+  | 'below'
+  | 'front'
+  | 'back';
+
+export type VideoLightingKelvinBias = 'warm' | 'neutral' | 'cool';
+
+export type VideoLightingPracticalSource = 'window' | 'desk-lamp' | 'overhead' | 'neon';
+
+export type VideoLightingModifierKey =
+  | 'intensity'
+  | 'contrast'
+  | 'softness'
+  | 'brightness'
+  | 'angle'
+  | 'kelvinBias'
+  | 'practicalSource'
+  | 'keyIntensity'
+  | 'fillIntensity'
+  | 'backIntensity'
+  | 'atmosphereDensity';
+
+export interface VideoLightingModifierState {
+  intensity?: number;
+  contrast?: number;
+  softness?: number;
+  brightness?: number;
+  angle?: VideoLightingAngle;
+  kelvinBias?: VideoLightingKelvinBias;
+  practicalSource?: VideoLightingPracticalSource;
+  keyIntensity?: number;
+  fillIntensity?: number;
+  backIntensity?: number;
+  atmosphereDensity?: number;
+}
+
+/** Video-only lighting technique presets (multi-select). */
+export interface VideoLightingSettings {
+  techniqueIds: VideoLightingTechniqueId[];
+  modifiers: Partial<Record<VideoLightingTechniqueId, VideoLightingModifierState>>;
+}
+
 export interface LightingSettings {
   keyLight: string;
   intensity: number;
@@ -140,6 +202,8 @@ export interface LightingSettings {
   themeTransformLighting?: ThemeTransformLightingInclusion;
   /** Rich atmosphere phrases appended to video generation prompts only. */
   videoEnvironment?: VideoEnvironmentSettings;
+  /** Cinematography lighting techniques appended to video generation prompts only. */
+  videoLighting?: VideoLightingSettings;
 }
 
 export interface MotionSettings {
@@ -176,7 +240,9 @@ export interface Shot {
   prompt?: string;
   references: (string | null)[];
   referenceRoles: ReferenceRole[];
-  /** When true (default), slots use Subject/Backdrop/Style labels and role-aware prompts. */
+  /** Auto-roles: Subject/Backdrop/Style labels + role-aware prompt binding. Manual: Image1/Image2/Image3. */
+  referenceMode?: ReferenceMode;
+  /** @deprecated migrated to referenceMode on load */
   cinematographyRefs?: boolean;
   /** Per-slot images after Theme Transformer image-model edit. */
   transformedReferences?: (string | null)[];

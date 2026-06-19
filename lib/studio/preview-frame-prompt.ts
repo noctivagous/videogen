@@ -4,7 +4,7 @@ import {
   buildGenerationRefs,
   buildReferencePromptLine,
 } from '@/lib/studio/generation-prompt';
-import { expandPromptMentions, hasPromptImageReferences } from '@/lib/studio/prompt-mentions';
+import { expandPromptMentions } from '@/lib/studio/prompt-mentions';
 import { isCinematographyRefs } from '@/lib/studio/reference-slots';
 import type { ReferenceRole, ScenePreviewPayload } from '@/lib/types/studio';
 
@@ -26,6 +26,7 @@ export function buildPreviewFramePayload(
     lighting: payload.lighting,
     motion: payload.motion,
     shot,
+    includeVideoLighting: false,
     includeVideoEnvironment: false,
   });
 
@@ -45,7 +46,7 @@ export function buildPreviewFramePayload(
     prompt = augmentPromptForXAIImageEdit(prompt, refs, cinematographyRefs);
   } else if (refs.length > 0 && cinematographyRefs) {
     const refLine = buildReferencePromptLine(refs);
-    if (refLine && !hasPromptImageReferences(prompt)) {
+    if (refLine) {
       prompt = `${refLine} ${prompt}`;
     }
   }

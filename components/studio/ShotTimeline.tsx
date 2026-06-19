@@ -6,12 +6,81 @@ import { getShotThumbnailOverlayLines, getShotThumbnailUrl } from '@/lib/studio/
 import { getGeneratedVideoCount, getShotActiveVideoUrl } from '@/lib/studio/shot-videos';
 import { useStudioStore } from '@/store/useStudioStore';
 
+type AddShotMode = 'duplicate' | 'blank';
+
+function AddShotControl({ variant }: { variant: 'header' | 'tile' }) {
+  const addShot = useStudioStore((s) => s.addShot);
+
+  const handleAdd = (mode: AddShotMode) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    addShot(mode);
+  };
+
+  if (variant === 'header') {
+    return (
+      <div
+        className="flex items-center rounded-lg border border-surface-600/80 bg-surface-800/40 overflow-hidden"
+        title="Append a new shot after the current list"
+      >
+        <span className="text-xs text-gray-400 font-medium px-2 py-1 flex items-center gap-1 border-r border-surface-600/80 shrink-0">
+          <svg className="w-3.5 h-3.5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+          </svg>
+          <span className="hidden sm:inline">Add Shot</span>
+        </span>
+        <button
+          type="button"
+          onClick={handleAdd('duplicate')}
+          className="text-xs text-brand-400 hover:text-brand-300 hover:bg-surface-700/60 font-medium px-2 py-1 transition-colors border-r border-surface-600/80"
+          title="Duplicate current shot settings"
+        >
+          Duplicate
+        </button>
+        <button
+          type="button"
+          onClick={handleAdd('blank')}
+          className="text-xs text-brand-400 hover:text-brand-300 hover:bg-surface-700/60 font-medium px-2 py-1 transition-colors"
+          title="Add shot with default settings"
+        >
+          Blank
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="flex-shrink-0 w-40 aspect-video rounded-lg border-2 border-dashed border-surface-600 bg-surface-800/50 flex flex-col items-center justify-center gap-2 px-2"
+      title="Add a new shot to the timeline"
+    >
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Add Shot</span>
+      <div className="flex gap-1.5 w-full">
+        <button
+          type="button"
+          onClick={handleAdd('duplicate')}
+          className="flex-1 text-[9px] font-semibold uppercase tracking-wide text-gray-400 hover:text-brand-400 hover:bg-surface-700/60 rounded px-1.5 py-1 transition-all border border-surface-600/80 hover:border-brand-500/60"
+          title="Duplicate current shot settings"
+        >
+          Duplicate
+        </button>
+        <button
+          type="button"
+          onClick={handleAdd('blank')}
+          className="flex-1 text-[9px] font-semibold uppercase tracking-wide text-gray-400 hover:text-brand-400 hover:bg-surface-700/60 rounded px-1.5 py-1 transition-all border border-surface-600/80 hover:border-brand-500/60"
+          title="Add shot with default settings"
+        >
+          Blank
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function ShotTimeline() {
   const shots = useStudioStore((s) => s.shots);
   const currentShotId = useStudioStore((s) => s.currentShot);
   const selectShot = useStudioStore((s) => s.selectShot);
   const deleteShot = useStudioStore((s) => s.deleteShot);
-  const addShot = useStudioStore((s) => s.addShot);
   const [collapsed, setCollapsed] = useState(true);
 
   const activeShot = shots.find((s) => s.id === currentShotId) || shots.find((s) => s.active) || shots[0];
@@ -40,17 +109,7 @@ export function ShotTimeline() {
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <button
-            type="button"
-            onClick={addShot}
-            className="text-xs text-brand-400 hover:text-brand-300 font-medium flex items-center gap-1 transition-colors px-2 py-1 rounded-lg hover:bg-surface-700/60"
-            title="Append a new shot after the current list"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-            </svg>
-            <span className="hidden sm:inline">Add Shot</span>
-          </button>
+          <AddShotControl variant="header" />
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}
@@ -140,17 +199,7 @@ export function ShotTimeline() {
           );
         })}
 
-        <button
-          type="button"
-          onClick={addShot}
-          className="flex-shrink-0 w-40 aspect-video rounded-lg border-2 border-dashed border-surface-600 hover:border-brand-500 bg-surface-800/50 hover:bg-surface-800 flex flex-col items-center justify-center gap-1 transition-all text-gray-500 hover:text-brand-400"
-          title="Add a new shot to the timeline"
-        >
-          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-          </svg>
-          <span className="text-[10px] font-semibold uppercase tracking-wider">Add Shot</span>
-        </button>
+        <AddShotControl variant="tile" />
       </div>
       )}
     </div>

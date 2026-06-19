@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState, type DragEvent } from 'react';
 import { normalizeReferenceRole } from '@/lib/constants/camera';
+import { normalizeReferenceMode, REFERENCE_MODE_OPTIONS } from '@/lib/constants/reference-modes';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { resolveReferenceDisplayUrl } from '@/lib/storage/reference-url';
 import { getEffectiveModelId } from '@/lib/studio/provider-modalities';
 import { getReferenceSlotLabel, isCinematographyRefs } from '@/lib/studio/reference-slots';
 import { getThemeTransformStatus } from '@/lib/studio/theme-transform';
 import { restrictsReferenceSlotsToFirst } from '@/lib/studio/xai-video-models';
-import type { ThemeTransformSlotStatus } from '@/lib/types/studio';
+import type { ReferenceMode, ThemeTransformSlotStatus } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
 
 function isImageDrag(e: DragEvent): boolean {
@@ -50,7 +51,7 @@ export function ReferenceSlots({ inletRefs, hoverInlet = null }: ReferenceSlotsP
   const ai = useStudioStore((s) => s.ai);
   const setReference = useStudioStore((s) => s.setReference);
   const cycleReferenceRole = useStudioStore((s) => s.cycleReferenceRole);
-  const toggleCinematographyRefs = useStudioStore((s) => s.toggleCinematographyRefs);
+  const setReferenceMode = useStudioStore((s) => s.setReferenceMode);
   const fileInputs = useRef<(HTMLInputElement | null)[]>([]);
   const localInletRefs = useRef<(HTMLElement | null)[]>([null, null, null]);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -71,7 +72,8 @@ export function ReferenceSlots({ inletRefs, hoverInlet = null }: ReferenceSlotsP
 
   if (!shot) return null;
 
-  const cinematographyRefs = isCinematographyRefs(shot);
+  const referenceMode = normalizeReferenceMode(shot);
+  const autoRoles = isCinematographyRefs(shot);
   const hasAnyImage = shot.references.some(Boolean);
 
   const handleFile = (index: number, file: File | undefined) => {
@@ -89,22 +91,21 @@ export function ReferenceSlots({ inletRefs, hoverInlet = null }: ReferenceSlotsP
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between gap-2 min-w-[17rem]">
-        <span
-          className={`text-[10px] uppercase tracking-wider font-semibold transition-colors ${
-            cinematographyRefs ? 'text-gray-300' : 'text-gray-500'
-          }`}
-        >
+        <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-300">
           Shot image references
         </span>
-        <button
-          type="button"
-          className={`composition-toggle ${cinematographyRefs ? 'active' : ''}`}
-          aria-pressed={cinematographyRefs}
-          aria-label="Toggle shot image references"
-          onClick={toggleCinematographyRefs}
+        <select
+          value={referenceMode}
+          onChange={(e) => setReferenceMode(e.target.value as ReferenceMode)}
+          className="reference-mode-select"
+          aria-label="Reference mode"
         >
-          <span className="composition-toggle-knob" />
-        </button>
+          {REFERENCE_MODE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="flex gap-2">
@@ -171,9 +172,9 @@ export function ReferenceSlots({ inletRefs, hoverInlet = null }: ReferenceSlotsP
                 }}
               >
                 <span
-                  className={`reference-label ${cinematographyRefs && !slotDisabled ? '' : 'pointer-events-none cursor-default hover:text-gray-400 hover:border-surface-700'}`}
+                  className={`reference-label ${autoRoles && !slotDisabled ? '' : 'pointer-events-none cursor-default hover:text-gray-400 hover:border-surface-700'}`}
                   onClick={(e) => {
-                    if (!cinematographyRefs || slotDisabled) return;
+                    if (!autoRoles || slotDisabled) return;
                     e.stopPropagation();
                     cycleReferenceRole(index);
                   }}
