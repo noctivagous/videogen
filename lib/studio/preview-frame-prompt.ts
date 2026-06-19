@@ -26,6 +26,7 @@ export function buildPreviewFramePayload(
     lighting: payload.lighting,
     motion: payload.motion,
     shot,
+    includeVideoEnvironment: false,
   });
 
   if (!prompt.trim()) {
@@ -41,9 +42,9 @@ export function buildPreviewFramePayload(
   }
 
   if (providerId === 'xai' && refs.length > 0) {
-    prompt = augmentPromptForXAIImageEdit(prompt, refs, cinematographyRefs, payload.lighting);
+    prompt = augmentPromptForXAIImageEdit(prompt, refs, cinematographyRefs);
   } else if (refs.length > 0 && cinematographyRefs) {
-    const refLine = buildReferencePromptLine(refs, payload.lighting);
+    const refLine = buildReferencePromptLine(refs);
     if (refLine && !hasPromptImageReferences(prompt)) {
       prompt = `${refLine} ${prompt}`;
     }

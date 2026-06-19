@@ -1,5 +1,6 @@
 import { normalizeReferenceRole } from '@/lib/constants/camera';
 import { resolveReferenceDisplayUrl } from '@/lib/storage/reference-url';
+import { effectiveReferenceUrl } from '@/lib/studio/theme-transform';
 import {
   getSubjectCutoutUrl,
   getStockSubjectGender,
@@ -40,9 +41,9 @@ export const STOCK_ASSETS = {
   ms: '/stock/shot-types/ms.jpg',
   mannequinIdentity: stockMannequinIdentityPath('male'),
   studioBackdrop: '/stock/studio-backdrop.jpg',
-  /** Default Shot breakdown Subject — character sheet (public/stock/demo-surfer). */
+  /** Default shot image references Subject — character sheet (public/stock/demo-surfer). */
   demoSurferCharacterSheet: '/stock/demo-surfer/demo-surfer-character-sheet.jpg',
-  /** Default Shot breakdown Backdrop (public/stock/demo-surfer). */
+  /** Default shot image references Backdrop (public/stock/demo-surfer). */
   demoSurferBackdrop: '/stock/demo-surfer/demo-surfer-backdrop-chk-stairs.jpg',
 } as const;
 
@@ -113,11 +114,11 @@ export function getSubjectReference(shot: Shot | undefined): string | null {
 function getSubjectSlotReference(shot: Shot | undefined): string | null {
   if (!shot) return null;
   for (let i = 0; i < shot.references.length; i++) {
-    const ref = shot.references[i];
     const role = normalizeReferenceRole(shot.referenceRoles[i] ?? 'None');
-    if (ref && role === 'Subject') {
-      return resolveReferenceDisplayUrl(normalizeStockSubjectRef(ref, shot.camera));
-    }
+    if (role !== 'Subject') continue;
+    const ref = effectiveReferenceUrl(shot, i, shot.lighting) ?? shot.references[i];
+    if (!ref) continue;
+    return resolveReferenceDisplayUrl(normalizeStockSubjectRef(ref, shot.camera));
   }
   return null;
 }
@@ -136,11 +137,10 @@ export function usesFieldSizeCutout(shot: Shot | undefined): boolean {
 export function getBackdropReference(shot: Shot | undefined): string | null {
   if (!shot) return STOCK_ASSETS.demoSurferBackdrop;
   for (let i = 0; i < shot.references.length; i++) {
-    const ref = shot.references[i];
     const role = normalizeReferenceRole(shot.referenceRoles[i] ?? 'None');
-    if (ref && (role === 'Backdrop' || role === 'Depth')) {
-      return resolveReferenceDisplayUrl(ref);
-    }
+    if (role !== 'Backdrop' && role !== 'Depth') continue;
+    const ref = effectiveReferenceUrl(shot, i, shot.lighting) ?? shot.references[i];
+    if (ref) return resolveReferenceDisplayUrl(ref);
   }
   return STOCK_ASSETS.demoSurferBackdrop;
 }

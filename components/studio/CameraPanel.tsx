@@ -254,7 +254,7 @@ export function CameraPanel() {
           leading={<ApertureDiagram fNumber={camera.aperture} size={52} />}
         />
         <p className="text-[10px] text-gray-500 -mt-2">
-          Snaps to full f-stops (f/1.4–f/22). Depth of Field updates automatically.
+          Snaps to full f-stops (f/1.4–f/22). Aperture and Depth of Field stay in sync.
         </p>
 
         <VisualDropdown

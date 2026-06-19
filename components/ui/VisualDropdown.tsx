@@ -35,6 +35,17 @@ function optionImage(option: VisualDropdownOption): string | undefined {
   return option.backgroundUrl ?? option.imageUrl;
 }
 
+function isCssGradient(value: string): boolean {
+  return value.startsWith('linear-gradient') || value.startsWith('radial-gradient');
+}
+
+function optionBackgroundStyle(option: VisualDropdownOption): CSSProperties | undefined {
+  const bg = option.backgroundUrl ?? option.imageUrl;
+  if (!bg) return undefined;
+  if (isCssGradient(bg)) return { background: bg };
+  return { backgroundImage: `url(${bg})` };
+}
+
 export function VisualDropdown<T extends string>({
   label,
   value,
@@ -201,19 +212,19 @@ export function VisualDropdown<T extends string>({
         onClick={() => !disabled && setOpen((o) => !o)}
         onKeyDown={onTriggerKeyDown}
       >
-        {triggerVariant === 'backgroundFill' && triggerImage ? (
+        {triggerVariant === 'backgroundFill' && selected ? (
           <span
             className="visual-dropdown__trigger-bg"
-            style={{ backgroundImage: `url(${triggerImage})` }}
+            style={optionBackgroundStyle(selected)}
             aria-hidden
           />
         ) : null}
 
-        {triggerVariant === 'thumbnailRight' && triggerImage ? (
+        {triggerVariant === 'thumbnailRight' && selected ? (
           <>
             <span
               className="visual-dropdown__trigger-thumb"
-              style={{ backgroundImage: `url(${triggerImage})` }}
+              style={optionBackgroundStyle(selected)}
               aria-hidden
             />
             <span className="visual-dropdown__trigger-shade" aria-hidden />
@@ -259,8 +270,16 @@ export function VisualDropdown<T extends string>({
                 >
                   {image ? (
                     <span className="visual-dropdown__cell-thumb-wrap">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={image} alt="" className="visual-dropdown__cell-thumb" />
+                      {isCssGradient(image) ? (
+                        <span
+                          className="visual-dropdown__cell-thumb visual-dropdown__cell-thumb--css"
+                          style={optionBackgroundStyle(option)}
+                          aria-hidden
+                        />
+                      ) : (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={image} alt="" className="visual-dropdown__cell-thumb" />
+                      )}
                     </span>
                   ) : (
                     <span className="visual-dropdown__cell-thumb-wrap visual-dropdown__cell-thumb-wrap--empty" />

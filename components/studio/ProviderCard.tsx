@@ -10,6 +10,7 @@ import {
   hasApiKey,
   mergeProviderCapabilities,
 } from '@/lib/studio/provider-modalities';
+import { isServerManagedProvider } from '@/lib/storage/ai-settings';
 import type { BuiltInProvider, CustomProvider } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
 
@@ -58,8 +59,11 @@ export function ProviderCard({ provider, isCustom }: ProviderCardProps) {
   const modelCount = capabilities.models.length;
   const showModalities = modelCount > 0;
 
+  const serverManaged = !isCustom && isServerManagedProvider(id, false, ai);
   const masked = configured
-    ? `••••••${(isCustom ? custom!.apiKey : ai.configured[id]?.apiKey)?.slice(-4)}`
+    ? serverManaged
+      ? 'server env'
+      : `••••••${(isCustom ? custom!.apiKey : ai.configured[id]?.apiKey)?.slice(-4)}`
     : '—';
 
   const verifiedAt = formatRelativeTime(discovery?.lastTested);

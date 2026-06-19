@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { VisualDropdown } from '@/components/ui/VisualDropdown';
 import {
   LOOK_CATEGORY_OPTIONS,
@@ -12,25 +12,35 @@ import {
   recipesForCategory,
   type LookCategory,
 } from '@/lib/constants/look-recipes';
+import { ThemeTransformPromptField } from '@/components/studio/ThemeTransformPromptField';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
+import { buildThemeTransformLookPrompt } from '@/lib/studio/theme-transform';
 import { useStudioStore } from '@/store/useStudioStore';
 
 export function LookLibraryPanel() {
-  const palette = useStudioStore((s) => s.lighting.colorPalette);
+  const lighting = useStudioStore((s) => s.lighting);
+  const palette = lighting.colorPalette;
   const applyLookRecipe = useStudioStore((s) => s.applyLookRecipe);
   const clearLookRecipe = useStudioStore((s) => s.clearLookRecipe);
   const [browseCategory, setBrowseCategory] = useState<LookCategory>(LOOK_CATEGORY_OPTIONS[0].value);
 
   const activeId = palette.activeLookRecipeId;
   const activeRecipe = getLookRecipe(activeId);
-  const resolvedCategory = activeRecipe?.category ?? browseCategory;
 
-  const recipeOptions = lookRecipeDropdownOptions(resolvedCategory);
+  useEffect(() => {
+    if (activeRecipe?.category) {
+      setBrowseCategory(activeRecipe.category);
+    }
+  }, [activeRecipe?.id, activeRecipe?.category]);
+
+  const recipeOptions = lookRecipeDropdownOptions(browseCategory);
 
   const selectedRecipeValue =
-    activeId && recipesForCategory(resolvedCategory).some((r) => r.id === activeId)
+    activeId && recipesForCategory(browseCategory).some((r) => r.id === activeId)
       ? activeId
       : LOOK_RECIPE_NONE;
+
+  const transformPrompt = activeRecipe ? buildThemeTransformLookPrompt(lighting) : '';
 
   return (
     <div className="mb-5 pb-5 border-b border-surface-700" {...uiSectionProps(UI_SECTIONS.studioLookLibrary)}>
@@ -52,7 +62,7 @@ export function LookLibraryPanel() {
       <div className="space-y-3">
         <VisualDropdown
           label="Category"
-          value={resolvedCategory}
+          value={browseCategory}
           onChange={(c: LookCategory) => setBrowseCategory(c)}
           options={LOOK_CATEGORY_OPTIONS}
           triggerVariant="thumbnailRight"
@@ -80,6 +90,15 @@ export function LookLibraryPanel() {
           cellHeight={88}
           uiSection={uiSectionProps(UI_SECTIONS.studioLookLibraryRecipe)}
         />
+
+        {activeRecipe && (
+          <ThemeTransformPromptField
+            value={transformPrompt}
+            lines={2}
+            label="Image transform prompt"
+            className="look-library-transform-prompt"
+          />
+        )}
       </div>
     </div>
   );

@@ -1,20 +1,23 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
-import { ColorPalettePreviewTable } from '@/components/studio/ColorPalettePreviewTable';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { CompositionOverlay } from '@/components/studio/CompositionOverlay';
 import { ReferenceSlots } from '@/components/studio/ReferenceSlots';
+import { ThemeTransformerPanel } from '@/components/studio/ThemeTransformerPanel';
+import { useThemeTransformConnector } from '@/components/studio/ThemeTransformConnector';
 import { GeneratedVideoStrip } from '@/components/studio/GeneratedVideoStrip';
 import { FrameViewSegment } from '@/components/studio/FrameViewSegment';
 import { ModelPreviewScene } from '@/components/studio/ModelPreviewScene';
 import { PreviewSubModeSegment } from '@/components/studio/PreviewSubModeSegment';
 import { PromptStackView } from '@/components/studio/PromptStackView';
 import { ReferencePreviewScene } from '@/components/studio/ReferencePreviewScene';
+import { formatResolutionWithLabel } from '@/lib/constants/resolutions';
 import { previewFramingFingerprint } from '@/lib/constants/subject-cutouts';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { formatDuration } from '@/lib/studio/shot-display';
 import { getGeneratedVideoCount, getShotActiveVideoUrl } from '@/lib/studio/shot-videos';
 import { isPreviewFrameSupported } from '@/lib/studio/generation/preview-frame-supported';
+import { needsThemeTransformer } from '@/lib/studio/theme-transform';
 import { isCustomProvider } from '@/lib/storage/ai-settings';
 import { useStudioStore } from '@/store/useStudioStore';
 
@@ -50,6 +53,9 @@ function fitPreviewFrame(
 export function PreviewPanel() {
   const previewStageRef = useRef<HTMLDivElement>(null);
   const previewFrameRef = useRef<HTMLDivElement>(null);
+  const connectorContainerRef = useRef<HTMLDivElement>(null);
+  const themeOutletRef = useRef<HTMLButtonElement>(null);
+  const inletRefs = useRef<(HTMLElement | null)[]>([null, null, null]);
   const frameView = useStudioStore((s) => s.frameView);
   const setFrameView = useStudioStore((s) => s.setFrameView);
   const project = useStudioStore((s) => s.project);
@@ -69,7 +75,23 @@ export function PreviewPanel() {
   const previewSubMode = useStudioStore((s) => s.previewSubMode);
   const setPreviewSubMode = useStudioStore((s) => s.setPreviewSubMode);
   const generatePreviewFrame = useStudioStore((s) => s.generatePreviewFrame);
+  const applyThemeTransformSlot = useStudioStore((s) => s.applyThemeTransformSlot);
   const ai = useStudioStore((s) => s.ai);
+
+  const themeEnabled = needsThemeTransformer(lighting);
+  const onThemeConnect = useCallback(
+    (slotIndex: number) => {
+      void applyThemeTransformSlot(slotIndex);
+    },
+    [applyThemeTransformSlot],
+  );
+  const { startDrag, connectorLine, hoverInlet } = useThemeTransformConnector({
+    containerRef: connectorContainerRef,
+    outletRef: themeOutletRef,
+    inletRefs,
+    onConnect: onThemeConnect,
+    enabled: themeEnabled,
+  });
 
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
   const showOverlay = shot?.frameComposition?.showOverlay ?? true;
@@ -126,7 +148,7 @@ export function PreviewPanel() {
     }
   }, [frameView, generatedVideo, setFrameView]);
 
-  const resIndicator = `${project.resolution} — ${project.aspectRatio} @ ${project.fps}fps`;
+  const resIndicator = `${formatResolutionWithLabel(project.resolution, project.aspectRatio)} — ${project.aspectRatio} @ ${project.fps}fps`;
 
   const previewBadge =
     frameView === 'generated' && generatedVideo
@@ -174,18 +196,27 @@ export function PreviewPanel() {
       {...uiSectionProps(UI_SECTIONS.studioPreviewPanel)}
     >
       <div className="absolute inset-0 z-30 pointer-events-none p-4 md:p-8">
-        <div className="preview-panel-controls pointer-events-auto">
-          <FrameViewSegment
-            value={frameView}
-            onChange={setFrameView}
-            generatedVideoCount={generatedVideoCount}
-          />
-          <ColorPalettePreviewTable />
-          <div
-            className="preview-panel-shot-breakdown"
-            {...uiSectionProps(UI_SECTIONS.studioBottomReferences)}
-          >
-            <ReferenceSlots />
+        <div
+          ref={connectorContainerRef}
+          className="preview-panel-controls-wrap relative h-full w-full"
+        >
+          {connectorLine}
+          <div className="preview-panel-controls pointer-events-auto">
+            <FrameViewSegment
+              value={frameView}
+              onChange={setFrameView}
+              generatedVideoCount={generatedVideoCount}
+            />
+            <ThemeTransformerPanel
+              outletRef={themeOutletRef}
+              onOutletPointerDown={startDrag}
+            />
+            <div
+              className="preview-panel-shot-image-references"
+              {...uiSectionProps(UI_SECTIONS.studioBottomReferences)}
+            >
+              <ReferenceSlots inletRefs={inletRefs} hoverInlet={hoverInlet} />
+            </div>
           </div>
         </div>
         {shot && (

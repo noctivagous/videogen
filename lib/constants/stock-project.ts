@@ -1,5 +1,8 @@
 import { DEFAULT_FRAME_COMPOSITION } from '@/lib/constants/camera';
+import { getDefaultResolution } from '@/lib/constants/resolutions';
 import { DEFAULT_COLOR_PALETTE, warmthToKelvin } from '@/lib/constants/color-palette';
+import { DEFAULT_THEME_TRANSFORM_LIGHTING_INCLUSION } from '@/lib/constants/theme-transform-lighting';
+import { DEFAULT_VIDEO_ENVIRONMENT } from '@/lib/constants/video-environment';
 import { STOCK_ASSETS, STOCK_MS_PROMPT, STOCK_SURFER_SHOT_ACTIVITY } from '@/lib/constants/stock-demo';
 import type {
   CameraSettings,
@@ -13,13 +16,13 @@ import type {
 
 export { STOCK_ASSETS, getBackdropReference, getSubjectReference } from '@/lib/constants/stock-demo';
 
-/** Default Subject / Backdrop for Shot breakdown (demo-surfer). */
+/** Default Subject / Backdrop for shot image references (demo-surfer). */
 export const STOCK_CHARACTER_REF = STOCK_ASSETS.demoSurferCharacterSheet;
 export const STOCK_BACKDROP_REF = STOCK_ASSETS.demoSurferBackdrop;
 
 export const STOCK_PROJECT: ProjectSettings = {
   name: 'Demo_Surfer',
-  resolution: '1280x720',
+  resolution: getDefaultResolution('16:9'),
   aspectRatio: '16:9',
   fps: 24,
   duration: 5,
@@ -45,6 +48,8 @@ export const STOCK_LIGHTING: LightingSettings = {
   colorTemp: warmthToKelvin(DEFAULT_COLOR_PALETTE.keyLightWarmth),
   atmosphere: 'clear',
   colorPalette: { ...DEFAULT_COLOR_PALETTE },
+  themeTransformLighting: { ...DEFAULT_THEME_TRANSFORM_LIGHTING_INCLUSION },
+  videoEnvironment: { ...DEFAULT_VIDEO_ENVIRONMENT },
 };
 
 export const STOCK_MOTION: MotionSettings = {
@@ -146,7 +151,7 @@ export const STOCK_SHOTS: Shot[] = [
 
 export const EMPTY_PROJECT: ProjectSettings = {
   name: 'Untitled Project',
-  resolution: '1280x720',
+  resolution: getDefaultResolution('16:9'),
   aspectRatio: '16:9',
   fps: 24,
   duration: 5,

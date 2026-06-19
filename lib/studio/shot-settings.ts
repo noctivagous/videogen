@@ -19,6 +19,13 @@ import {
 } from '@/lib/constants/stock-project';
 import { stripLegacySceneBoilerplate } from '@/lib/studio/legacy-scene-boilerplate';
 import { migrateShotGeneratedVideos } from '@/lib/studio/shot-videos';
+import { normalizeThemeTransformLighting } from '@/lib/constants/theme-transform-lighting';
+import { normalizeVideoEnvironment } from '@/lib/constants/video-environment';
+import {
+  defaultThemeTransformRefs,
+  defaultThemeTransformStatus,
+  emptyThemeTransformArray,
+} from '@/lib/studio/theme-transform';
 import type {
   CameraSettings,
   FrameComposition,
@@ -79,6 +86,8 @@ export function cloneInheritedShotSettings(
     lighting: {
       ...source.lighting,
       colorPalette: normalizeColorPalette(source.lighting.colorPalette),
+      themeTransformLighting: normalizeThemeTransformLighting(source.lighting.themeTransformLighting),
+      videoEnvironment: normalizeVideoEnvironment(source.lighting.videoEnvironment),
     },
     motion: { ...source.motion },
     sceneSetup: source.sceneSetup,
@@ -87,6 +96,11 @@ export function cloneInheritedShotSettings(
     references: [...source.references],
     referenceRoles: [...source.referenceRoles],
     cinematographyRefs: source.cinematographyRefs,
+    transformedReferences: [...(source.transformedReferences ?? defaultThemeTransformRefs())],
+    themeTransformFingerprint: [...(source.themeTransformFingerprint ?? emptyThemeTransformArray(null))],
+    themeTransformStatus: [...(source.themeTransformStatus ?? defaultThemeTransformStatus())],
+    themeTransformError: [...(source.themeTransformError ?? emptyThemeTransformArray(null))],
+    themeTransformLinked: [...(source.themeTransformLinked ?? emptyThemeTransformArray(false))],
   };
 }
 
@@ -149,6 +163,12 @@ export function migrateShot(
       ...defaults.lighting,
       ...shot.lighting,
       colorPalette: normalizeColorPalette(shot.lighting?.colorPalette ?? defaults.lighting.colorPalette),
+      themeTransformLighting: normalizeThemeTransformLighting(
+        shot.lighting?.themeTransformLighting ?? defaults.lighting.themeTransformLighting,
+      ),
+      videoEnvironment: normalizeVideoEnvironment(
+        shot.lighting?.videoEnvironment ?? defaults.lighting.videoEnvironment,
+      ),
     },
     motion: { ...defaults.motion, ...shot.motion },
     sceneSetup: stripLegacySceneBoilerplate(shot.sceneSetup ?? shot.prompt ?? defaults.sceneSetup),
@@ -174,6 +194,11 @@ export function migrateShot(
     previewFrameUrl: shot.previewFrameUrl ?? null,
     previewFrameFingerprint: shot.previewFrameFingerprint ?? null,
     cinematographyRefs: shot.cinematographyRefs,
+    transformedReferences: shot.transformedReferences ?? defaultThemeTransformRefs(),
+    themeTransformFingerprint: shot.themeTransformFingerprint ?? emptyThemeTransformArray(null),
+    themeTransformStatus: shot.themeTransformStatus ?? defaultThemeTransformStatus(),
+    themeTransformError: shot.themeTransformError ?? emptyThemeTransformArray(null),
+    themeTransformLinked: shot.themeTransformLinked ?? emptyThemeTransformArray(false),
   };
 }
 

@@ -1,6 +1,7 @@
 import { normalizeReferenceRole } from '@/lib/constants/camera';
 import { getReferenceSlotLabel, isCinematographyRefs } from '@/lib/studio/reference-slots';
-import type { ReferenceRole, Shot } from '@/lib/types/studio';
+import { effectiveReferenceUrl } from '@/lib/studio/theme-transform';
+import type { LightingSettings, ReferenceRole, Shot } from '@/lib/types/studio';
 
 export interface PromptMentionOption {
   id: string;
@@ -20,7 +21,7 @@ export function buildPromptMentionOptions(shot: Shot | undefined): PromptMention
   const cinematography = isCinematographyRefs(shot);
 
   for (let i = 0; i < shot.references.length; i++) {
-    const url = shot.references[i];
+    const url = effectiveReferenceUrl(shot, i, shot.lighting);
     if (!url) continue;
 
     const role = normalizeReferenceRole(shot.referenceRoles[i] ?? 'None');
@@ -42,13 +43,15 @@ export function buildPromptMentionOptions(shot: Shot | undefined): PromptMention
 /** Filled reference slots in slot order — used for API send list (compacted). */
 export function buildSlotReferenceRefs(
   shot: Shot | undefined,
+  lighting?: LightingSettings,
 ): Array<{ role: ReferenceRole; url: string; slotIndex: number }> {
   if (!shot) return [];
 
+  const resolvedLighting = lighting ?? shot.lighting;
   const cinematography = isCinematographyRefs(shot);
   const refs: Array<{ role: ReferenceRole; url: string; slotIndex: number }> = [];
   for (let i = 0; i < shot.references.length; i++) {
-    const url = shot.references[i];
+    const url = effectiveReferenceUrl(shot, i, resolvedLighting);
     if (!url) continue;
 
     const role = normalizeReferenceRole(shot.referenceRoles[i] ?? 'None');

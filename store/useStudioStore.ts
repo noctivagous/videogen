@@ -3,11 +3,11 @@
 import { create } from 'zustand';
 import { DEFAULT_FRAME_COMPOSITION, normalizeReferenceRole, SINGLE_ONLY_COVERAGE } from '@/lib/constants/camera';
 import { getDefaultEnabledProviderId, isBuiltInProviderEnabled } from '@/lib/constants/providers';
-import { dofFromAperture, snapToApertureStop } from '@/lib/constants/aperture';
+import { apertureForDof, dofFromAperture, snapToApertureStop } from '@/lib/constants/aperture';
 import { kelvinToWarmth, warmthToKelvin } from '@/lib/constants/color-palette';
 import { applyLookRecipeToLighting, getLookRecipe } from '@/lib/constants/look-recipes';
 import { applyLensCameraPatch } from '@/lib/constants/lens';
-import { RESOLUTION_PRESETS } from '@/lib/constants/resolutions';
+import { getDefaultResolution, RESOLUTION_PRESETS } from '@/lib/constants/resolutions';
 import {
   EMPTY_PROJECT,
   EMPTY_SHOTS,
@@ -35,6 +35,18 @@ import {
   resolveModelSelectionForProvider,
 } from '@/lib/studio/provider-modalities';
 import { buildModelPayloadStack, buildShotPrompt } from '@/lib/studio/model-payload';
+import { normalizeThemeTransformLighting } from '@/lib/constants/theme-transform-lighting';
+import { normalizeVideoEnvironment } from '@/lib/constants/video-environment';
+import {
+  buildThemeTransformFingerprint,
+  defaultThemeTransformRefs,
+  defaultThemeTransformStatus,
+  emptyThemeTransformArray,
+  hasStaleLinkedTransforms,
+  needsThemeTransformer,
+  patchThemeTransformInvalidation,
+  THEME_TRANSFORM_SLOT_COUNT,
+} from '@/lib/studio/theme-transform';
 import { restrictsReferenceSlotsToFirst } from '@/lib/studio/xai-video-models';
 import { applyFrameCompositionSmartDefaults } from '@/lib/studio/composition';
 import {
@@ -52,6 +64,8 @@ import {
   selectGeneratedVideoIndex,
 } from '@/lib/studio/shot-videos';
 import {
+  applyProviderTestResultToState,
+  bootstrapAIState,
   createCustomProvider,
   DEFAULT_AI_STATE,
   getImageProviderName,
@@ -59,7 +73,6 @@ import {
   getVideoProviderName,
   isCustomProvider,
   isProviderConnected,
-  loadAIState,
   saveAIState,
 } from '@/lib/storage/ai-settings';
 import {
@@ -68,7 +81,9 @@ import {
   getProjectLocationLabel,
   getProjectSaveState,
   hasOpenProjectLocation,
+  isDirectoryAccessSupported,
   isFileSystemAccessSupported,
+  isNativeFilePickerSupported,
   openProjectFile as openProjectFileFromDisk,
   openProjectFolder as openProjectFolderFromDisk,
   restoreProjectSession,
@@ -179,9 +194,14 @@ function ensureResolution(project: ProjectSettings): ProjectSettings {
   const ar = project.aspectRatio || '16:9';
   const presets = RESOLUTION_PRESETS[ar as AspectRatio] || RESOLUTION_PRESETS['16:9'];
   if (!presets.find((p) => p.value === project.resolution)) {
-    return { ...project, resolution: presets[presets.length - 1].value };
+    return { ...project, resolution: getDefaultResolution(ar as AspectRatio) };
   }
   return project;
+}
+
+function themeLightingInvalidationPatch(shot: Shot | undefined): Partial<Shot> {
+  if (!shot) return {};
+  return patchThemeTransformInvalidation(shot, [0, 1, 2], 'lighting');
 }
 
 const stockState = getStockDefaults();
@@ -248,6 +268,7 @@ interface StudioStore {
   setReference: (index: number, dataUrl: string | null) => void;
   cycleReferenceRole: (index: number) => void;
   toggleCinematographyRefs: () => void;
+  applyThemeTransformSlot: (index: number) => Promise<void>;
 
   generate: () => Promise<void>;
   saveProject: () => Promise<void>;
@@ -338,11 +359,11 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     if (get().initialized) return;
 
     void (async () => {
-      const ai = loadAIState();
+      const ai = await bootstrapAIState();
       let applied: ReturnType<typeof applyStudioProject> | null = null;
       let toastMessage: string | null = null;
 
-      if (fileApiSupported) {
+      if (isNativeFilePickerSupported()) {
         const restored = await restoreProjectSession();
         if (restored) {
           applied = applyStudioProject(restored);
@@ -449,6 +470,9 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       if (patch.aperture !== undefined) {
         camera.aperture = snapToApertureStop(patch.aperture);
         camera.dof = dofFromAperture(camera.aperture);
+      } else if (patch.dof !== undefined) {
+        camera.dof = patch.dof;
+        camera.aperture = apertureForDof(patch.dof, base.aperture);
       }
       if (patch.movement === 'drone') {
         camera.angle = 'drone';
@@ -475,7 +499,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         if (clearRecipe && patch.colorPalette.activeLookRecipeId === undefined) {
           base.colorPalette.activeLookRecipeId = null;
         }
-      } else if (Object.keys(patch).length > 0) {
+      } else if (Object.keys(patch).some((key) => key !== 'themeTransformLighting' && key !== 'videoEnvironment')) {
         base.colorPalette = { ...base.colorPalette, activeLookRecipeId: null };
       }
       if (patch.colorTemp !== undefined) {
@@ -485,8 +509,34 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
           activeLookRecipeId: null,
         };
       }
+      if (patch.themeTransformLighting) {
+        base.themeTransformLighting = normalizeThemeTransformLighting({
+          ...s.lighting.themeTransformLighting,
+          ...patch.themeTransformLighting,
+        });
+      } else if (!s.lighting.themeTransformLighting) {
+        base.themeTransformLighting = normalizeThemeTransformLighting();
+      }
+      if (patch.videoEnvironment) {
+        base.videoEnvironment = normalizeVideoEnvironment({
+          ...s.lighting.videoEnvironment,
+          ...patch.videoEnvironment,
+        });
+      } else if (!s.lighting.videoEnvironment) {
+        base.videoEnvironment = normalizeVideoEnvironment();
+      }
       const current = getCurrentShotFromList(s.shots, s.currentShot);
       const shotLighting = { ...current?.lighting ?? base, ...patch };
+      if (patch.themeTransformLighting) {
+        shotLighting.themeTransformLighting = base.themeTransformLighting;
+      } else if (!shotLighting.themeTransformLighting) {
+        shotLighting.themeTransformLighting = normalizeThemeTransformLighting();
+      }
+      if (patch.videoEnvironment) {
+        shotLighting.videoEnvironment = base.videoEnvironment;
+      } else if (!shotLighting.videoEnvironment) {
+        shotLighting.videoEnvironment = normalizeVideoEnvironment();
+      }
       if (patch.colorPalette) {
         shotLighting.colorPalette = { ...current?.lighting?.colorPalette ?? s.lighting.colorPalette, ...patch.colorPalette };
         if (patch.colorPalette.bw) {
@@ -498,7 +548,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         if (clearRecipe && patch.colorPalette.activeLookRecipeId === undefined) {
           shotLighting.colorPalette.activeLookRecipeId = null;
         }
-      } else if (Object.keys(patch).length > 0) {
+      } else if (Object.keys(patch).some((key) => key !== 'themeTransformLighting' && key !== 'videoEnvironment')) {
         shotLighting.colorPalette = {
           ...shotLighting.colorPalette,
           activeLookRecipeId: null,
@@ -511,7 +561,11 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
           activeLookRecipeId: null,
         };
       }
-      const shots = patchCurrentShot(s.shots, s.currentShot, { lighting: shotLighting });
+      const invalidationShot = { ...current, lighting: shotLighting } as Shot;
+      const shots = patchCurrentShot(s.shots, s.currentShot, {
+        lighting: shotLighting,
+        ...themeLightingInvalidationPatch(invalidationShot),
+      });
       return { lighting: base, shots };
     });
   },
@@ -538,7 +592,10 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
           ? { colorTemp: warmthToKelvin(patch.keyLightWarmth) }
           : {}),
       };
-      const shots = patchCurrentShot(s.shots, s.currentShot, { lighting: shotLighting });
+      const shots = patchCurrentShot(s.shots, s.currentShot, {
+        lighting: shotLighting,
+        ...themeLightingInvalidationPatch(current),
+      });
       return { lighting: base, shots };
     });
   },
@@ -550,7 +607,10 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       const current = getCurrentShotFromList(s.shots, s.currentShot);
       const source = current?.lighting ?? s.lighting;
       const lighting = applyLookRecipeToLighting(source, recipe);
-      const shots = patchCurrentShot(s.shots, s.currentShot, { lighting });
+      const shots = patchCurrentShot(s.shots, s.currentShot, {
+        lighting,
+        ...themeLightingInvalidationPatch(current),
+      });
       return { lighting, shots };
     });
   },
@@ -730,8 +790,17 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     }
     const references = [...shot.references];
     references[index] = dataUrl;
+    const transformedReferences = [...(shot.transformedReferences ?? defaultThemeTransformRefs())];
+    transformedReferences[index] = null;
+    const linked = [...(shot.themeTransformLinked ?? emptyThemeTransformArray(false))];
+    if (!dataUrl) linked[index] = false;
     set((s) => ({
-      shots: patchCurrentShot(s.shots, s.currentShot, { references }),
+      shots: patchCurrentShot(s.shots, s.currentShot, {
+        references,
+        transformedReferences,
+        themeTransformLinked: linked,
+        ...patchThemeTransformInvalidation(shot, [index], 'source'),
+      }),
     }));
     if (dataUrl) get().showToast('Reference image added');
   },
@@ -756,7 +825,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     set((s) => ({
       shots: patchCurrentShot(s.shots, s.currentShot, { cinematographyRefs: next }),
     }));
-    get().showToast(next ? 'Shot breakdown refs on' : 'Generic image slots');
+    get().showToast(next ? 'Shot image references on' : 'Generic image slots');
   },
 
   async generatePreviewFrame() {
@@ -841,6 +910,162 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     }
   },
 
+  async applyThemeTransformSlot(index) {
+    if (index < 0 || index >= THEME_TRANSFORM_SLOT_COUNT) return;
+
+    const state = get();
+    const { project, ai, shots, currentShot } = state;
+    const shot = getCurrentShotFromList(shots, currentShot);
+    if (!shot) return;
+
+    const lighting = shot.lighting;
+    if (!needsThemeTransformer(lighting)) {
+      get().showToast('Enable Color Palette or a Look Library preset first', 'error');
+      return;
+    }
+
+    const sourceUrl = shot.references[index];
+    if (!sourceUrl) {
+      get().showToast('Add a reference image to this slot first', 'error');
+      return;
+    }
+
+    const status = shot.themeTransformStatus?.[index] ?? 'idle';
+    if (status === 'applying') return;
+
+    const imageProviderId = ai.defaultImageProvider;
+    const isCustom = isCustomProvider(imageProviderId, ai);
+    if (!isProviderConnected(imageProviderId, isCustom, ai)) {
+      get().showToast('Configure your image provider API key in Settings first', 'error');
+      return;
+    }
+    if (!isPreviewFrameSupported(imageProviderId, isCustom)) {
+      get().showToast('Theme Transformer requires xAI, OpenAI, or Replicate as image provider', 'error');
+      return;
+    }
+    if (!hasVerifiedImageModels(imageProviderId, isCustom, ai)) {
+      get().showToast('Test your image provider connection in Settings to load image models first', 'error');
+      return;
+    }
+
+    const linked = [...(shot.themeTransformLinked ?? emptyThemeTransformArray(false))];
+    linked[index] = true;
+    const themeTransformStatus = [...(shot.themeTransformStatus ?? defaultThemeTransformStatus())];
+    themeTransformStatus[index] = 'applying';
+    const themeTransformError = [...(shot.themeTransformError ?? emptyThemeTransformArray(null))];
+    themeTransformError[index] = null;
+
+    set((s) => ({
+      shots: patchCurrentShot(s.shots, s.currentShot, {
+        themeTransformLinked: linked,
+        themeTransformStatus,
+        themeTransformError,
+      }),
+    }));
+
+    const rawRefs = [{ role: normalizeReferenceRole(shot.referenceRoles[index] ?? 'None'), url: sourceUrl }];
+    const refs = await resolveRefsForApi(rawRefs);
+    const resolvedSource = refs[0]?.url;
+    if (!resolvedSource) {
+      set((s) => ({
+        shots: patchCurrentShot(s.shots, s.currentShot, {
+          themeTransformStatus: (() => {
+            const next = [...(shot.themeTransformStatus ?? defaultThemeTransformStatus())];
+            next[index] = 'error';
+            return next;
+          })(),
+          themeTransformError: (() => {
+            const next = [...(shot.themeTransformError ?? emptyThemeTransformArray(null))];
+            next[index] = 'Could not resolve reference image URL';
+            return next;
+          })(),
+        }),
+      }));
+      get().showToast('Could not resolve reference image URL', 'error');
+      return;
+    }
+
+    const apiKey = getProviderApiKey(imageProviderId, isCustom, ai);
+    const customBaseUrl = isCustom
+      ? ai.customProviders.find((p) => p.id === imageProviderId)?.baseUrl
+      : undefined;
+    const modelId = getEffectivePreviewModelId(ai);
+    if (!modelId) {
+      const nextStatus = [...themeTransformStatus];
+      nextStatus[index] = 'error';
+      const nextErrors = [...themeTransformError];
+      nextErrors[index] = 'No image model available';
+      set((s) => ({
+        shots: patchCurrentShot(s.shots, s.currentShot, {
+          themeTransformStatus: nextStatus,
+          themeTransformError: nextErrors,
+        }),
+      }));
+      get().showToast('No image model available — re-test your image provider in Settings', 'error');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/transform-references', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          providerId: imageProviderId,
+          isCustom,
+          apiKey,
+          customBaseUrl,
+          modelId,
+          aspectRatio: project.aspectRatio,
+          lighting,
+          slot: {
+            index,
+            role: normalizeReferenceRole(shot.referenceRoles[index] ?? 'None'),
+            sourceUrl: resolvedSource,
+          },
+        }),
+      });
+
+      const result = await res.json();
+      if (!res.ok || result.status === 'error') {
+        throw new Error(result.error || 'Theme transform failed');
+      }
+
+      const fingerprint = buildThemeTransformFingerprint(sourceUrl, lighting);
+      const transformedReferences = [...(shot.transformedReferences ?? defaultThemeTransformRefs())];
+      transformedReferences[index] = result.imageUrl ?? null;
+      const nextStatus = [...(shot.themeTransformStatus ?? defaultThemeTransformStatus())];
+      nextStatus[index] = 'ready';
+      const fingerprints = [...(shot.themeTransformFingerprint ?? emptyThemeTransformArray(null))];
+      fingerprints[index] = fingerprint;
+
+      set((s) => ({
+        shots: patchCurrentShot(s.shots, s.currentShot, {
+          transformedReferences,
+          themeTransformStatus: nextStatus,
+          themeTransformFingerprint: fingerprints,
+          themeTransformError: (() => {
+            const next = [...(shot.themeTransformError ?? emptyThemeTransformArray(null))];
+            next[index] = null;
+            return next;
+          })(),
+        }),
+      }));
+      get().showToast('Reference color grade applied');
+    } catch (e) {
+      const nextStatus = [...(shot.themeTransformStatus ?? defaultThemeTransformStatus())];
+      nextStatus[index] = 'error';
+      const nextErrors = [...(shot.themeTransformError ?? emptyThemeTransformArray(null))];
+      nextErrors[index] = e instanceof Error ? e.message : 'Theme transform failed';
+      set((s) => ({
+        shots: patchCurrentShot(s.shots, s.currentShot, {
+          themeTransformStatus: nextStatus,
+          themeTransformError: nextErrors,
+        }),
+      }));
+      get().showToast(nextErrors[index] ?? 'Theme transform failed', 'error');
+    }
+  },
+
   async generate() {
     const state = get();
     const { project, ai, shots, currentShot } = state;
@@ -850,6 +1075,14 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const combinedPrompt = buildShotPrompt(shot.sceneSetup, shot.shotActivity);
     if (!combinedPrompt.trim()) {
       get().showToast('Please enter scene setup or shot activity first', 'error');
+      return;
+    }
+
+    if (needsThemeTransformer(shot.lighting) && hasStaleLinkedTransforms(shot, shot.lighting)) {
+      get().showToast(
+        'Theme Transformer: drag from the outlet to linked reference slots to refresh color grade',
+        'error',
+      );
       return;
     }
 
@@ -958,7 +1191,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 
   async saveProject() {
     const project = buildStudioProject(get());
-    if (isFileSystemAccessSupported()) {
+    if (isNativeFilePickerSupported()) {
       const saved = await saveProjectFileToDisk(project);
       if (saved) {
         get().syncProjectFileUi();
@@ -971,7 +1204,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   },
 
   async saveProjectQuick() {
-    if (isFileSystemAccessSupported() && hasOpenProjectLocation()) {
+    if (isNativeFilePickerSupported() && hasOpenProjectLocation()) {
       const ok = await saveProjectNow(buildStudioProject(get()));
       get().syncProjectFileUi();
       get().showToast(
@@ -980,7 +1213,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       );
       return;
     }
-    if (isFileSystemAccessSupported()) {
+    if (isDirectoryAccessSupported()) {
       await get().saveProjectFolderAs();
       return;
     }
@@ -988,7 +1221,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   },
 
   async openProjectQuick() {
-    if (isFileSystemAccessSupported()) {
+    if (isDirectoryAccessSupported()) {
       await get().openProjectFolder();
       return;
     }
@@ -996,7 +1229,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   },
 
   async loadProject() {
-    if (isFileSystemAccessSupported()) {
+    if (isNativeFilePickerSupported()) {
       try {
         const data = await openProjectFileFromDisk();
         if (!data) return;
@@ -1030,8 +1263,8 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   },
 
   async openProjectFolder() {
-    if (!isFileSystemAccessSupported()) {
-      get().showToast('Use Chrome or Edge on HTTPS or localhost to open project folders', 'error');
+    if (!isDirectoryAccessSupported()) {
+      get().showToast('This browser cannot open project folders — use Open JSON file instead', 'error');
       return;
     }
     try {
@@ -1052,7 +1285,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   },
 
   async saveProjectFolderAs() {
-    if (!isFileSystemAccessSupported()) {
+    if (!isDirectoryAccessSupported()) {
       await get().saveProject();
       return;
     }
@@ -1192,45 +1425,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   },
 
   applyProviderTestResult(id, isCustom, result, apiKey) {
-    const ai = { ...get().ai };
-    const patch = {
-      lastTested: Date.now(),
-      lastTestOk: result.ok,
-      lastTestMessage: result.message,
-      models: result.models,
-      modalities: result.modalities,
-      purposes: result.purposes,
-    };
-
-    if (isCustom) {
-      ai.customProviders = ai.customProviders.map((p) =>
-        p.id === id
-          ? {
-              ...p,
-              ...patch,
-              apiKey: apiKey?.trim() || p.apiKey,
-              connected: result.ok || !!(apiKey?.trim() || (p.apiKey && p.apiKey.length > 4)),
-            }
-          : p,
-      );
-    } else {
-      const existing = ai.configured[id] ?? { apiKey: '', connected: false };
-      const resolvedKey = apiKey?.trim() || existing.apiKey;
-      ai.configured[id] = {
-        ...existing,
-        ...patch,
-        apiKey: resolvedKey,
-        connected: result.ok || !!(resolvedKey && resolvedKey.length > 4),
-      };
-    }
-
-    if (ai.defaultVideoProvider === id) {
-      ai.defaultVideoModelId = resolveModelSelectionForProvider(id, isCustom, ai, ai.defaultVideoModelId);
-    }
-    if (ai.defaultImageProvider === id) {
-      ai.defaultImageModelId = resolveImageModelSelectionForProvider(id, isCustom, ai, ai.defaultImageModelId);
-    }
-
+    const ai = applyProviderTestResultToState(get().ai, id, isCustom, result, apiKey);
     saveAIState(ai);
     set({ ai });
   },

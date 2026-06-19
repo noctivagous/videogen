@@ -1,3 +1,4 @@
+import { formatResolutionWithLabel } from '@/lib/constants/resolutions';
 import { getVideoProviderName, isCustomProvider } from '@/lib/storage/ai-settings';
 import { getShotFrameComposition } from '@/lib/studio/composition';
 import {
@@ -6,8 +7,8 @@ import {
   buildGenerationRefs,
 } from '@/lib/studio/generation-prompt';
 import { getLookRecipe } from '@/lib/constants/look-recipes';
-import { isColorPaletteActive } from '@/lib/constants/color-palette';
-import { buildColorMoodPrompt } from '@/lib/studio/color-mood-prompt';
+import { getVideoEnvironmentPreset } from '@/lib/constants/video-environment';
+import { needsThemeTransformer } from '@/lib/studio/theme-transform';
 import { expandPromptMentions } from '@/lib/studio/prompt-mentions';
 import { getEffectiveModelId } from '@/lib/studio/provider-modalities';
 import { formatReferenceRoleLabel, isCinematographyRefs } from '@/lib/studio/reference-slots';
@@ -68,7 +69,7 @@ export function buildModelPayloadStack(input: {
   const videoModelId = getEffectiveModelId(ai);
   const capabilities = getProviderCapabilities(videoProviderId, isCustom, videoModelId);
 
-  let refs = buildGenerationRefs(shot);
+  let refs = buildGenerationRefs(shot, lighting);
   if (videoProviderId === 'xai' && isXAIImageToVideoOnlyModel(videoModelId)) {
     refs = filterRefsForImageToVideoOnly(refs);
   }
@@ -88,7 +89,7 @@ export function buildModelPayloadStack(input: {
   }
 
   if (videoProviderId === 'xai' && refs.length > 0) {
-    combinedPrompt = augmentPromptForXAI(combinedPrompt, refs, cinematographyRefs, lighting);
+    combinedPrompt = augmentPromptForXAI(combinedPrompt, refs, cinematographyRefs);
   }
 
   const blocks: PayloadStackBlock[] = [
@@ -119,8 +120,18 @@ export function buildModelPayloadStack(input: {
     });
   }
 
-  const colorMoodLine = buildColorMoodPrompt(lighting);
   const activeRecipe = getLookRecipe(lighting.colorPalette?.activeLookRecipeId);
+  const activeVideoEnvironment = getVideoEnvironmentPreset(lighting.videoEnvironment?.presetId);
+  const themeOn = needsThemeTransformer(lighting);
+  const linkedSlots = shot?.themeTransformLinked
+    ?.map((linked, i) => (linked ? i + 1 : null))
+    .filter((v): v is number => v !== null) ?? [];
+  const readySlots = shot?.themeTransformStatus
+    ?.map((status, i) => (status === 'ready' ? i + 1 : null))
+    .filter((v): v is number => v !== null) ?? [];
+  const staleSlots = shot?.themeTransformStatus
+    ?.map((status, i) => (status === 'stale' || status === 'error' ? i + 1 : null))
+    .filter((v): v is number => v !== null) ?? [];
 
   blocks.push(
     {
@@ -146,14 +157,28 @@ export function buildModelPayloadStack(input: {
         ]
       : []),
     {
-      id: 'color-mood',
-      title: 'Color & Mood',
+      id: 'theme-transformer',
+      title: 'Theme Transformer',
       lines: [
-        colorMoodLine ||
-          (isColorPaletteActive(lighting.colorPalette)
-            ? '(color mood compiling…)'
-            : '(color palette off — select Color, B&W, or FX to add mood grading)'),
-      ],
+        themeOn
+          ? activeRecipe
+            ? `Look: ${activeRecipe.label} — drag outlet to reference slots in preview`
+            : 'Palette active — drag Theme Transformer outlet to reference slots'
+          : 'Off — enable Color, B&W, FX, or a Look Library recipe',
+        linkedSlots.length > 0
+          ? `Linked slots: ${linkedSlots.map((n) => `@Image${n}`).join(', ')}`
+          : 'No slots linked yet',
+        readySlots.length > 0 ? `Transformed: ${readySlots.map((n) => `@Image${n}`).join(', ')}` : '',
+        staleSlots.length > 0 ? `Stale — re-drag outlet: ${staleSlots.map((n) => `@Image${n}`).join(', ')}` : '',
+      ].filter(Boolean),
+      variant: 'composition',
+    },
+    {
+      id: 'video-environment',
+      title: 'Atmosphere / Environment',
+      lines: activeVideoEnvironment
+        ? [activeVideoEnvironment.label, activeVideoEnvironment.promptPhrase]
+        : ['Off — no atmospheric effects in video prompt'],
       variant: 'composition',
     },
     {
@@ -168,7 +193,7 @@ export function buildModelPayloadStack(input: {
       id: 'output',
       title: 'Output',
       lines: [
-        `${project.resolution} · ${project.aspectRatio} · ${project.fps}fps`,
+        `${formatResolutionWithLabel(project.resolution, project.aspectRatio, ' · ')} · ${project.aspectRatio} · ${project.fps}fps`,
         `${project.duration}s · ${shot?.name ?? 'Shot 01'}`,
       ],
       variant: 'output',
@@ -191,7 +216,7 @@ export function buildModelPayloadStack(input: {
 
   mermaidLines.push(
     `  prompt["Assembled Prompt"]`,
-    `  out["Output\\n${project.resolution}"]`,
+    `  out["Output\\n${formatResolutionWithLabel(project.resolution, project.aspectRatio, ' · ')}"]`,
     `  ${prev} --> prompt`,
     '  prompt --> out',
   );

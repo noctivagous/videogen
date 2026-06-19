@@ -1,6 +1,85 @@
 FUTURE FEATURES
 
 
+---------
+
+pre-processing of image references vs.
+prompt text for the video.
+
+1. 
+The color palette table is the table
+that will transform the provided image references,
+so it should include any "Look Library" setting
+in it and it can be called "Theme Transformer".
+
+We need to remove the current setup where we
+are trying to get prompts to change the video.
+Text prompts alone have relatively weak influence 
+on precise color grading, palettes, or filmic looks in video models. 
+The models prioritize subject, motion, and composition first. 
+Explicit color instructions (“teal and orange complementary 
+palette, cinematic color grading”) help somewhat but often 
+produce inconsistent or subtle results, especially across frames.
+color palette control is much stronger via reference 
+images (subject + style) than text prompts alone.
+
+Pre-colorized assets win — Generate or edit your 
+Subject / Backdrop / Style references with the color palette and Look Library
+settings, lighting, and film look before feeding them into the video model. 
+This is the dominant workflow.
+
+We will rework the app so it applies color palette and 
+look library settings to the user’s assets (before generation) 
+so that it aligns with how the most effective AI video workflows work today.
+
+Recommended Implementation Flow
+
+User uploads assets (Subject, Backdrop, Style reference)
+User selects color palette / mood / film look in the UI 
+(color wheel + schemes, presets, film stock emulation).
+
+App processes the assets client-side or via a lightweight server step:
+Apply color grading, saturation, temperature, and filmic effects to the images
+OR, which will happen for the look library setting use the
+currently selected image model to make modifications.  The modifications
+will sit underneath the "Shot References" as "Transformed References"
+and if "Look Library" or "Color Palette" are turned off this will be
+turned off too. 
+
+Generate or modify a style reference that embodies the chosen look.
+
+Send the processed (pre-colored) assets + reinforced prompt to the video model.
+
+This gives the model the strong visual anchors in the image refs
+instead of relying on text descriptions.
+
+The Look Library and Color Palette section in the UI can be
+grouped under "Theme Transformer"
+
+
+
+if 
+put it above the color palette table. put an
+arrow pointing down to the color palette table.
+the color palette table should have a button,
+""
+
+but some kind of logic can be applied to
+the situation depending on how the user
+is using this widget it will adapt
+
+
+2. in the frame preview area, the AI will
+use the color palette and effects setting
+and before generation apply it to the
+backdrop and subject image reference slots but will
+indicate that it is a generation by
+putting the new images underneath with
+an arrow pointing to them.  
+
+
+---------
+
 We want to make a new dropdown menu control
 and it will be taller than a line of text for the item's
 title and accommodate the associated image, such
@@ -78,9 +157,9 @@ prompt, inserts text after helper modal is completed:
 
  character starting position:
  	facing direction: [away from camera, etc.]
- 	pose: [walking, etc.]
+ 	pose / movement: [walking, etc.]
  	expression: [neutral]
- 	interacting with object: [e.g. staircase]
+ 	interacting with env. or object: [e.g. staircase]
  	beginning of video:
  	end of video:
  	

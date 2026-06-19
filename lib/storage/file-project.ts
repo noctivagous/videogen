@@ -36,28 +36,86 @@ let saveState: ProjectSaveState = 'none';
 let autosaveTimer: ReturnType<typeof setTimeout> | null = null;
 let autosaveGeneration = 0;
 
+export type FileSystemAccessTier = 'directory' | 'file-only' | 'download' | 'none';
+
 export type FileSystemAccessBlockReason = 'ssr' | 'insecure-context' | 'api-unavailable';
 
 export interface FileSystemAccessStatus {
+  /** Best available tier — native folder, native file, download fallback, or none. */
+  tier: FileSystemAccessTier;
+  /** True when project JSON can be saved or loaded (any tier except none). */
   supported: boolean;
-  reason: 'supported' | FileSystemAccessBlockReason;
+  reason: FileSystemAccessTier | FileSystemAccessBlockReason;
+}
+
+function getPickerWindow(): FilePickerWindow | null {
+  if (typeof window === 'undefined') return null;
+  return window as FilePickerWindow;
+}
+
+function hasDirectoryPicker(): boolean {
+  const win = getPickerWindow();
+  if (!win) return false;
+  try {
+    return typeof win.showDirectoryPicker === 'function';
+  } catch {
+    return false;
+  }
+}
+
+function hasFilePickers(): boolean {
+  const win = getPickerWindow();
+  if (!win) return false;
+  try {
+    return (
+      typeof win.showOpenFilePicker === 'function'
+      || typeof win.showSaveFilePicker === 'function'
+    );
+  } catch {
+    return false;
+  }
+}
+
+function hasDownloadFallback(): boolean {
+  return typeof document !== 'undefined' && typeof document.createElement === 'function';
 }
 
 export function getFileSystemAccessStatus(): FileSystemAccessStatus {
   if (typeof window === 'undefined') {
-    return { supported: false, reason: 'ssr' };
+    return { tier: 'none', supported: false, reason: 'ssr' };
   }
-  if (!window.isSecureContext) {
-    return { supported: false, reason: 'insecure-context' };
+
+  const secure = window.isSecureContext;
+
+  if (secure && hasDirectoryPicker()) {
+    return { tier: 'directory', supported: true, reason: 'directory' };
   }
-  if (!('showDirectoryPicker' in window)) {
-    return { supported: false, reason: 'api-unavailable' };
+  if (secure && hasFilePickers()) {
+    return { tier: 'file-only', supported: true, reason: 'file-only' };
   }
-  return { supported: true, reason: 'supported' };
+  if (hasDownloadFallback()) {
+    return {
+      tier: 'download',
+      supported: true,
+      reason: secure ? 'api-unavailable' : 'insecure-context',
+    };
+  }
+
+  return { tier: 'none', supported: false, reason: 'api-unavailable' };
+}
+
+/** Native File System Access API pickers (folder or persistent file handle). */
+export function isNativeFilePickerSupported(): boolean {
+  const { tier } = getFileSystemAccessStatus();
+  return tier === 'directory' || tier === 'file-only';
 }
 
 export function isFileSystemAccessSupported(): boolean {
   return getFileSystemAccessStatus().supported;
+}
+
+export function isDirectoryAccessSupported(): boolean {
+  return getFileSystemAccessStatus().tier === 'directory';
 }
 
 export function getProjectLocationLabel(): string | null {

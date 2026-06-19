@@ -26,16 +26,16 @@ function fileAccessBlockedCopy(
     case 'insecure-context':
       return {
         headline: 'HTTPS or localhost required',
-        detail: 'Open VideoGen at https://… or http://localhost to save folders',
+        detail: 'File saving needs a secure context — use https://… or http://localhost',
       };
     case 'api-unavailable':
       return {
-        headline: 'Browser cannot save folders',
-        detail: 'Use Chrome or Edge for project folders, or export JSON',
+        headline: 'File saving unavailable',
+        detail: 'This browser does not support the File System Access API',
       };
     default:
       return {
-        headline: 'Checking folder support…',
+        headline: 'Checking file support…',
         detail: 'Detecting File System Access API',
       };
   }
@@ -52,6 +52,23 @@ function folderStatusCopy(
       ...blocked,
       dotClass: 'bg-gray-500',
       urgent: fileAccess.reason !== 'ssr',
+    };
+  }
+  if (
+    (fileAccess.tier === 'file-only' || fileAccess.tier === 'download')
+    && kind !== 'directory'
+    && kind !== 'file'
+  ) {
+    const insecure = fileAccess.reason === 'insecure-context';
+    return {
+      headline: 'JSON save & load available',
+      detail: insecure
+        ? 'Use localhost or HTTPS for folder access'
+        : fileAccess.tier === 'download'
+          ? 'Save or open project JSON from the project menu'
+          : 'Open or save project JSON — folder autosave needs directory picker support',
+      dotClass: 'bg-amber-500',
+      urgent: false,
     };
   }
   if (kind === 'directory') {
@@ -119,6 +136,8 @@ function ProjectFolderBadge({
   const panelRef = useRef<HTMLDivElement>(null);
   const status = folderStatusCopy(kind, saveState, fileAccess);
   const fileApiSupported = fileAccess.supported;
+  const directoryApiSupported = fileAccess.tier === 'directory';
+  const nativeFileApiSupported = fileAccess.tier === 'directory' || fileAccess.tier === 'file-only';
   const hasDirectory = kind === 'directory';
 
   return (
@@ -177,17 +196,33 @@ function ProjectFolderBadge({
             {!fileApiSupported ? (
               fileAccess.reason === 'insecure-context' ? (
                 <>
-                  Project folders require a <span className="text-gray-300">secure connection</span>. The File System Access API is only available on HTTPS or <span className="text-gray-300">http://localhost</span> — not on plain HTTP via a network IP or custom hostname. Open VideoGen at localhost, enable HTTPS, or export JSON from the project menu.
+                  File saving requires a <span className="text-gray-300">secure connection</span>. The File System Access API is only available on HTTPS or <span className="text-gray-300">http://localhost</span> — not on plain HTTP via a network IP or custom hostname.
                 </>
               ) : fileAccess.reason === 'api-unavailable' ? (
                 <>
-                  Your browser does not expose the File System Access API. Use Chrome or Edge for full project-folder autosave, or download the project as a JSON file from the project menu.
+                  This browser does not expose the File System Access API.
                 </>
               ) : (
                 <>
-                  Detecting whether this browser can save to a project folder on your computer…
+                  Detecting whether this browser can save project files…
                 </>
               )
+            ) : (fileAccess.tier === 'file-only' || fileAccess.tier === 'download') && !hasDirectory && kind !== 'file' ? (
+              <>
+                {fileAccess.reason === 'insecure-context' ? (
+                  <>
+                    Open VideoGen at <span className="text-gray-300">http://localhost</span> or HTTPS to unlock native file and folder pickers. You can still <span className="text-gray-300">download or upload JSON</span> project files from the project menu.
+                  </>
+                ) : fileAccess.tier === 'download' ? (
+                  <>
+                    Native file pickers were not detected in this browser build. Use <span className="text-gray-300">Save JSON</span> or <span className="text-gray-300">Open JSON</span> from the project menu — or try Chrome, Edge, or Safari 15.2+ on localhost for folder autosave.
+                  </>
+                ) : (
+                  <>
+                    This browser supports saving and opening <span className="text-gray-300">JSON project files</span> but not project folders. Use Save JSON or Open JSON from the project menu. For folder autosave with assets, use a browser with directory picker support (Chrome, Edge, or recent Safari).
+                  </>
+                )}
+              </>
             ) : hasDirectory ? (
               <>
                 VideoGen has access to a folder on your computer. It autosaves{' '}
@@ -210,20 +245,32 @@ function ProjectFolderBadge({
             <div className="flex flex-col gap-1.5">
               {!hasDirectory ? (
                 <>
-                  <button
-                    type="button"
-                    className="w-full text-left px-3 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition-colors"
-                    onClick={() => { onSaveFolder(); setPanelOpen(false); }}
-                  >
-                    Choose project folder…
-                  </button>
-                  <button
-                    type="button"
-                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-surface-700 text-gray-300 transition-colors"
-                    onClick={() => { onOpenFolder(); setPanelOpen(false); }}
-                  >
-                    Open existing project folder…
-                  </button>
+                  {directoryApiSupported ? (
+                    <button
+                      type="button"
+                      className="w-full text-left px-3 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition-colors"
+                      onClick={() => { onSaveFolder(); setPanelOpen(false); }}
+                    >
+                      Choose project folder…
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="w-full text-left px-3 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition-colors"
+                      onClick={() => { onSaveNow(); setPanelOpen(false); }}
+                    >
+                      {nativeFileApiSupported ? 'Save JSON file…' : 'Download project JSON…'}
+                    </button>
+                  )}
+                  {directoryApiSupported ? (
+                    <button
+                      type="button"
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-surface-700 text-gray-300 transition-colors"
+                      onClick={() => { onOpenFolder(); setPanelOpen(false); }}
+                    >
+                      Open existing project folder…
+                    </button>
+                  ) : null}
                 </>
               ) : (
                 <>
@@ -389,9 +436,13 @@ export function HeaderBar() {
                 <div className="h-px bg-surface-600 my-1" />
                 {fileApiSupported ? (
                   <>
-                    <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { void openProjectFolder().then(() => setMenuOpen(false)); }}>Open folder…</button>
-                    <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { void saveProjectFolderAs().then(() => setMenuOpen(false)); }}>Save folder as…</button>
-                    <div className="h-px bg-surface-600 my-1" />
+                    {fileAccess.tier === 'directory' ? (
+                      <>
+                        <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { void openProjectFolder().then(() => setMenuOpen(false)); }}>Open folder…</button>
+                        <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { void saveProjectFolderAs().then(() => setMenuOpen(false)); }}>Save folder as…</button>
+                        <div className="h-px bg-surface-600 my-1" />
+                      </>
+                    ) : null}
                     <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { void saveProject().then(() => setMenuOpen(false)); }}>Save JSON file…</button>
                     <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { void loadProject().then(() => setMenuOpen(false)); }}>Open JSON file…</button>
                   </>
@@ -497,9 +548,11 @@ export function HeaderBar() {
           type="button"
           onClick={() => void saveProjectQuick()}
           title={fileApiSupported
-            ? projectLocationLabel
-              ? 'Save project to open folder'
-              : 'Save project folder'
+            ? fileAccess.tier === 'directory'
+              ? projectLocationLabel
+                ? 'Save project to open folder'
+                : 'Save project folder'
+              : 'Save project as JSON'
             : 'Save project as JSON'}
           className="p-2 hover:bg-surface-700 rounded-lg transition-all group"
         >
@@ -510,7 +563,11 @@ export function HeaderBar() {
         <button
           type="button"
           onClick={() => void openProjectQuick()}
-          title={fileApiSupported ? 'Open project folder' : 'Load project from JSON'}
+          title={fileApiSupported
+            ? fileAccess.tier === 'directory'
+              ? 'Open project folder'
+              : 'Open project JSON file'
+            : 'Load project from JSON'}
           className="p-2 hover:bg-surface-700 rounded-lg transition-all group"
         >
           <svg className="w-5 h-5 text-gray-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -46,6 +46,16 @@ export function assetPathForReference(
   return `${ASSETS_DIR}/shot-${String(shotId).padStart(2, '0')}-ref-${slotIndex}-${slug}.${ext}`;
 }
 
+export function assetPathForTransformedReference(
+  shotId: number,
+  slotIndex: number,
+  role: ReferenceRole,
+  ext: string,
+): string {
+  const slug = role.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  return `${ASSETS_DIR}/shot-${String(shotId).padStart(2, '0')}-transformed-ref-${slotIndex}-${slug}.${ext}`;
+}
+
 function extensionForMime(mime: string): string {
   const map: Record<string, string> = {
     'image/png': 'png',
@@ -125,12 +135,14 @@ async function readBlobFromAssetPath(
   }
 }
 
-async function externalizeShotReferences(
+async function externalizeReferenceList(
   assetsDir: FileSystemDirectoryHandle,
   shot: Shot,
-): Promise<Shot> {
-  const references = await Promise.all(
-    shot.references.map(async (ref, index) => {
+  refs: (string | null)[],
+  pathFor: (shotId: number, index: number, role: ReferenceRole, ext: string) => string,
+): Promise<(string | null)[]> {
+  return Promise.all(
+    refs.map(async (ref, index) => {
       if (!ref || !shouldExternalizeReference(ref)) return ref;
 
       const blob = await blobFromInlineReference(ref);
@@ -138,14 +150,34 @@ async function externalizeShotReferences(
 
       const role = normalizeReferenceRole(shot.referenceRoles[index] ?? 'None');
       const ext = extensionForMime(blob.type);
-      const assetPath = assetPathForReference(shot.id, index, role, ext);
+      const assetPath = pathFor(shot.id, index, role, ext);
       await writeBlobToAssetPath(assetsDir, assetPath, blob);
       registerAssetBlob(assetPath, blob);
       return assetPath;
     }),
   );
+}
 
-  return { ...shot, references };
+async function externalizeShotReferences(
+  assetsDir: FileSystemDirectoryHandle,
+  shot: Shot,
+): Promise<Shot> {
+  const references = await externalizeReferenceList(
+    assetsDir,
+    shot,
+    shot.references,
+    assetPathForReference,
+  );
+  const transformedReferences = shot.transformedReferences
+    ? await externalizeReferenceList(
+        assetsDir,
+        shot,
+        shot.transformedReferences,
+        assetPathForTransformedReference,
+      )
+    : shot.transformedReferences;
+
+  return { ...shot, references, transformedReferences };
 }
 
 export async function externalizeProjectReferences(
@@ -159,12 +191,12 @@ export async function externalizeProjectReferences(
   return { ...project, shots };
 }
 
-async function hydrateShotReferences(
+async function hydrateReferenceList(
   assetsDir: FileSystemDirectoryHandle,
-  shot: Shot,
-): Promise<Shot> {
-  const references = await Promise.all(
-    shot.references.map(async (ref) => {
+  refs: (string | null)[],
+): Promise<(string | null)[]> {
+  return Promise.all(
+    refs.map(async (ref) => {
       if (!ref || !isProjectAssetPath(ref)) return ref;
       const cached = getAssetBlobUrl(ref);
       if (cached) return cached;
@@ -174,8 +206,18 @@ async function hydrateShotReferences(
       return registerAssetBlob(ref, blob);
     }),
   );
+}
 
-  return { ...shot, references };
+async function hydrateShotReferences(
+  assetsDir: FileSystemDirectoryHandle,
+  shot: Shot,
+): Promise<Shot> {
+  const references = await hydrateReferenceList(assetsDir, shot.references);
+  const transformedReferences = shot.transformedReferences
+    ? await hydrateReferenceList(assetsDir, shot.transformedReferences)
+    : shot.transformedReferences;
+
+  return { ...shot, references, transformedReferences };
 }
 
 export async function hydrateProjectReferences(

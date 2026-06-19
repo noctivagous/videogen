@@ -38,6 +38,9 @@ function walkShotUrls(
   shot.references.forEach((ref, refIndex) => {
     if (ref) visit(`${base}.references.${refIndex}`, ref);
   });
+  shot.transformedReferences?.forEach((ref, refIndex) => {
+    if (ref) visit(`${base}.transformedReferences.${refIndex}`, ref);
+  });
 
   shot.generatedVideos?.forEach((video, videoIndex) => {
     visit(`${base}.generatedVideos.${videoIndex}.url`, video.url);

@@ -23,32 +23,47 @@ function accentStrengthDescriptor(value: number): string {
   return 'moderate accent isolation';
 }
 
-export function buildFalseColorPrompt(palette: ColorPaletteSettings, lightingStyle: string): string {
+export function buildFalseColorPrompt(
+  palette: ColorPaletteSettings,
+  lightingStyle?: string,
+): string {
   const dominantName = hueToColorName(palette.dominantHue);
-  const parts = [
-    `${lightingStyle.replace(/-/g, ' ')} lighting`,
+  const parts: string[] = [];
+  if (lightingStyle) {
+    parts.push(`${lightingStyle.replace(/-/g, ' ')} lighting`);
+  }
+  parts.push(
     'false color grading, surreal spectrum remap',
     `dominant ${dominantName} false-color cast`,
     spectrumBiasDescriptor(palette.spectrumBias),
     palette.saturation > 70 ? 'hyper-saturated false color' : 'saturated false color',
-  ];
+  );
   return parts.join(', ');
 }
 
-export function buildDuotonePrompt(palette: ColorPaletteSettings, lightingStyle: string): string {
+export function buildDuotonePrompt(
+  palette: ColorPaletteSettings,
+  lightingStyle?: string,
+): string {
   const primary = hueToColorName(palette.dominantHue);
   const secondary = hueToColorName(palette.secondaryHue);
-  const parts = [
-    `${lightingStyle.replace(/-/g, ' ')} lighting`,
+  const parts: string[] = [];
+  if (lightingStyle) {
+    parts.push(`${lightingStyle.replace(/-/g, ' ')} lighting`);
+  }
+  parts.push(
     `full-frame duotone color grading with ${primary} shadows and ${secondary} highlights across subject and environment`,
     duotoneBalanceDescriptor(palette.duotoneBalance),
     palette.saturation < 35 ? 'muted duotone' : 'rich duotone color grading',
     'strong visible two-tone color split, not naturalistic color',
-  ];
+  );
   return parts.join(', ');
 }
 
-export function buildAccentSplashPrompt(palette: ColorPaletteSettings, lightingStyle: string): string {
+export function buildAccentSplashPrompt(
+  palette: ColorPaletteSettings,
+  lightingStyle?: string,
+): string {
   const accentHue = normalizeHue(palette.accentHue ?? palette.dominantHue);
   const accentName = hueToColorName(accentHue);
   const tonal = buildBwTonalPrompt(
@@ -56,6 +71,7 @@ export function buildAccentSplashPrompt(palette: ColorPaletteSettings, lightingS
     palette.brightness,
     palette.keyLightWarmth,
     lightingStyle,
+    { includeWarmthBias: true, includeStyleGrade: Boolean(lightingStyle) },
   );
   const parts = [
     tonal,
@@ -67,7 +83,7 @@ export function buildAccentSplashPrompt(palette: ColorPaletteSettings, lightingS
 
 export function buildFxColorPrompt(
   palette: ColorPaletteSettings,
-  lightingStyle: string,
+  lightingStyle?: string,
 ): string {
   switch (palette.mode) {
     case 'false-color':

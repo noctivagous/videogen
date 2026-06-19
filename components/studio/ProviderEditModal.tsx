@@ -6,7 +6,7 @@ import { BUILT_IN_PROVIDERS } from '@/lib/constants/providers';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import type { ProviderTestResult } from '@/lib/studio/generation/types';
 import { getProviderDiscovery } from '@/lib/studio/provider-modalities';
-import { getProviderApiKey } from '@/lib/storage/ai-settings';
+import { getProviderApiKey, isServerManagedProvider } from '@/lib/storage/ai-settings';
 import type { ProviderModel } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
 
@@ -58,6 +58,7 @@ export function ProviderEditModal() {
 
   if (!providerEdit) return null;
 
+  const serverManaged = !providerEdit.isCustom && isServerManagedProvider(providerEdit.id, false, ai);
   const builtIn = BUILT_IN_PROVIDERS.find((p) => p.id === providerEdit.id);
   const custom = providerEdit.isCustom
     ? ai.customProviders.find((p) => p.id === providerEdit.id)
@@ -68,7 +69,7 @@ export function ProviderEditModal() {
   const displayHint = providerEdit.isCustom ? custom?.baseUrl : builtIn?.hint;
 
   const testConnection = async () => {
-    if (!apiKey.trim()) {
+    if (!apiKey.trim() && !serverManaged) {
       setTestMessage('Please enter an API key before testing.');
       setTestUi('error');
       showToast('Please enter an API key', 'error');
@@ -181,11 +182,17 @@ export function ProviderEditModal() {
 
           <div>
             <label className="text-xs uppercase tracking-wider text-gray-400 block mb-1.5">API Key</label>
+            {serverManaged && (
+              <p className="text-xs text-emerald-400/90 mb-2">
+                Configured on the server via environment variable — leave blank to use it, or enter a key to override in this browser.
+              </p>
+            )}
             <div className="relative">
               <input
                 type={showKey ? 'text' : 'password'}
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
+                placeholder={serverManaged ? 'Using server key' : undefined}
                 className="w-full bg-surface-700 border border-surface-600 rounded-2xl px-4 py-3 pr-12 text-sm outline-none font-mono"
               />
               <button

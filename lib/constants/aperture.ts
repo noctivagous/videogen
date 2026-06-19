@@ -41,6 +41,32 @@ export function dofFromAperture(f: number): DepthOfField {
   return 'deep';
 }
 
+/** f-stops that map to each depth-of-field band (inverse of {@link dofFromAperture}). */
+const APERTURE_STOPS_BY_DOF: Record<DepthOfField, readonly ApertureStop[]> = {
+  'very-shallow': [1.4, 2],
+  shallow: [2.8, 4],
+  medium: [5.6, 8],
+  deep: [11, 16, 22],
+};
+
+/** Pick the nearest full stop in `targetDof`'s band; unchanged if current aperture already matches. */
+export function apertureForDof(targetDof: DepthOfField, currentF: number): ApertureStop {
+  const current = snapToApertureStop(currentF);
+  if (dofFromAperture(current) === targetDof) return current;
+
+  const candidates = APERTURE_STOPS_BY_DOF[targetDof];
+  let nearest = candidates[0];
+  let minDist = Math.abs(nearest - current);
+  for (const stop of candidates) {
+    const dist = Math.abs(stop - current);
+    if (dist < minDist) {
+      minDist = dist;
+      nearest = stop;
+    }
+  }
+  return nearest;
+}
+
 export function formatApertureLabel(f: number): string {
   return `f/${snapToApertureStop(f)}`;
 }

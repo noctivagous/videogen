@@ -37,3 +37,30 @@ export const RESOLUTION_PRESETS: Record<AspectRatio, ResolutionPreset[]> = {
     { label: '480p (Ultrawide)', value: '1120x480' },
   ],
 };
+
+/** Lowest preset for each aspect ratio — used as the app default (480p). */
+export function getDefaultResolution(aspectRatio: AspectRatio = '16:9'): string {
+  const presets = RESOLUTION_PRESETS[aspectRatio] ?? RESOLUTION_PRESETS['16:9'];
+  return presets[presets.length - 1].value;
+}
+
+/** Human label for a preset value, e.g. `480p`, `720p`, `4K`. */
+export function getResolutionLabel(
+  resolution: string,
+  aspectRatio: AspectRatio = '16:9',
+): string | null {
+  const presets = RESOLUTION_PRESETS[aspectRatio] ?? RESOLUTION_PRESETS['16:9'];
+  const match = presets.find((p) => p.value === resolution);
+  if (!match) return null;
+  return match.label.replace(/\s+\([^)]+\)$/, '');
+}
+
+/** Prefix pixel dimensions with preset name when known — `480p — 854x480`. */
+export function formatResolutionWithLabel(
+  resolution: string,
+  aspectRatio: AspectRatio = '16:9',
+  separator = ' — ',
+): string {
+  const label = getResolutionLabel(resolution, aspectRatio);
+  return label ? `${label}${separator}${resolution}` : resolution;
+}

@@ -86,6 +86,7 @@ export function hasApiKey(id: string, isCustom: boolean, ai: AIState): boolean {
     return !!(prov?.apiKey && prov.apiKey.length > 4);
   }
   const conf = ai.configured[id];
+  if (conf?.serverManaged) return true;
   return !!(conf?.apiKey && conf.apiKey.length > 4);
 }
 

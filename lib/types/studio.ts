@@ -29,6 +29,8 @@ export type Headroom = 'tight' | 'normal' | 'generous';
 
 export type ReferenceRole = 'Subject' | 'Backdrop' | 'Style' | 'Depth' | 'Canny' | 'None';
 
+export type ThemeTransformSlotStatus = 'idle' | 'applying' | 'ready' | 'stale' | 'error';
+
 export interface FrameComposition {
   guide: CompositionGuide;
   placement: Placement;
@@ -111,6 +113,21 @@ export interface ColorPaletteSettings {
   bw: BwTonalSettings;
 }
 
+/** Per-control opt-in for Theme Transformer image-reference prompts (default off). */
+export interface ThemeTransformLightingInclusion {
+  keyLight: boolean;
+  style: boolean;
+  timeOfDay: boolean;
+  colorTemp: boolean;
+  atmosphere: boolean;
+}
+
+/** Video-only atmospheric / environmental preset (not Theme Transformer). */
+export interface VideoEnvironmentSettings {
+  /** null = off / not applied */
+  presetId: string | null;
+}
+
 export interface LightingSettings {
   keyLight: string;
   intensity: number;
@@ -119,6 +136,10 @@ export interface LightingSettings {
   colorTemp: number;
   atmosphere: string;
   colorPalette: ColorPaletteSettings;
+  /** Which lighting controls are woven into Theme Transformer prompts. */
+  themeTransformLighting?: ThemeTransformLightingInclusion;
+  /** Rich atmosphere phrases appended to video generation prompts only. */
+  videoEnvironment?: VideoEnvironmentSettings;
 }
 
 export interface MotionSettings {
@@ -157,6 +178,13 @@ export interface Shot {
   referenceRoles: ReferenceRole[];
   /** When true (default), slots use Subject/Backdrop/Style labels and role-aware prompts. */
   cinematographyRefs?: boolean;
+  /** Per-slot images after Theme Transformer image-model edit. */
+  transformedReferences?: (string | null)[];
+  themeTransformFingerprint?: (string | null)[];
+  themeTransformStatus?: ThemeTransformSlotStatus[];
+  themeTransformError?: (string | null)[];
+  /** Slots the user connected via Theme Transformer drag — stale when palette/refs change. */
+  themeTransformLinked?: boolean[];
   frameComposition: FrameComposition;
   /** AI-generated quick preview still for this shot */
   previewFrameUrl?: string | null;
@@ -199,6 +227,8 @@ export interface ProviderDiscovery {
 export interface ProviderConfig extends ProviderDiscovery {
   apiKey: string;
   connected: boolean;
+  /** Key is supplied by server env — client never stores or sends the secret. */
+  serverManaged?: boolean;
 }
 
 export interface CustomProvider extends ProviderDiscovery {

@@ -158,8 +158,11 @@ export function buildBwTonalPrompt(
   bw: BwTonalSettings,
   brightness: number,
   warmth: number,
-  lightingStyle: string,
+  lightingStyle?: string,
+  options?: { includeWarmthBias?: boolean; includeStyleGrade?: boolean },
 ): string {
+  const includeWarmthBias = options?.includeWarmthBias !== false;
+  const includeStyleGrade = options?.includeStyleGrade !== false;
   const parts = ['grayscale only, no color', BW_TONAL_LOOK_PROMPTS[bw.look]];
 
   const lookSetsContrast = bw.look === 'high-key' || bw.look === 'film-noir' || bw.look === 'silhouette';
@@ -177,12 +180,18 @@ export function buildBwTonalPrompt(
     parts.push(highlightTonePrompt(bw.highlightTone));
   }
 
-  parts.push(midTonePrompt(brightness), toneBiasPrompt(warmth));
+  parts.push(midTonePrompt(brightness));
+  if (includeWarmthBias) parts.push(toneBiasPrompt(warmth));
 
   const grain = grainPrompt(bw.grain);
   if (grain) parts.push(grain);
 
-  if (['cinematic', 'dramatic'].includes(lightingStyle) && bw.look !== 'film-noir') {
+  if (
+    includeStyleGrade &&
+    lightingStyle &&
+    ['cinematic', 'dramatic'].includes(lightingStyle) &&
+    bw.look !== 'film-noir'
+  ) {
     parts.push('cinematic monochrome grading');
   }
 

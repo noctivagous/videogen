@@ -12,11 +12,14 @@ import { useStudioStore } from '@/store/useStudioStore';
 export interface ColorPalettePreviewTableProps {
   palette?: ColorPaletteSettings;
   className?: string;
+  /** Transform prompt shown below palette swatches. */
+  transformPrompt?: string;
 }
 
 export function ColorPalettePreviewTable({
   palette: paletteProp,
   className = '',
+  transformPrompt,
 }: ColorPalettePreviewTableProps) {
   const storePalette = useStudioStore((s) => s.lighting.colorPalette);
   const palette = paletteProp ?? storePalette;
@@ -44,6 +47,21 @@ export function ColorPalettePreviewTable({
           </tr>
         ))}
       </tbody>
+      {transformPrompt?.trim() ? (
+        <tfoot>
+          <tr>
+            <td colSpan={2} className="color-palette-preview-table__prompt-cell">
+              <textarea
+                readOnly
+                rows={3}
+                value={transformPrompt}
+                className="color-palette-preview-table__prompt-input"
+                aria-label="Theme transform prompt"
+              />
+            </td>
+          </tr>
+        </tfoot>
+      ) : null}
     </table>
   );
 }

@@ -1,0 +1,1 @@
+export { buildVideoEnvironmentPrompt } from '@/lib/constants/video-environment';

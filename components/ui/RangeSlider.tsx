@@ -3,6 +3,7 @@ interface RangeSliderProps extends React.InputHTMLAttributes<HTMLInputElement> {
   valueLabel: string;
   colorTemp?: boolean;
   leading?: React.ReactNode;
+  labelTrailing?: React.ReactNode;
 }
 
 export function RangeSlider({
@@ -10,15 +11,19 @@ export function RangeSlider({
   valueLabel,
   colorTemp,
   leading,
+  labelTrailing,
   className = '',
   ...props
 }: RangeSliderProps) {
   return (
     <div className="parameter-enclosure">
-      <label className="text-xs text-gray-400 mb-2 block flex justify-between">
+      <div className="text-xs text-gray-400 mb-2 flex items-center justify-between gap-2">
         <span>{label}</span>
-        <span className="text-brand-400 font-medium">{valueLabel}</span>
-      </label>
+        <span className="flex items-center gap-2">
+          <span className="text-brand-400 font-medium">{valueLabel}</span>
+          {labelTrailing}
+        </span>
+      </div>
       <div className={leading ? 'flex items-center gap-3' : undefined}>
         {leading}
         <input
