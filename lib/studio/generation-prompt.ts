@@ -100,26 +100,34 @@ function xaiReferenceRoleIndices(refs: Array<{ role: string; url: string }>) {
   };
 }
 
+function xaiReferenceImageNumber(
+  refs: Array<{ role: string; url: string }>,
+  role: 'Subject' | 'Backdrop',
+): number | null {
+  const idx = refs.findIndex((r) => r.role === role);
+  return idx >= 0 ? idx + 1 : null;
+}
+
 /** Reference instructions for xAI reference-to-video (<IMAGE_N> tags required by API). */
 export function buildXAIReferencePrompt(
   refs: Array<{ role: string; url: string }>,
 ): string {
-  const hasSubject = refs.some((r) => r.role === 'Subject');
-  const hasBackdrop = refs.some((r) => r.role === 'Backdrop');
+  const subjectN = xaiReferenceImageNumber(refs, 'Subject');
+  const backdropN = xaiReferenceImageNumber(refs, 'Backdrop');
 
-  if (hasSubject && hasBackdrop) {
+  if (subjectN && backdropN) {
     return (
-      'The subject in the video — face, body, wardrobe, and proportions only — comes from <IMAGE_1>; ' +
-      'ignore any background, floor, or environment in <IMAGE_1>. ' +
-      'The scene environment, backdrop, and floor geometry come from <IMAGE_2>. ' +
-      'The subject from <IMAGE_1> appears in the environment from <IMAGE_2>.'
+      `The subject in the video — face, body, wardrobe, and proportions only — comes from <IMAGE_${subjectN}>; ` +
+      `ignore any background, floor, or environment in <IMAGE_${subjectN}>. ` +
+      `The scene environment, backdrop, and floor geometry come from <IMAGE_${backdropN}>. ` +
+      `The subject from <IMAGE_${subjectN}> appears in the environment from <IMAGE_${backdropN}>.`
     );
   }
-  if (hasSubject) {
-    return 'Use <IMAGE_1> as the starting frame. Preserve the subject identity and appearance from <IMAGE_1>.';
+  if (subjectN) {
+    return `Use <IMAGE_${subjectN}> as the starting frame. Preserve the subject identity and appearance from <IMAGE_${subjectN}>.`;
   }
-  if (hasBackdrop) {
-    return 'Match the environment, backdrop, and lighting palette from <IMAGE_1>.';
+  if (backdropN) {
+    return `Match the environment, backdrop, and lighting palette from <IMAGE_${backdropN}>.`;
   }
   return '';
 }

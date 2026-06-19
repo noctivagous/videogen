@@ -1,5 +1,9 @@
 FUTURE FEATURES
 
+
+Pure text modifiers often give inconsistent or 
+subtle results across motion and different models.
+
 ---------
 
 VIDEOGEN APP SHAPE

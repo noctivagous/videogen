@@ -4,8 +4,10 @@ import { AtmosphereEnvironmentPanel } from '@/components/studio/AtmosphereEnviro
 import { VideoLightingTechniquesPanel } from '@/components/studio/VideoLightingTechniquesPanel';
 import { ColorPalettePanel } from '@/components/studio/ColorPalettePanel';
 import { ThemeTransformApplyToggle } from '@/components/studio/ThemeTransformApplyToggle';
+import { ThemeTransformerOutlet } from '@/components/studio/ThemeTransformerOutlet';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { resolveThemeTransformLightingInclusion } from '@/lib/constants/theme-transform-lighting';
+import { needsThemeTransformer } from '@/lib/studio/theme-transform';
 import type { ThemeTransformLightingInclusion } from '@/lib/types/studio';
 import { RangeSlider } from '@/components/ui/RangeSlider';
 import { Select } from '@/components/ui/Select';
@@ -63,7 +65,8 @@ export function LightingPanel() {
         </svg>
         <h3 className="font-semibold text-sm uppercase tracking-wider text-gray-300">Theme Transformer</h3>
       </div>
-      <p className="text-[10px] text-gray-500 mb-4">Applied to image references</p>
+      <p className="text-[10px] text-gray-500 mb-3">Applied to image references</p>
+      {needsThemeTransformer(lighting) && <ThemeTransformerOutlet />}
       <ColorPalettePanel />
 
       <div className="flex items-center gap-2 mb-4 mt-6">

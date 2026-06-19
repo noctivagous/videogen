@@ -141,7 +141,45 @@ function isStockDemoSurferSubject(ref: string | null | undefined): boolean {
   return ref === STOCK_CHARACTER_REF || ref.includes('demo-surfer');
 }
 
-/** Restore demo-surfer backdrop when a prior session stripped slot 1 but kept the Backdrop role. */
+/** Swap legacy slot 0=Subject / slot 1=Backdrop into Backdrop-first order. */
+function migrateReferenceSlotOrder<T extends {
+  referenceRoles: ReturnType<typeof normalizeReferenceRole>[];
+  references: (string | null)[];
+  transformedReferences?: (string | null)[];
+  themeTransformLinked?: boolean[];
+  themeTransformStatus?: import('@/lib/types/studio').ThemeTransformSlotStatus[];
+  themeTransformError?: (string | null)[];
+  themeTransformFingerprint?: (string | null)[];
+}>(shot: T): T {
+  const roles = shot.referenceRoles;
+  if (roles[0] !== 'Subject' || roles[1] !== 'Backdrop') return shot;
+
+  const swapTriplet = <V,>(arr: V[] | undefined, fill: V): [V, V, V] => {
+    const list = [...(arr ?? [])];
+    while (list.length < 3) list.push(fill);
+    return [list[1], list[0], list[2]];
+  };
+
+  const [r0, r1, r2] = swapTriplet(shot.references, null);
+  const [t0, t1, t2] = swapTriplet(shot.transformedReferences, null);
+  const [l0, l1, l2] = swapTriplet(shot.themeTransformLinked, false);
+  const [s0, s1, s2] = swapTriplet(shot.themeTransformStatus, 'idle');
+  const [e0, e1, e2] = swapTriplet(shot.themeTransformError, null);
+  const [f0, f1, f2] = swapTriplet(shot.themeTransformFingerprint, null);
+
+  return {
+    ...shot,
+    referenceRoles: ['Backdrop', 'Subject', roles[2] ?? 'Style'],
+    references: [r0, r1, r2],
+    transformedReferences: [t0, t1, t2],
+    themeTransformLinked: [l0, l1, l2],
+    themeTransformStatus: [s0, s1, s2],
+    themeTransformError: [e0, e1, e2],
+    themeTransformFingerprint: [f0, f1, f2],
+  };
+}
+
+/** Restore demo-surfer backdrop when a prior session stripped the Backdrop slot but kept the role. */
 function healStockDemoReferences(
   references: (string | null)[],
   referenceRoles: ReturnType<typeof normalizeReferenceRole>[],
@@ -183,6 +221,16 @@ export function migrateShot(
     normalizeReferenceRole(role as string),
   );
 
+  const slotOrderMigrated = migrateReferenceSlotOrder({
+    referenceRoles,
+    references: shot.references ?? [null, null, null],
+    transformedReferences: shot.transformedReferences,
+    themeTransformLinked: shot.themeTransformLinked,
+    themeTransformStatus: shot.themeTransformStatus,
+    themeTransformError: shot.themeTransformError,
+    themeTransformFingerprint: shot.themeTransformFingerprint,
+  });
+
   return {
     id: shot.id,
     name: shot.name,
@@ -208,18 +256,23 @@ export function migrateShot(
     motion: { ...defaults.motion, ...shot.motion },
     sceneSetup: stripLegacySceneBoilerplate(shot.sceneSetup ?? shot.prompt ?? defaults.sceneSetup),
     shotActivity: shot.shotActivity ?? '',
-    referenceRoles,
+    referenceRoles: slotOrderMigrated.referenceRoles,
     references: healStockDemoReferences(
-      (shot.references ?? [null, null, null]).map((ref, i) => {
+      slotOrderMigrated.references.map((ref, i) => {
         if (!ref) return ref;
-        const role = referenceRoles[i] ?? 'None';
+        const role = slotOrderMigrated.referenceRoles[i] ?? 'None';
         if (role === 'Subject' && !isUserSubjectReference(ref)) {
           return normalizeStockSubjectRef(ref, legacyCamera);
         }
         return ref;
       }),
-      referenceRoles,
+      slotOrderMigrated.referenceRoles,
     ),
+    transformedReferences: slotOrderMigrated.transformedReferences ?? defaultThemeTransformRefs(),
+    themeTransformLinked: slotOrderMigrated.themeTransformLinked ?? emptyThemeTransformArray(false),
+    themeTransformStatus: slotOrderMigrated.themeTransformStatus ?? defaultThemeTransformStatus(),
+    themeTransformError: slotOrderMigrated.themeTransformError ?? emptyThemeTransformArray(null),
+    themeTransformFingerprint: slotOrderMigrated.themeTransformFingerprint ?? emptyThemeTransformArray(null),
     frameComposition: {
       ...DEFAULT_FRAME_COMPOSITION,
       ...shot.frameComposition,
@@ -229,11 +282,6 @@ export function migrateShot(
     previewFrameUrl: shot.previewFrameUrl ?? null,
     previewFrameFingerprint: shot.previewFrameFingerprint ?? null,
     referenceMode: normalizeReferenceMode(shot),
-    transformedReferences: shot.transformedReferences ?? defaultThemeTransformRefs(),
-    themeTransformFingerprint: shot.themeTransformFingerprint ?? emptyThemeTransformArray(null),
-    themeTransformStatus: shot.themeTransformStatus ?? defaultThemeTransformStatus(),
-    themeTransformError: shot.themeTransformError ?? emptyThemeTransformArray(null),
-    themeTransformLinked: shot.themeTransformLinked ?? emptyThemeTransformArray(false),
   };
 }
 

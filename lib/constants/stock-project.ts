@@ -71,7 +71,7 @@ export const STOCK_SHOT_COMPOSITION: FrameComposition = {
   showOverlay: true,
 };
 
-export const STOCK_REFERENCE_ROLES: ReferenceRole[] = ['Subject', 'Backdrop', 'Style'];
+export const STOCK_REFERENCE_ROLES: ReferenceRole[] = ['Backdrop', 'Subject', 'Style'];
 
 export interface CreateStockShotOptions {
   duration?: number;
@@ -121,7 +121,7 @@ export function createStockShot(
     sceneSetup: sceneSetup ?? prompt ?? STOCK_PROMPT,
     shotActivity,
     references: withReferences
-      ? [STOCK_CHARACTER_REF, STOCK_BACKDROP_REF, null]
+      ? [STOCK_BACKDROP_REF, STOCK_CHARACTER_REF, null]
       : [null, null, null],
     referenceRoles: [...STOCK_REFERENCE_ROLES],
     referenceMode: DEFAULT_REFERENCE_MODE,

@@ -45,14 +45,14 @@ export function getProviderCapabilities(
     const isXAI = providerId === 'xai';
     const xaiImageToVideoOnly = isXAI && isXAIImageToVideoOnlyModel(videoModelId);
     const subjectRefNote = xaiImageToVideoOnly
-      ? 'Image 1 — required starting frame, sent as API `image` (image-to-video only)'
+      ? 'Image 2 — not used by grok-imagine-video-1.5 (Image 1 only)'
       : isXAI
-        ? 'Subject ref — with Backdrop, sent as <IMAGE_1> (reference-to-video; does not lock first frame)'
+        ? 'Subject ref (Image 2) — role-tagged in reference-to-video prompt'
         : IMAGE_NOTE;
     const backdropRefNote = xaiImageToVideoOnly
-      ? 'Not available for grok-imagine-video-1.5 — use Image 1 only'
+      ? 'Image 1 — required starting frame, sent as API `image` (image-to-video only)'
       : isXAI
-        ? 'Backdrop ref — with Subject, sent as <IMAGE_2> (reference-to-video)'
+        ? 'Backdrop ref (Image 1) — role-tagged in reference-to-video prompt'
         : 'Sent as reference image when provider supports it (e.g. xAI)';
     const summary = xaiImageToVideoOnly
       ? `${label} BYOK adapter (grok-imagine-video-1.5): image-to-video only — Image 1 is the starting frame via API \`image\`. Prompt describes motion; camera, lighting, and motion controls are folded into the prompt.`

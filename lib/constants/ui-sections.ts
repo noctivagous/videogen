@@ -33,6 +33,8 @@ export const UI_SECTIONS = {
   studioPreviewGeneratingOverlay: { id: 'studio-preview-generating-overlay', name: 'Preview Generating Overlay' },
   studioPreviewCompositionOverlay: { id: 'studio-preview-composition-overlay', name: 'Composition Overlay' },
   studioPreviewFrameViewSegment: { id: 'studio-preview-frame-view-segment', name: 'Frame View Segment' },
+  studioPreviewShotLabel: { id: 'studio-preview-shot-label', name: 'Preview Shot Label' },
+  studioPreviewMainChrome: { id: 'studio-preview-main-chrome', name: 'Preview Main Chrome' },
   studioPreviewColorPalette: { id: 'studio-preview-color-palette', name: 'Preview Color Palette' },
   studioThemeTransformer: { id: 'studio-theme-transformer', name: 'Theme Transformer' },
   studioThemeTransformerOutlet: { id: 'studio-theme-transformer-outlet', name: 'Theme Transformer Outlet' },

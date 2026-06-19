@@ -90,14 +90,14 @@ export function ReferenceSlots({ inletRefs, hoverInlet = null }: ReferenceSlotsP
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between gap-2 min-w-[17rem]">
+      <div className="image-references-header flex flex-col gap-1.5">
         <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-300">
-          Shot image references
+          Image References
         </span>
         <select
           value={referenceMode}
           onChange={(e) => setReferenceMode(e.target.value as ReferenceMode)}
-          className="reference-mode-select"
+          className="reference-mode-select w-full"
           aria-label="Reference mode"
         >
           {REFERENCE_MODE_OPTIONS.map((option) => (
@@ -108,7 +108,7 @@ export function ReferenceSlots({ inletRefs, hoverInlet = null }: ReferenceSlotsP
         </select>
       </div>
 
-      <div className="flex gap-2">
+      <div className="reference-slots-stack flex flex-col gap-2">
         {[0, 1, 2].map((index) => {
           const imgData = resolveReferenceDisplayUrl(shot.references[index]);
           const role = normalizeReferenceRole(shot.referenceRoles[index] ?? 'None');
@@ -122,7 +122,7 @@ export function ReferenceSlots({ inletRefs, hoverInlet = null }: ReferenceSlotsP
           const inletActive = hoverInlet === index && !slotDisabled && Boolean(imgData);
 
           return (
-            <div key={index} className="reference-slot-column">
+            <div key={index} className="reference-slot-row">
               <button
                 type="button"
                 ref={(el) => setInletRef(index, el)}
@@ -133,6 +133,7 @@ export function ReferenceSlots({ inletRefs, hoverInlet = null }: ReferenceSlotsP
                 {...uiSectionProps(UI_SECTIONS.studioThemeTransformInlet, { suffix: index })}
               />
 
+              <div className="reference-slot-column">
               <div
                 className={`reference-slot group ${imgData ? 'has-image' : ''} ${dragOverIndex === index ? 'drag-over' : ''} ${slotDisabled ? 'reference-slot--disabled' : ''}`}
                 title={
@@ -252,6 +253,7 @@ export function ReferenceSlots({ inletRefs, hoverInlet = null }: ReferenceSlotsP
                 accept="image/*"
                 onChange={(e) => handleFile(index, e.target.files?.[0])}
               />
+              </div>
             </div>
           );
         })}

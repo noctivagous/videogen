@@ -1,10 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { CompositionOverlay } from '@/components/studio/CompositionOverlay';
 import { ReferenceSlots } from '@/components/studio/ReferenceSlots';
-import { ThemeTransformerPanel } from '@/components/studio/ThemeTransformerPanel';
-import { useThemeTransformConnector } from '@/components/studio/ThemeTransformConnector';
+import { useThemeTransformConnectorContext } from '@/components/studio/ThemeTransformConnectorProvider';
 import { GeneratedVideoStrip } from '@/components/studio/GeneratedVideoStrip';
 import { FrameViewSegment } from '@/components/studio/FrameViewSegment';
 import { ModelPreviewScene } from '@/components/studio/ModelPreviewScene';
@@ -17,7 +16,7 @@ import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { formatDuration } from '@/lib/studio/shot-display';
 import { getGeneratedVideoCount, getShotActiveVideoUrl } from '@/lib/studio/shot-videos';
 import { isPreviewFrameSupported } from '@/lib/studio/generation/preview-frame-supported';
-import { needsThemeTransformer } from '@/lib/studio/theme-transform';
+
 import { isCustomProvider } from '@/lib/storage/ai-settings';
 import { useStudioStore } from '@/store/useStudioStore';
 
@@ -53,9 +52,7 @@ function fitPreviewFrame(
 export function PreviewPanel() {
   const previewStageRef = useRef<HTMLDivElement>(null);
   const previewFrameRef = useRef<HTMLDivElement>(null);
-  const connectorContainerRef = useRef<HTMLDivElement>(null);
-  const themeOutletRef = useRef<HTMLButtonElement>(null);
-  const inletRefs = useRef<(HTMLElement | null)[]>([null, null, null]);
+  const { inletRefs, hoverInlet } = useThemeTransformConnectorContext();
   const frameView = useStudioStore((s) => s.frameView);
   const setFrameView = useStudioStore((s) => s.setFrameView);
   const project = useStudioStore((s) => s.project);
@@ -75,23 +72,7 @@ export function PreviewPanel() {
   const previewSubMode = useStudioStore((s) => s.previewSubMode);
   const setPreviewSubMode = useStudioStore((s) => s.setPreviewSubMode);
   const generatePreviewFrame = useStudioStore((s) => s.generatePreviewFrame);
-  const applyThemeTransformSlot = useStudioStore((s) => s.applyThemeTransformSlot);
   const ai = useStudioStore((s) => s.ai);
-
-  const themeEnabled = needsThemeTransformer(lighting);
-  const onThemeConnect = useCallback(
-    (slotIndex: number) => {
-      void applyThemeTransformSlot(slotIndex);
-    },
-    [applyThemeTransformSlot],
-  );
-  const { startDrag, connectorLine, hoverInlet } = useThemeTransformConnector({
-    containerRef: connectorContainerRef,
-    outletRef: themeOutletRef,
-    inletRefs,
-    onConnect: onThemeConnect,
-    enabled: themeEnabled && frameView === 'preview',
-  });
 
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
   const showOverlay = shot?.frameComposition?.showOverlay ?? true;
@@ -193,36 +174,22 @@ export function PreviewPanel() {
       className="relative flex-1 min-h-0 overflow-hidden"
       {...uiSectionProps(UI_SECTIONS.studioPreviewPanel)}
     >
-      <div className="absolute inset-0 z-30 pointer-events-none p-4 md:p-8">
-        <div
-          ref={connectorContainerRef}
-          className="preview-panel-controls-wrap relative h-full w-full"
-        >
-          {connectorLine}
-          <div className="preview-panel-controls pointer-events-auto">
-            <FrameViewSegment
-              value={frameView}
-              onChange={setFrameView}
-              generatedVideoCount={generatedVideoCount}
-            />
-            {frameView === 'preview' && (
-              <>
-                <ThemeTransformerPanel
-                  outletRef={themeOutletRef}
-                  onOutletPointerDown={startDrag}
-                />
-                <div
-                  className="preview-panel-shot-image-references"
-                  {...uiSectionProps(UI_SECTIONS.studioBottomReferences)}
-                >
-                  <ReferenceSlots inletRefs={inletRefs} hoverInlet={hoverInlet} />
-                </div>
-              </>
-            )}
-          </div>
+      <div
+        className="absolute inset-x-0 top-0 z-30 pointer-events-none flex items-start justify-between gap-3"
+        {...uiSectionProps(UI_SECTIONS.studioPreviewMainChrome)}
+      >
+        <div className="preview-panel-controls pointer-events-auto shrink-0">
+          <FrameViewSegment
+            value={frameView}
+            onChange={setFrameView}
+            generatedVideoCount={generatedVideoCount}
+          />
         </div>
         {shot && (
-          <div className="absolute top-0 right-0 pointer-events-auto bg-surface-800 border border-surface-700 px-3 py-1 rounded-lg text-xs font-semibold text-gray-300">
+          <div
+            className="pointer-events-auto shrink-0 bg-surface-800 border border-surface-700 px-3 py-1 rounded-lg text-xs font-semibold text-gray-300"
+            {...uiSectionProps(UI_SECTIONS.studioPreviewShotLabel)}
+          >
             {shot.name}
           </div>
         )}
@@ -240,13 +207,25 @@ export function PreviewPanel() {
           ref={previewStageRef}
           className="relative w-full h-full max-w-5xl mx-auto flex items-center justify-center min-h-0"
         >
-          <div className="relative shrink-0 flex flex-col items-end gap-2">
-          <PreviewProjectSettingsBar />
           <div
-            ref={previewFrameRef}
-            className="preview-frame relative bg-surface-800 rounded-xl border-2 border-surface-700 overflow-hidden shadow-2xl group"
-            {...uiSectionProps(UI_SECTIONS.studioPreviewFrame)}
+            className={`preview-frame-stage shrink-0 ${frameView === 'preview' ? 'preview-frame-stage--with-refs' : ''}`}
           >
+            {frameView === 'preview' && (
+              <div
+                className="preview-frame-stage__refs preview-panel-shot-image-references"
+                {...uiSectionProps(UI_SECTIONS.studioBottomReferences)}
+              >
+                <ReferenceSlots inletRefs={inletRefs} hoverInlet={hoverInlet} />
+              </div>
+            )}
+            <div className="preview-frame-stage__settings">
+              <PreviewProjectSettingsBar />
+            </div>
+            <div
+              ref={previewFrameRef}
+              className="preview-frame-stage__frame preview-frame relative bg-surface-800 rounded-xl border-2 border-surface-700 overflow-hidden shadow-2xl group"
+              {...uiSectionProps(UI_SECTIONS.studioPreviewFrame)}
+            >
           <div className="absolute inset-0 bg-surface-900" {...uiSectionProps(UI_SECTIONS.studioPreviewContent)}>
             {renderMainContent()}
 

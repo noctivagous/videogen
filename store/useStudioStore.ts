@@ -766,7 +766,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
               sceneSetup: STOCK_PROMPT,
               shotActivity: '',
               frameComposition: { ...DEFAULT_FRAME_COMPOSITION },
-              references: [STOCK_CHARACTER_REF, STOCK_BACKDROP_REF, null] as (string | null)[],
+              references: [STOCK_BACKDROP_REF, STOCK_CHARACTER_REF, null] as (string | null)[],
               referenceRoles: [...STOCK_REFERENCE_ROLES],
               referenceMode: DEFAULT_REFERENCE_MODE,
             };

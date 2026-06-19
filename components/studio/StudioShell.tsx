@@ -6,6 +6,7 @@ import { CameraPanel } from '@/components/studio/CameraPanel';
 import { HeaderBar } from '@/components/studio/HeaderBar';
 import { LightingPanel } from '@/components/studio/LightingPanel';
 import { PreviewPanel } from '@/components/studio/PreviewPanel';
+import { ThemeTransformConnectorProvider } from '@/components/studio/ThemeTransformConnectorProvider';
 import { ProviderEditModal } from '@/components/studio/ProviderEditModal';
 import { SettingsModal } from '@/components/studio/SettingsModal';
 import { Toast } from '@/components/studio/Toast';
@@ -25,7 +26,7 @@ export function StudioShell() {
     <div className="h-screen flex flex-col overflow-hidden" {...uiSectionProps(UI_SECTIONS.studioRoot)}>
       <HeaderBar />
 
-      <div className="flex-1 flex overflow-hidden" {...uiSectionProps(UI_SECTIONS.studioWorkspace)}>
+      <ThemeTransformConnectorProvider>
         <aside
           className="hidden lg:block w-72 glass border-r border-surface-700 overflow-y-auto control-panel"
           {...uiSectionProps(UI_SECTIONS.studioCameraPanel)}
@@ -46,7 +47,7 @@ export function StudioShell() {
         >
           <LightingPanel />
         </aside>
-      </div>
+      </ThemeTransformConnectorProvider>
 
       <BottomBar />
 
