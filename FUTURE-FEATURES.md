@@ -1,6 +1,37 @@
 FUTURE FEATURES
 
 
+We want to make a new dropdown menu control
+and it will be taller than a line of text for the item's
+title and accommodate the associated image, such
+as for Field Size.  The dropdown menu will not
+use the system dropdown menu system but instead be
+custom for different views of its contents, such
+as grid contents with multiple columns.  
+For Field Size, when the dropdown opens it shows
+thumbnails and labels for all of the associated
+field seizes. If the user selects MS - Medium Shot,
+the idle state of the dropdown menu is tall enough
+to show a thumbnail aligned right in the background
+while the label is centered vertically.  The dropdown
+control will have different parameters so that it can
+be sized small, medium, large for different thumbnails
+and backgrounds.  Some dropdown menu buttons 
+will not show a thumbnail but instead a background
+image for the entire button background, 
+such as "Night", "Afternoon" and they won't need
+to be as tall, but their dropdown menu may be
+multi-column.  The width and height of the cells
+in the multi-column dropdown can be configured controls.
+
+
+- Add a collapse control to Shot List so that it
+collapses into a title bar and then the rest of the UI
+makes use of the additional space.
+
+- We need to think about how to compact the UI.
+
+
 REFINEMENT
 
 symbols, images, icons
@@ -25,12 +56,6 @@ xAI's image and video models allow more than
 3 references.
 
 
-ISSUES
-
-- The "Focal Length" slider should snap to actual
-focal lengths, e.g. 70mm and not 71mm.
-- The in the upper right of the frame is clipped by the frame
-
 NOTES
 
 There are some advantages to have this
@@ -54,6 +79,13 @@ prompt, inserts text after helper modal is completed:
  	facing direction: [away from camera, etc.]
  	pose: [walking, etc.]
  	expression: [neutral]
+ 	
+
+Should we make Characters Activity a separate
+prompt text box?  We would split "Shot Activity"
+into "General" and "Characters Activity" in the
+same section.
+
  	
  	
 We wil be doing things with this app
@@ -105,6 +137,12 @@ of images and also generating images and videos
 with a color palette as guidance.  Color Wheel
 
 ----------
+
+Media Library - lets the user browse images
+stored for the project.  Is a starting place
+for taking an image in the media library
+and changing it with AI, such as color palette
+or image contents.
 
 Image Composer - multiplexer UI that allows
 for search for image assets (with API keys

@@ -31,11 +31,37 @@ export const FOCAL_LENGTH_BANDS: { min: number; max: number; lensType: LensType 
 /** Tick marks at each band boundary (slider steps align to lens zones). */
 export const FOCAL_LENGTH_TICKS = [8, 17, 36, 71, 90, 106, 200] as const;
 
-export const GLOBAL_FOCAL_MIN = FOCAL_LENGTH_TICKS[0];
-export const GLOBAL_FOCAL_MAX = FOCAL_LENGTH_TICKS[FOCAL_LENGTH_TICKS.length - 1];
+/** Real-world prime / zoom-stop focal lengths available in retail lenses (8–200mm). */
+export const RETAIL_FOCAL_LENGTHS = [
+  8, 10, 12, 14, 16, 18, 20, 21, 24, 28, 32, 35, 40, 45, 50, 55, 58, 65, 70, 75, 85, 90, 95,
+  100, 105, 120, 135, 150, 180, 200,
+] as const;
+
+export const GLOBAL_FOCAL_MIN = RETAIL_FOCAL_LENGTHS[0];
+export const GLOBAL_FOCAL_MAX = RETAIL_FOCAL_LENGTHS[RETAIL_FOCAL_LENGTHS.length - 1];
+
+export function snapToRetailFocalLength(mm: number): number {
+  const clamped = Math.min(GLOBAL_FOCAL_MAX, Math.max(GLOBAL_FOCAL_MIN, mm));
+  let nearest: number = RETAIL_FOCAL_LENGTHS[0];
+  let minDist = Infinity;
+  for (const focal of RETAIL_FOCAL_LENGTHS) {
+    const dist = Math.abs(focal - clamped);
+    if (dist < minDist) {
+      minDist = dist;
+      nearest = focal;
+    }
+  }
+  return nearest;
+}
+
+export function retailFocalLengthIndex(mm: number): number {
+  const snapped = snapToRetailFocalLength(mm);
+  const idx = RETAIL_FOCAL_LENGTHS.indexOf(snapped as (typeof RETAIL_FOCAL_LENGTHS)[number]);
+  return idx >= 0 ? idx : RETAIL_FOCAL_LENGTHS.indexOf(50);
+}
 
 export function clampGlobalFocalLength(mm: number): number {
-  return Math.min(GLOBAL_FOCAL_MAX, Math.max(GLOBAL_FOCAL_MIN, Math.round(mm)));
+  return snapToRetailFocalLength(mm);
 }
 
 /** Anamorphic is kept while focal length stays in 40–75mm if already selected. */

@@ -780,3 +780,190 @@ input[type="range"]::-moz-range-thumb:hover {
   overflow-x: auto;
   white-space: pre;
 }
+
+/* ── Visual dropdown (custom select with thumbnails) ── */
+
+.visual-dropdown {
+  position: relative;
+}
+
+.visual-dropdown__trigger {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid #3f3f46;
+  border-radius: 0.5rem;
+  background: #27272d;
+  color: #e4e4e7;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.visual-dropdown__trigger:hover:not(:disabled) {
+  background: #323238;
+  border-color: #52525b;
+}
+
+.visual-dropdown__trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.visual-dropdown__trigger--open {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+}
+
+.visual-dropdown__trigger--sm { min-height: 2.5rem; }
+.visual-dropdown__trigger--md { min-height: 3.5rem; }
+.visual-dropdown__trigger--lg { min-height: 4.5rem; }
+
+.visual-dropdown__trigger--backgroundFill { min-height: 2.75rem; }
+
+.visual-dropdown__trigger-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+}
+
+.visual-dropdown__trigger--backgroundFill .visual-dropdown__trigger-label {
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.85);
+}
+
+.visual-dropdown__trigger-thumb {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 42%;
+  background-size: cover;
+  background-position: center top;
+}
+
+.visual-dropdown__trigger-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #27272d 58%, rgba(39, 39, 45, 0.55) 78%, rgba(39, 39, 45, 0.15) 100%);
+  pointer-events: none;
+}
+
+.visual-dropdown__trigger-label {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 2rem 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.visual-dropdown__chevron {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  font-size: 0.65rem;
+  color: #71717a;
+}
+
+.visual-dropdown__menu {
+  position: absolute;
+  top: calc(100% + 0.375rem);
+  left: 0;
+  right: 0;
+  z-index: 60;
+  max-height: min(24rem, 60vh);
+  overflow-y: auto;
+  padding: 0.375rem;
+  background: #1c1c21;
+  border: 1px solid #3f3f46;
+  border-radius: 0.5rem;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  outline: none;
+}
+
+.visual-dropdown__grid,
+.visual-dropdown__list {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.visual-dropdown__list {
+  grid-template-columns: 1fr !important;
+}
+
+.visual-dropdown__cell {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: var(--vd-cell-w, 6rem);
+  min-height: var(--vd-cell-h, 5.5rem);
+  padding: 0.375rem;
+  border: 1px solid #3f3f46;
+  border-radius: 0.5rem;
+  background: #27272d;
+  color: #d4d4d8;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.visual-dropdown__cell:hover,
+.visual-dropdown__cell--active {
+  border-color: #52525b;
+  background: #323238;
+}
+
+.visual-dropdown__cell--selected {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.45);
+}
+
+.visual-dropdown__cell-thumb-wrap {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 0.375rem;
+  overflow: hidden;
+  background: #18181b;
+  margin-bottom: 0.375rem;
+}
+
+.visual-dropdown__cell-thumb-wrap--empty {
+  background: linear-gradient(135deg, #27272d, #18181b);
+}
+
+.visual-dropdown__cell-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+}
+
+.visual-dropdown__cell-short {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #a1a1aa;
+}
+
+.visual-dropdown__cell-label {
+  font-size: 0.625rem;
+  line-height: 1.3;
+  color: #71717a;
+  margin-top: 0.125rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

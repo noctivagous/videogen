@@ -1,4 +1,5 @@
 import { normalizeReferenceRole } from '@/lib/constants/camera';
+import { resolveReferenceDisplayUrl } from '@/lib/storage/reference-url';
 import {
   getSubjectCutoutUrl,
   getStockSubjectGender,
@@ -69,6 +70,7 @@ export { getSubjectCutoutUrl, getStockSubjectGender, subjectCutoutPath, otsCutou
 export function isUserSubjectReference(url: string): boolean {
   if (url.startsWith('data:')) return true;
   if (url.startsWith('blob:')) return true;
+  if (url.startsWith('assets/')) return true;
   if (url.startsWith('/stock/')) return false;
   return true;
 }
@@ -78,7 +80,9 @@ export function getUserSubjectReference(shot: Shot | undefined): string | null {
   for (let i = 0; i < shot.references.length; i++) {
     const ref = shot.references[i];
     const role = normalizeReferenceRole(shot.referenceRoles[i] ?? 'None');
-    if (ref && role === 'Subject' && isUserSubjectReference(ref)) return ref;
+    if (ref && role === 'Subject' && isUserSubjectReference(ref)) {
+      return resolveReferenceDisplayUrl(ref);
+    }
   }
   return null;
 }
@@ -90,7 +94,9 @@ export function getGenerationSubjectReference(shot: Shot | undefined): string | 
     const ref = shot.references[i];
     const role = normalizeReferenceRole(shot.referenceRoles[i] ?? 'None');
     if (ref && role === 'Subject') {
-      return isUserSubjectReference(ref) ? ref : normalizeStockSubjectRef(ref, shot.camera);
+      return isUserSubjectReference(ref)
+        ? resolveReferenceDisplayUrl(ref)
+        : normalizeStockSubjectRef(ref, shot.camera);
     }
   }
   return null;
@@ -106,7 +112,7 @@ function getSubjectSlotReference(shot: Shot | undefined): string | null {
     const ref = shot.references[i];
     const role = normalizeReferenceRole(shot.referenceRoles[i] ?? 'None');
     if (ref && role === 'Subject') {
-      return normalizeStockSubjectRef(ref, shot.camera);
+      return resolveReferenceDisplayUrl(normalizeStockSubjectRef(ref, shot.camera));
     }
   }
   return null;
@@ -128,7 +134,9 @@ export function getBackdropReference(shot: Shot | undefined): string | null {
   for (let i = 0; i < shot.references.length; i++) {
     const ref = shot.references[i];
     const role = normalizeReferenceRole(shot.referenceRoles[i] ?? 'None');
-    if (ref && (role === 'Backdrop' || role === 'Depth')) return ref;
+    if (ref && (role === 'Backdrop' || role === 'Depth')) {
+      return resolveReferenceDisplayUrl(ref);
+    }
   }
   return STOCK_ASSETS.demoSurferBackdrop;
 }

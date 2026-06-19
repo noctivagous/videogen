@@ -38,6 +38,7 @@ export const UI_SECTIONS = {
   studioPreviewResolutionBadge: { id: 'studio-preview-resolution-badge', name: 'Resolution Badge' },
 
   studioCameraControls: { id: 'studio-camera-controls', name: 'Camera Controls' },
+  studioCameraFieldSize: { id: 'studio-camera-field-size', name: 'Field Size Dropdown' },
   studioCameraFrameComposition: { id: 'studio-camera-frame-composition', name: 'Frame Composition Controls' },
   studioCameraMotionSubject: { id: 'studio-camera-motion-subject', name: 'Motion & Subject Controls' },
 

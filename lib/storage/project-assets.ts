@@ -1,0 +1,199 @@
+import { normalizeReferenceRole } from '@/lib/constants/camera';
+import type { ReferenceRole, Shot, StudioProject } from '@/lib/types/studio';
+
+export const ASSETS_DIR = 'assets';
+
+const blobUrlByAssetPath = new Map<string, string>();
+
+export function isProjectAssetPath(ref: string): boolean {
+  return ref.startsWith(`${ASSETS_DIR}/`);
+}
+
+export function isInlineReference(ref: string): boolean {
+  return ref.startsWith('data:') || ref.startsWith('blob:');
+}
+
+export function shouldExternalizeReference(ref: string | null): boolean {
+  return Boolean(ref && isInlineReference(ref));
+}
+
+export function getAssetBlobUrl(assetPath: string): string | null {
+  return blobUrlByAssetPath.get(assetPath) ?? null;
+}
+
+export function revokeProjectAssetUrls(): void {
+  for (const url of blobUrlByAssetPath.values()) {
+    URL.revokeObjectURL(url);
+  }
+  blobUrlByAssetPath.clear();
+}
+
+function registerAssetBlob(assetPath: string, blob: Blob): string {
+  const existing = blobUrlByAssetPath.get(assetPath);
+  if (existing) URL.revokeObjectURL(existing);
+  const blobUrl = URL.createObjectURL(blob);
+  blobUrlByAssetPath.set(assetPath, blobUrl);
+  return blobUrl;
+}
+
+export function assetPathForReference(
+  shotId: number,
+  slotIndex: number,
+  role: ReferenceRole,
+  ext: string,
+): string {
+  const slug = role.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  return `${ASSETS_DIR}/shot-${String(shotId).padStart(2, '0')}-ref-${slotIndex}-${slug}.${ext}`;
+}
+
+function extensionForMime(mime: string): string {
+  const map: Record<string, string> = {
+    'image/png': 'png',
+    'image/jpeg': 'jpg',
+    'image/jpg': 'jpg',
+    'image/webp': 'webp',
+    'image/gif': 'gif',
+  };
+  return map[mime.toLowerCase()] ?? 'png';
+}
+
+function parseDataUrl(dataUrl: string): { mime: string; bytes: Uint8Array } | null {
+  const match = dataUrl.match(/^data:([^;,]+)?(?:;base64)?,([\s\S]*)$/);
+  if (!match) return null;
+  const mime = match[1] || 'application/octet-stream';
+  const payload = match[2];
+  if (dataUrl.includes(';base64')) {
+    const binary = atob(payload);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return { mime, bytes };
+  }
+  const encoded = encodeURIComponent(payload);
+  const decoded = decodeURIComponent(encoded);
+  const bytes = new TextEncoder().encode(decoded);
+  return { mime, bytes };
+}
+
+async function blobFromInlineReference(url: string): Promise<Blob | null> {
+  if (url.startsWith('data:')) {
+    const parsed = parseDataUrl(url);
+    if (!parsed) return null;
+    return new Blob([Uint8Array.from(parsed.bytes)], { type: parsed.mime });
+  }
+  if (url.startsWith('blob:')) {
+    try {
+      const res = await fetch(url);
+      return res.blob();
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+async function getAssetsDirectory(
+  dir: FileSystemDirectoryHandle,
+): Promise<FileSystemDirectoryHandle> {
+  return dir.getDirectoryHandle(ASSETS_DIR, { create: true });
+}
+
+function assetFileName(assetPath: string): string {
+  return assetPath.slice(`${ASSETS_DIR}/`.length);
+}
+
+async function writeBlobToAssetPath(
+  assetsDir: FileSystemDirectoryHandle,
+  assetPath: string,
+  blob: Blob,
+): Promise<void> {
+  const fileHandle = await assetsDir.getFileHandle(assetFileName(assetPath), { create: true });
+  const writable = await fileHandle.createWritable();
+  await writable.write(blob);
+  await writable.close();
+}
+
+async function readBlobFromAssetPath(
+  assetsDir: FileSystemDirectoryHandle,
+  assetPath: string,
+): Promise<Blob | null> {
+  try {
+    const fileHandle = await assetsDir.getFileHandle(assetFileName(assetPath));
+    const file = await fileHandle.getFile();
+    return file;
+  } catch {
+    return null;
+  }
+}
+
+async function externalizeShotReferences(
+  assetsDir: FileSystemDirectoryHandle,
+  shot: Shot,
+): Promise<Shot> {
+  const references = await Promise.all(
+    shot.references.map(async (ref, index) => {
+      if (!ref || !shouldExternalizeReference(ref)) return ref;
+
+      const blob = await blobFromInlineReference(ref);
+      if (!blob) return ref;
+
+      const role = normalizeReferenceRole(shot.referenceRoles[index] ?? 'None');
+      const ext = extensionForMime(blob.type);
+      const assetPath = assetPathForReference(shot.id, index, role, ext);
+      await writeBlobToAssetPath(assetsDir, assetPath, blob);
+      registerAssetBlob(assetPath, blob);
+      return assetPath;
+    }),
+  );
+
+  return { ...shot, references };
+}
+
+export async function externalizeProjectReferences(
+  dir: FileSystemDirectoryHandle,
+  project: StudioProject,
+): Promise<StudioProject> {
+  const assetsDir = await getAssetsDirectory(dir);
+  const shots = await Promise.all(
+    project.shots.map((shot) => externalizeShotReferences(assetsDir, shot)),
+  );
+  return { ...project, shots };
+}
+
+async function hydrateShotReferences(
+  assetsDir: FileSystemDirectoryHandle,
+  shot: Shot,
+): Promise<Shot> {
+  const references = await Promise.all(
+    shot.references.map(async (ref) => {
+      if (!ref || !isProjectAssetPath(ref)) return ref;
+      const cached = getAssetBlobUrl(ref);
+      if (cached) return cached;
+
+      const blob = await readBlobFromAssetPath(assetsDir, ref);
+      if (!blob) return ref;
+      return registerAssetBlob(ref, blob);
+    }),
+  );
+
+  return { ...shot, references };
+}
+
+export async function hydrateProjectReferences(
+  dir: FileSystemDirectoryHandle,
+  project: StudioProject,
+): Promise<StudioProject> {
+  const assetsDir = await getAssetsDirectory(dir);
+  const shots = await Promise.all(
+    project.shots.map((shot) => hydrateShotReferences(assetsDir, shot)),
+  );
+  return { ...project, shots };
+}
+
+export async function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error ?? new Error('Failed to read blob'));
+    reader.readAsDataURL(blob);
+  });
+}

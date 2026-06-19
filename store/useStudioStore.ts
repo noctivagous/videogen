@@ -58,13 +58,34 @@ import {
   loadAIState,
   saveAIState,
 } from '@/lib/storage/ai-settings';
+import {
+  clearProjectLocationSession,
+  getProjectLocationKind,
+  getProjectLocationLabel,
+  getProjectSaveState,
+  hasOpenProjectLocation,
+  isFileSystemAccessSupported,
+  openProjectFile as openProjectFileFromDisk,
+  openProjectFolder as openProjectFolderFromDisk,
+  restoreProjectSession,
+  saveProjectFileAs as saveProjectFileToDisk,
+  saveProjectFolderAs as saveProjectFolderToDisk,
+  saveProjectNow,
+  scheduleProjectAutosave,
+  type ProjectLocationKind,
+  type ProjectSaveState,
+} from '@/lib/storage/file-project';
 import { downloadProject, pickAndLoadProject } from '@/lib/storage/project-io';
+import { resolveRefsForApi } from '@/lib/storage/reference-url';
+import {
+  clearServerProjectStorage,
+  isServerProjectStorageEnabled,
+  loadProjectFromServer,
+} from '@/lib/storage/server-project-storage';
 import {
   buildStudioProject,
   clearStudioDraft,
   loadStudioDraft,
-  saveStudioDraft,
-  scheduleStudioAutosave,
 } from '@/lib/storage/studio-state';
 import type {
   AIState,
@@ -83,6 +104,14 @@ import type {
 import type { FrameView } from '@/components/studio/FrameViewSegment';
 
 const PREVIEW_MODE_KEY = 'videogen_preview_mode';
+
+function projectFileUiState() {
+  return {
+    projectLocationLabel: getProjectLocationLabel(),
+    projectLocationKind: getProjectLocationKind(),
+    projectSaveState: getProjectSaveState(),
+  };
+}
 
 function projectDefaultsFromData(data: StudioProject): ShotProjectDefaults {
   return {
@@ -177,6 +206,10 @@ interface StudioStore {
   previewSubMode: PreviewSubMode;
   isPreviewFrameGenerating: boolean;
   previewFrameProgress: string;
+  projectLocationLabel: string | null;
+  projectLocationKind: ProjectLocationKind;
+  projectSaveState: ProjectSaveState;
+  fileApiSupported: boolean;
 
   init: () => void;
   setFrameView: (view: FrameView) => void;
@@ -209,11 +242,16 @@ interface StudioStore {
   toggleCinematographyRefs: () => void;
 
   generate: () => Promise<void>;
-  saveProject: () => void;
+  saveProject: () => Promise<void>;
+  saveProjectQuick: () => Promise<void>;
   loadProject: () => Promise<void>;
+  openProjectQuick: () => Promise<void>;
+  openProjectFolder: () => Promise<void>;
+  saveProjectFolderAs: () => Promise<void>;
   newProject: () => void;
   resetToDemo: () => void;
   exportVideo: () => void;
+  syncProjectFileUi: () => void;
 
   openSettings: () => void;
   closeSettings: () => void;
@@ -268,6 +306,14 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   previewSubMode: 'framing',
   isPreviewFrameGenerating: false,
   previewFrameProgress: '',
+  projectLocationLabel: null,
+  projectLocationKind: null,
+  projectSaveState: 'none',
+  fileApiSupported: false,
+
+  syncProjectFileUi() {
+    set(projectFileUiState());
+  },
 
   setFrameView(view) {
     set({ frameView: view });
@@ -278,21 +324,61 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   },
 
   init() {
+    const fileApiSupported = isFileSystemAccessSupported();
+    set({ fileApiSupported });
+
     if (get().initialized) return;
-    const ai = loadAIState();
-    const draft = loadStudioDraft();
-    if (draft) {
-      const applied = applyStudioProject(draft);
-      set({ ...applied, ai, previewMode: 'vector', initialized: true });
-      saveStudioDraft(buildStudioProject({
-        project: applied.project,
-        shots: applied.shots,
-        currentShot: applied.currentShot,
-      }));
-      get().showToast('Restored your last session');
-    } else {
-      set({ ai, previewMode: 'vector', initialized: true });
-    }
+
+    void (async () => {
+      const ai = loadAIState();
+      let applied: ReturnType<typeof applyStudioProject> | null = null;
+      let toastMessage: string | null = null;
+
+      if (fileApiSupported) {
+        const restored = await restoreProjectSession();
+        if (restored) {
+          applied = applyStudioProject(restored);
+          toastMessage = `Opened ${getProjectLocationLabel() ?? 'project'}`;
+        }
+      }
+
+      if (!applied) {
+        const draft = loadStudioDraft();
+        if (draft) {
+          applied = applyStudioProject(draft);
+          clearStudioDraft();
+          toastMessage = fileApiSupported
+            ? 'Restored unsaved work — open or save a project folder to keep it on disk'
+            : 'Restored your last session — save a project file to keep it';
+        }
+      }
+
+      if (!applied && isServerProjectStorageEnabled()) {
+        const serverProject = await loadProjectFromServer();
+        if (serverProject) {
+          applied = applyStudioProject(serverProject);
+          toastMessage = 'Restored from server backup — choose a project folder to save locally';
+        }
+      }
+
+      if (applied) {
+        set({
+          ...applied,
+          ai,
+          previewMode: 'vector',
+          initialized: true,
+          ...projectFileUiState(),
+        });
+        if (toastMessage) get().showToast(toastMessage);
+      } else {
+        set({
+          ai,
+          previewMode: 'vector',
+          initialized: true,
+          ...projectFileUiState(),
+        });
+      }
+    })();
   },
 
   setPreviewMode(mode) {
@@ -589,7 +675,8 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       motion: shot.motion,
       shot,
     };
-    const { prompt, refs } = buildPreviewFramePayload(payload, imageProviderId);
+    const { prompt, refs: rawRefs } = buildPreviewFramePayload(payload, imageProviderId);
+    const refs = await resolveRefsForApi(rawRefs);
     const apiKey = getProviderApiKey(imageProviderId, isCustom, ai);
     const customBaseUrl = isCustom
       ? ai.customProviders.find((p) => p.id === imageProviderId)?.baseUrl
@@ -682,6 +769,8 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       shot,
       ai,
     });
+    const rawRefs = stack.blocks.find((b) => b.id === 'references')?.refs ?? [];
+    const refs = await resolveRefsForApi(rawRefs);
     const apiKey = getProviderApiKey(videoProviderId, isCustom, ai);
     const customBaseUrl = isCustom
       ? ai.customProviders.find((p) => p.id === videoProviderId)?.baseUrl
@@ -710,7 +799,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
           fps: project.fps,
           resolution: project.resolution,
           aspectRatio: project.aspectRatio,
-          refs: stack.blocks.find((b) => b.id === 'references')?.refs ?? [],
+          refs,
           cinematographyRefs: shot.cinematographyRefs !== false,
         }),
       });
@@ -747,12 +836,63 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     }
   },
 
-  saveProject() {
-    downloadProject(buildStudioProject(get()));
-    get().showToast('Project saved successfully');
+  async saveProject() {
+    const project = buildStudioProject(get());
+    if (isFileSystemAccessSupported()) {
+      const saved = await saveProjectFileToDisk(project);
+      if (saved) {
+        get().syncProjectFileUi();
+        get().showToast('Project saved to file');
+        return;
+      }
+    }
+    downloadProject(project);
+    get().showToast('Project downloaded');
+  },
+
+  async saveProjectQuick() {
+    if (isFileSystemAccessSupported() && hasOpenProjectLocation()) {
+      const ok = await saveProjectNow(buildStudioProject(get()));
+      get().syncProjectFileUi();
+      get().showToast(
+        ok ? 'Project saved' : 'Could not save — check folder permission',
+        ok ? 'success' : 'error',
+      );
+      return;
+    }
+    if (isFileSystemAccessSupported()) {
+      await get().saveProjectFolderAs();
+      return;
+    }
+    await get().saveProject();
+  },
+
+  async openProjectQuick() {
+    if (isFileSystemAccessSupported()) {
+      await get().openProjectFolder();
+      return;
+    }
+    await get().loadProject();
   },
 
   async loadProject() {
+    if (isFileSystemAccessSupported()) {
+      try {
+        const data = await openProjectFileFromDisk();
+        if (!data) return;
+        const applied = applyStudioProject(data);
+        set({
+          ...applied,
+          ...projectFileUiState(),
+        });
+        get().showToast('Project file opened');
+        return;
+      } catch {
+        get().showToast('Could not open project file', 'error');
+        return;
+      }
+    }
+
     const result = await pickAndLoadProject();
     if (result.status === 'cancelled') return;
     if (result.status === 'error') {
@@ -760,27 +900,78 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       return;
     }
     const applied = applyStudioProject(result.data);
-    set(applied);
-    clearStudioDraft();
-    saveStudioDraft(buildStudioProject(applied));
-    get().showToast('Project loaded successfully');
+    set({
+      ...applied,
+      projectLocationLabel: null,
+      projectLocationKind: null,
+      projectSaveState: 'dirty',
+    });
+    get().showToast('Project loaded — save to a folder to keep it on disk');
+  },
+
+  async openProjectFolder() {
+    if (!isFileSystemAccessSupported()) {
+      get().showToast('Use Chrome or Edge on HTTPS or localhost to open project folders', 'error');
+      return;
+    }
+    try {
+      const data = await openProjectFolderFromDisk();
+      if (!data) {
+        get().showToast('No project.json found in that folder', 'error');
+        return;
+      }
+      const applied = applyStudioProject(data);
+      set({
+        ...applied,
+        ...projectFileUiState(),
+      });
+      get().showToast(`Opened ${getProjectLocationLabel() ?? 'project folder'}`);
+    } catch {
+      get().showToast('Could not open project folder', 'error');
+    }
+  },
+
+  async saveProjectFolderAs() {
+    if (!isFileSystemAccessSupported()) {
+      await get().saveProject();
+      return;
+    }
+    try {
+      const saved = await saveProjectFolderToDisk(buildStudioProject(get()));
+      if (!saved) return;
+      get().syncProjectFileUi();
+      get().showToast(`Saved to ${getProjectLocationLabel() ?? 'folder'}`);
+    } catch {
+      get().showToast('Could not save project folder', 'error');
+    }
   },
 
   newProject() {
-    set({ ...getEmptyDefaults(), showPreviewSuccess: false });
+    clearProjectLocationSession();
+    void clearServerProjectStorage();
+    set({
+      ...getEmptyDefaults(),
+      showPreviewSuccess: false,
+      projectLocationLabel: null,
+      projectLocationKind: null,
+      projectSaveState: 'none',
+    });
     clearStudioDraft();
-    get().showToast('New project created');
+    get().showToast('New project — choose a project folder to save on disk');
   },
 
   resetToDemo() {
+    clearProjectLocationSession();
+    void clearServerProjectStorage();
     const demo = getStockDefaults();
-    set({ ...demo, showPreviewSuccess: false });
+    set({
+      ...demo,
+      showPreviewSuccess: false,
+      projectLocationLabel: null,
+      projectLocationKind: null,
+      projectSaveState: 'none',
+    });
     clearStudioDraft();
-    saveStudioDraft(buildStudioProject({
-      project: demo.project,
-      shots: demo.shots,
-      currentShot: demo.currentShot,
-    }));
     get().showToast('Demo project restored');
   },
 
@@ -954,7 +1145,31 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   },
 }));
 
-useStudioStore.subscribe((state) => {
+function isPersistedProjectDirty(state: StudioStore, prevState: StudioStore): boolean {
+  return (
+    state.project !== prevState.project ||
+    state.shots !== prevState.shots ||
+    state.currentShot !== prevState.currentShot
+  );
+}
+
+useStudioStore.subscribe((state, prevState) => {
   if (!state.initialized) return;
-  scheduleStudioAutosave(buildStudioProject(state));
+  if (!isPersistedProjectDirty(state, prevState)) return;
+
+  scheduleProjectAutosave(buildStudioProject(state), (saveState) => {
+    const current = useStudioStore.getState();
+    const ui = projectFileUiState();
+    if (
+      current.projectSaveState === saveState &&
+      current.projectLocationLabel === ui.projectLocationLabel &&
+      current.projectLocationKind === ui.projectLocationKind
+    ) {
+      return;
+    }
+    useStudioStore.setState({
+      ...ui,
+      projectSaveState: saveState,
+    });
+  });
 });

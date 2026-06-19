@@ -2,11 +2,10 @@
 
 import { PlacementGrid } from '@/components/studio/PlacementGrid';
 import {
-  FOCAL_LENGTH_TICKS,
   formatLensLabel,
-  GLOBAL_FOCAL_MAX,
-  GLOBAL_FOCAL_MIN,
   LENS_PRESETS,
+  RETAIL_FOCAL_LENGTHS,
+  retailFocalLengthIndex,
 } from '@/lib/constants/lens';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import {
@@ -15,8 +14,10 @@ import {
   showHeadroomControl,
   showPlacementGrid,
 } from '@/lib/studio/composition';
+import { FIELD_SIZE_OPTIONS } from '@/lib/constants/field-size-options';
 import { RangeSlider } from '@/components/ui/RangeSlider';
 import { Select } from '@/components/ui/Select';
+import { VisualDropdown } from '@/components/ui/VisualDropdown';
 import { useStudioStore } from '@/store/useStudioStore';
 
 export function CameraPanel() {
@@ -47,28 +48,19 @@ export function CameraPanel() {
       </div>
 
       <div className="space-y-4">
-        <Select
+        <VisualDropdown
           label="Field Size"
           value={camera.fieldSize}
-          onChange={(e) => setCamera({ fieldSize: e.target.value as typeof camera.fieldSize })}
-        >
-          <option value="ecu">ECU - Extreme Close-Up</option>
-          <option value="cu">CU - Close-Up</option>
-          <option value="mcu">MCU - Medium Close-Up</option>
-          <option value="close-shot">CS - Close Shot</option>
-          <option value="ms">MS - Medium Shot</option>
-          <option value="fs">FS - Full Shot</option>
-          <option value="ls">LS - Long Shot</option>
-          <option value="els">ELS - Extreme Long Shot</option>
-          <option value="vls">VLS - Very Long Shot</option>
-          <option value="ws">WS - Wide Shot</option>
-          <option value="mws">MWS - Medium Wide Shot</option>
-          <option value="bcu">BCU - Big Close-Up</option>
-          <option value="xls">XLS - Extreme Long Shot</option>
-          <option value="cowboy">CS - Cowboy Shot (American Shot)</option>
-          <option value="ch">CH - Choker Shot</option>
-          <option value="gv">GV - General View</option>
-        </Select>
+          onChange={(fieldSize) => setCamera({ fieldSize })}
+          options={FIELD_SIZE_OPTIONS}
+          triggerVariant="thumbnailRight"
+          menuVariant="grid"
+          size="md"
+          menuColumns={2}
+          cellWidth={96}
+          cellHeight={88}
+          uiSection={uiSectionProps(UI_SECTIONS.studioCameraFieldSize)}
+        />
 
         <Select
           label="Subject Count"
@@ -181,20 +173,16 @@ export function CameraPanel() {
         <RangeSlider
           label="Focal Length"
           valueLabel={formatLensLabel(camera)}
-          min={GLOBAL_FOCAL_MIN}
-          max={GLOBAL_FOCAL_MAX}
+          min={0}
+          max={RETAIL_FOCAL_LENGTHS.length - 1}
           step={1}
-          list="focal-length-ticks"
-          value={camera.focalLength}
-          onChange={(e) => setCamera({ focalLength: parseInt(e.target.value) })}
+          value={retailFocalLengthIndex(camera.focalLength)}
+          onChange={(e) =>
+            setCamera({ focalLength: RETAIL_FOCAL_LENGTHS[parseInt(e.target.value, 10)] })
+          }
         />
-        <datalist id="focal-length-ticks">
-          {FOCAL_LENGTH_TICKS.map((tick) => (
-            <option key={tick} value={tick} />
-          ))}
-        </datalist>
         <p className="text-[10px] text-gray-500 -mt-2">
-          Slider spans all lens zones (8–200mm). Crossing a range updates the Lens dropdown automatically.
+          Snaps to retail focal lengths (8–200mm). Crossing a lens zone updates the Lens dropdown automatically.
         </p>
 
         <Select label="Angle" value={camera.angle} onChange={(e) => setCamera({ angle: e.target.value as typeof camera.angle })}>

@@ -9,8 +9,256 @@ import {
   getSelectedVideoModelDisplay,
 } from '@/lib/studio/provider-modalities';
 import { isCustomProvider, isProviderConnected } from '@/lib/storage/ai-settings';
+import { useFileSystemAccess } from '@/hooks/use-file-system-access';
+import { ALLOW_SERVER_PROJECT_STORAGE } from '@/lib/constants/app-flags';
+import type {
+  FileSystemAccessStatus,
+  ProjectLocationKind,
+  ProjectSaveState,
+} from '@/lib/storage/file-project';
 import type { AspectRatio } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
+
+function fileAccessBlockedCopy(
+  status: FileSystemAccessStatus,
+): { headline: string; detail: string } {
+  switch (status.reason) {
+    case 'insecure-context':
+      return {
+        headline: 'HTTPS or localhost required',
+        detail: 'Open VideoGen at https://… or http://localhost to save folders',
+      };
+    case 'api-unavailable':
+      return {
+        headline: 'Browser cannot save folders',
+        detail: 'Use Chrome or Edge for project folders, or export JSON',
+      };
+    default:
+      return {
+        headline: 'Checking folder support…',
+        detail: 'Detecting File System Access API',
+      };
+  }
+}
+
+function folderStatusCopy(
+  kind: ProjectLocationKind,
+  saveState: ProjectSaveState,
+  fileAccess: FileSystemAccessStatus,
+): { headline: string; detail: string; dotClass: string; urgent: boolean } {
+  if (!fileAccess.supported) {
+    const blocked = fileAccessBlockedCopy(fileAccess);
+    return {
+      ...blocked,
+      dotClass: 'bg-gray-500',
+      urgent: fileAccess.reason !== 'ssr',
+    };
+  }
+  if (kind === 'directory') {
+    if (saveState === 'saved') {
+      return {
+        headline: 'Saved to disk',
+        detail: 'Autosaving to your project folder',
+        dotClass: 'bg-emerald-400',
+        urgent: false,
+      };
+    }
+    return {
+      headline: 'Saving changes…',
+      detail: 'Updates will be written to your project folder',
+      dotClass: 'bg-amber-500',
+      urgent: false,
+    };
+  }
+  if (kind === 'file') {
+    return {
+      headline: 'JSON file only',
+      detail: 'Choose a project folder for assets & autosave',
+      dotClass: 'bg-amber-500',
+      urgent: true,
+    };
+  }
+  if (ALLOW_SERVER_PROJECT_STORAGE && saveState === 'saved') {
+    return {
+      headline: 'No project folder',
+      detail: 'Backed up on server — choose a folder to save locally',
+      dotClass: 'bg-emerald-400',
+      urgent: true,
+    };
+  }
+  return {
+    headline: 'No project folder',
+    detail: saveState === 'dirty'
+      ? ALLOW_SERVER_PROJECT_STORAGE
+        ? 'Saving to server — choose a folder for local copy'
+        : 'Edits exist only in this tab — set up a folder to keep them'
+      : 'Choose a folder on your computer to save this project',
+    dotClass: 'bg-amber-500',
+    urgent: true,
+  };
+}
+
+function ProjectFolderBadge({
+  label,
+  kind,
+  saveState,
+  fileAccess,
+  onSaveFolder,
+  onOpenFolder,
+  onSaveNow,
+}: {
+  label: string | null;
+  kind: ProjectLocationKind;
+  saveState: ProjectSaveState;
+  fileAccess: FileSystemAccessStatus;
+  onSaveFolder: () => void;
+  onOpenFolder: () => void;
+  onSaveNow: () => void;
+}) {
+  const [panelOpen, setPanelOpen] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const status = folderStatusCopy(kind, saveState, fileAccess);
+  const fileApiSupported = fileAccess.supported;
+  const hasDirectory = kind === 'directory';
+
+  return (
+    <div className="relative flex-shrink-0" ref={panelRef}>
+      <button
+        type="button"
+        onClick={() => setPanelOpen((open) => !open)}
+        onBlur={() => setTimeout(() => setPanelOpen(false), 150)}
+        className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs min-w-0 max-w-[11rem] sm:max-w-[13rem] lg:max-w-[15rem] border transition-all text-left ${
+          status.urgent
+            ? 'bg-amber-500/10 border-amber-500/40 hover:border-amber-500/60 hover:bg-amber-500/15'
+            : 'bg-surface-800 border-surface-600 hover:bg-surface-700 hover:border-surface-500'
+        }`}
+        aria-expanded={panelOpen}
+        aria-haspopup="dialog"
+        title="Project folder on disk — click for details"
+      >
+        <svg className={`w-3.5 h-3.5 flex-shrink-0 ${status.urgent ? 'text-amber-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+        </svg>
+        <div className="min-w-0 leading-tight flex-1">
+          {hasDirectory && label ? (
+            <div className="text-gray-300 truncate font-medium">{label}</div>
+          ) : (
+            <div className={`truncate font-medium ${status.urgent ? 'text-amber-200' : 'text-gray-300'}`}>
+              {status.headline}
+            </div>
+          )}
+          <div className="flex items-center gap-1.5 text-[10px] text-gray-500">
+            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${status.dotClass}`} />
+            <span className="truncate">
+              {hasDirectory && label ? status.headline : status.detail}
+            </span>
+          </div>
+        </div>
+        <span className="text-gray-500 text-[10px] flex-shrink-0" aria-hidden>▾</span>
+      </button>
+
+      {panelOpen && (
+        <div
+          role="dialog"
+          aria-label="Project folder status"
+          className="absolute top-full left-0 mt-1.5 w-72 sm:w-80 bg-surface-800 border border-surface-600 rounded-lg shadow-xl z-[60] p-3 text-sm"
+        >
+          <div className="flex items-start gap-2 mb-2">
+            <span className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${status.dotClass}`} />
+            <div className="min-w-0">
+              <div className="font-medium text-gray-200">{status.headline}</div>
+              {hasDirectory && label ? (
+                <div className="text-xs text-gray-400 truncate mt-0.5">{label}</div>
+              ) : null}
+            </div>
+          </div>
+
+          <p className="text-xs text-gray-400 leading-relaxed mb-3">
+            {!fileApiSupported ? (
+              fileAccess.reason === 'insecure-context' ? (
+                <>
+                  Project folders require a <span className="text-gray-300">secure connection</span>. The File System Access API is only available on HTTPS or <span className="text-gray-300">http://localhost</span> — not on plain HTTP via a network IP or custom hostname. Open VideoGen at localhost, enable HTTPS, or export JSON from the project menu.
+                </>
+              ) : fileAccess.reason === 'api-unavailable' ? (
+                <>
+                  Your browser does not expose the File System Access API. Use Chrome or Edge for full project-folder autosave, or download the project as a JSON file from the project menu.
+                </>
+              ) : (
+                <>
+                  Detecting whether this browser can save to a project folder on your computer…
+                </>
+              )
+            ) : hasDirectory ? (
+              <>
+                VideoGen has access to a folder on your computer. It autosaves{' '}
+                <span className="text-gray-300">project.json</span>, reference images in{' '}
+                <span className="text-gray-300">assets/</span>, and will store generated videos in{' '}
+                <span className="text-gray-300">generated/</span>.
+              </>
+            ) : kind === 'file' ? (
+              <>
+                This project is linked to a single JSON file. Reference images and generated videos need a project folder. Choose a folder to move to full on-disk saving.
+              </>
+            ) : (
+              <>
+                This project is not linked to a folder yet. Pick or create a folder on your computer so VideoGen can autosave your work — otherwise it only lives in this browser tab.
+              </>
+            )}
+          </p>
+
+          {fileApiSupported && (
+            <div className="flex flex-col gap-1.5">
+              {!hasDirectory ? (
+                <>
+                  <button
+                    type="button"
+                    className="w-full text-left px-3 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition-colors"
+                    onClick={() => { onSaveFolder(); setPanelOpen(false); }}
+                  >
+                    Choose project folder…
+                  </button>
+                  <button
+                    type="button"
+                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-surface-700 text-gray-300 transition-colors"
+                    onClick={() => { onOpenFolder(); setPanelOpen(false); }}
+                  >
+                    Open existing project folder…
+                  </button>
+                </>
+              ) : (
+                <>
+                  {saveState === 'dirty' && (
+                    <button
+                      type="button"
+                      className="w-full text-left px-3 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition-colors"
+                      onClick={() => { onSaveNow(); setPanelOpen(false); }}
+                    >
+                      Save now
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-surface-700 text-gray-300 transition-colors"
+                    onClick={() => { onOpenFolder(); setPanelOpen(false); }}
+                  >
+                    Open different folder…
+                  </button>
+                  <button
+                    type="button"
+                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-surface-700 text-gray-300 transition-colors"
+                    onClick={() => { onSaveFolder(); setPanelOpen(false); }}
+                  >
+                    Save copy to new folder…
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function ProviderBadge({
   kind,
@@ -67,8 +315,17 @@ export function HeaderBar() {
   const project = useStudioStore((s) => s.project);
   const ai = useStudioStore((s) => s.ai);
   const setProject = useStudioStore((s) => s.setProject);
+  const projectLocationLabel = useStudioStore((s) => s.projectLocationLabel);
+  const projectLocationKind = useStudioStore((s) => s.projectLocationKind);
+  const projectSaveState = useStudioStore((s) => s.projectSaveState);
+  const fileAccess = useFileSystemAccess();
+  const fileApiSupported = fileAccess.supported;
   const saveProject = useStudioStore((s) => s.saveProject);
+  const saveProjectQuick = useStudioStore((s) => s.saveProjectQuick);
   const loadProject = useStudioStore((s) => s.loadProject);
+  const openProjectQuick = useStudioStore((s) => s.openProjectQuick);
+  const openProjectFolder = useStudioStore((s) => s.openProjectFolder);
+  const saveProjectFolderAs = useStudioStore((s) => s.saveProjectFolderAs);
   const newProject = useStudioStore((s) => s.newProject);
   const resetToDemo = useStudioStore((s) => s.resetToDemo);
   const exportVideo = useStudioStore((s) => s.exportVideo);
@@ -126,15 +383,37 @@ export function HeaderBar() {
               ▾
             </button>
             {menuOpen && (
-              <div className="absolute top-full left-0 mt-1 w-44 bg-surface-800 border border-surface-600 rounded-lg shadow-xl z-50 py-1 text-sm">
+              <div className="absolute top-full left-0 mt-1 w-52 bg-surface-800 border border-surface-600 rounded-lg shadow-xl z-50 py-1 text-sm">
                 <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { newProject(); setMenuOpen(false); }}>New project</button>
                 <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { resetToDemo(); setMenuOpen(false); }}>Reset to demo</button>
                 <div className="h-px bg-surface-600 my-1" />
-                <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { saveProject(); setMenuOpen(false); }}>Save project…</button>
-                <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { loadProject(); setMenuOpen(false); }}>Load project…</button>
+                {fileApiSupported ? (
+                  <>
+                    <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { void openProjectFolder().then(() => setMenuOpen(false)); }}>Open folder…</button>
+                    <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { void saveProjectFolderAs().then(() => setMenuOpen(false)); }}>Save folder as…</button>
+                    <div className="h-px bg-surface-600 my-1" />
+                    <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { void saveProject().then(() => setMenuOpen(false)); }}>Save JSON file…</button>
+                    <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { void loadProject().then(() => setMenuOpen(false)); }}>Open JSON file…</button>
+                  </>
+                ) : (
+                  <>
+                    <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { void saveProject().then(() => setMenuOpen(false)); }}>Save project…</button>
+                    <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { void loadProject().then(() => setMenuOpen(false)); }}>Load project…</button>
+                  </>
+                )}
               </div>
             )}
           </div>
+
+          <ProjectFolderBadge
+            label={projectLocationLabel}
+            kind={projectLocationKind}
+            saveState={projectSaveState}
+            fileAccess={fileAccess}
+            onSaveFolder={() => void saveProjectFolderAs()}
+            onOpenFolder={() => void openProjectFolder()}
+            onSaveNow={() => void saveProjectQuick()}
+          />
         </div>
 
         <div className="hidden sm:flex items-center gap-2 min-w-0" {...uiSectionProps(UI_SECTIONS.studioHeaderProviderBadge)}>
@@ -214,12 +493,26 @@ export function HeaderBar() {
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0" {...uiSectionProps(UI_SECTIONS.studioHeaderActions)}>
-        <button type="button" onClick={saveProject} title="Save project as JSON" className="p-2 hover:bg-surface-700 rounded-lg transition-all group">
+        <button
+          type="button"
+          onClick={() => void saveProjectQuick()}
+          title={fileApiSupported
+            ? projectLocationLabel
+              ? 'Save project to open folder'
+              : 'Save project folder'
+            : 'Save project as JSON'}
+          className="p-2 hover:bg-surface-700 rounded-lg transition-all group"
+        >
           <svg className="w-5 h-5 text-gray-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
           </svg>
         </button>
-        <button type="button" onClick={() => loadProject()} title="Load project from JSON" className="p-2 hover:bg-surface-700 rounded-lg transition-all group">
+        <button
+          type="button"
+          onClick={() => void openProjectQuick()}
+          title={fileApiSupported ? 'Open project folder' : 'Load project from JSON'}
+          className="p-2 hover:bg-surface-700 rounded-lg transition-all group"
+        >
           <svg className="w-5 h-5 text-gray-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
           </svg>

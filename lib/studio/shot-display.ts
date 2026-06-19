@@ -7,6 +7,7 @@ import {
 } from '@/lib/constants/camera';
 import { LENS_PRESETS } from '@/lib/constants/lens';
 import { getPreviewImageUrl, getSubjectReference } from '@/lib/constants/stock-demo';
+import { resolveReferenceDisplayUrl } from '@/lib/storage/reference-url';
 import { getActiveGeneratedVideo } from '@/lib/studio/shot-videos';
 import type { CameraSettings, Shot } from '@/lib/types/studio';
 
@@ -18,7 +19,7 @@ export function getShotThumbnailUrl(shot: Shot | undefined): string | null {
   const subject = getSubjectReference(shot);
   if (subject) return subject;
   const anyRef = shot.references.find(Boolean);
-  if (anyRef) return anyRef;
+  if (anyRef) return resolveReferenceDisplayUrl(anyRef);
   return getPreviewImageUrl(shot.camera);
 }
 

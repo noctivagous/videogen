@@ -16,13 +16,15 @@ import { isPreviewFrameSupported } from '@/lib/studio/generation/preview-frame-s
 import { isCustomProvider } from '@/lib/storage/ai-settings';
 import { useStudioStore } from '@/store/useStudioStore';
 
-function fitPreviewFrame(frame: HTMLElement, aspectRatio: string) {
+function fitPreviewFrame(
+  frame: HTMLElement,
+  container: HTMLElement,
+  aspectRatio: string,
+) {
   const [w, h] = aspectRatio.split(':').map(Number);
   if (!w || !h) return;
 
   const targetRatio = w / h;
-  const container = frame.parentElement;
-  if (!container) return;
 
   const { width: maxW, height: maxH } = container.getBoundingClientRect();
   if (maxW === 0 || maxH === 0) return;
@@ -44,6 +46,7 @@ function fitPreviewFrame(frame: HTMLElement, aspectRatio: string) {
 }
 
 export function PreviewPanel() {
+  const previewStageRef = useRef<HTMLDivElement>(null);
   const previewFrameRef = useRef<HTMLDivElement>(null);
   const frameView = useStudioStore((s) => s.frameView);
   const setFrameView = useStudioStore((s) => s.setFrameView);
@@ -103,14 +106,14 @@ export function PreviewPanel() {
     if (frameView === 'prompt') return;
 
     const frame = previewFrameRef.current;
-    if (!frame) return;
+    const container = previewStageRef.current;
+    if (!frame || !container) return;
 
-    const update = () => fitPreviewFrame(frame, project.aspectRatio || '16:9');
+    const update = () => fitPreviewFrame(frame, container, project.aspectRatio || '16:9');
 
     update();
     const observer = new ResizeObserver(update);
-    const container = frame.parentElement;
-    if (container) observer.observe(container);
+    observer.observe(container);
 
     return () => observer.disconnect();
   }, [project.aspectRatio, frameView]);
@@ -186,10 +189,14 @@ export function PreviewPanel() {
 
       {frameView !== 'prompt' && (
       <div className="absolute inset-0 z-0 p-4 md:p-8">
-        <div className="relative w-full h-full max-w-5xl mx-auto flex items-center justify-center min-h-0">
+        <div
+          ref={previewStageRef}
+          className="relative w-full h-full max-w-5xl mx-auto flex items-center justify-center min-h-0"
+        >
+          <div className="relative shrink-0">
           <div
             ref={previewFrameRef}
-            className="preview-frame relative bg-surface-800 rounded-xl border-2 border-surface-700 overflow-hidden shadow-2xl group shrink-0"
+            className="preview-frame relative bg-surface-800 rounded-xl border-2 border-surface-700 overflow-hidden shadow-2xl group"
             {...uiSectionProps(UI_SECTIONS.studioPreviewFrame)}
           >
           <div className="absolute inset-0 bg-surface-900" {...uiSectionProps(UI_SECTIONS.studioPreviewContent)}>
@@ -302,13 +309,15 @@ export function PreviewPanel() {
             <span className="text-xs text-gray-400">{timecode}</span>
           </div>
 
+          </div>
+
           <div
-            className="absolute -top-3 right-4 bg-surface-800 border border-surface-700 px-3 py-1 rounded-lg text-xs text-gray-400 z-20"
+            className="absolute -top-3 right-4 bg-surface-800 border border-surface-700 px-3 py-1 rounded-lg text-xs text-gray-400 z-20 pointer-events-none"
             {...uiSectionProps(UI_SECTIONS.studioPreviewResolutionBadge)}
           >
             {resIndicator}
           </div>
-        </div>
+          </div>
         </div>
       </div>
       )}

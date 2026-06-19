@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react';
 import { normalizeReferenceRole } from '@/lib/constants/camera';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
+import { resolveReferenceDisplayUrl } from '@/lib/storage/reference-url';
 import { getReferenceSlotLabel, isCinematographyRefs } from '@/lib/studio/reference-slots';
 import { useStudioStore } from '@/store/useStudioStore';
 
@@ -71,7 +72,7 @@ export function ReferenceSlots() {
 
       <div className="flex gap-2">
         {[0, 1, 2].map((index) => {
-          const imgData = shot.references[index];
+          const imgData = resolveReferenceDisplayUrl(shot.references[index]);
           const role = normalizeReferenceRole(shot.referenceRoles[index] ?? 'None');
           const label = getReferenceSlotLabel(shot, index, role);
 

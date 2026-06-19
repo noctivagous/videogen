@@ -17,7 +17,7 @@ export const STOCK_CHARACTER_REF = STOCK_ASSETS.demoSurferCharacterSheet;
 export const STOCK_BACKDROP_REF = STOCK_ASSETS.demoSurferBackdrop;
 
 export const STOCK_PROJECT: ProjectSettings = {
-  name: 'Demo_MS_Mannequin',
+  name: 'Demo_Surfer',
   resolution: '1280x720',
   aspectRatio: '16:9',
   fps: 24,
