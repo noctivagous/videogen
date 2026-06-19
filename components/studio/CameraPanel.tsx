@@ -15,6 +15,8 @@ import {
   showPlacementGrid,
 } from '@/lib/studio/composition';
 import { FIELD_SIZE_OPTIONS } from '@/lib/constants/field-size-options';
+import { COVERAGE_OPTIONS } from '@/lib/constants/coverage-options';
+import { SUBJECT_COUNT_OPTIONS } from '@/lib/constants/subject-count-options';
 import { RangeSlider } from '@/components/ui/RangeSlider';
 import { Select } from '@/components/ui/Select';
 import { VisualDropdown } from '@/components/ui/VisualDropdown';
@@ -62,37 +64,57 @@ export function CameraPanel() {
           uiSection={uiSectionProps(UI_SECTIONS.studioCameraFieldSize)}
         />
 
-        <Select
-          label="Subject Count"
-          value={camera.subjectCount}
-          onChange={(e) => {
-            setCamera({ subjectCount: e.target.value as typeof camera.subjectCount });
-            handleCameraCompositionChange('subjectCount');
-          }}
-        >
-          <option value="1s">1S - One Shot (Single)</option>
-          <option value="2s">2S - Two Shot</option>
-          <option value="3s">3S - Three Shot</option>
-          <option value="group">Group - Ensemble Shot (4+)</option>
-          <option value="crowd">Crowd - Crowd Shot</option>
-        </Select>
-
-        {showCoverage && (
-          <Select
-            label="Coverage"
-            value={camera.coverage}
-            onChange={(e) => {
-              setCamera({ coverage: e.target.value as typeof camera.coverage });
-              handleCameraCompositionChange('coverage');
+        <div className="camera-param-chain">
+          <VisualDropdown
+            label="Subject Count"
+            value={camera.subjectCount}
+            onChange={(subjectCount) => {
+              setCamera({ subjectCount });
+              handleCameraCompositionChange('subjectCount');
             }}
-          >
-            <option value="clean">Clean Single</option>
-            <option value="dirty-single">Dirty Single</option>
-            <option value="ots">Over The Shoulder (OTS)</option>
-            <option value="one-half">1½ Shot (One and a Half)</option>
-            <option value="pov">Point Of View (POV)</option>
-          </Select>
-        )}
+            options={SUBJECT_COUNT_OPTIONS}
+            triggerVariant="thumbnailRight"
+            menuVariant="grid"
+            size="md"
+            menuColumns={2}
+            cellWidth={96}
+            cellHeight={88}
+            uiSection={uiSectionProps(UI_SECTIONS.studioCameraSubjectCount)}
+          />
+
+          {showCoverage && (
+            <>
+              <div className="camera-param-chain__connector" aria-hidden>
+                <svg
+                  className="camera-param-chain__arrow"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12l7 7 7-7" />
+                </svg>
+              </div>
+
+              <VisualDropdown
+                label="Coverage"
+                value={camera.coverage}
+                onChange={(coverage) => {
+                  setCamera({ coverage });
+                  handleCameraCompositionChange('coverage');
+                }}
+                options={COVERAGE_OPTIONS}
+                triggerVariant="thumbnailRight"
+                menuVariant="grid"
+                size="md"
+                menuColumns={2}
+                cellWidth={96}
+                cellHeight={88}
+                uiSection={uiSectionProps(UI_SECTIONS.studioCameraCoverage)}
+              />
+            </>
+          )}
+        </div>
 
         <p className="text-xs text-brand-400 font-medium px-1 -mt-1">{compositionLabel}</p>
 

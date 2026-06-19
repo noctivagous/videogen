@@ -22,9 +22,9 @@ export function resolveReference(ref) {
   if (!ref) return null;
 
   const candidates = [
-    rawJpgPath(ref),
     stockPath(ref),
     stockPath(ref.replace(/\.png$/i, '.jpg')),
+    rawJpgPath(ref),
   ];
 
   for (const p of candidates) {

@@ -83,7 +83,9 @@
         "lighting": "lighting/",
         "composition": "composition/",
         "movements": "movements/",
-        "atmosphere": "atmosphere/"
+        "atmosphere": "atmosphere/",
+        "subjectCounts": "subject-counts/",
+        "coverage": "coverage/"
       },
       "naming": "Lowercase abbr; replace slashes with hyphens (LS/WS → ls-ws.jpg)"
     },
@@ -169,6 +171,34 @@
       "framing": "Medium shot waist-up constant — atmosphere effect fills the frame around and in front of the mannequin",
       "emphasis": "The atmospheric effect is the primary subject — large-scale, filling the environment around and interacting with the mannequin. Mannequin remains in standardPose, passive to the atmosphere.",
       "forbidden": "No text, no weather icons, no diagrams, no fantasy elements beyond the named effect"
+    },
+    "subjectCounts": {
+      "category": "Subject Count",
+      "sectionKey": "subjectCounts",
+      "sectionId": "subjectCounts",
+      "folder": "subject-counts/",
+      "inherits": "Global conventions (subject, facialFeatures, wardrobe, standardPose, noText, outputSpec, environment)",
+      "anchorFile": "subject-counts/1s.jpg",
+      "anchorRole": "Generate one-shot (1S) first from male MS master. Pass anchorFile as image_paths for two-shot and three-shot so mannequin identity and studio stay consistent.",
+      "matchReference": "Use the exact same matte gray mannequin identity, sculpted gray wardrobe, neutral gray studio, and cinematic 35mm lens look from the reference image.",
+      "framing": "Medium shot waist up for 1S, 2S, and 3S. Medium wide knees-up for group. Long shot for crowd.",
+      "emphasis": "The number of distinct mannequin subjects in frame is the primary visual subject — each subject clearly separated, facing camera, standardPose.",
+      "femaleMannequin": "Matte gray female display mannequin with sculpted facial features, clean bob hairstyle, sculpted blouse with collar, sculpted skirt — unified gray hard-surface sculpt matching male mannequin material.",
+      "forbidden": "No text, no labels, no diagrams, no realistic humans, no overlapping subjects that read as one person, no action poses"
+    },
+    "coverage": {
+      "category": "Coverage",
+      "sectionKey": "coverage",
+      "sectionId": "coverage",
+      "folder": "coverage/",
+      "inherits": "Global conventions (subject, facialFeatures, wardrobe, standardPose, noText, outputSpec, environment)",
+      "anchorFile": "coverage/clean.jpg",
+      "anchorRole": "Generate clean single first from male MS master. Use OTS cutout master for OTS; other coverage types edit from clean or MS master.",
+      "matchReference": "Use the exact same matte gray male mannequin identity, sculpted gray dress shirt, belt, neutral gray studio, and cinematic 35mm lens look from the reference image.",
+      "framing": "Medium shot waist up for all coverage types unless POV requires subjective camera position.",
+      "emphasis": "The coverage relationship between camera, foreground obstructions, and on-camera subject is the primary visual subject.",
+      "otsSubject": "Foreground mannequin: back/shoulder only in sculpted gray dress shirt, soft blur. Facing-camera subject: second distinct matte gray male mannequin, standardPose, facing camera.",
+      "forbidden": "No text, no labels, no diagrams, no realistic humans, no action poses"
     }
   },
   "samples": [
@@ -710,6 +740,88 @@
       "file": "atmosphere/heat.jpg",
       "referenceFile": "angles/eye-level.jpg",
       "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up. Heat shimmer distortion visible in the air between camera and mannequin — wavy refractive ripples distort the mannequin silhouette and the background, as if looking across a hot surface. Warm baked oppressive tone, the mannequin slightly warped by the heat waves. Clear heat shimmer atmosphere demonstration."
+    },
+    {
+      "id": "subject-counts-1s",
+      "sectionKey": "subjectCounts",
+      "abbr": "1S",
+      "file": "subject-counts/1s.jpg",
+      "referenceFile": "subjects/male/ms.png",
+      "isAnchor": true,
+      "prompt": "Use the exact same matte gray male mannequin identity from the reference image — same face sculpt, side-parted hair, sculpted gray dress shirt, belt at waist. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Neutral gray studio, dark desaturated palette, cinematic 35mm lens. Medium shot waist up. One shot (single): exactly ONE mannequin subject alone in frame, facing camera, arms relaxed at sides. Clear one-shot demonstration."
+    },
+    {
+      "id": "subject-counts-2s",
+      "sectionKey": "subjectCounts",
+      "abbr": "2S",
+      "file": "subject-counts/2s.jpg",
+      "referenceFile": "subjects/male/ms.png",
+      "prompt": "Use the exact same matte gray male mannequin from the reference image on the left. Add a second distinct matte gray female display mannequin on the right — sculpted bob hairstyle, sculpted blouse with collar, sculpted skirt, unified gray hard-surface sculpt, different face sculpt and proportions from the male. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Neutral gray studio, cinematic 35mm lens. Medium shot waist up. Two shot: exactly TWO mannequin subjects side by side, both facing camera, arms at sides, equal prominence. Clear two-shot demonstration."
+    },
+    {
+      "id": "subject-counts-3s",
+      "sectionKey": "subjectCounts",
+      "abbr": "3S",
+      "file": "subject-counts/3s.jpg",
+      "referenceFile": "subject-counts/2s.jpg",
+      "prompt": "Use the exact same two matte gray mannequins from the reference image — male in gray dress shirt left, female in gray blouse center-left. Add a third distinct matte gray male mannequin on the right — different face sculpt from the first male, same sculpted gray dress shirt and belt, standardPose. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Neutral gray studio, cinematic 35mm lens. Medium shot waist up. Three shot: exactly THREE mannequin subjects across frame, all facing camera, arms at sides. Clear three-shot demonstration."
+    },
+    {
+      "id": "subject-counts-group",
+      "sectionKey": "subjectCounts",
+      "abbr": "Group",
+      "file": "subject-counts/group.jpg",
+      "referenceFile": "subjects/male/fs.png",
+      "prompt": "Use the exact same matte gray male mannequin identity and studio from the reference. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Neutral gray studio, cinematic 35mm lens. Group ensemble shot: exactly five distinct matte gray mannequins (mix of male and female sculpts) arranged in a shallow row, all facing camera, standardPose, medium wide shot from knees up. Each subject clearly separated. Clear group shot demonstration."
+    },
+    {
+      "id": "subject-counts-crowd",
+      "sectionKey": "subjectCounts",
+      "abbr": "Crowd",
+      "file": "subject-counts/crowd.jpg",
+      "referenceFile": "subjects/male/gv.png",
+      "prompt": "Match the matte gray mannequin material and neutral gray studio from the reference. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Neutral gray studio, cinematic 35mm lens. Crowd shot: many matte gray mannequin figures (at least twelve) filling the frame at varied depths — some larger in foreground, many smaller in background, mix of male and female sculpts, all facing camera loosely, long shot framing. Clear crowd shot demonstration."
+    },
+    {
+      "id": "coverage-clean",
+      "sectionKey": "coverage",
+      "abbr": "Clean",
+      "file": "coverage/clean.jpg",
+      "referenceFile": "subjects/male/ms.png",
+      "isAnchor": true,
+      "prompt": "Use the exact same matte gray male mannequin identity from the reference image — same face sculpt, side-parted hair, sculpted gray dress shirt, belt at waist. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Neutral gray studio, cinematic 35mm lens. Medium shot waist up. Clean single: exactly ONE unobstructed mannequin subject alone in frame, facing camera, arms at sides, no foreground elements, no partial second subject. Clear clean single coverage demonstration."
+    },
+    {
+      "id": "coverage-dirty-single",
+      "sectionKey": "coverage",
+      "abbr": "Dirty",
+      "file": "coverage/dirty-single.jpg",
+      "referenceFile": "subjects/male/ms.png",
+      "prompt": "Use the exact same matte gray male mannequin from the reference as the on-camera subject facing camera, medium shot waist up, arms at sides. Add a large soft-blurred foreground element on the left edge: back of shoulder and side of head of another matte gray mannequin in sculpted gray dress shirt, heavily out of focus, partially blocking the frame. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Neutral gray studio, cinematic 35mm lens. Clear dirty single coverage demonstration."
+    },
+    {
+      "id": "coverage-ots",
+      "sectionKey": "coverage",
+      "abbr": "OTS",
+      "file": "coverage/ots.jpg",
+      "referenceFile": "subjects/ots/male-over-male.png",
+      "prompt": "Use the exact same over-the-shoulder composition from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Neutral gray studio, cinematic 35mm lens. Over-the-shoulder coverage: foreground back and shoulder of first matte gray male mannequin in sculpted gray dress shirt, soft blur. Facing camera: second distinct matte gray male mannequin in sculpted gray dress shirt, medium shot waist up, arms at sides. Clear OTS coverage demonstration."
+    },
+    {
+      "id": "coverage-one-half",
+      "sectionKey": "coverage",
+      "abbr": "1½",
+      "file": "coverage/one-half.jpg",
+      "referenceFile": "subjects/male/ms.png",
+      "prompt": "Use the exact same matte gray male mannequin from the reference as the primary on-camera subject, medium shot waist up, facing camera, positioned in the left two-thirds of frame. Add a partial second matte gray male mannequin at the right edge — only shoulder, side of head, and upper arm visible, soft blur, not fully in frame. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Neutral gray studio, cinematic 35mm lens. Clear one-and-a-half shot coverage demonstration."
+    },
+    {
+      "id": "coverage-pov",
+      "sectionKey": "coverage",
+      "abbr": "POV",
+      "file": "coverage/pov.jpg",
+      "referenceFile": "subjects/male/ms.png",
+      "prompt": "Use the exact same matte gray male mannequin identity from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Neutral gray studio, cinematic 35mm lens. Point-of-view coverage: subjective first-person camera view looking directly at the mannequin face and sculpted gray dress shirt in medium shot waist up, arms at sides, as if the viewer is another character in the scene. Clear POV coverage demonstration."
     }
   ]
 }

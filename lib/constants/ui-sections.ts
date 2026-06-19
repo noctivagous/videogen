@@ -39,6 +39,8 @@ export const UI_SECTIONS = {
 
   studioCameraControls: { id: 'studio-camera-controls', name: 'Camera Controls' },
   studioCameraFieldSize: { id: 'studio-camera-field-size', name: 'Field Size Dropdown' },
+  studioCameraSubjectCount: { id: 'studio-camera-subject-count', name: 'Subject Count Dropdown' },
+  studioCameraCoverage: { id: 'studio-camera-coverage', name: 'Coverage Dropdown' },
   studioCameraFrameComposition: { id: 'studio-camera-frame-composition', name: 'Frame Composition Controls' },
   studioCameraMotionSubject: { id: 'studio-camera-motion-subject', name: 'Motion & Subject Controls' },
 

@@ -967,3 +967,23 @@ input[type="range"]::-moz-range-thumb:hover {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+.camera-param-chain {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.camera-param-chain__connector {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.125rem 0;
+  color: #ffffff;
+}
+
+.camera-param-chain__arrow {
+  width: 1.125rem;
+  height: 1.125rem;
+  opacity: 0.9;
+}
