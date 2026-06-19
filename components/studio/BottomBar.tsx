@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo } from 'react';
-import { ReferenceSlots } from '@/components/studio/ReferenceSlots';
 import { MentionTextarea } from '@/components/ui/MentionTextarea';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { buildPromptMentionOptions } from '@/lib/studio/prompt-mentions';
@@ -29,13 +28,6 @@ export function BottomBar() {
     <div className="border-t border-surface-700" {...uiSectionProps(UI_SECTIONS.studioBottomBar)}>
       <div className="p-4 space-y-3">
         <div className="flex gap-3 items-stretch">
-          <div
-            className="studio-bottom-panel shrink-0 flex flex-col"
-            {...uiSectionProps(UI_SECTIONS.studioBottomReferences)}
-          >
-            <ReferenceSlots />
-          </div>
-
           <div
             className="studio-bottom-panel flex-1 flex flex-col min-w-0"
             {...uiSectionProps(UI_SECTIONS.studioBottomPrompt)}
@@ -99,9 +91,7 @@ export function BottomBar() {
           </div>
         </div>
 
-        <div className="studio-bottom-panel" {...uiSectionProps(UI_SECTIONS.studioBottomShotTimeline)}>
-          <ShotTimeline />
-        </div>
+        <ShotTimeline />
       </div>
     </div>
   );

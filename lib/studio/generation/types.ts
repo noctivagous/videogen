@@ -3,6 +3,8 @@ import type { Modality, ProviderModel } from '@/lib/types/studio';
 export interface GenerationRef {
   role: string;
   url: string;
+  /** 0-based reference slot; used by xAI image-to-video-only models. */
+  slotIndex?: number;
 }
 
 export interface GenerationRequest {

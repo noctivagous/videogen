@@ -41,9 +41,9 @@ export function buildPreviewFramePayload(
   }
 
   if (providerId === 'xai' && refs.length > 0) {
-    prompt = augmentPromptForXAIImageEdit(prompt, refs, cinematographyRefs);
+    prompt = augmentPromptForXAIImageEdit(prompt, refs, cinematographyRefs, payload.lighting);
   } else if (refs.length > 0 && cinematographyRefs) {
-    const refLine = buildReferencePromptLine(refs);
+    const refLine = buildReferencePromptLine(refs, payload.lighting);
     if (refLine && !hasPromptImageReferences(prompt)) {
       prompt = `${refLine} ${prompt}`;
     }

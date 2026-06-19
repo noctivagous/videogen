@@ -4,7 +4,9 @@ import { useEffect, useRef, useState, type DragEvent } from 'react';
 import { normalizeReferenceRole } from '@/lib/constants/camera';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { resolveReferenceDisplayUrl } from '@/lib/storage/reference-url';
+import { getEffectiveModelId } from '@/lib/studio/provider-modalities';
 import { getReferenceSlotLabel, isCinematographyRefs } from '@/lib/studio/reference-slots';
+import { restrictsReferenceSlotsToFirst } from '@/lib/studio/xai-video-models';
 import { useStudioStore } from '@/store/useStudioStore';
 
 function isImageDrag(e: DragEvent): boolean {
@@ -20,6 +22,7 @@ function isImageDrag(e: DragEvent): boolean {
 export function ReferenceSlots() {
   const shots = useStudioStore((s) => s.shots);
   const currentShot = useStudioStore((s) => s.currentShot);
+  const ai = useStudioStore((s) => s.ai);
   const setReference = useStudioStore((s) => s.setReference);
   const cycleReferenceRole = useStudioStore((s) => s.cycleReferenceRole);
   const toggleCinematographyRefs = useStudioStore((s) => s.toggleCinematographyRefs);
@@ -27,6 +30,8 @@ export function ReferenceSlots() {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
+  const videoModelId = getEffectiveModelId(ai);
+  const singleImageOnly = restrictsReferenceSlotsToFirst(ai.defaultVideoProvider, videoModelId);
 
   useEffect(() => {
     const clearDrag = () => setDragOverIndex(null);
@@ -75,25 +80,32 @@ export function ReferenceSlots() {
           const imgData = resolveReferenceDisplayUrl(shot.references[index]);
           const role = normalizeReferenceRole(shot.referenceRoles[index] ?? 'None');
           const label = getReferenceSlotLabel(shot, index, role);
+          const slotDisabled = singleImageOnly && index > 0;
 
           return (
             <div
               key={index}
-              className={`reference-slot group ${imgData ? 'has-image' : ''} ${dragOverIndex === index ? 'drag-over' : ''}`}
+              className={`reference-slot group ${imgData ? 'has-image' : ''} ${dragOverIndex === index ? 'drag-over' : ''} ${slotDisabled ? 'reference-slot--disabled' : ''}`}
+              title={
+                slotDisabled
+                  ? 'Not sent to grok-imagine-video-1.5 — image-to-video uses Image 1 only'
+                  : undefined
+              }
               {...uiSectionProps(UI_SECTIONS.studioReferenceSlot, { suffix: index })}
               onClick={(e) => {
+                if (slotDisabled) return;
                 if (!(e.target as HTMLElement).closest('.reference-label') &&
                     !(e.target as HTMLElement).closest('.reference-remove')) {
                   fileInputs.current[index]?.click();
                 }
               }}
               onDragEnter={(e) => {
-                if (!isImageDrag(e)) return;
+                if (slotDisabled || !isImageDrag(e)) return;
                 e.preventDefault();
                 setDragOverIndex(index);
               }}
               onDragOver={(e) => {
-                if (!isImageDrag(e)) return;
+                if (slotDisabled || !isImageDrag(e)) return;
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'copy';
                 setDragOverIndex(index);
@@ -104,15 +116,16 @@ export function ReferenceSlots() {
                 }
               }}
               onDrop={(e) => {
+                if (slotDisabled) return;
                 e.preventDefault();
                 setDragOverIndex(null);
                 handleFile(index, e.dataTransfer.files[0]);
               }}
             >
               <span
-                className={`reference-label ${cinematographyRefs ? '' : 'pointer-events-none cursor-default hover:text-gray-400 hover:border-surface-700'}`}
+                className={`reference-label ${cinematographyRefs && !slotDisabled ? '' : 'pointer-events-none cursor-default hover:text-gray-400 hover:border-surface-700'}`}
                 onClick={(e) => {
-                  if (!cinematographyRefs) return;
+                  if (!cinematographyRefs || slotDisabled) return;
                   e.stopPropagation();
                   cycleReferenceRole(index);
                 }}
@@ -137,7 +150,12 @@ export function ReferenceSlots() {
                   <button
                     type="button"
                     className="reference-remove"
-                    onClick={(e) => { e.stopPropagation(); setReference(index, null); }}
+                    disabled={slotDisabled}
+                    onClick={(e) => {
+                      if (slotDisabled) return;
+                      e.stopPropagation();
+                      setReference(index, null);
+                    }}
                   >
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />

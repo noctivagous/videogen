@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { ColorPalettePreviewTable } from '@/components/studio/ColorPalettePreviewTable';
 import { CompositionOverlay } from '@/components/studio/CompositionOverlay';
+import { ReferenceSlots } from '@/components/studio/ReferenceSlots';
 import { GeneratedVideoStrip } from '@/components/studio/GeneratedVideoStrip';
 import { FrameViewSegment } from '@/components/studio/FrameViewSegment';
 import { ModelPreviewScene } from '@/components/studio/ModelPreviewScene';
@@ -143,7 +144,12 @@ export function PreviewPanel() {
         <ModelPreviewScene payload={payload} imageUrl={modelPreviewUrl} stale={modelStale} />
       );
     }
-    return <ReferencePreviewScene payload={payload} />;
+    return (
+      <ReferencePreviewScene
+        payload={payload}
+        backdropOnly={previewSubMode === 'framing'}
+      />
+    );
   };
 
   const renderMainContent = () => {
@@ -175,6 +181,12 @@ export function PreviewPanel() {
             generatedVideoCount={generatedVideoCount}
           />
           <ColorPalettePreviewTable />
+          <div
+            className="preview-panel-shot-breakdown"
+            {...uiSectionProps(UI_SECTIONS.studioBottomReferences)}
+          >
+            <ReferenceSlots />
+          </div>
         </div>
         {shot && (
           <div className="absolute top-0 right-0 pointer-events-auto bg-surface-800 border border-surface-700 px-3 py-1 rounded-lg text-xs font-semibold text-gray-300">

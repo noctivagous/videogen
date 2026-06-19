@@ -9,8 +9,13 @@ import { getLookRecipe } from '@/lib/constants/look-recipes';
 import { isColorPaletteActive } from '@/lib/constants/color-palette';
 import { buildColorMoodPrompt } from '@/lib/studio/color-mood-prompt';
 import { expandPromptMentions } from '@/lib/studio/prompt-mentions';
+import { getEffectiveModelId } from '@/lib/studio/provider-modalities';
 import { formatReferenceRoleLabel, isCinematographyRefs } from '@/lib/studio/reference-slots';
 import { CHANNEL_LABELS, getProviderCapabilities } from '@/lib/studio/provider-capabilities';
+import {
+  filterRefsForImageToVideoOnly,
+  isXAIImageToVideoOnlyModel,
+} from '@/lib/studio/xai-video-models';
 import type {
   AIState,
   CameraSettings,
@@ -60,9 +65,13 @@ export function buildModelPayloadStack(input: {
   const videoProviderId = ai.defaultVideoProvider;
   const provider = getVideoProviderName(ai);
   const isCustom = isCustomProvider(videoProviderId, ai);
-  const capabilities = getProviderCapabilities(videoProviderId, isCustom);
+  const videoModelId = getEffectiveModelId(ai);
+  const capabilities = getProviderCapabilities(videoProviderId, isCustom, videoModelId);
 
-  const refs = buildGenerationRefs(shot);
+  let refs = buildGenerationRefs(shot);
+  if (videoProviderId === 'xai' && isXAIImageToVideoOnlyModel(videoModelId)) {
+    refs = filterRefsForImageToVideoOnly(refs);
+  }
   const cinematographyRefs = isCinematographyRefs(shot);
 
   let combinedPrompt = buildGenerationPrompt({
@@ -79,7 +88,7 @@ export function buildModelPayloadStack(input: {
   }
 
   if (videoProviderId === 'xai' && refs.length > 0) {
-    combinedPrompt = augmentPromptForXAI(combinedPrompt, refs, cinematographyRefs);
+    combinedPrompt = augmentPromptForXAI(combinedPrompt, refs, cinematographyRefs, lighting);
   }
 
   const blocks: PayloadStackBlock[] = [

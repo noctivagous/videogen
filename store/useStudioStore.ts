@@ -35,6 +35,7 @@ import {
   resolveModelSelectionForProvider,
 } from '@/lib/studio/provider-modalities';
 import { buildModelPayloadStack, buildShotPrompt } from '@/lib/studio/model-payload';
+import { restrictsReferenceSlotsToFirst } from '@/lib/studio/xai-video-models';
 import { applyFrameCompositionSmartDefaults } from '@/lib/studio/composition';
 import {
   cloneInheritedShotSettings,
@@ -718,6 +719,15 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   setReference(index, dataUrl) {
     const shot = get().getCurrentShot();
     if (!shot) return;
+    const { ai } = get();
+    const modelId = getEffectiveModelId(ai);
+    if (
+      dataUrl &&
+      restrictsReferenceSlotsToFirst(ai.defaultVideoProvider, modelId) &&
+      index > 0
+    ) {
+      return;
+    }
     const references = [...shot.references];
     references[index] = dataUrl;
     set((s) => ({
@@ -861,6 +871,15 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       return;
     }
 
+    const modelId = getEffectiveModelId(ai);
+    if (
+      restrictsReferenceSlotsToFirst(videoProviderId, modelId) &&
+      !shot.references[0]
+    ) {
+      get().showToast('grok-imagine-video-1.5 requires a starting image in Image 1', 'error');
+      return;
+    }
+
     const stack = buildModelPayloadStack({
       project,
       camera: shot.camera,
@@ -877,7 +896,6 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const customBaseUrl = isCustom
       ? ai.customProviders.find((p) => p.id === videoProviderId)?.baseUrl
       : undefined;
-    const modelId = getEffectiveModelId(ai);
     if (!isCustom && !modelId) {
       get().showToast('No video model available — re-test your video provider in Settings', 'error');
       return;

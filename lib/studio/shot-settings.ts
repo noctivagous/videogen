@@ -8,7 +8,15 @@ import {
 import { normalizeLensCamera } from '@/lib/constants/lens';
 import { isUserSubjectReference, normalizeStockSubjectRef } from '@/lib/constants/stock-demo';
 import { normalizeColorPalette } from '@/lib/constants/color-palette';
-import { STOCK_CAMERA, STOCK_LIGHTING, STOCK_MOTION, STOCK_PROMPT, STOCK_REFERENCE_ROLES } from '@/lib/constants/stock-project';
+import {
+  STOCK_BACKDROP_REF,
+  STOCK_CAMERA,
+  STOCK_CHARACTER_REF,
+  STOCK_LIGHTING,
+  STOCK_MOTION,
+  STOCK_PROMPT,
+  STOCK_REFERENCE_ROLES,
+} from '@/lib/constants/stock-project';
 import { stripLegacySceneBoilerplate } from '@/lib/studio/legacy-scene-boilerplate';
 import { migrateShotGeneratedVideos } from '@/lib/studio/shot-videos';
 import type {
@@ -82,6 +90,31 @@ export function cloneInheritedShotSettings(
   };
 }
 
+function isStockDemoSurferSubject(ref: string | null | undefined): boolean {
+  if (!ref) return false;
+  return ref === STOCK_CHARACTER_REF || ref.includes('demo-surfer');
+}
+
+/** Restore demo-surfer backdrop when a prior session stripped slot 1 but kept the Backdrop role. */
+function healStockDemoReferences(
+  references: (string | null)[],
+  referenceRoles: ReturnType<typeof normalizeReferenceRole>[],
+): (string | null)[] {
+  const refs = [...references];
+  while (refs.length < 3) refs.push(null);
+
+  const backdropIdx = referenceRoles.findIndex((role) => role === 'Backdrop');
+  if (backdropIdx < 0 || refs[backdropIdx]) return refs;
+
+  const subjectRef = refs.find(
+    (ref, i) => ref && referenceRoles[i] === 'Subject',
+  );
+  if (!isStockDemoSurferSubject(subjectRef)) return refs;
+
+  refs[backdropIdx] = STOCK_BACKDROP_REF;
+  return refs;
+}
+
 /** Migrate legacy shots (flat fieldSize / project-level prompt) into per-shot settings. */
 export function migrateShot(
   shot: Shot & {
@@ -100,6 +133,9 @@ export function migrateShot(
   };
 
   const generated = migrateShotGeneratedVideos(shot);
+  const referenceRoles = (shot.referenceRoles ?? [...STOCK_REFERENCE_ROLES]).map((role) =>
+    normalizeReferenceRole(role as string),
+  );
 
   return {
     id: shot.id,
@@ -117,16 +153,17 @@ export function migrateShot(
     motion: { ...defaults.motion, ...shot.motion },
     sceneSetup: stripLegacySceneBoilerplate(shot.sceneSetup ?? shot.prompt ?? defaults.sceneSetup),
     shotActivity: shot.shotActivity ?? '',
-    references: (shot.references ?? [null, null, null]).map((ref, i) => {
-      if (!ref) return ref;
-      const role = normalizeReferenceRole(shot.referenceRoles?.[i] ?? 'None');
-      if (role === 'Subject' && !isUserSubjectReference(ref)) {
-        return normalizeStockSubjectRef(ref, legacyCamera);
-      }
-      return ref;
-    }),
-    referenceRoles: (shot.referenceRoles ?? [...STOCK_REFERENCE_ROLES]).map((role) =>
-      normalizeReferenceRole(role as string),
+    referenceRoles,
+    references: healStockDemoReferences(
+      (shot.references ?? [null, null, null]).map((ref, i) => {
+        if (!ref) return ref;
+        const role = referenceRoles[i] ?? 'None';
+        if (role === 'Subject' && !isUserSubjectReference(ref)) {
+          return normalizeStockSubjectRef(ref, legacyCamera);
+        }
+        return ref;
+      }),
+      referenceRoles,
     ),
     frameComposition: {
       ...DEFAULT_FRAME_COMPOSITION,

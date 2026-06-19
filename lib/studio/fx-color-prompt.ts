@@ -40,9 +40,10 @@ export function buildDuotonePrompt(palette: ColorPaletteSettings, lightingStyle:
   const secondary = hueToColorName(palette.secondaryHue);
   const parts = [
     `${lightingStyle.replace(/-/g, ' ')} lighting`,
-    `duotone grading with ${primary} shadows and ${secondary} highlights`,
+    `full-frame duotone color grading with ${primary} shadows and ${secondary} highlights across subject and environment`,
     duotoneBalanceDescriptor(palette.duotoneBalance),
     palette.saturation < 35 ? 'muted duotone' : 'rich duotone color grading',
+    'strong visible two-tone color split, not naturalistic color',
   ];
   return parts.join(', ');
 }

@@ -15,16 +15,19 @@ import type { ScenePreviewPayload } from '@/lib/types/studio';
 
 interface ReferencePreviewSceneProps {
   payload: ScenePreviewPayload;
+  /** Framing mode: environment/backdrop only — subject placement comes from the composition overlay. */
+  backdropOnly?: boolean;
 }
 
-export function ReferencePreviewScene({ payload }: ReferencePreviewSceneProps) {
+export function ReferencePreviewScene({ payload, backdropOnly = false }: ReferencePreviewSceneProps) {
   const frame = payload.shot?.frameComposition ?? DEFAULT_FRAME_COMPOSITION;
   const aspectRatio = payload.project.aspectRatio || '16:9';
   const cinematographyRefs = isCinematographyRefs(payload.shot);
   const genericRefUrl = cinematographyRefs ? null : getFirstSlotReferenceUrl(payload.shot);
   const subjectUrl = getPreviewSubjectUrl(payload.shot, payload.camera);
 
-  const backdropUrl = cinematographyRefs ? getBackdropReference(payload.shot) : null;
+  const backdropUrl =
+    cinematographyRefs || backdropOnly ? getBackdropReference(payload.shot) : null;
 
   const backdropStyle = useMemo<CSSProperties>(
     () => getBackdropLayerStyle(frame.placement, payload.camera.angle),
@@ -59,6 +62,32 @@ export function ReferencePreviewScene({ payload }: ReferencePreviewSceneProps) {
 
   const fieldLabel =
     CAMERA_FIELD_SIZE_SHORT[payload.camera.fieldSize] || payload.camera.fieldSize.toUpperCase();
+
+  if (backdropOnly) {
+    return (
+      <div
+        className="reference-preview-scene absolute inset-0 overflow-hidden bg-[#242424]"
+        {...uiSectionProps(UI_SECTIONS.studioPreviewVectorScene)}
+      >
+        {backdropUrl && (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={backdropUrl}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 pointer-events-none"
+            style={backdropStyle}
+            draggable={false}
+          />
+        )}
+        <div className="absolute bottom-3 left-3 z-10 pointer-events-none">
+          <span className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-md bg-surface-900/75 border border-surface-600 text-gray-300">
+            {fieldLabel}
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   if (genericRefUrl) {
     return (

@@ -1,5 +1,6 @@
 import { BUILT_IN_PROVIDERS } from '@/lib/constants/providers';
 import { hasGenerationAdapter } from '@/lib/studio/generation/capabilities';
+import { isXAIImageToVideoOnlyModel } from '@/lib/studio/xai-video-models';
 
 export type SettingChannel = 'api' | 'prompt' | 'preview-only' | 'unused';
 
@@ -21,7 +22,11 @@ export interface ProviderCapabilities {
 const PROMPT_NOTE = 'Included in assembled text prompt';
 const IMAGE_NOTE = 'Sent as reference still when Subject/Backdrop ref exists';
 const PREVIEW_NOTE = 'Blocking preview & composition overlay only';
-export function getProviderCapabilities(providerId: string, isCustom: boolean): ProviderCapabilities {
+export function getProviderCapabilities(
+  providerId: string,
+  isCustom: boolean,
+  videoModelId?: string,
+): ProviderCapabilities {
   if (isCustom) {
     return {
       providerId: 'custom',
@@ -38,15 +43,22 @@ export function getProviderCapabilities(providerId: string, isCustom: boolean): 
 
   if (generates) {
     const isXAI = providerId === 'xai';
-    const subjectRefNote = isXAI
-      ? 'Subject ref — with Backdrop, sent as <IMAGE_1> (reference-to-video; does not lock first frame)'
-      : IMAGE_NOTE;
-    const backdropRefNote = isXAI
-      ? 'Backdrop ref — with Subject, sent as <IMAGE_2> (reference-to-video)'
-      : 'Sent as reference image when provider supports it (e.g. xAI)';
-    const summary = isXAI
-      ? `${label} BYOK adapter: Subject + Backdrop use reference-to-video (both refs influence output without locking the first frame). Subject-only or Backdrop-only uses image-to-video (locks starting frame). Other providers send one image (Subject preferred). Camera, lighting, and motion are folded into the prompt.`
-      : `${label} BYOK adapter sends your prompt and reference images using your API key. Only one reference image is sent (Subject preferred over Backdrop). Camera, lighting, and motion controls are folded into the assembled prompt.`;
+    const xaiImageToVideoOnly = isXAI && isXAIImageToVideoOnlyModel(videoModelId);
+    const subjectRefNote = xaiImageToVideoOnly
+      ? 'Image 1 — required starting frame, sent as API `image` (image-to-video only)'
+      : isXAI
+        ? 'Subject ref — with Backdrop, sent as <IMAGE_1> (reference-to-video; does not lock first frame)'
+        : IMAGE_NOTE;
+    const backdropRefNote = xaiImageToVideoOnly
+      ? 'Not available for grok-imagine-video-1.5 — use Image 1 only'
+      : isXAI
+        ? 'Backdrop ref — with Subject, sent as <IMAGE_2> (reference-to-video)'
+        : 'Sent as reference image when provider supports it (e.g. xAI)';
+    const summary = xaiImageToVideoOnly
+      ? `${label} BYOK adapter (grok-imagine-video-1.5): image-to-video only — Image 1 is the starting frame via API \`image\`. Prompt describes motion; camera, lighting, and motion controls are folded into the prompt.`
+      : isXAI
+        ? `${label} BYOK adapter: Subject + Backdrop use reference-to-video (both refs influence output without locking the first frame). Subject-only or Backdrop-only uses image-to-video (locks starting frame). Other providers send one image (Subject preferred). Camera, lighting, and motion are folded into the prompt.`
+        : `${label} BYOK adapter sends your prompt and reference images using your API key. Only one reference image is sent (Subject preferred over Backdrop). Camera, lighting, and motion controls are folded into the assembled prompt.`;
 
     return {
       providerId,

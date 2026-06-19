@@ -50,6 +50,20 @@ function appendGarnish(base: string, recipeId: string | null): string {
   return base ? `${base}, ${garnish}` : garnish;
 }
 
+/**
+ * Imperative look directive for video models (xAI Imagine, etc.).
+ * Look Library patches color palette and lighting; "colorize" alone under-describes that scope.
+ * Descriptive mood text alone often loses to reference-image pixels when refs are present.
+ */
+export function buildColorGradeDirective(lighting: LightingSettings): string {
+  const mood = buildColorMoodPrompt(lighting);
+  if (!mood) return '';
+  return (
+    'Apply this cinematic look to the entire video — color grade, lighting mood, and atmosphere ' +
+    `(subject, wardrobe, and environment): ${mood}`
+  );
+}
+
 export function buildColorMoodPrompt(lighting: LightingSettings): string {
   const palette = lighting.colorPalette;
   if (!palette || !isColorPaletteActive(palette)) return '';

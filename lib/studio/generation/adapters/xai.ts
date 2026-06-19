@@ -1,4 +1,3 @@
-import { LEGACY_MODEL_ALIASES } from '@/lib/constants/provider-models';
 import { resolveRefUrl } from '@/lib/studio/generation/adapters/refs.server';
 import {
   formatApiError,
@@ -11,15 +10,16 @@ import {
 import { augmentPromptForXAI } from '@/lib/studio/generation-prompt';
 import type { GenerationRequest, GenerationResult, ProviderTestResult } from '@/lib/studio/generation/types';
 import { inferModalitiesFromModelId, unionModalities } from '@/lib/studio/provider-modalities';
+import {
+  filterRefsForImageToVideoOnly,
+  isXAIImageToVideoOnlyModel,
+  normalizeXAIVideoModelId,
+} from '@/lib/studio/xai-video-models';
 import type { ProviderModel } from '@/lib/types/studio';
 
 const XAI_API = 'https://api.x.ai/v1';
 const XAI_VIDEO_POLL_MS = 5000;
 const XAI_VIDEO_MAX_POLLS = 58;
-
-function normalizeVideoModel(modelId: string): string {
-  return LEGACY_MODEL_ALIASES[modelId] ?? modelId;
-}
 
 function xaiVideoResolution(resolution: string): '720p' | '480p' {
   const { height } = parseResolution(resolution);
@@ -79,10 +79,21 @@ export async function generateWithXAI(req: GenerationRequest): Promise<Generatio
     if (!selected) {
       return { status: 'error', error: NO_MODEL_SELECTED_ERROR };
     }
-    const model = normalizeVideoModel(selected);
+    const model = normalizeXAIVideoModelId(selected);
     const duration = Math.min(Math.max(Math.round(req.duration), 1), 15);
+    const imageToVideoOnly = isXAIImageToVideoOnlyModel(model);
 
-    const refs = req.refs.filter((r) => r.url);
+    let refs = req.refs.filter((r) => r.url);
+    if (imageToVideoOnly) {
+      refs = filterRefsForImageToVideoOnly(refs);
+      if (refs.length === 0) {
+        return {
+          status: 'error',
+          error: 'grok-imagine-video-1.5 requires a starting image in Image 1 (image-to-video only)',
+        };
+      }
+    }
+
     const prompt = augmentPromptForXAI(req.prompt, refs, req.cinematographyRefs !== false);
 
     const body: Record<string, unknown> = {
@@ -93,7 +104,9 @@ export async function generateWithXAI(req: GenerationRequest): Promise<Generatio
       resolution: xaiVideoResolution(req.resolution),
     };
 
-    if (refs.length >= 2) {
+    if (imageToVideoOnly) {
+      body.image = { url: resolveRefUrl(refs[0].url) };
+    } else if (refs.length >= 2) {
       body.reference_images = refs.map((r) => ({ url: resolveRefUrl(r.url) }));
     } else if (refs.length === 1) {
       body.image = { url: resolveRefUrl(refs[0].url) };

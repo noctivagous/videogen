@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { getShotThumbnailOverlayLines, getShotThumbnailUrl } from '@/lib/studio/shot-display';
 import { getGeneratedVideoCount, getShotActiveVideoUrl } from '@/lib/studio/shot-videos';
@@ -7,36 +8,71 @@ import { useStudioStore } from '@/store/useStudioStore';
 
 export function ShotTimeline() {
   const shots = useStudioStore((s) => s.shots);
+  const currentShotId = useStudioStore((s) => s.currentShot);
   const selectShot = useStudioStore((s) => s.selectShot);
   const deleteShot = useStudioStore((s) => s.deleteShot);
   const addShot = useStudioStore((s) => s.addShot);
+  const [collapsed, setCollapsed] = useState(true);
+
+  const activeShot = shots.find((s) => s.id === currentShotId) || shots.find((s) => s.active) || shots[0];
 
   return (
-    <div {...uiSectionProps(UI_SECTIONS.studioShotTimeline)}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <svg className="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div
+      className={`studio-bottom-panel shot-list-panel${collapsed ? ' shot-list-panel--collapsed' : ''}`}
+      {...uiSectionProps(UI_SECTIONS.studioBottomShotTimeline)}
+    >
+      <div
+        className="shot-list-header flex items-center justify-between gap-2"
+        {...uiSectionProps(UI_SECTIONS.studioShotTimeline)}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <svg className="w-4 h-4 text-brand-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
           </svg>
-          <label className="text-xs uppercase tracking-wider font-semibold text-gray-300">Shot List</label>
-          <span className="text-xs text-gray-500 bg-surface-700 px-2 py-0.5 rounded">
+          <span className="text-xs uppercase tracking-wider font-semibold text-gray-300">Shot List</span>
+          <span className="text-xs text-gray-500 bg-surface-700 px-2 py-0.5 rounded shrink-0">
             {shots.length} shot{shots.length !== 1 ? 's' : ''}
           </span>
+          {collapsed && activeShot && (
+            <span className="text-xs text-gray-500 truncate hidden sm:inline">
+              · {activeShot.name}
+            </span>
+          )}
         </div>
-        <button
-          type="button"
-          onClick={addShot}
-          className="text-xs text-brand-400 hover:text-brand-300 font-medium flex items-center gap-1 transition-colors"
-          title="Append a new shot after the current list"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-          </svg>
-          Add Shot
-        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={addShot}
+            className="text-xs text-brand-400 hover:text-brand-300 font-medium flex items-center gap-1 transition-colors px-2 py-1 rounded-lg hover:bg-surface-700/60"
+            title="Append a new shot after the current list"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+            </svg>
+            <span className="hidden sm:inline">Add Shot</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setCollapsed((c) => !c)}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-surface-700/60 transition-colors"
+            aria-expanded={!collapsed}
+            aria-label={collapsed ? 'Expand shot list' : 'Collapse shot list'}
+            title={collapsed ? 'Expand shot list' : 'Collapse shot list'}
+          >
+            <svg
+              className={`w-4 h-4 transition-transform ${collapsed ? '' : 'rotate-180'}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7" />
+            </svg>
+          </button>
+        </div>
       </div>
 
-      <div className="flex gap-3 overflow-x-auto pb-2">
+      {!collapsed && (
+      <div className="flex gap-3 overflow-x-auto pb-2 mt-3">
         {shots.map((shot) => {
           const thumbUrl = getShotThumbnailUrl(shot);
           const [overlayLine1, overlayLine2] = getShotThumbnailOverlayLines(shot);
@@ -116,6 +152,7 @@ export function ShotTimeline() {
           <span className="text-[10px] font-semibold uppercase tracking-wider">Add Shot</span>
         </button>
       </div>
+      )}
     </div>
   );
 }
