@@ -1,0 +1,212 @@
+{
+  "referenceFile": "angles/eye-level.jpg",
+  "basePrompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, neutral standing pose, and medium shot waist-up framing from the reference image. Pure photographic cinematic color grading reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Cinematic 35mm lens. The color grade and mood is the primary subject:",
+  "categories": [
+    {
+      "id": "daylight",
+      "file": "looks/categories/daylight.jpg",
+      "abbr": "Daylight",
+      "clause": "natural daylight color grades — warm golden sunset glow on mannequin and studio, bright airy high-key luminance, readable warm-cool daylight mood"
+    },
+    {
+      "id": "shadow",
+      "file": "looks/categories/shadow.jpg",
+      "abbr": "Shadow",
+      "clause": "shadow-forward cinematic grades — deep noir chiaroscuro contrast, backlit silhouette rim edges, bleak cool desaturated overcast mood"
+    },
+    {
+      "id": "vintage-print",
+      "file": "looks/categories/vintage-print.jpg",
+      "abbr": "Vintage",
+      "clause": "vintage print film color grades — faded warm archival tones, punchy classic photochemical saturation, antique sepia warmth, gritty bleach-bypass desaturation"
+    },
+    {
+      "id": "blockbuster",
+      "file": "looks/categories/blockbuster.jpg",
+      "abbr": "Blockbuster",
+      "clause": "blockbuster commercial color grades — teal shadows with orange highlights, desaturated epic restraint, warm sun-drenched hero tones"
+    },
+    {
+      "id": "neon-night",
+      "file": "looks/categories/neon-night.jpg",
+      "abbr": "Neon",
+      "clause": "neon and night moods — electric magenta-cyan city glow, warm tungsten practical intimacy, amber sodium streetlight haze"
+    },
+    {
+      "id": "surreality",
+      "file": "looks/categories/surreality.jpg",
+      "abbr": "Surreal",
+      "clause": "surreal color FX grades — infrared false-color magenta foliage tones, thermal heat-map gradients, night-vision green phosphor cast, bold duotone split, selective vivid accent on monochrome"
+    },
+    {
+      "id": "worlds",
+      "file": "looks/categories/worlds.jpg",
+      "abbr": "Worlds",
+      "clause": "world-building palettes — lush saturated eco greens, brass steampunk warmth, phosphor green terminal cast, whimsical pastel production design, cold nordic noir desaturation"
+    }
+  ],
+  "recipes": [
+    {
+      "id": "daylight-warm-dusk",
+      "file": "looks/daylight-warm-dusk.jpg",
+      "abbr": "Warm Dusk",
+      "clause": "warm dusk golden hour color grade — rich amber sunset glow, long soft shadows, magic hour warmth on mannequin face and gray studio"
+    },
+    {
+      "id": "daylight-cool-twilight",
+      "file": "looks/daylight-cool-twilight.jpg",
+      "abbr": "Cool Twilight",
+      "clause": "cool twilight blue hour color grade — deep blue ambient skylight, desaturated cool tones, civil twilight mood on mannequin and studio"
+    },
+    {
+      "id": "daylight-bright-airy",
+      "file": "looks/daylight-bright-airy.jpg",
+      "abbr": "Bright Airy",
+      "clause": "bright airy high-key daylight grade — luminous clean whites, low contrast, open even exposure, fresh morning clarity"
+    },
+    {
+      "id": "shadow-detective-noir",
+      "file": "looks/shadow-detective-noir.jpg",
+      "abbr": "Noir",
+      "clause": "detective noir black and white grade — high contrast monochrome, chiaroscuro hard shadows, film noir dramatic shadow sculpting"
+    },
+    {
+      "id": "shadow-backlit-shape",
+      "file": "looks/shadow-backlit-shape.jpg",
+      "abbr": "Silhouette",
+      "clause": "backlit silhouette monochrome grade — subject dark graphic shape against bright background, crisp rim light outlining head and shoulders"
+    },
+    {
+      "id": "shadow-bleak-overcast",
+      "file": "looks/shadow-bleak-overcast.jpg",
+      "abbr": "Bleak",
+      "clause": "bleak overcast grade — heavily desaturated cool grays, flat diffused light, muted hopeless atmosphere"
+    },
+    {
+      "id": "vintage-archive-warmth",
+      "file": "looks/vintage-archive-warmth.jpg",
+      "abbr": "Archive",
+      "clause": "vintage archive warmth grade — faded warm photograph tones, gentle fade, nostalgic print yellowing"
+    },
+    {
+      "id": "vintage-hyper-classic",
+      "file": "looks/vintage-hyper-classic.jpg",
+      "abbr": "Classic",
+      "clause": "hyper classic Hollywood grade — rich warm skin-adjacent tones with cool shadow accents, punchy photochemical saturation"
+    },
+    {
+      "id": "vintage-antique-tint",
+      "file": "looks/vintage-antique-tint.jpg",
+      "abbr": "Antique",
+      "clause": "antique tint grade — sepia-leaning paper warmth, aged photograph brown-gold toning across entire frame"
+    },
+    {
+      "id": "vintage-silver-grit",
+      "file": "looks/vintage-silver-grit.jpg",
+      "abbr": "Silver Grit",
+      "clause": "silver grit bleach bypass grade — desaturated high contrast, metallic silvery mid-tones, gritty crushed color"
+    },
+    {
+      "id": "blockbuster-complementary-punch",
+      "file": "looks/blockbuster-complementary-punch.jpg",
+      "abbr": "Teal-Orange",
+      "clause": "complementary punch blockbuster grade — teal cyan shadows, warm orange highlights, commercial color contrast"
+    },
+    {
+      "id": "blockbuster-desaturated-epic",
+      "file": "looks/blockbuster-desaturated-epic.jpg",
+      "abbr": "Epic",
+      "clause": "desaturated epic blockbuster grade — restrained muted palette, cool dawn mist, cinematic scale through subdued color"
+    },
+    {
+      "id": "blockbuster-warm-hero",
+      "file": "looks/blockbuster-warm-hero.jpg",
+      "abbr": "Warm Hero",
+      "clause": "warm hero blockbuster grade — sun-drenched golden warmth, rich sunset skin-tone warmth on mannequin and environment"
+    },
+    {
+      "id": "neon-electric-city",
+      "file": "looks/neon-electric-city.jpg",
+      "abbr": "Electric",
+      "clause": "electric city neon grade — hyper-saturated magenta and cyan split lighting, rainy neon reflections, cyberpunk night glow"
+    },
+    {
+      "id": "neon-tungsten-glow",
+      "file": "looks/neon-tungsten-glow.jpg",
+      "abbr": "Tungsten",
+      "clause": "tungsten glow night grade — warm amber practical lamp light, dark interior, intimate low-key warmth"
+    },
+    {
+      "id": "neon-street-sodium",
+      "file": "looks/neon-street-sodium.jpg",
+      "abbr": "Sodium",
+      "clause": "street sodium grade — orange sodium vapor streetlight cast, foggy amber urban night haze"
+    },
+    {
+      "id": "neon-candle-intimacy",
+      "file": "looks/neon-candle-intimacy.jpg",
+      "abbr": "Candle",
+      "clause": "candle intimacy grade — soft warm candlelight glow, deep shadows, flickering warm practical falloff on face"
+    },
+    {
+      "id": "surreality-false-color",
+      "file": "looks/surreality-false-color.jpg",
+      "abbr": "False Color",
+      "clause": "false color infrared grade — surreal magenta and pink foliage tones, hyper-saturated false-color spectrum remap on studio scene"
+    },
+    {
+      "id": "surreality-heat-map",
+      "file": "looks/surreality-heat-map.jpg",
+      "abbr": "Heat Map",
+      "clause": "thermal heat map grade — hot red-orange to cool blue false-color thermal imaging gradient across mannequin and background"
+    },
+    {
+      "id": "surreality-surveillance-green",
+      "file": "looks/surreality-surveillance-green.jpg",
+      "abbr": "NVG",
+      "clause": "surveillance night vision grade — green phosphor cast, grainy low-light security camera aesthetic, cool green monochrome glow"
+    },
+    {
+      "id": "surreality-duotone-pop",
+      "file": "looks/surreality-duotone-pop.jpg",
+      "abbr": "Duotone",
+      "clause": "duotone pop grade — bold two-hue split with violet shadows and amber highlights, graphic poster-like color separation"
+    },
+    {
+      "id": "surreality-isolated-accent",
+      "file": "looks/surreality-isolated-accent.jpg",
+      "abbr": "Accent",
+      "clause": "isolated accent grade — black and white monochrome scene with single vivid red accent color on mannequin dress shirt only, selective color isolation"
+    },
+    {
+      "id": "worlds-eco-bright",
+      "file": "looks/worlds-eco-bright.jpg",
+      "abbr": "Eco",
+      "clause": "eco bright world grade — lush saturated greens, sunlit clarity, vibrant natural green color cast on studio environment"
+    },
+    {
+      "id": "worlds-brass-age",
+      "file": "looks/worlds-brass-age.jpg",
+      "abbr": "Brass",
+      "clause": "brass age steampunk grade — warm brass and copper industrial tones, dusty amber-brown atmosphere"
+    },
+    {
+      "id": "worlds-terminal-cast",
+      "file": "looks/worlds-terminal-cast.jpg",
+      "abbr": "Terminal",
+      "clause": "terminal cast grade — phosphor green digital world glow, dark background, matrix-like green color wash"
+    },
+    {
+      "id": "worlds-pastel-stage",
+      "file": "looks/worlds-pastel-stage.jpg",
+      "abbr": "Pastel",
+      "clause": "pastel stage grade — soft whimsical pastel production colors, high-key gentle pink blue and mint tones"
+    },
+    {
+      "id": "worlds-nordic-noir",
+      "file": "looks/worlds-nordic-noir.jpg",
+      "abbr": "Nordic",
+      "clause": "nordic noir grade — cold desaturated blue-gray palette, misty low-key scandinavian crime-drama mood"
+    }
+  ]
+}

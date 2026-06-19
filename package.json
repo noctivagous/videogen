@@ -16,7 +16,8 @@
     "stock:generate": "node scripts/generate-mannequin-cutouts.mjs",
     "stock:matte": "node scripts/matte-cutouts.mjs",
     "stock:pipeline": "node scripts/generate-mannequin-cutouts.mjs && node scripts/matte-cutouts.mjs",
-    "stock:previews": "node scripts/generate-stock-previews.mjs"
+    "stock:previews": "node scripts/generate-stock-previews.mjs",
+    "stock:looks": "node scripts/generate-look-previews.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",

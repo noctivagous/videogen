@@ -3,8 +3,11 @@
 import { useState } from 'react';
 import { VisualDropdown } from '@/components/ui/VisualDropdown';
 import {
-  LOOK_CATEGORIES,
-  LOOK_CATEGORY_LABELS,
+  LOOK_CATEGORY_OPTIONS,
+  LOOK_RECIPE_NONE,
+  lookRecipeDropdownOptions,
+} from '@/lib/constants/look-options';
+import {
   getLookRecipe,
   recipesForCategory,
   type LookCategory,
@@ -12,36 +15,22 @@ import {
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { useStudioStore } from '@/store/useStudioStore';
 
-const NONE_RECIPE = '__none__';
-
 export function LookLibraryPanel() {
   const palette = useStudioStore((s) => s.lighting.colorPalette);
   const applyLookRecipe = useStudioStore((s) => s.applyLookRecipe);
   const clearLookRecipe = useStudioStore((s) => s.clearLookRecipe);
-  const [browseCategory, setBrowseCategory] = useState<LookCategory>(LOOK_CATEGORIES[0]);
+  const [browseCategory, setBrowseCategory] = useState<LookCategory>(LOOK_CATEGORY_OPTIONS[0].value);
 
   const activeId = palette.activeLookRecipeId;
   const activeRecipe = getLookRecipe(activeId);
   const resolvedCategory = activeRecipe?.category ?? browseCategory;
 
-  const categoryOptions = LOOK_CATEGORIES.map((c) => ({
-    value: c,
-    label: LOOK_CATEGORY_LABELS[c],
-    description: `${recipesForCategory(c).length} looks`,
-  }));
+  const recipeOptions = lookRecipeDropdownOptions(resolvedCategory);
 
-  const recipeOptions = [
-    { value: NONE_RECIPE, label: 'None', description: 'No look preset applied' },
-    ...recipesForCategory(resolvedCategory).map((r) => ({
-      value: r.id,
-      label: r.label,
-      description: r.description,
-    })),
-  ];
-
-  const selectedRecipeValue = activeId && recipesForCategory(resolvedCategory).some((r) => r.id === activeId)
-    ? activeId
-    : NONE_RECIPE;
+  const selectedRecipeValue =
+    activeId && recipesForCategory(resolvedCategory).some((r) => r.id === activeId)
+      ? activeId
+      : LOOK_RECIPE_NONE;
 
   return (
     <div className="mb-5 pb-5 border-b border-surface-700" {...uiSectionProps(UI_SECTIONS.studioLookLibrary)}>
@@ -65,10 +54,13 @@ export function LookLibraryPanel() {
           label="Category"
           value={resolvedCategory}
           onChange={(c: LookCategory) => setBrowseCategory(c)}
-          options={categoryOptions}
-          triggerVariant="textOnly"
-          menuVariant="list"
+          options={LOOK_CATEGORY_OPTIONS}
+          triggerVariant="thumbnailRight"
+          menuVariant="grid"
           size="sm"
+          menuColumns={2}
+          cellWidth={96}
+          cellHeight={88}
           uiSection={uiSectionProps(UI_SECTIONS.studioLookLibraryCategory)}
         />
 
@@ -76,13 +68,16 @@ export function LookLibraryPanel() {
           label="Look"
           value={selectedRecipeValue}
           onChange={(id: string) => {
-            if (id === NONE_RECIPE) clearLookRecipe();
+            if (id === LOOK_RECIPE_NONE) clearLookRecipe();
             else applyLookRecipe(id);
           }}
           options={recipeOptions}
-          triggerVariant="textOnly"
-          menuVariant="list"
+          triggerVariant="thumbnailRight"
+          menuVariant="grid"
           size="sm"
+          menuColumns={2}
+          cellWidth={96}
+          cellHeight={88}
           uiSection={uiSectionProps(UI_SECTIONS.studioLookLibraryRecipe)}
         />
       </div>
