@@ -46,7 +46,7 @@ export const UI_SECTIONS = {
   studioPreviewHoverBar: { id: 'studio-preview-hover-bar', name: 'Preview Hover Bar' },
   studioPreviewVideoVersions: { id: 'studio-preview-video-versions', name: 'Generated Video Versions' },
   studioPreviewBlockingLabel: { id: 'studio-preview-blocking-label', name: 'Blocking Preview Label' },
-  studioPreviewResolutionBadge: { id: 'studio-preview-resolution-badge', name: 'Resolution Badge' },
+  studioPreviewResolutionBadge: { id: 'studio-preview-resolution-badge', name: 'Project Settings' },
 
   studioCameraControls: { id: 'studio-camera-controls', name: 'Camera Controls' },
   studioCameraShotSetup: { id: 'studio-camera-shot-setup', name: 'Shot Setup Controls' },

@@ -27,6 +27,15 @@
   background-color: #565656;
 }
 
+#studio-preview-resolution-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  pointer-events: auto;
+}
+
 .studio-bottom-panel {
   background: #131316;
   border: 1px solid #1c1c21;

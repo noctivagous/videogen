@@ -11,7 +11,7 @@ import { ModelPreviewScene } from '@/components/studio/ModelPreviewScene';
 import { PreviewSubModeSegment } from '@/components/studio/PreviewSubModeSegment';
 import { PromptStackView } from '@/components/studio/PromptStackView';
 import { ReferencePreviewScene } from '@/components/studio/ReferencePreviewScene';
-import { formatResolutionWithLabel } from '@/lib/constants/resolutions';
+import { PreviewProjectSettingsBar } from '@/components/studio/PreviewProjectSettingsBar';
 import { previewFramingFingerprint } from '@/lib/constants/subject-cutouts';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { formatDuration } from '@/lib/studio/shot-display';
@@ -90,7 +90,7 @@ export function PreviewPanel() {
     outletRef: themeOutletRef,
     inletRefs,
     onConnect: onThemeConnect,
-    enabled: themeEnabled,
+    enabled: themeEnabled && frameView === 'preview',
   });
 
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
@@ -147,8 +147,6 @@ export function PreviewPanel() {
       setFrameView('preview');
     }
   }, [frameView, generatedVideo, setFrameView]);
-
-  const resIndicator = `${formatResolutionWithLabel(project.resolution, project.aspectRatio)} — ${project.aspectRatio} @ ${project.fps}fps`;
 
   const previewBadge =
     frameView === 'generated' && generatedVideo
@@ -207,16 +205,20 @@ export function PreviewPanel() {
               onChange={setFrameView}
               generatedVideoCount={generatedVideoCount}
             />
-            <ThemeTransformerPanel
-              outletRef={themeOutletRef}
-              onOutletPointerDown={startDrag}
-            />
-            <div
-              className="preview-panel-shot-image-references"
-              {...uiSectionProps(UI_SECTIONS.studioBottomReferences)}
-            >
-              <ReferenceSlots inletRefs={inletRefs} hoverInlet={hoverInlet} />
-            </div>
+            {frameView === 'preview' && (
+              <>
+                <ThemeTransformerPanel
+                  outletRef={themeOutletRef}
+                  onOutletPointerDown={startDrag}
+                />
+                <div
+                  className="preview-panel-shot-image-references"
+                  {...uiSectionProps(UI_SECTIONS.studioBottomReferences)}
+                >
+                  <ReferenceSlots inletRefs={inletRefs} hoverInlet={hoverInlet} />
+                </div>
+              </>
+            )}
           </div>
         </div>
         {shot && (
@@ -238,7 +240,8 @@ export function PreviewPanel() {
           ref={previewStageRef}
           className="relative w-full h-full max-w-5xl mx-auto flex items-center justify-center min-h-0"
         >
-          <div className="relative shrink-0">
+          <div className="relative shrink-0 flex flex-col items-end gap-2">
+          <PreviewProjectSettingsBar />
           <div
             ref={previewFrameRef}
             className="preview-frame relative bg-surface-800 rounded-xl border-2 border-surface-700 overflow-hidden shadow-2xl group"
@@ -354,13 +357,6 @@ export function PreviewPanel() {
             <span className="text-xs text-gray-400">{timecode}</span>
           </div>
 
-          </div>
-
-          <div
-            className="absolute -top-3 right-4 bg-surface-800 border border-surface-700 px-3 py-1 rounded-lg text-xs text-gray-400 z-20 pointer-events-none"
-            {...uiSectionProps(UI_SECTIONS.studioPreviewResolutionBadge)}
-          >
-            {resIndicator}
           </div>
           </div>
         </div>
