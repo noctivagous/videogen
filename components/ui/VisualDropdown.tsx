@@ -17,6 +17,7 @@ export type VisualDropdownSize = 'sm' | 'md' | 'lg';
 
 export interface VisualDropdownProps<T extends string = string> {
   label?: string;
+  labelClassName?: string;
   value: T;
   onChange: (value: T) => void;
   options: VisualDropdownOption<T>[];
@@ -48,6 +49,7 @@ function optionBackgroundStyle(option: VisualDropdownOption): CSSProperties | un
 
 export function VisualDropdown<T extends string>({
   label,
+  labelClassName = '',
   value,
   onChange,
   options,
@@ -190,7 +192,10 @@ export function VisualDropdown<T extends string>({
       {...uiSection}
     >
       {label ? (
-        <label className="text-xs text-gray-400 mb-2 block" id={`${listboxId}-label`}>
+        <label
+          className={`text-xs text-gray-400 mb-2 block ${labelClassName}`.trim()}
+          id={`${listboxId}-label`}
+        >
           {label}
         </label>
       ) : null}

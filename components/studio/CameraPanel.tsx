@@ -27,6 +27,8 @@ import { Select } from '@/components/ui/Select';
 import { VisualDropdown } from '@/components/ui/VisualDropdown';
 import { useStudioStore } from '@/store/useStudioStore';
 
+const CAMERA_PANEL_LABEL = 'camera-panel-label';
+
 export function CameraPanel() {
   const camera = useStudioStore((s) => s.camera);
   const shots = useStudioStore((s) => s.shots);
@@ -51,12 +53,31 @@ export function CameraPanel() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
-        <h3 className="font-semibold text-sm uppercase tracking-wider text-gray-300">Camera</h3>
+        <h3 className="camera-panel-heading font-semibold text-sm uppercase tracking-wider">Camera</h3>
       </div>
 
+      <div className="border-t border-surface-700 mb-4" aria-hidden />
+
       <div className="space-y-4">
+        <div
+          className="space-y-4"
+          {...uiSectionProps(UI_SECTIONS.studioCameraShotSetup, { id: false })}
+        >
+          <div className="flex items-center gap-2 px-1">
+            <svg className="w-4 h-4 text-brand-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"
+              />
+            </svg>
+            <span className="camera-panel-subheading text-xs font-semibold uppercase tracking-wider">Shot Setup</span>
+          </div>
+
         <VisualDropdown
           label="Field Size"
+          labelClassName={CAMERA_PANEL_LABEL}
           value={camera.fieldSize}
           onChange={(fieldSize) => setCamera({ fieldSize })}
           options={FIELD_SIZE_OPTIONS}
@@ -72,6 +93,7 @@ export function CameraPanel() {
         <div className="camera-param-chain">
           <VisualDropdown
             label="Subject Count"
+            labelClassName={CAMERA_PANEL_LABEL}
             value={camera.subjectCount}
             onChange={(subjectCount) => {
               setCamera({ subjectCount });
@@ -103,6 +125,7 @@ export function CameraPanel() {
 
               <VisualDropdown
                 label="Coverage"
+                labelClassName={CAMERA_PANEL_LABEL}
                 value={camera.coverage}
                 onChange={(coverage) => {
                   setCamera({ coverage });
@@ -122,10 +145,11 @@ export function CameraPanel() {
         </div>
 
         <p className="text-xs text-brand-400 font-medium px-1 -mt-1">{compositionLabel}</p>
+        </div>
 
         <div className="border-t border-surface-700 pt-3 space-y-4" {...uiSectionProps(UI_SECTIONS.studioCameraFrameComposition, { id: false })}>
           <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Frame Composition</span>
+            <span className="camera-panel-subheading text-xs font-semibold uppercase tracking-wider">Frame Composition</span>
             <span className="text-[10px] font-medium text-brand-400 bg-brand-500/10 border border-brand-500/20 rounded px-1.5 py-0.5">
               {shot?.name || 'Shot'}
             </span>
@@ -133,6 +157,7 @@ export function CameraPanel() {
 
           <Select
             label="Composition Guide"
+            labelClassName={CAMERA_PANEL_LABEL}
             value={frame.guide}
             onChange={(e) => {
               const guide = e.target.value as typeof frame.guide;
@@ -148,7 +173,7 @@ export function CameraPanel() {
 
           {placementVisible && (
             <div className="parameter-enclosure">
-              <label className="text-xs text-gray-400 mb-1 block">Subject Placement</label>
+              <label className={`text-xs text-gray-400 mb-1 block ${CAMERA_PANEL_LABEL}`}>Subject Placement</label>
               <p className="text-[10px] text-gray-500 mb-2 leading-snug">
                 Tap a cell or dot below, or click/drag on the framing preview to reposition the subject.
               </p>
@@ -162,6 +187,7 @@ export function CameraPanel() {
           {headroomVisible && (
             <Select
               label="Headroom"
+              labelClassName={CAMERA_PANEL_LABEL}
               value={frame.headroom}
               onChange={(e) => setShotFrameComposition({ headroom: e.target.value as typeof frame.headroom })}
             >
@@ -172,7 +198,7 @@ export function CameraPanel() {
           )}
 
           <div className="parameter-enclosure flex items-center justify-between">
-            <label className="text-xs text-gray-400">Show Guides</label>
+            <label className={`text-xs text-gray-400 ${CAMERA_PANEL_LABEL}`}>Show Guides</label>
             <button
               type="button"
               className={`composition-toggle ${frame.showOverlay ? 'active' : ''}`}
@@ -186,6 +212,7 @@ export function CameraPanel() {
 
         <VisualDropdown
           label="Lens"
+          labelClassName={CAMERA_PANEL_LABEL}
           value={camera.lensType}
           onChange={(lensType) => setCamera({ lensType })}
           options={LENS_OPTIONS}
@@ -200,6 +227,7 @@ export function CameraPanel() {
 
         <RangeSlider
           label="Focal Length"
+          labelClassName={CAMERA_PANEL_LABEL}
           valueLabel={formatLensLabel(camera)}
           min={0}
           max={RETAIL_FOCAL_LENGTHS.length - 1}
@@ -215,6 +243,7 @@ export function CameraPanel() {
 
         <VisualDropdown
           label="Angle"
+          labelClassName={CAMERA_PANEL_LABEL}
           value={camera.angle}
           onChange={(angle) => setCamera({ angle })}
           options={ANGLE_OPTIONS}
@@ -229,6 +258,7 @@ export function CameraPanel() {
 
         <VisualDropdown
           label="Movement"
+          labelClassName={CAMERA_PANEL_LABEL}
           value={camera.movement}
           onChange={(movement) => setCamera({ movement })}
           options={MOVEMENT_OPTIONS}
@@ -243,6 +273,7 @@ export function CameraPanel() {
 
         <RangeSlider
           label="Aperture"
+          labelClassName={CAMERA_PANEL_LABEL}
           valueLabel={formatApertureLabel(camera.aperture)}
           min={0}
           max={APERTURE_STOPS.length - 1}
@@ -259,6 +290,7 @@ export function CameraPanel() {
 
         <VisualDropdown
           label="Depth of Field"
+          labelClassName={CAMERA_PANEL_LABEL}
           value={camera.dof}
           onChange={(dof) => setCamera({ dof })}
           options={DOF_OPTIONS}
@@ -276,11 +308,16 @@ export function CameraPanel() {
             <svg className="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
-            <h3 className="font-semibold text-xs uppercase tracking-wider text-gray-300">Motion & Subject</h3>
+            <h3 className="camera-panel-subheading font-semibold text-xs uppercase tracking-wider">Motion & Subject</h3>
           </div>
 
           <div className="space-y-4">
-            <Select label="Motion Intensity" value={motion.intensity} onChange={(e) => setMotion({ intensity: e.target.value })}>
+            <Select
+              label="Motion Intensity"
+              labelClassName={CAMERA_PANEL_LABEL}
+              value={motion.intensity}
+              onChange={(e) => setMotion({ intensity: e.target.value })}
+            >
               <option value="none">None</option>
               <option value="subtle">Subtle</option>
               <option value="moderate">Moderate</option>
@@ -288,7 +325,12 @@ export function CameraPanel() {
               <option value="intense">Intense</option>
             </Select>
 
-            <Select label="Subject Action" value={motion.subjectAction} onChange={(e) => setMotion({ subjectAction: e.target.value })}>
+            <Select
+              label="Subject Action"
+              labelClassName={CAMERA_PANEL_LABEL}
+              value={motion.subjectAction}
+              onChange={(e) => setMotion({ subjectAction: e.target.value })}
+            >
               <option value="none">None</option>
               <option value="still">Still Pose</option>
               <option value="walking">Walking</option>
@@ -301,6 +343,7 @@ export function CameraPanel() {
 
             <RangeSlider
               label="Stabilization"
+              labelClassName={CAMERA_PANEL_LABEL}
               valueLabel={`${motion.stabilization}%`}
               min={0}
               max={100}
@@ -308,7 +351,12 @@ export function CameraPanel() {
               onChange={(e) => setMotion({ stabilization: parseInt(e.target.value) })}
             />
 
-            <Select label="Motion Blur" value={motion.motionBlur} onChange={(e) => setMotion({ motionBlur: e.target.value })}>
+            <Select
+              label="Motion Blur"
+              labelClassName={CAMERA_PANEL_LABEL}
+              value={motion.motionBlur}
+              onChange={(e) => setMotion({ motionBlur: e.target.value })}
+            >
               <option value="off">Off</option>
               <option value="low">Low</option>
               <option value="medium">Medium</option>

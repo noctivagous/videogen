@@ -49,6 +49,7 @@ export const UI_SECTIONS = {
   studioPreviewResolutionBadge: { id: 'studio-preview-resolution-badge', name: 'Resolution Badge' },
 
   studioCameraControls: { id: 'studio-camera-controls', name: 'Camera Controls' },
+  studioCameraShotSetup: { id: 'studio-camera-shot-setup', name: 'Shot Setup Controls' },
   studioCameraFieldSize: { id: 'studio-camera-field-size', name: 'Field Size Dropdown' },
   studioCameraSubjectCount: { id: 'studio-camera-subject-count', name: 'Subject Count Dropdown' },
   studioCameraCoverage: { id: 'studio-camera-coverage', name: 'Coverage Dropdown' },

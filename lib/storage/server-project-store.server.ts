@@ -44,24 +44,90 @@ function parseDataUrl(dataUrl: string): { mime: string; bytes: Buffer } | null {
   return { mime, bytes: Buffer.from(decodeURIComponent(payload)) };
 }
 
+function parseContentType(header: string | null): string | null {
+  if (!header) return null;
+  const mime = header.split(';')[0]?.trim().toLowerCase();
+  return mime || null;
+}
+
 function extensionForMime(mime: string, fallback = 'bin'): string {
+  const normalized = mime.toLowerCase();
   const map: Record<string, string> = {
     'image/png': 'png',
     'image/jpeg': 'jpg',
+    'image/jpg': 'jpg',
     'image/webp': 'webp',
     'image/gif': 'gif',
     'video/mp4': 'mp4',
     'video/webm': 'webm',
   };
-  return map[mime.toLowerCase()] ?? fallback;
+  if (map[normalized]) return map[normalized];
+  if (normalized.startsWith('image/')) return 'png';
+  if (normalized.startsWith('video/')) return 'mp4';
+  return fallback;
 }
 
-function filenameForUpload(upload: ProjectMediaUpload, bytes: Buffer): string {
+function sniffMimeFromBytes(bytes: Buffer): string | null {
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return 'image/jpeg';
+  }
+  if (
+    bytes.length >= 8 &&
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47
+  ) {
+    return 'image/png';
+  }
+  if (bytes.length >= 6) {
+    const header = bytes.subarray(0, 6).toString('ascii');
+    if (header === 'GIF87a' || header === 'GIF89a') return 'image/gif';
+  }
+  if (
+    bytes.length >= 12 &&
+    bytes.subarray(0, 4).toString('ascii') === 'RIFF' &&
+    bytes.subarray(8, 12).toString('ascii') === 'WEBP'
+  ) {
+    return 'image/webp';
+  }
+  if (bytes.length >= 12 && bytes.subarray(4, 8).toString('ascii') === 'ftyp') {
+    return 'video/mp4';
+  }
+  if (bytes.length >= 4 && bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3) {
+    return 'video/webm';
+  }
+  return null;
+}
+
+/** Last-resort MIME when headers and magic bytes are inconclusive. */
+function mimeHintFromUploadPath(uploadPath: string): string | null {
+  if (/\.videoUrl$|generatedVideos\.\d+\.url$/.test(uploadPath)) return 'video/mp4';
+  if (
+    /transformedReferences|\.references\.|previewFrameUrl|thumbnail|posterUrl/.test(uploadPath)
+  ) {
+    return 'image/png';
+  }
+  return null;
+}
+
+function resolveUploadMime(upload: ProjectMediaUpload, bytes: Buffer, contentType: string | null): string {
+  if (upload.kind === 'inline') {
+    return parseDataUrl(upload.dataUrl)?.mime ?? 'application/octet-stream';
+  }
+
+  const headerMime = parseContentType(contentType);
+  if (headerMime && headerMime !== 'application/octet-stream') {
+    return headerMime;
+  }
+
+  return sniffMimeFromBytes(bytes) ?? mimeHintFromUploadPath(upload.path) ?? headerMime ?? 'application/octet-stream';
+}
+
+function filenameForUpload(upload: ProjectMediaUpload, bytes: Buffer, mime: string): string {
   const hash = createHash('sha256').update(bytes).digest('hex').slice(0, 12);
   const slug = upload.path.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48);
-  const ext = upload.kind === 'inline'
-    ? extensionForMime(parseDataUrl(upload.dataUrl)?.mime ?? 'application/octet-stream')
-    : extensionForMime('application/octet-stream', 'mp4');
+  const ext = extensionForMime(mime, mime.startsWith('video/') ? 'mp4' : 'png');
   return `${slug || 'asset'}-${hash}.${ext}`;
 }
 
@@ -72,14 +138,16 @@ async function ensureSessionDirs(sessionId: string): Promise<{ root: string; med
   return { root, media };
 }
 
-async function bytesForUpload(upload: ProjectMediaUpload): Promise<Buffer> {
+async function payloadForUpload(
+  upload: ProjectMediaUpload,
+): Promise<{ bytes: Buffer; mime: string }> {
   if (upload.kind === 'inline') {
     const parsed = parseDataUrl(upload.dataUrl);
     if (!parsed) throw new Error(`Invalid inline asset at ${upload.path}`);
     if (parsed.bytes.length > MAX_INLINE_BYTES) {
       throw new Error(`Inline asset too large at ${upload.path}`);
     }
-    return parsed.bytes;
+    return { bytes: parsed.bytes, mime: parsed.mime };
   }
 
   const res = await fetch(upload.url, { signal: AbortSignal.timeout(120_000) });
@@ -88,7 +156,8 @@ async function bytesForUpload(upload: ProjectMediaUpload): Promise<Buffer> {
   if (buf.length > MAX_REMOTE_BYTES) {
     throw new Error(`Remote asset too large at ${upload.path}`);
   }
-  return buf;
+  const mime = resolveUploadMime(upload, buf, res.headers.get('content-type'));
+  return { bytes: buf, mime };
 }
 
 export async function saveServerProject(
@@ -100,8 +169,8 @@ export async function saveServerProject(
   let nextProject = structuredClone(project);
 
   for (const upload of uploads) {
-    const bytes = await bytesForUpload(upload);
-    const filename = filenameForUpload(upload, bytes);
+    const { bytes, mime } = await payloadForUpload(upload);
+    const filename = filenameForUpload(upload, bytes, mime);
     const filePath = path.join(media, filename);
     await fs.writeFile(filePath, bytes);
     nextProject = setValueAtPath(
