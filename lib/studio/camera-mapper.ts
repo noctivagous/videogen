@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { DEFAULT_FRAME_COMPOSITION, PLACEMENT_POSITIONS } from '@/lib/constants/camera';
+import { isColorPaletteActive, paletteSwatchCss, paletteDisplayValues } from '@/lib/constants/color-palette';
 import { FIELD_SIZE_FRAMING } from '@/lib/constants/framing';
 import type { FrameComposition, ScenePreviewPayload } from '@/lib/types/studio';
 import type { Object3D, PerspectiveCamera } from 'three';
@@ -13,6 +14,7 @@ const ANGLE_PRESETS: Record<string, { camAim: number; targetAim: number; pitch: 
   'birds-eye': { camAim: 1.6, targetAim: 0.4, pitch: -52 },
   'worms-eye': { camAim: 0.1, targetAim: 0.75, pitch: 16 },
   dutch: { camAim: 0.82, targetAim: 0.6, pitch: 0, roll: 14 },
+  drone: { camAim: 2.0, targetAim: 0.3, pitch: -62 },
 };
 
 const HEADROOM_OFFSET: Record<string, number> = {
@@ -212,7 +214,14 @@ export function applyLightingFromState(
     night: 0x0a0a12,
   };
 
-  const bg = timeColors[lighting.timeOfDay] || 0x1c1c21;
+  let bg = timeColors[lighting.timeOfDay] || 0x1c1c21;
+  if (lighting.colorPalette && isColorPaletteActive(lighting.colorPalette)) {
+    const base = new THREE.Color(bg);
+    const tintValue = paletteDisplayValues(lighting.colorPalette)[0];
+    const tint = new THREE.Color(paletteSwatchCss(lighting.colorPalette, tintValue));
+    base.lerp(tint, 0.3);
+    bg = base.getHex();
+  }
   scene.background = new THREE.Color(bg);
 
   scene.fog = null;
@@ -225,6 +234,11 @@ export function applyLightingFromState(
   );
   if (ambient) {
     ambient.intensity = 0.25 + intensity * 0.45;
-    ambient.color.setRGB(rgb.r, rgb.g, rgb.b);
+    const ambientColor = new THREE.Color(rgb.r, rgb.g, rgb.b);
+    if (lighting.colorPalette && isColorPaletteActive(lighting.colorPalette)) {
+      const tintValue = paletteDisplayValues(lighting.colorPalette)[0];
+      ambientColor.lerp(new THREE.Color(paletteSwatchCss(lighting.colorPalette, tintValue)), 0.2);
+    }
+    ambient.color.copy(ambientColor);
   }
 }

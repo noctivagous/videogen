@@ -1,3 +1,5 @@
+import { dofFromAperture, snapToApertureStop } from '@/lib/constants/aperture';
+import { DOF_LABELS } from '@/lib/constants/dof-options';
 import type { CameraSettings, LensType } from '@/lib/types/studio';
 
 export interface LensPreset {
@@ -114,7 +116,8 @@ export function formatLensLabel(camera: CameraSettings): string {
 
 export function formatLensForPrompt(camera: CameraSettings): string {
   const preset = LENS_PRESETS[camera.lensType];
-  return `${camera.focalLength}mm ${preset.promptHint} lens, f/${camera.aperture}, ${camera.dof} depth of field`;
+  const dofLabel = DOF_LABELS[camera.dof]?.toLowerCase() ?? camera.dof;
+  return `${camera.focalLength}mm ${preset.promptHint} lens, f/${camera.aperture}, ${dofLabel}`;
 }
 
 export function normalizeLensCamera(camera: CameraSettings): CameraSettings {
@@ -123,5 +126,6 @@ export function normalizeLensCamera(camera: CameraSettings): CameraSettings {
     camera.lensType in LENS_PRESETS
       ? lensTypeFromFocalLength(focalLength, camera.lensType)
       : lensTypeFromFocalLength(focalLength);
-  return { ...camera, lensType, focalLength };
+  const aperture = snapToApertureStop(camera.aperture || 2.8);
+  return { ...camera, lensType, focalLength, aperture, dof: dofFromAperture(aperture) };
 }

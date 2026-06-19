@@ -7,6 +7,7 @@ import {
 } from '@/lib/constants/camera';
 import { normalizeLensCamera } from '@/lib/constants/lens';
 import { isUserSubjectReference, normalizeStockSubjectRef } from '@/lib/constants/stock-demo';
+import { normalizeColorPalette } from '@/lib/constants/color-palette';
 import { STOCK_CAMERA, STOCK_LIGHTING, STOCK_MOTION, STOCK_PROMPT, STOCK_REFERENCE_ROLES } from '@/lib/constants/stock-project';
 import { stripLegacySceneBoilerplate } from '@/lib/studio/legacy-scene-boilerplate';
 import { migrateShotGeneratedVideos } from '@/lib/studio/shot-videos';
@@ -67,7 +68,10 @@ export function cloneInheritedShotSettings(
   return {
     duration: source.duration,
     camera: normalizeLensCamera(migrateCamera({ ...source.camera })),
-    lighting: { ...source.lighting },
+    lighting: {
+      ...source.lighting,
+      colorPalette: normalizeColorPalette(source.lighting.colorPalette),
+    },
     motion: { ...source.motion },
     sceneSetup: source.sceneSetup,
     shotActivity: source.shotActivity,
@@ -105,7 +109,11 @@ export function migrateShot(
     ...generated,
     active: shot.active ?? false,
     camera: normalizeLensCamera(migrateCamera(legacyCamera)),
-    lighting: { ...defaults.lighting, ...shot.lighting },
+    lighting: {
+      ...defaults.lighting,
+      ...shot.lighting,
+      colorPalette: normalizeColorPalette(shot.lighting?.colorPalette ?? defaults.lighting.colorPalette),
+    },
     motion: { ...defaults.motion, ...shot.motion },
     sceneSetup: stripLegacySceneBoilerplate(shot.sceneSetup ?? shot.prompt ?? defaults.sceneSetup),
     shotActivity: shot.shotActivity ?? '',

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
+import { ColorPalettePreviewTable } from '@/components/studio/ColorPalettePreviewTable';
 import { CompositionOverlay } from '@/components/studio/CompositionOverlay';
 import { GeneratedVideoStrip } from '@/components/studio/GeneratedVideoStrip';
 import { FrameViewSegment } from '@/components/studio/FrameViewSegment';
@@ -167,12 +168,13 @@ export function PreviewPanel() {
       {...uiSectionProps(UI_SECTIONS.studioPreviewPanel)}
     >
       <div className="absolute inset-0 z-30 pointer-events-none p-4 md:p-8">
-        <div className="pointer-events-auto">
+        <div className="preview-panel-controls pointer-events-auto">
           <FrameViewSegment
             value={frameView}
             onChange={setFrameView}
             generatedVideoCount={generatedVideoCount}
           />
+          <ColorPalettePreviewTable />
         </div>
         {shot && (
           <div className="absolute top-0 right-0 pointer-events-auto bg-surface-800 border border-surface-700 px-3 py-1 rounded-lg text-xs font-semibold text-gray-300">

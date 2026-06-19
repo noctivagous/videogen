@@ -18,6 +18,7 @@ function angleTransform(angle: string): string {
       return 'scale(1 1.1)';
     case 'high-angle':
     case 'birds-eye':
+    case 'drone':
       return 'scale(1 0.92)';
     case 'dutch':
       return 'rotate(-8 50 50)';

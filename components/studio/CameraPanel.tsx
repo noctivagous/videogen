@@ -3,10 +3,10 @@
 import { PlacementGrid } from '@/components/studio/PlacementGrid';
 import {
   formatLensLabel,
-  LENS_PRESETS,
   RETAIL_FOCAL_LENGTHS,
   retailFocalLengthIndex,
 } from '@/lib/constants/lens';
+import { LENS_OPTIONS } from '@/lib/constants/lens-options';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import {
   getCameraCompositionLabel,
@@ -15,8 +15,13 @@ import {
   showPlacementGrid,
 } from '@/lib/studio/composition';
 import { FIELD_SIZE_OPTIONS } from '@/lib/constants/field-size-options';
+import { ANGLE_OPTIONS } from '@/lib/constants/angle-options';
+import { MOVEMENT_OPTIONS } from '@/lib/constants/movement-options';
 import { COVERAGE_OPTIONS } from '@/lib/constants/coverage-options';
 import { SUBJECT_COUNT_OPTIONS } from '@/lib/constants/subject-count-options';
+import { ApertureDiagram } from '@/components/ui/ApertureDiagram';
+import { APERTURE_STOPS, apertureStopIndex, formatApertureLabel } from '@/lib/constants/aperture';
+import { DOF_OPTIONS } from '@/lib/constants/dof-options';
 import { RangeSlider } from '@/components/ui/RangeSlider';
 import { Select } from '@/components/ui/Select';
 import { VisualDropdown } from '@/components/ui/VisualDropdown';
@@ -179,18 +184,19 @@ export function CameraPanel() {
           </div>
         </div>
 
-        <Select
+        <VisualDropdown
           label="Lens"
           value={camera.lensType}
-          onChange={(e) => setCamera({ lensType: e.target.value as typeof camera.lensType })}
-        >
-          <option value="wide">Wide Angle ({LENS_PRESETS.wide.min}–{LENS_PRESETS.wide.max}mm)</option>
-          <option value="standard">Standard ({LENS_PRESETS.standard.min}–{LENS_PRESETS.standard.max}mm)</option>
-          <option value="telephoto">Telephoto ({LENS_PRESETS.telephoto.min}–{LENS_PRESETS.telephoto.max}mm)</option>
-          <option value="macro">Macro ({LENS_PRESETS.macro.min}–{LENS_PRESETS.macro.max}mm)</option>
-          <option value="fisheye">Fisheye ({LENS_PRESETS.fisheye.min}–{LENS_PRESETS.fisheye.max}mm)</option>
-          <option value="anamorphic">Anamorphic ({LENS_PRESETS.anamorphic.min}–{LENS_PRESETS.anamorphic.max}mm)</option>
-        </Select>
+          onChange={(lensType) => setCamera({ lensType })}
+          options={LENS_OPTIONS}
+          triggerVariant="thumbnailRight"
+          menuVariant="grid"
+          size="md"
+          menuColumns={2}
+          cellWidth={96}
+          cellHeight={88}
+          uiSection={uiSectionProps(UI_SECTIONS.studioCameraLens)}
+        />
 
         <RangeSlider
           label="Focal Length"
@@ -207,45 +213,63 @@ export function CameraPanel() {
           Snaps to retail focal lengths (8–200mm). Crossing a lens zone updates the Lens dropdown automatically.
         </p>
 
-        <Select label="Angle" value={camera.angle} onChange={(e) => setCamera({ angle: e.target.value as typeof camera.angle })}>
-          <option value="eye-level">Eye Level</option>
-          <option value="high-angle">High Angle</option>
-          <option value="low-angle">Low Angle</option>
-          <option value="birds-eye">Bird&apos;s Eye</option>
-          <option value="worms-eye">Worm&apos;s Eye</option>
-          <option value="dutch">Dutch Tilt</option>
-        </Select>
+        <VisualDropdown
+          label="Angle"
+          value={camera.angle}
+          onChange={(angle) => setCamera({ angle })}
+          options={ANGLE_OPTIONS}
+          triggerVariant="thumbnailRight"
+          menuVariant="grid"
+          size="md"
+          menuColumns={2}
+          cellWidth={96}
+          cellHeight={88}
+          uiSection={uiSectionProps(UI_SECTIONS.studioCameraAngle)}
+        />
 
-        <Select label="Movement" value={camera.movement} onChange={(e) => setCamera({ movement: e.target.value as typeof camera.movement })}>
-          <option value="static">Static</option>
-          <option value="pan-left">Pan Left</option>
-          <option value="pan-right">Pan Right</option>
-          <option value="tilt-up">Tilt Up</option>
-          <option value="tilt-down">Tilt Down</option>
-          <option value="dolly-in">Dolly In</option>
-          <option value="dolly-out">Dolly Out</option>
-          <option value="truck-left">Truck Left</option>
-          <option value="truck-right">Truck Right</option>
-          <option value="orbit">Orbit</option>
-          <option value="handheld">Handheld</option>
-          <option value="drone">Drone Shot</option>
-        </Select>
+        <VisualDropdown
+          label="Movement"
+          value={camera.movement}
+          onChange={(movement) => setCamera({ movement })}
+          options={MOVEMENT_OPTIONS}
+          triggerVariant="thumbnailRight"
+          menuVariant="grid"
+          size="md"
+          menuColumns={2}
+          cellWidth={96}
+          cellHeight={88}
+          uiSection={uiSectionProps(UI_SECTIONS.studioCameraMovement)}
+        />
 
         <RangeSlider
           label="Aperture"
-          valueLabel={`f/${camera.aperture}`}
-          min={1.4}
-          max={22}
-          step={0.1}
-          value={camera.aperture}
-          onChange={(e) => setCamera({ aperture: parseFloat(e.target.value) })}
+          valueLabel={formatApertureLabel(camera.aperture)}
+          min={0}
+          max={APERTURE_STOPS.length - 1}
+          step={1}
+          value={apertureStopIndex(camera.aperture)}
+          onChange={(e) =>
+            setCamera({ aperture: APERTURE_STOPS[parseInt(e.target.value, 10)] })
+          }
+          leading={<ApertureDiagram fNumber={camera.aperture} size={52} />}
         />
+        <p className="text-[10px] text-gray-500 -mt-2">
+          Snaps to full f-stops (f/1.4–f/22). Depth of Field updates automatically.
+        </p>
 
-        <Select label="Depth of Field" value={camera.dof} onChange={(e) => setCamera({ dof: e.target.value as typeof camera.dof })}>
-          <option value="shallow">Shallow</option>
-          <option value="medium">Medium</option>
-          <option value="deep">Deep Focus</option>
-        </Select>
+        <VisualDropdown
+          label="Depth of Field"
+          value={camera.dof}
+          onChange={(dof) => setCamera({ dof })}
+          options={DOF_OPTIONS}
+          triggerVariant="thumbnailRight"
+          menuVariant="grid"
+          size="md"
+          menuColumns={2}
+          cellWidth={96}
+          cellHeight={88}
+          uiSection={uiSectionProps(UI_SECTIONS.studioCameraDepthOfField)}
+        />
 
         <div className="pt-4 border-t border-surface-700" {...uiSectionProps(UI_SECTIONS.studioCameraMotionSubject, { id: false })}>
           <div className="flex items-center gap-2 mb-4">

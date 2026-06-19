@@ -3,6 +3,9 @@
 import { create } from 'zustand';
 import { DEFAULT_FRAME_COMPOSITION, normalizeReferenceRole, SINGLE_ONLY_COVERAGE } from '@/lib/constants/camera';
 import { getDefaultEnabledProviderId, isBuiltInProviderEnabled } from '@/lib/constants/providers';
+import { dofFromAperture, snapToApertureStop } from '@/lib/constants/aperture';
+import { kelvinToWarmth, warmthToKelvin } from '@/lib/constants/color-palette';
+import { applyLookRecipeToLighting, getLookRecipe } from '@/lib/constants/look-recipes';
 import { applyLensCameraPatch } from '@/lib/constants/lens';
 import { RESOLUTION_PRESETS } from '@/lib/constants/resolutions';
 import {
@@ -92,6 +95,7 @@ import type {
   AspectRatio,
   CameraSettings,
   FrameComposition,
+  ColorPaletteSettings,
   LightingSettings,
   MotionSettings,
   ProjectSettings,
@@ -225,6 +229,9 @@ interface StudioStore {
   setProject: (patch: Partial<ProjectSettings>) => void;
   setCamera: (patch: Partial<CameraSettings>) => void;
   setLighting: (patch: Partial<LightingSettings>) => void;
+  setColorPalette: (patch: Partial<ColorPaletteSettings>) => void;
+  applyLookRecipe: (id: string) => void;
+  clearLookRecipe: () => void;
   setMotion: (patch: Partial<MotionSettings>) => void;
   setSceneSetup: (sceneSetup: string) => void;
   setShotActivity: (shotActivity: string) => void;
@@ -438,6 +445,13 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       const current = getCurrentShotFromList(s.shots, s.currentShot);
       const base = current?.camera ?? s.camera;
       const camera = { ...base, ...applyLensCameraPatch(base, patch) };
+      if (patch.aperture !== undefined) {
+        camera.aperture = snapToApertureStop(patch.aperture);
+        camera.dof = dofFromAperture(camera.aperture);
+      }
+      if (patch.movement === 'drone') {
+        camera.angle = 'drone';
+      }
       return {
         camera,
         shots: patchCurrentShot(s.shots, s.currentShot, { camera }),
@@ -447,13 +461,101 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 
   setLighting(patch) {
     set((s) => {
-      const lighting = { ...s.lighting, ...patch };
+      const clearRecipe = !('activeLookRecipeId' in (patch.colorPalette ?? {}));
+      const base = { ...s.lighting, ...patch };
+      if (patch.colorPalette) {
+        base.colorPalette = { ...s.lighting.colorPalette, ...patch.colorPalette };
+        if (patch.colorPalette.bw) {
+          base.colorPalette.bw = {
+            ...s.lighting.colorPalette.bw,
+            ...patch.colorPalette.bw,
+          };
+        }
+        if (clearRecipe && patch.colorPalette.activeLookRecipeId === undefined) {
+          base.colorPalette.activeLookRecipeId = null;
+        }
+      } else if (Object.keys(patch).length > 0) {
+        base.colorPalette = { ...base.colorPalette, activeLookRecipeId: null };
+      }
+      if (patch.colorTemp !== undefined) {
+        base.colorPalette = {
+          ...base.colorPalette,
+          keyLightWarmth: kelvinToWarmth(patch.colorTemp),
+          activeLookRecipeId: null,
+        };
+      }
       const current = getCurrentShotFromList(s.shots, s.currentShot);
-      const shots = patchCurrentShot(s.shots, s.currentShot, {
-        lighting: { ...current?.lighting ?? lighting, ...patch },
-      });
+      const shotLighting = { ...current?.lighting ?? base, ...patch };
+      if (patch.colorPalette) {
+        shotLighting.colorPalette = { ...current?.lighting?.colorPalette ?? s.lighting.colorPalette, ...patch.colorPalette };
+        if (patch.colorPalette.bw) {
+          shotLighting.colorPalette.bw = {
+            ...(current?.lighting?.colorPalette?.bw ?? s.lighting.colorPalette.bw),
+            ...patch.colorPalette.bw,
+          };
+        }
+        if (clearRecipe && patch.colorPalette.activeLookRecipeId === undefined) {
+          shotLighting.colorPalette.activeLookRecipeId = null;
+        }
+      } else if (Object.keys(patch).length > 0) {
+        shotLighting.colorPalette = {
+          ...shotLighting.colorPalette,
+          activeLookRecipeId: null,
+        };
+      }
+      if (patch.colorTemp !== undefined) {
+        shotLighting.colorPalette = {
+          ...shotLighting.colorPalette,
+          keyLightWarmth: kelvinToWarmth(patch.colorTemp),
+          activeLookRecipeId: null,
+        };
+      }
+      const shots = patchCurrentShot(s.shots, s.currentShot, { lighting: shotLighting });
+      return { lighting: base, shots };
+    });
+  },
+
+  setColorPalette(patch) {
+    set((s) => {
+      const colorPalette = { ...s.lighting.colorPalette, ...patch };
+      if (patch.bw) {
+        colorPalette.bw = { ...s.lighting.colorPalette.bw, ...patch.bw };
+      }
+      if (patch.activeLookRecipeId === undefined) {
+        colorPalette.activeLookRecipeId = null;
+      }
+      const lightingPatch: Partial<LightingSettings> = { colorPalette };
+      if (patch.keyLightWarmth !== undefined) {
+        lightingPatch.colorTemp = warmthToKelvin(patch.keyLightWarmth);
+      }
+      const base = { ...s.lighting, ...lightingPatch };
+      const current = getCurrentShotFromList(s.shots, s.currentShot);
+      const shotLighting = {
+        ...current?.lighting ?? base,
+        colorPalette,
+        ...(patch.keyLightWarmth !== undefined
+          ? { colorTemp: warmthToKelvin(patch.keyLightWarmth) }
+          : {}),
+      };
+      const shots = patchCurrentShot(s.shots, s.currentShot, { lighting: shotLighting });
+      return { lighting: base, shots };
+    });
+  },
+
+  applyLookRecipe(id) {
+    const recipe = getLookRecipe(id);
+    if (!recipe) return;
+    set((s) => {
+      const current = getCurrentShotFromList(s.shots, s.currentShot);
+      const source = current?.lighting ?? s.lighting;
+      const lighting = applyLookRecipeToLighting(source, recipe);
+      const shots = patchCurrentShot(s.shots, s.currentShot, { lighting });
       return { lighting, shots };
     });
+  },
+
+  clearLookRecipe() {
+    get().setColorPalette({ activeLookRecipeId: null });
   },
 
   setMotion(patch) {

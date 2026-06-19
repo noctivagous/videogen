@@ -45,6 +45,27 @@ export const CAMERA_ANGLE_LABELS: Record<CameraAngle, string> = {
   'birds-eye': "Bird's Eye",
   'worms-eye': "Worm's Eye",
   dutch: 'Dutch Tilt',
+  drone: 'Drone',
+};
+
+export const CAMERA_MOVEMENT_LABELS: Record<CameraMovement, string> = {
+  static: 'Static',
+  'pan-left': 'Pan Left',
+  'pan-right': 'Pan Right',
+  'tilt-up': 'Tilt Up',
+  'tilt-down': 'Tilt Down',
+  'dolly-in': 'Dolly In',
+  'dolly-out': 'Dolly Out',
+  'truck-left': 'Truck Left',
+  'truck-right': 'Truck Right',
+  orbit: 'Orbit',
+  handheld: 'Handheld',
+  drone: 'Drone Shot',
+  'push-in': 'Push In',
+  steadicam: 'Steadicam',
+  'whip-pan': 'Whip Pan',
+  zoom: 'Zoom',
+  'pov-track': 'POV Track',
 };
 
 export const CAMERA_MOVEMENT_SHORT: Record<CameraMovement, string> = {
@@ -60,6 +81,11 @@ export const CAMERA_MOVEMENT_SHORT: Record<CameraMovement, string> = {
   orbit: 'Orbit',
   handheld: 'Handheld',
   drone: 'Drone',
+  'push-in': 'Push In',
+  steadicam: 'Steadicam',
+  'whip-pan': 'Whip Pan',
+  zoom: 'Zoom',
+  'pov-track': 'POV Track',
 };
 
 export const CAMERA_COVERAGE_LABELS: Record<Coverage, string> = {

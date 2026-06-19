@@ -38,4 +38,9 @@ export const MOVEMENT_PROMPTS: Record<string, string> = {
   orbit: 'orbiting camera move',
   handheld: 'handheld camera',
   drone: 'aerial drone move',
+  'push-in': 'slow push in',
+  steadicam: 'steadicam glide',
+  'whip-pan': 'fast whip pan',
+  zoom: 'zoom in or out',
+  'pov-track': 'POV tracking shot',
 };

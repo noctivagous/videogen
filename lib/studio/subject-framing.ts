@@ -31,6 +31,7 @@ function angleTransform(angle: CameraAngle): string {
       return 'perspective(900px) rotateX(6deg) scale(1.04)';
     case 'high-angle':
     case 'birds-eye':
+    case 'drone':
       return 'perspective(900px) rotateX(-6deg) scale(0.98)';
     case 'dutch':
       return 'rotate(-2.5deg) scale(1.03)';

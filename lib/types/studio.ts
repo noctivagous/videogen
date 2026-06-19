@@ -11,13 +11,14 @@ export type Coverage = 'clean' | 'dirty-single' | 'ots' | 'one-half' | 'pov';
 export type LensType = 'wide' | 'standard' | 'telephoto' | 'macro' | 'fisheye' | 'anamorphic';
 
 export type CameraAngle =
-  | 'eye-level' | 'high-angle' | 'low-angle' | 'birds-eye' | 'worms-eye' | 'dutch';
+  | 'eye-level' | 'high-angle' | 'low-angle' | 'birds-eye' | 'worms-eye' | 'dutch' | 'drone';
 
 export type CameraMovement =
   | 'static' | 'pan-left' | 'pan-right' | 'tilt-up' | 'tilt-down'
-  | 'dolly-in' | 'dolly-out' | 'truck-left' | 'truck-right' | 'orbit' | 'handheld' | 'drone';
+  | 'dolly-in' | 'dolly-out' | 'truck-left' | 'truck-right' | 'orbit' | 'handheld' | 'drone'
+  | 'push-in' | 'steadicam' | 'whip-pan' | 'zoom' | 'pov-track';
 
-export type DepthOfField = 'shallow' | 'medium' | 'deep';
+export type DepthOfField = 'very-shallow' | 'shallow' | 'medium' | 'deep';
 
 export type CompositionGuide = 'none' | 'grid-3x3' | 'center' | 'fill-frame';
 
@@ -55,6 +56,61 @@ export interface CameraSettings {
   dof: DepthOfField;
 }
 
+export type ColorScheme =
+  | 'analogous'
+  | 'complementary'
+  | 'split-complementary'
+  | 'triadic'
+  | 'tetradic'
+  | 'monochromatic';
+
+export type ColorPaletteMode =
+  | 'color'
+  | 'bw'
+  | 'off'
+  | 'false-color'
+  | 'duotone'
+  | 'accent-splash';
+
+export type FxColorMode = 'false-color' | 'duotone' | 'accent-splash';
+
+/** Cinematic monochrome looks — phrasing aligned with common AI video prompt guides. */
+export type BwTonalLook = 'natural' | 'high-key' | 'low-key' | 'film-noir' | 'silhouette';
+
+export type BwFilmGrain = 'none' | 'subtle' | 'heavy';
+
+export interface BwTonalSettings {
+  look: BwTonalLook;
+  /** Overall contrast — maps to low / balanced / high contrast monochrome. */
+  contrast: number;
+  /** Shadow depth / black point — lifted grays through crushed blacks. */
+  shadowDepth: number;
+  /** Highlight roll-off — subdued through bright clean whites. */
+  highlightTone: number;
+  grain: BwFilmGrain;
+}
+
+export interface ColorPaletteSettings {
+  mode: ColorPaletteMode;
+  dominantHue: number;
+  scheme: ColorScheme;
+  saturation: number;
+  brightness: number;
+  keyLightWarmth: number;
+  accentHue: number | null;
+  /** Duotone secondary hue (primary = dominantHue). */
+  secondaryHue: number;
+  /** 0 = primary-heavy, 100 = secondary-heavy. */
+  duotoneBalance: number;
+  /** Accent isolation strength for accent-splash mode. */
+  accentStrength: number;
+  /** False-color spectrum shift / bias. */
+  spectrumBias: number;
+  /** Active Look Library recipe, or null when customized / none. */
+  activeLookRecipeId: string | null;
+  bw: BwTonalSettings;
+}
+
 export interface LightingSettings {
   keyLight: string;
   intensity: number;
@@ -62,6 +118,7 @@ export interface LightingSettings {
   timeOfDay: string;
   colorTemp: number;
   atmosphere: string;
+  colorPalette: ColorPaletteSettings;
 }
 
 export interface MotionSettings {

@@ -85,7 +85,9 @@
         "movements": "movements/",
         "atmosphere": "atmosphere/",
         "subjectCounts": "subject-counts/",
-        "coverage": "coverage/"
+        "coverage": "coverage/",
+        "lenses": "lenses/",
+        "depthOfField": "depth-of-field/"
       },
       "naming": "Lowercase abbr; replace slashes with hyphens (LS/WS → ls-ws.jpg)"
     },
@@ -199,6 +201,32 @@
       "emphasis": "The coverage relationship between camera, foreground obstructions, and on-camera subject is the primary visual subject.",
       "otsSubject": "Foreground mannequin: back/shoulder only in sculpted gray dress shirt, soft blur. Facing-camera subject: second distinct matte gray male mannequin, standardPose, facing camera.",
       "forbidden": "No text, no labels, no diagrams, no realistic humans, no action poses"
+    },
+    "lenses": {
+      "category": "Lens Types",
+      "sectionKey": "lenses",
+      "sectionId": "lenses",
+      "folder": "lenses/",
+      "inherits": "Global conventions (noText, outputSpec, environment palette)",
+      "material": "Matte gray hard-surface sculpt — same unified matte gray mannequin material from subject cutouts. Smooth sculpted planes, no realistic rubber grips, no leather texture, no brand logos, no text or numbers on barrel.",
+      "anchorFile": "lenses/standard.jpg",
+      "anchorRole": "Generate standard lens first. Pass anchorFile as image_paths for every other lens so material, studio, and sculpt style stay consistent.",
+      "matchReference": "Use the exact same matte gray hard-surface lens sculpt material, neutral gray studio, and soft even lighting from the reference image.",
+      "framing": "Three-quarter product view of a single lens centered in frame, angled slightly — lens is the only subject, no camera body, no mannequin.",
+      "forbidden": "No text, no logos, no brand names, no readable markings, no colored materials, no realistic product photography of real branded lenses, no people, no mannequins"
+    },
+    "depthOfField": {
+      "category": "Depth of Field",
+      "sectionKey": "depthOfField",
+      "sectionId": "depthOfField",
+      "folder": "depth-of-field/",
+      "inherits": "Global conventions (noText, outputSpec, environment palette) — composition primitive vocabulary, no mannequins",
+      "subject": "Grayscale matte hard-surface primitive geometric solids only: sphere (medium gray), cube (medium-dark gray), pyramid (dark gray), cuboid (light gray). No people, no mannequins, no color.",
+      "anchorFile": "depth-of-field/base-scene.jpg",
+      "anchorRole": "Generate base depth scene first with four primitives arranged receding into depth. Pass anchorFile for every DoF variant so shapes, materials, layout, and studio stay consistent — only focus/blur changes.",
+      "matchReference": "Use the exact same sphere, cube, pyramid, and cuboid — same positions, same matte gray sculpt materials, same dark charcoal studio from the reference image.",
+      "framing": "Eye-level camera, primitives aligned along center axis receding into depth — sphere nearest, cuboid farthest.",
+      "forbidden": "No text, no labels, no diagrams, no people, no mannequins, no colored blocks"
     }
   },
   "samples": [
@@ -678,6 +706,30 @@
       "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Overhead bird's-eye view: camera looking straight down at the mannequin standing on the studio floor. Gentle diagonal motion blur sweeps across the frame suggesting forward aerial travel. The mannequin is small in frame surrounded by the studio floor receding in all directions. Clear drone aerial sweep demonstration."
     },
     {
+      "id": "movements-dolly-out",
+      "sectionKey": "movements",
+      "abbr": "Dolly Out",
+      "file": "movements/dolly-out.jpg",
+      "referenceFile": "shot-types/ms.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot. Camera dollying backward away from the mannequin: subtle radial streaking lines converging inward toward the center suggesting the camera is pulling back. The mannequin remains sharp while the frame feels like it is widening. Clear dolly out demonstration."
+    },
+    {
+      "id": "movements-truck-left",
+      "sectionKey": "movements",
+      "abbr": "Truck L",
+      "file": "movements/truck-left.jpg",
+      "referenceFile": "shot-types/ms.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up, arms at sides. Camera trucking left: strong horizontal motion blur across the studio background moving right-to-left while the mannequin stays facing camera, suggesting lateral camera travel to the left. Clear truck left demonstration."
+    },
+    {
+      "id": "movements-truck-right",
+      "sectionKey": "movements",
+      "abbr": "Truck R",
+      "file": "movements/truck-right.jpg",
+      "referenceFile": "shot-types/ms.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up, arms at sides. Camera trucking right: strong horizontal motion blur across the studio background moving left-to-right while the mannequin stays facing camera, suggesting lateral camera travel to the right. Clear truck right demonstration."
+    },
+    {
       "id": "atmosphere-fog",
       "sectionKey": "atmosphere",
       "abbr": "Fog",
@@ -822,6 +874,96 @@
       "file": "coverage/pov.jpg",
       "referenceFile": "subjects/male/ms.png",
       "prompt": "Use the exact same matte gray male mannequin identity from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Neutral gray studio, cinematic 35mm lens. Point-of-view coverage: subjective first-person camera view looking directly at the mannequin face and sculpted gray dress shirt in medium shot waist up, arms at sides, as if the viewer is another character in the scene. Clear POV coverage demonstration."
+    },
+    {
+      "id": "lenses-standard",
+      "sectionKey": "lenses",
+      "abbr": "Standard",
+      "file": "lenses/standard.jpg",
+      "referenceFile": null,
+      "isAnchor": true,
+      "prompt": "Pure photographic film-school product reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, brand names, or markings on the lens. Matte gray hard-surface sculpt cinema lens — same unified matte gray material as display mannequins, smooth sculpted planes, no rubber, no leather. Neutral gray seamless studio, dark desaturated palette, soft even lighting. Three-quarter view of a single standard 50mm prime lens centered in frame — moderate barrel length, round front element, focus ring and aperture ring as smooth gray sculpt bands. No camera body. Clear standard lens demonstration."
+    },
+    {
+      "id": "lenses-wide",
+      "sectionKey": "lenses",
+      "abbr": "Wide",
+      "file": "lenses/wide.jpg",
+      "referenceFile": "lenses/standard.jpg",
+      "prompt": "Use the exact same matte gray hard-surface lens sculpt material, neutral gray studio, and lighting from the reference image. Pure photographic film-school product reference still. Zero typography: no text, logos, brand names, or barrel markings. Wide-angle cinema lens: shorter wider barrel, larger bulbous front element, wide-angle design clearly reads as 14–35mm class. Three-quarter product view, single lens only, no camera body. Clear wide angle lens demonstration."
+    },
+    {
+      "id": "lenses-telephoto",
+      "sectionKey": "lenses",
+      "abbr": "Telephoto",
+      "file": "lenses/telephoto.jpg",
+      "referenceFile": "lenses/standard.jpg",
+      "prompt": "Use the exact same matte gray hard-surface lens sculpt material, neutral gray studio, and lighting from the reference image. Pure photographic film-school product reference still. Zero typography: no text, logos, brand names, or barrel markings. Telephoto cinema lens: long extended barrel, narrower front element, clearly reads as 70–200mm telephoto class. Three-quarter product view, single lens only, no camera body. Clear telephoto lens demonstration."
+    },
+    {
+      "id": "lenses-macro",
+      "sectionKey": "lenses",
+      "abbr": "Macro",
+      "file": "lenses/macro.jpg",
+      "referenceFile": "lenses/standard.jpg",
+      "prompt": "Use the exact same matte gray hard-surface lens sculpt material, neutral gray studio, and lighting from the reference image. Pure photographic film-school product reference still. Zero typography: no text, logos, brand names, or barrel markings. Macro cinema lens: shorter barrel with prominent close-focus distance ring, macro lens proportions, front element designed for close focus. Three-quarter product view, single lens only, no camera body. Clear macro lens demonstration."
+    },
+    {
+      "id": "lenses-fisheye",
+      "sectionKey": "lenses",
+      "abbr": "Fisheye",
+      "file": "lenses/fisheye.jpg",
+      "referenceFile": "lenses/standard.jpg",
+      "prompt": "Use the exact same matte gray hard-surface lens sculpt material, neutral gray studio, and lighting from the reference image. Pure photographic film-school product reference still. Zero typography: no text, logos, brand names, or barrel markings. Fisheye cinema lens: compact barrel with extreme bulbous protruding front glass dome, ultra-wide fisheye design clearly visible. Three-quarter product view, single lens only, no camera body. Clear fisheye lens demonstration."
+    },
+    {
+      "id": "lenses-anamorphic",
+      "sectionKey": "lenses",
+      "abbr": "Anamorphic",
+      "file": "lenses/anamorphic.jpg",
+      "referenceFile": "lenses/standard.jpg",
+      "prompt": "Use the exact same matte gray hard-surface lens sculpt material, neutral gray studio, and lighting from the reference image. Pure photographic film-school product reference still. Zero typography: no text, logos, brand names, or barrel markings. Anamorphic cinema lens: cylindrical barrel with distinctive horizontal anamorphic front element housing, slightly elongated form factor versus spherical primes. Three-quarter product view, single lens only, no camera body. Clear anamorphic lens demonstration."
+    },
+    {
+      "id": "depth-of-field-base-scene",
+      "sectionKey": "depthOfField",
+      "abbr": "_base",
+      "file": "depth-of-field/base-scene.jpg",
+      "referenceFile": null,
+      "isAnchor": true,
+      "prompt": "Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark charcoal seamless studio floor and backdrop. Four matte hard-surface grayscale primitive solids arranged in a line receding into depth along the center axis: sphere (medium gray) in foreground, cube (medium-dark gray) in near midground, pyramid (dark gray) in far midground, cuboid (light gray) in background. Eye-level camera, soft even studio lighting, all primitives evenly lit and neutral focus. No people, no mannequins, no color. Depth-of-field teaching base layout."
+    },
+    {
+      "id": "depth-of-field-very-shallow",
+      "sectionKey": "depthOfField",
+      "abbr": "Very Shallow",
+      "file": "depth-of-field/very-shallow.jpg",
+      "referenceFile": "depth-of-field/base-scene.jpg",
+      "prompt": "Use the exact same sphere, cube, pyramid, and cuboid positions, materials, and dark charcoal studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Very shallow depth of field: ONLY the foreground sphere is tack sharp. Cube, pyramid, and cuboid behind it are heavily blurred with strong creamy bokeh — unreadable shapes, extreme focus falloff. Clear very shallow depth of field demonstration."
+    },
+    {
+      "id": "depth-of-field-shallow",
+      "sectionKey": "depthOfField",
+      "abbr": "Shallow",
+      "file": "depth-of-field/shallow.jpg",
+      "referenceFile": "depth-of-field/base-scene.jpg",
+      "prompt": "Use the exact same sphere, cube, pyramid, and cuboid positions, materials, and dark charcoal studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Shallow depth of field: sphere and near cube are sharp. Pyramid and background cuboid are noticeably blurred with soft bokeh. Clear shallow depth of field demonstration."
+    },
+    {
+      "id": "depth-of-field-medium",
+      "sectionKey": "depthOfField",
+      "abbr": "Medium",
+      "file": "depth-of-field/medium.jpg",
+      "referenceFile": "depth-of-field/base-scene.jpg",
+      "prompt": "Use the exact same sphere, cube, pyramid, and cuboid positions, materials, and dark charcoal studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Medium depth of field: sphere, cube, and pyramid are acceptably sharp. Only the far background cuboid shows mild softness. Balanced focus zone. Clear medium depth of field demonstration."
+    },
+    {
+      "id": "depth-of-field-deep",
+      "sectionKey": "depthOfField",
+      "abbr": "Deep",
+      "file": "depth-of-field/deep.jpg",
+      "referenceFile": "depth-of-field/base-scene.jpg",
+      "prompt": "Use the exact same sphere, cube, pyramid, and cuboid positions, materials, and dark charcoal studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Deep focus landscape depth of field: ALL four primitives sharp from foreground sphere to background cuboid — maximum depth of field, no visible blur, entire scene in focus front to back. Clear deep focus landscape demonstration."
     }
   ]
 }

@@ -1,4 +1,5 @@
 import { DEFAULT_FRAME_COMPOSITION } from '@/lib/constants/camera';
+import { DEFAULT_COLOR_PALETTE, warmthToKelvin } from '@/lib/constants/color-palette';
 import { STOCK_ASSETS, STOCK_MS_PROMPT } from '@/lib/constants/stock-demo';
 import type {
   CameraSettings,
@@ -41,8 +42,9 @@ export const STOCK_LIGHTING: LightingSettings = {
   intensity: 75,
   style: 'cinematic',
   timeOfDay: 'afternoon',
-  colorTemp: 5800,
+  colorTemp: warmthToKelvin(DEFAULT_COLOR_PALETTE.keyLightWarmth),
   atmosphere: 'clear',
+  colorPalette: { ...DEFAULT_COLOR_PALETTE },
 };
 
 export const STOCK_MOTION: MotionSettings = {

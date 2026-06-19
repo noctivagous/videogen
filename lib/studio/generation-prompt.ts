@@ -20,6 +20,8 @@ import {
   MOVEMENT_PROMPTS,
   SUBJECT_COUNT_PROMPTS,
 } from '@/lib/studio/generation-prompt-constants';
+import { isColorPaletteActive } from '@/lib/constants/color-palette';
+import { buildColorMoodPrompt } from '@/lib/studio/color-mood-prompt';
 import { prepareSceneTextForGeneration } from '@/lib/studio/legacy-scene-boilerplate';
 import { hasPromptImageReferences } from '@/lib/studio/prompt-mentions';
 
@@ -77,9 +79,14 @@ export function getGenerationCameraPrompt(
 }
 
 function buildLightingPrompt(lighting: LightingSettings): string {
+  const paletteEnabled = isColorPaletteActive(lighting.colorPalette);
   const parts = [
-    `${lighting.style} lighting with ${lighting.keyLight} key light`,
-    `${lighting.timeOfDay.replace(/-/g, ' ')}, ${lighting.colorTemp}K color temperature`,
+    paletteEnabled
+      ? `${lighting.keyLight} key light`
+      : `${lighting.style} lighting with ${lighting.keyLight} key light`,
+    paletteEnabled
+      ? lighting.timeOfDay.replace(/-/g, ' ')
+      : `${lighting.timeOfDay.replace(/-/g, ' ')}, ${lighting.colorTemp}K color temperature`,
   ];
   if (lighting.atmosphere !== 'clear') {
     parts.push(`${lighting.atmosphere.replace(/-/g, ' ')} atmosphere`);
@@ -185,10 +192,11 @@ export function buildGenerationPrompt(input: {
   const sceneParts = [prepared.sceneSetup, prepared.shotActivity].filter(Boolean);
   const sceneBlock = sceneParts.join('. ');
   const cameraLine = getGenerationCameraPrompt(camera, frame);
+  const colorMoodLine = buildColorMoodPrompt(lighting);
   const lightingLine = buildLightingPrompt(lighting);
   const motionLine = buildMotionPrompt(motion);
 
-  return [sceneBlock, cameraLine, lightingLine, motionLine]
+  return [sceneBlock, cameraLine, colorMoodLine, lightingLine, motionLine]
     .filter(Boolean)
     .join('. ')
     .replace(/\.\s*\./g, '.')

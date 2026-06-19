@@ -5,6 +5,9 @@ import {
   buildGenerationPrompt,
   buildGenerationRefs,
 } from '@/lib/studio/generation-prompt';
+import { getLookRecipe } from '@/lib/constants/look-recipes';
+import { isColorPaletteActive } from '@/lib/constants/color-palette';
+import { buildColorMoodPrompt } from '@/lib/studio/color-mood-prompt';
 import { expandPromptMentions } from '@/lib/studio/prompt-mentions';
 import { formatReferenceRoleLabel, isCinematographyRefs } from '@/lib/studio/reference-slots';
 import { CHANNEL_LABELS, getProviderCapabilities } from '@/lib/studio/provider-capabilities';
@@ -107,6 +110,9 @@ export function buildModelPayloadStack(input: {
     });
   }
 
+  const colorMoodLine = buildColorMoodPrompt(lighting);
+  const activeRecipe = getLookRecipe(lighting.colorPalette?.activeLookRecipeId);
+
   blocks.push(
     {
       id: 'model-io',
@@ -119,6 +125,27 @@ export function buildModelPayloadStack(input: {
         .filter((s) => s.channel === 'api' || s.channel === 'prompt')
         .map((s) => `${s.label} · ${CHANNEL_LABELS[s.channel]}`),
       variant: 'settings',
+    },
+    ...(activeRecipe
+      ? [
+          {
+            id: 'look-recipe',
+            title: 'Look Recipe',
+            lines: [`${activeRecipe.label} — compiled from controls`],
+            variant: 'composition' as const,
+          },
+        ]
+      : []),
+    {
+      id: 'color-mood',
+      title: 'Color & Mood',
+      lines: [
+        colorMoodLine ||
+          (isColorPaletteActive(lighting.colorPalette)
+            ? '(color mood compiling…)'
+            : '(color palette off — select Color, B&W, or FX to add mood grading)'),
+      ],
+      variant: 'composition',
     },
     {
       id: 'assembled-prompt',
