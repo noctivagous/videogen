@@ -20,8 +20,10 @@ export function restrictsReferenceSlotsToFirst(
   return providerId === 'xai' && isXAIImageToVideoOnlyModel(modelId);
 }
 
-export function filterRefsForImageToVideoOnly<T extends { url: string; slotIndex?: number }>(
-  refs: T[],
-): T[] {
-  return refs.filter((r) => r.slotIndex === 0);
+export function filterRefsForImageToVideoOnly<
+  T extends { url: string; slotIndex?: number; role?: string },
+>(refs: T[]): T[] {
+  const slotZero = refs.filter((r) => r.slotIndex === 0);
+  if (slotZero.length > 0) return slotZero;
+  return refs.filter((r) => r.role === 'Backdrop');
 }

@@ -8,6 +8,7 @@ import {
   timedFetch,
 } from '@/lib/studio/generation/adapters/shared';
 import { augmentPromptForXAI } from '@/lib/studio/generation-prompt';
+import { hasPromptImageReferences } from '@/lib/studio/prompt-mentions';
 import { formatXAIVideoPollStatus, wrapProgressReporter } from '@/lib/studio/generation/progress';
 import type { GenerationRequest, GenerationResult, ProviderTestResult } from '@/lib/studio/generation/types';
 import { inferModalitiesFromModelId, unionModalities } from '@/lib/studio/provider-modalities';
@@ -119,7 +120,9 @@ export async function generateWithXAI(req: GenerationRequest): Promise<Generatio
       detail: `${model} · ${videoMode} · ${duration}s · ${xaiVideoResolution(req.resolution)} · ${req.aspectRatio}`,
     });
 
-    const prompt = augmentPromptForXAI(req.prompt, refs, req.cinematographyRefs !== false);
+    const prompt = hasPromptImageReferences(req.prompt)
+      ? req.prompt
+      : augmentPromptForXAI(req.prompt, refs, req.cinematographyRefs !== false);
 
     const body: Record<string, unknown> = {
       model,

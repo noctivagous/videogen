@@ -87,6 +87,7 @@ import {
   finalizeMannequinsForShot,
   getWorkflowReferenceSteps,
   isLockStartFrame,
+  shouldUseBakedStartFrameForVideo,
 } from '@/lib/studio/workflow';
 import {
   clearBackdropCrops,
@@ -1856,7 +1857,8 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const modelId = getEffectiveModelId(ai);
     if (
       restrictsReferenceSlotsToFirst(videoProviderId, modelId) &&
-      !shot.references[0]
+      !shot.references[0] &&
+      !shouldUseBakedStartFrameForVideo(shot)
     ) {
       get().showToast('grok-imagine-video-1.5 requires a starting image in Image 1', 'error');
       return;

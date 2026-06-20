@@ -119,6 +119,15 @@ export function shouldInjectFieldSizePrompt(shot: Shot | undefined): boolean {
   return !isLockStartFrame(shot);
 }
 
+export function hasBakedStartFrame(shot: Shot | undefined): boolean {
+  return Boolean(shot?.bakedStartFrame && shot.bakeStatus === 'ready');
+}
+
+/** Lock-start video should use the baked pixels only — not auto-place refs or scene-rebuild prompts. */
+export function shouldUseBakedStartFrameForVideo(shot: Shot | undefined): boolean {
+  return isLockStartFrame(shot) && hasBakedStartFrame(shot);
+}
+
 export { canAddMannequin, createDefaultMannequin, getMannequinLimit } from '@/lib/studio/mannequin-factory';
 
 /** Default mannequin layout from camera subject count, field size, and placement grid. */
@@ -138,20 +147,13 @@ export function getSubjectSheetUrl(shot: Shot | undefined, lighting?: LightingSe
   return url ?? getSubjectReference(shot) ?? null;
 }
 
-/** Video/API refs when lock-start-frame bake is ready. */
+/** Video/API refs when lock-start-frame bake is ready — baked frame only (identity is already in pixels). */
 export function buildWorkflowGenerationRefs(
   shot: Shot | undefined,
-  lighting?: LightingSettings,
-  aspectRatio?: AspectRatio,
+  _lighting?: LightingSettings,
+  _aspectRatio?: AspectRatio,
 ): Array<{ role: ReferenceRole; url: string; slotIndex: number }> | null {
-  if (!shot || !isLockStartFrame(shot) || !shot.bakedStartFrame) return null;
+  if (!shouldUseBakedStartFrameForVideo(shot) || !shot?.bakedStartFrame) return null;
 
-  const subjectUrl = getSubjectSheetUrl(shot, lighting);
-  const refs: Array<{ role: ReferenceRole; url: string; slotIndex: number }> = [
-    { role: 'Backdrop', url: shot.bakedStartFrame, slotIndex: -1 },
-  ];
-  if (subjectUrl) {
-    refs.push({ role: 'Subject', url: subjectUrl, slotIndex: subjectSlotIndex(shot) });
-  }
-  return refs;
+  return [{ role: 'Backdrop', url: shot.bakedStartFrame, slotIndex: 0 }];
 }

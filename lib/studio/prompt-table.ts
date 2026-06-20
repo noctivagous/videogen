@@ -9,6 +9,7 @@ import { getShotFrameComposition } from '@/lib/studio/composition';
 import { buildXAIReferencePrompt, getGenerationFramePrompt } from '@/lib/studio/generation-prompt';
 import { getVideoLightingPromptParts } from '@/lib/studio/video-lighting-prompt';
 import { prepareSceneTextForGeneration } from '@/lib/studio/legacy-scene-boilerplate';
+import { shouldUseBakedStartFrameForVideo } from '@/lib/studio/workflow';
 import { expandPromptMentions } from '@/lib/studio/prompt-mentions';
 import {
   FIELD_SIZE_PROMPTS,
@@ -135,31 +136,36 @@ export function buildPromptTable(input: {
   } = input;
 
   const frame = getShotFrameComposition(shot);
+  const useBakedFrame = shouldUseBakedStartFrameForVideo(shot);
   const prepared = prepareSceneTextForGeneration(sceneSetup, shotActivity);
   const rows: PromptTableRow[] = [];
 
   if (providerId === 'xai' && refs.length > 0 && cinematographyRefs) {
-    const xaiRef = buildXAIReferencePrompt(refs);
+    const xaiRef = buildXAIReferencePrompt(refs, shot);
     for (const part of splitPromptParts(xaiRef)) {
       rows.push({ source: 'Reference Images', text: part });
     }
   }
 
-  pushSceneRows(rows, 'Scene Setup', prepared.sceneSetup, shot, providerId);
+  if (!useBakedFrame) {
+    pushSceneRows(rows, 'Scene Setup', prepared.sceneSetup, shot, providerId);
+  }
   pushSceneRows(rows, 'Shot Activity', prepared.shotActivity, shot, providerId);
 
-  if (includeVideoLighting) {
+  if (!useBakedFrame && includeVideoLighting) {
     rows.push(...getVideoLightingPromptParts(lighting));
   }
 
-  if (includeVideoEnvironment) {
+  if (!useBakedFrame && includeVideoEnvironment) {
     const videoEnvironment = buildVideoEnvironmentPrompt(lighting);
     for (const part of splitCommaParts(videoEnvironment)) {
       rows.push({ source: 'Atmosphere / Environment', text: part });
     }
   }
 
-  rows.push(...getCameraPromptParts(camera, frame));
+  if (!useBakedFrame) {
+    rows.push(...getCameraPromptParts(camera, frame));
+  }
 
   if (resolveCameraPromptInclusion(camera).includeInPrompt) {
     const motionRow = getMotionPromptPart(motion);

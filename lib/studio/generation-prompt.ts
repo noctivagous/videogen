@@ -24,7 +24,7 @@ import {
 } from '@/lib/studio/generation-prompt-constants';
 
 import { prepareSceneTextForGeneration } from '@/lib/studio/legacy-scene-boilerplate';
-import { shouldInjectFieldSizePrompt } from '@/lib/studio/workflow';
+import { shouldInjectFieldSizePrompt, shouldUseBakedStartFrameForVideo } from '@/lib/studio/workflow';
 
 import { buildVideoEnvironmentPrompt } from '@/lib/studio/video-environment-prompt';
 import { buildVideoLightingPrompt } from '@/lib/studio/video-lighting-prompt';
@@ -128,17 +128,14 @@ export function buildXAIReferencePrompt(
   refs: Array<{ role: string; url: string }>,
   shot?: Shot,
 ): string {
-  if (shot?.bakedStartFrame && shot.workflow === 'lock-start-frame') {
+  if (shouldUseBakedStartFrameForVideo(shot)) {
     const startN = refs.findIndex((r) => r.role === 'Backdrop') + 1;
-    const subjectN = xaiReferenceImageNumber(refs, 'Subject');
-    if (startN > 0 && subjectN) {
-      return (
-        `Use <IMAGE_${startN}> as the locked start frame — preserve exact composition, subject positions, and scale. ` +
-        `Subject identity (face, body, wardrobe) comes from <IMAGE_${subjectN}> for motion and appearance consistency.`
-      );
-    }
     if (startN > 0) {
-      return `Use <IMAGE_${startN}> as the locked start frame. Preserve exact composition and subject placement.`;
+      return (
+        `Use <IMAGE_${startN}> as the locked start frame. ` +
+        `Preserve exact composition, subject positions, scale, crop, and lighting. ` +
+        `Animate motion only — do not reframe, recrop, reposition subjects, or change lighting.`
+      );
     }
   }
 
@@ -274,15 +271,18 @@ export function buildGenerationPrompt(input: {
     includeVideoEnvironment = true,
   } = input;
   const frame = getShotFrameComposition(shot);
+  const useBakedFrame = shouldUseBakedStartFrameForVideo(shot);
 
   const prepared = prepareSceneTextForGeneration(sceneSetup, shotActivity);
-  const sceneParts = [prepared.sceneSetup, prepared.shotActivity].filter(Boolean);
+  const sceneParts = useBakedFrame
+    ? [prepared.shotActivity].filter(Boolean)
+    : [prepared.sceneSetup, prepared.shotActivity].filter(Boolean);
   const sceneBlock = sceneParts.join('. ');
   const videoLightingLine =
-    includeVideoLighting ? buildVideoLightingPrompt(lighting) : '';
+    !useBakedFrame && includeVideoLighting ? buildVideoLightingPrompt(lighting) : '';
   const videoEnvironmentLine =
-    includeVideoEnvironment ? buildVideoEnvironmentPrompt(lighting) : '';
-  const cameraLine = getGenerationCameraPrompt(camera, frame, shot);
+    !useBakedFrame && includeVideoEnvironment ? buildVideoEnvironmentPrompt(lighting) : '';
+  const cameraLine = useBakedFrame ? '' : getGenerationCameraPrompt(camera, frame, shot);
   const motionLine =
     resolveCameraPromptInclusion(camera).includeInPrompt ? buildMotionPrompt(motion) : '';
 
