@@ -134,8 +134,12 @@
   background: transparent;
 }
 
-.backdrop-framing-hit-target--active {
-  z-index: 14;
+.backdrop-framing-pan-layer {
+  position: absolute;
+  pointer-events: auto;
+  touch-action: none;
+  z-index: 1;
+  background: transparent;
 }
 
 .backdrop-framing-bounds-outline {
@@ -147,6 +151,7 @@
 
 .backdrop-transform-widget {
   position: absolute;
+  z-index: 20;
   pointer-events: auto;
   touch-action: none;
   color: #818cf8;

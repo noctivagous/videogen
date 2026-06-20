@@ -74,6 +74,7 @@ export function BackdropFramingControlsStage({
   const setBackdropSelected = useStudioStore((s) => s.setBackdropSelected);
   const setBackdropFraming = useStudioStore((s) => s.setBackdropFraming);
   const hitTargetRef = useRef<HTMLDivElement>(null);
+  const panLayerRef = useRef<HTMLDivElement>(null);
   const [frameBox, setFrameBox] = useState<FrameBox | null>(null);
   const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
 
@@ -156,7 +157,8 @@ export function BackdropFramingControlsStage({
       const target = event.target as HTMLElement;
       if (
         target.closest('.backdrop-transform-widget') ||
-        target.closest('.backdrop-framing-hit-target')
+        target.closest('.backdrop-framing-hit-target') ||
+        target.closest('.backdrop-framing-pan-layer')
       ) {
         return;
       }
@@ -188,7 +190,7 @@ export function BackdropFramingControlsStage({
   }, [frameRef, setBackdropSelected]);
 
   useEffect(() => {
-    const element = hitTargetRef.current;
+    const element = panLayerRef.current;
     if (!element || !frameBox || !imageSize || framing.locked || !backdropSelected) return;
 
     return bindBackdropFramingPointer({
@@ -241,9 +243,17 @@ export function BackdropFramingControlsStage({
   const widgetTop = rect.y + rect.height / 2 - widgetH / 2;
 
   const handleHitTargetDown = (event: React.PointerEvent) => {
-    if (backdropSelected) return;
     event.stopPropagation();
     setBackdropSelected(true);
+  };
+
+  const imageLayerStyle = {
+    left: rect.x,
+    top: rect.y,
+    width: rect.width,
+    height: rect.height,
+    transform: boxTransform || undefined,
+    transformOrigin: 'center center' as const,
   };
 
   return (
@@ -256,34 +266,27 @@ export function BackdropFramingControlsStage({
         height: frameBox.height,
       }}
     >
-      <div
-        ref={hitTargetRef}
-        className={`backdrop-framing-hit-target ${backdropSelected ? 'backdrop-framing-hit-target--active' : ''}`}
-        style={{
-          left: rect.x,
-          top: rect.y,
-          width: rect.width,
-          height: rect.height,
-          transform: boxTransform || undefined,
-          transformOrigin: 'center center',
-          cursor: BACKDROP_WIDGET_CURSORS.pan,
-        }}
-        onPointerDown={handleHitTargetDown}
-      />
-
-      {backdropSelected ? (
+      {!backdropSelected ? (
+        <div
+          ref={hitTargetRef}
+          className="backdrop-framing-hit-target"
+          style={{
+            ...imageLayerStyle,
+            cursor: BACKDROP_WIDGET_CURSORS.pan,
+          }}
+          onPointerDown={handleHitTargetDown}
+        />
+      ) : (
         <>
           <div
-            className="backdrop-framing-bounds-outline"
+            ref={panLayerRef}
+            className="backdrop-framing-pan-layer"
             style={{
-              left: rect.x,
-              top: rect.y,
-              width: rect.width,
-              height: rect.height,
-              transform: boxTransform || undefined,
-              transformOrigin: 'center center',
+              ...imageLayerStyle,
+              cursor: BACKDROP_WIDGET_CURSORS.pan,
             }}
           />
+          <div className="backdrop-framing-bounds-outline" style={imageLayerStyle} />
           <BackdropTransformWidget
             shot={shot}
             aspectRatio={aspectRatio}
@@ -295,7 +298,7 @@ export function BackdropFramingControlsStage({
             top={widgetTop}
           />
         </>
-      ) : null}
+      )}
     </div>
   );
 }
