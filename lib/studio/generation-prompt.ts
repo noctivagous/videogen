@@ -4,6 +4,7 @@ import {
   HEADROOM_FIELD_SIZES,
   placementFramingPrompt,
 } from '@/lib/constants/camera';
+import { resolveCameraPromptInclusion } from '@/lib/constants/camera-prompt-inclusion';
 import { formatLensForPrompt } from '@/lib/constants/lens';
 import { buildSlotReferenceRefs } from '@/lib/studio/prompt-mentions';
 import type {
@@ -56,19 +57,24 @@ export function getGenerationCameraPrompt(
   frame: FrameComposition,
   shot?: Shot,
 ): string {
+  const inclusion = resolveCameraPromptInclusion(camera);
+  if (!inclusion.includeInPrompt) return '';
+
   const injectFieldSize = shouldInjectFieldSizePrompt(shot);
   const count = SUBJECT_COUNT_PROMPTS[camera.subjectCount] ?? camera.subjectCount;
 
   const parts: string[] = [];
-  if (injectFieldSize) {
-    const field = FIELD_SIZE_PROMPTS[camera.fieldSize] ?? camera.fieldSize;
-    parts.push(field);
-  }
-  parts.push(count);
+  if (inclusion.shotSetup) {
+    if (injectFieldSize) {
+      const field = FIELD_SIZE_PROMPTS[camera.fieldSize] ?? camera.fieldSize;
+      parts.push(field);
+    }
+    parts.push(count);
 
-  if (camera.subjectCount === '1s' && camera.coverage !== 'clean') {
-    const coverage = CAMERA_COVERAGE_LABELS[camera.coverage];
-    if (coverage) parts.push(coverage.toLowerCase());
+    if (camera.subjectCount === '1s' && camera.coverage !== 'clean') {
+      const coverage = CAMERA_COVERAGE_LABELS[camera.coverage];
+      if (coverage) parts.push(coverage.toLowerCase());
+    }
   }
 
   const framing = injectFieldSize ? getGenerationFramePrompt(camera.fieldSize, frame) : '';
@@ -261,7 +267,8 @@ export function buildGenerationPrompt(input: {
   const videoEnvironmentLine =
     includeVideoEnvironment ? buildVideoEnvironmentPrompt(lighting) : '';
   const cameraLine = getGenerationCameraPrompt(camera, frame, shot);
-  const motionLine = buildMotionPrompt(motion);
+  const motionLine =
+    resolveCameraPromptInclusion(camera).includeInPrompt ? buildMotionPrompt(motion) : '';
 
   const blocks = [sceneBlock, videoLightingLine, videoEnvironmentLine, cameraLine, motionLine];
 

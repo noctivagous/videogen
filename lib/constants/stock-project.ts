@@ -2,6 +2,7 @@ import { DEFAULT_FRAME_COMPOSITION } from '@/lib/constants/camera';
 import { DEFAULT_REFERENCE_MODE } from '@/lib/constants/reference-modes';
 import { getDefaultResolution } from '@/lib/constants/resolutions';
 import { DEFAULT_COLOR_PALETTE, warmthToKelvin } from '@/lib/constants/color-palette';
+import { DEFAULT_CAMERA_PROMPT_INCLUSION } from '@/lib/constants/camera-prompt-inclusion';
 import { DEFAULT_THEME_TRANSFORM_LIGHTING_INCLUSION } from '@/lib/constants/theme-transform-lighting';
 import { DEFAULT_VIDEO_ENVIRONMENT } from '@/lib/constants/video-environment';
 import { DEFAULT_VIDEO_LIGHTING } from '@/lib/constants/video-lighting';
@@ -40,6 +41,7 @@ export const STOCK_CAMERA: CameraSettings = {
   movement: 'static',
   aperture: 2.8,
   dof: 'shallow',
+  promptInclusion: { ...DEFAULT_CAMERA_PROMPT_INCLUSION },
 };
 
 export const STOCK_LIGHTING: LightingSettings = {

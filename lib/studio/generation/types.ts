@@ -1,3 +1,4 @@
+import type { GenerationProgressReporter } from '@/lib/studio/generation/progress';
 import type { Modality, ProviderModel } from '@/lib/types/studio';
 
 export interface GenerationRef {
@@ -22,6 +23,8 @@ export interface GenerationRequest {
   refs: GenerationRef[];
   /** When false, skip role-based xAI reference prefix (generic image slots). */
   cinematographyRefs?: boolean;
+  /** Server-only — reports granular progress when streaming NDJSON to the client. */
+  onProgress?: GenerationProgressReporter;
 }
 
 export interface GenerationResult {

@@ -1,11 +1,23 @@
-// Generated from subject cutout alpha bounds at 16:9 center placement.
+// Generated from subject cutout alpha bounds at 16:9 center placement, front facing, eye-level.
 // Regenerate: npm run generate:mannequin-bounds-presets
+//
+// Table shape today: fieldSize → gender-age → bounds
+// Near-term: fieldSize → gender-age → mannequinFacing → bounds
+// Long-term: fieldSize → gender-age → mannequinFacing → cameraAngle → bounds
+// Contract: lib/studio/mannequin-bounds-contract.ts
 
 import type { MannequinBoundsFrame } from '@/lib/studio/mannequin-bounds-framing';
-import type { FieldSize, MannequinAge, MannequinGender } from '@/lib/types/studio';
+import {
+  MANNEQUIN_BOUNDS_DEFAULT_CAMERA_ANGLE,
+  MANNEQUIN_BOUNDS_DEFAULT_FACING,
+  type MannequinBoundsPreset,
+  type MannequinDemographicKey,
+  mannequinDemographicKey,
+} from '@/lib/studio/mannequin-bounds-contract';
+import type { CameraAngle, FieldSize, MannequinAge, MannequinAngle, MannequinGender } from '@/lib/types/studio';
 
-export type MannequinBoundsPreset = Pick<MannequinBoundsFrame, 'insetLeft' | 'insetTop' | 'widthToFrameHeight'>;
-export type MannequinDemographicKey = `${MannequinGender}-${MannequinAge}`;
+export type { MannequinBoundsPreset, MannequinDemographicKey };
+export { mannequinDemographicKey };
 
 export const MANNEQUIN_DEMOGRAPHICS: MannequinDemographicKey[] = [
   'male-adult',
@@ -15,10 +27,6 @@ export const MANNEQUIN_DEMOGRAPHICS: MannequinDemographicKey[] = [
   'female-teen',
   'female-child',
 ];
-
-export function mannequinDemographicKey(gender: MannequinGender, age: MannequinAge): MannequinDemographicKey {
-  return `${gender}-${age}`;
-}
 
 export const FIELD_SIZE_BOUNDS_PRESETS: Record<FieldSize, Record<MannequinDemographicKey, MannequinBoundsPreset>> = {
   'ecu': {
@@ -157,4 +165,22 @@ export function boundsPresetForDemographic(
   age: MannequinAge,
 ): MannequinBoundsPreset {
   return FIELD_SIZE_BOUNDS_PRESETS[fieldSize][mannequinDemographicKey(gender, age)];
+}
+
+/**
+ * Resolve preset for a full variant. Non-front facing falls back to front row until
+ * per-facing tables are tuned. cameraAngle is a placeholder (eye-level only today).
+ */
+export function boundsPresetForVariant(
+  fieldSize: FieldSize,
+  gender: MannequinGender,
+  age: MannequinAge,
+  facing: MannequinAngle = MANNEQUIN_BOUNDS_DEFAULT_FACING,
+  cameraAngle: CameraAngle = MANNEQUIN_BOUNDS_DEFAULT_CAMERA_ANGLE,
+): MannequinBoundsPreset {
+  void facing;
+  void cameraAngle;
+  // Future: FIELD_SIZE_BOUNDS_BY_FACING[fieldSize][facing][demographic]
+  // Future: ...[cameraAngle] when camera-angle mannequin art ships
+  return boundsPresetForDemographic(fieldSize, gender, age);
 }

@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
 import { runPreviewFrameGeneration } from '@/lib/studio/generation/adapters/preview-frame';
+import { noopProgressReporter } from '@/lib/studio/generation/progress';
+import {
+  createNdjsonProgressStreamResponse,
+  wantsProgressStream,
+} from '@/lib/studio/generation/progress-stream.server';
 import type { PreviewFrameRequest } from '@/lib/studio/generation/preview-frame-types';
 import { resolveProviderApiKey } from '@/lib/storage/server-provider-keys.server';
 
@@ -7,7 +12,7 @@ export const maxDuration = 120;
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as PreviewFrameRequest;
+    const body = (await request.json()) as PreviewFrameRequest & { streamProgress?: boolean };
 
     const apiKey = resolveProviderApiKey(body.providerId, body.apiKey);
     if (!apiKey) {
@@ -17,7 +22,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ status: 'error', error: 'Prompt is required' }, { status: 400 });
     }
 
-    const result = await runPreviewFrameGeneration({ ...body, apiKey });
+    const run = (onProgress: NonNullable<PreviewFrameRequest['onProgress']>) =>
+      runPreviewFrameGeneration({ ...body, apiKey, onProgress });
+
+    if (wantsProgressStream(body)) {
+      return createNdjsonProgressStreamResponse(
+        run,
+        (result) => result.status === 'error',
+        { errorStatus: 422 },
+      );
+    }
+
+    const result = await run(noopProgressReporter());
     return NextResponse.json(result, { status: result.status === 'error' ? 422 : 200 });
   } catch (e) {
     return NextResponse.json(

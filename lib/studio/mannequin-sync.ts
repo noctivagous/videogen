@@ -221,10 +221,14 @@ function smartResyncMannequins(
     prevShot.frameComposition.headroom !== shot.frameComposition.headroom ||
     prevShot.frameComposition.guide !== shot.frameComposition.guide;
 
+  const forceLayoutCount =
+    countChanged || coverageChanged || subjectCountChanged;
+  const layoutCount = forceLayoutCount ? targetDefaults.length : sortedExisting.length;
+
   const merged: Mannequin[] = [];
 
-  for (let i = 0; i < targetDefaults.length; i++) {
-    const def = targetDefaults[i]!;
+  for (let i = 0; i < layoutCount; i++) {
+    const def = targetDefaults[Math.min(i, targetDefaults.length - 1)]!;
     const oldDef = oldDefaults[i] ?? oldDefaults[oldDefaults.length - 1] ?? def;
     const prev = sortedExisting[i];
 

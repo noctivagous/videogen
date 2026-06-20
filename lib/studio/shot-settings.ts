@@ -25,6 +25,7 @@ import {
 import { stripLegacySceneBoilerplate } from '@/lib/studio/legacy-scene-boilerplate';
 import { normalizeReferenceSlotArrays } from '@/lib/studio/reference-slots';
 import { migrateShotGeneratedVideos } from '@/lib/studio/shot-videos';
+import { normalizeCameraPromptInclusion } from '@/lib/constants/camera-prompt-inclusion';
 import { normalizeThemeTransformLighting } from '@/lib/constants/theme-transform-lighting';
 import { normalizeVideoEnvironment } from '@/lib/constants/video-environment';
 import { normalizeVideoLighting } from '@/lib/constants/video-lighting';
@@ -62,7 +63,10 @@ export function migrateCamera(camera: CameraSettings): CameraSettings {
   const migrated = legacy ? { ...camera, ...legacy } : { ...camera };
   if (!migrated.subjectCount) migrated.subjectCount = '1s';
   if (!migrated.coverage) migrated.coverage = 'clean';
-  return migrated;
+  return {
+    ...migrated,
+    promptInclusion: normalizeCameraPromptInclusion(migrated.promptInclusion),
+  };
 }
 
 export function shotActiveView(shot: Shot) {

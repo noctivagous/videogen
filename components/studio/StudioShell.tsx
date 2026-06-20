@@ -6,6 +6,7 @@ import { CameraPanel } from '@/components/studio/CameraPanel';
 import { HeaderBar } from '@/components/studio/HeaderBar';
 import { LightingPanel } from '@/components/studio/LightingPanel';
 import { PreviewPanel } from '@/components/studio/PreviewPanel';
+import { ContextMenuManager } from '@/components/ui/ContextMenuManager';
 import { ModalManager } from '@/components/ui/ModalManager';
 import { ThemeTransformConnectorProvider } from '@/components/studio/ThemeTransformConnectorProvider';
 import { ProviderEditModal } from '@/components/studio/ProviderEditModal';
@@ -25,6 +26,7 @@ export function StudioShell() {
 
   return (
     <ModalManager>
+    <ContextMenuManager>
     <div className="h-screen flex flex-col overflow-hidden" {...uiSectionProps(UI_SECTIONS.studioRoot)}>
       <HeaderBar />
 
@@ -95,6 +97,7 @@ export function StudioShell() {
       <SettingsModal />
       <ProviderEditModal />
     </div>
+    </ContextMenuManager>
     </ModalManager>
   );
 }

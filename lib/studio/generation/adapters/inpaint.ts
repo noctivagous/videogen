@@ -8,6 +8,7 @@ import {
   sleep,
 } from '@/lib/studio/generation/adapters/shared';
 import { DEFAULT_INPAINT_MODEL, DEFAULT_XAI_BAKE_IMAGE_MODEL } from '@/lib/constants/workflows';
+import { wrapProgressReporter } from '@/lib/studio/generation/progress';
 import type { InpaintRequest, InpaintResult } from '@/lib/studio/generation/inpaint-types';
 
 const XAI_API = 'https://api.x.ai/v1';
@@ -46,8 +47,14 @@ function parseXAIImageResponse(
 }
 
 export async function generateWithXAIInpaint(req: InpaintRequest): Promise<InpaintResult> {
+  const report = wrapProgressReporter(req.onProgress);
   const modelId = requireModelId(req.modelId) ?? DEFAULT_XAI_BAKE_IMAGE_MODEL;
   if (!modelId) return { status: 'error', error: NO_MODEL_SELECTED_ERROR };
+
+  report({
+    message: 'Pass 1: Replacing mannequin silhouettes',
+    detail: `POST /v1/images/edits · ${modelId}${req.aspectRatio ? ` · ${req.aspectRatio}` : ''}`,
+  });
 
   const image = resolveRefUrl(req.imageUrl);
   const body: Record<string, unknown> = {
@@ -75,6 +82,8 @@ export async function generateWithXAIInpaint(req: InpaintRequest): Promise<Inpai
     return { status: 'error', error: formatApiError(res.status, text, 'xAI image edit failed') };
   }
 
+  report({ message: 'Pass 1 complete', detail: 'Decoding Grok Imagine edit response' });
+
   const data = (await res.json()) as {
     data?: Array<{ url?: string; b64_json?: string }>;
   };
@@ -82,11 +91,17 @@ export async function generateWithXAIInpaint(req: InpaintRequest): Promise<Inpai
 }
 
 export async function generateWithReplicateInpaint(req: InpaintRequest): Promise<InpaintResult> {
+  const report = wrapProgressReporter(req.onProgress);
   const modelId = requireModelId(req.modelId) ?? DEFAULT_INPAINT_MODEL;
   if (!modelId) return { status: 'error', error: NO_MODEL_SELECTED_ERROR };
   if (!req.maskUrl) {
     return { status: 'error', error: 'Mask URL is required for Replicate inpainting.' };
   }
+
+  report({
+    message: 'Pass 1: FLUX Fill inpainting',
+    detail: `POST Replicate · ${modelId}`,
+  });
 
   const image = resolveRefUrl(req.imageUrl);
   const mask = resolveRefUrl(req.maskUrl);
@@ -113,6 +128,10 @@ export async function generateWithReplicateInpaint(req: InpaintRequest): Promise
     await sleep(POLL_INTERVAL_MS);
     result = await replicateFetch(`/predictions/${prediction.id}`, req.apiKey);
     polls++;
+    report({
+      message: `FLUX Fill ${result.status ?? 'processing'}`,
+      detail: `Poll ${polls}/${MAX_POLLS} · job ${prediction.id}`,
+    });
   }
 
   if (result.status === 'failed' || result.status === 'canceled') {

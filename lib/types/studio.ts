@@ -90,6 +90,14 @@ export interface ProjectSettings {
   duration: number;
 }
 
+/** Per-section opt-in for camera settings in generation prompts (default on). */
+export interface CameraPromptInclusion {
+  /** Master toggle — when false, all camera sections are excluded from prompts. */
+  includeInPrompt: boolean;
+  /** Field size, subject count, and coverage. */
+  shotSetup: boolean;
+}
+
 export interface CameraSettings {
   fieldSize: FieldSize;
   subjectCount: SubjectCount;
@@ -100,6 +108,7 @@ export interface CameraSettings {
   movement: CameraMovement;
   aperture: number;
   dof: DepthOfField;
+  promptInclusion: CameraPromptInclusion;
 }
 
 export type ColorScheme =

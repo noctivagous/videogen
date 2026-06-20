@@ -1,3 +1,4 @@
+import type { GenerationProgressReporter } from '@/lib/studio/generation/progress';
 import type { GenerationRef } from '@/lib/studio/generation/types';
 
 export interface InpaintRequest {
@@ -10,6 +11,7 @@ export interface InpaintRequest {
   maskUrl?: string;
   prompt: string;
   aspectRatio?: string;
+  onProgress?: GenerationProgressReporter;
 }
 
 export interface InpaintResult {
@@ -29,6 +31,7 @@ export type BakeIdentityPassPayload = {
   aspectRatio: string;
   refs: GenerationRef[];
   cinematographyRefs?: boolean;
+  onProgress?: GenerationProgressReporter;
 };
 
 export interface BakeStartFrameRequest {

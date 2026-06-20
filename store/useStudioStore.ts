@@ -6,6 +6,7 @@ import { getDefaultEnabledProviderId, isBuiltInProviderEnabled } from '@/lib/con
 import { apertureForDof, dofFromAperture, snapToApertureStop } from '@/lib/constants/aperture';
 import { kelvinToWarmth, warmthToKelvin } from '@/lib/constants/color-palette';
 import { applyLookRecipeToLighting, getLookRecipe } from '@/lib/constants/look-recipes';
+import { resolveCameraPromptInclusion } from '@/lib/constants/camera-prompt-inclusion';
 import { applyLensCameraPatch } from '@/lib/constants/lens';
 import { getDefaultResolution, RESOLUTION_PRESETS } from '@/lib/constants/resolutions';
 import {
@@ -60,6 +61,7 @@ import {
 } from '@/lib/studio/bake-start-frame';
 import { buildIdentityPassPlan } from '@/lib/studio/bake-identity-pass';
 import type { BakeStartFrameRequest } from '@/lib/studio/generation/inpaint-types';
+import { fetchWithGenerationProgress } from '@/lib/studio/generation/progress-stream.client';
 import {
   applyMannequinSubjectSlot,
   clearMannequinAssignmentsForSlot,
@@ -293,6 +295,7 @@ interface StudioStore {
   toast: { message: string; type: ToastType } | null;
   isGenerating: boolean;
   progressText: string;
+  progressDetail: string;
   showPreviewSuccess: boolean;
   previewSuccessProvider: string;
   previewSuccessPrompt: string;
@@ -305,8 +308,10 @@ interface StudioStore {
   previewSubMode: PreviewSubMode;
   isBakingStartFrame: boolean;
   bakeProgress: string;
+  bakeProgressDetail: string;
   isPreviewFrameGenerating: boolean;
   previewFrameProgress: string;
+  previewFrameProgressDetail: string;
   projectLocationLabel: string | null;
   projectLocationKind: ProjectLocationKind;
   projectSaveState: ProjectSaveState;
@@ -437,6 +442,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   toast: null,
   isGenerating: false,
   progressText: '',
+  progressDetail: '',
   showPreviewSuccess: false,
   previewSuccessProvider: '',
   previewSuccessPrompt: '',
@@ -449,8 +455,10 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   previewSubMode: 'framing',
   isBakingStartFrame: false,
   bakeProgress: '',
+  bakeProgressDetail: '',
   isPreviewFrameGenerating: false,
   previewFrameProgress: '',
+  previewFrameProgressDetail: '',
   projectLocationLabel: null,
   projectLocationKind: null,
   projectSaveState: 'none',
@@ -597,7 +605,19 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     set((s) => {
       const current = getCurrentShotFromList(s.shots, s.currentShot);
       const base = current?.camera ?? s.camera;
-      const camera = { ...base, ...applyLensCameraPatch(base, patch) };
+      const lensPatch = applyLensCameraPatch(base, patch);
+      const camera = {
+        ...base,
+        ...lensPatch,
+        ...(patch.promptInclusion
+          ? {
+              promptInclusion: {
+                ...resolveCameraPromptInclusion(base),
+                ...patch.promptInclusion,
+              },
+            }
+          : {}),
+      };
       if (patch.aperture !== undefined) {
         camera.aperture = snapToApertureStop(patch.aperture);
         camera.dof = dofFromAperture(camera.aperture);
@@ -1398,9 +1418,12 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       return;
     }
 
+    const principalCount = (shot.mannequins ?? []).filter((m) => (m.opacity ?? 1) >= 0.5).length;
+
     set({
       isBakingStartFrame: true,
-      bakeProgress: 'Rendering composite frame…',
+      bakeProgress: 'Rendering bake composite locally',
+      bakeProgressDetail: `Backdrop + ${principalCount} mannequin silhouette(s) at ${project.resolution}`,
       shots: patchCurrentShot(shots, currentShot, { bakeStatus: 'baking' }),
     });
 
@@ -1413,7 +1436,10 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       });
       const { imageUrl, compositeUrl } = await bakeBlobsToDataUrls(bakeOutput);
 
-      set({ bakeProgress: 'Editing with Grok Imagine…' });
+      set({
+        bakeProgress: 'Encoding composite for API upload',
+        bakeProgressDetail: 'Converting backdrop and mannequin mask to data URLs',
+      });
 
       const identityPlan = buildIdentityPassPlan(shot, imageUrl, shot.lighting);
       let identityPasses: BakeStartFrameRequest['identityPasses'];
@@ -1429,15 +1455,20 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
           refs: spec.refs,
           cinematographyRefs: false,
         }));
-        if (identityPlan.passes.length > 1) {
-          set({ bakeProgress: 'Applying character identities…' });
-        }
       }
 
-      const res = await fetch('/api/bake-start-frame', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const identityPassCount = identityPasses?.length ?? 0;
+      set({
+        bakeProgress: 'Starting server bake pipeline',
+        bakeProgressDetail:
+          identityPassCount > 0
+            ? `Pass 1 (silhouette edit) + ${identityPassCount} identity pass(es) · ${xaiModelId}`
+            : `Pass 1 only (no character assignment) · ${xaiModelId}`,
+      });
+
+      const result = await fetchWithGenerationProgress<{ status: string; imageUrl?: string; error?: string }>(
+        '/api/bake-start-frame',
+        {
           inpaint: {
             providerId: 'xai',
             apiKey: xaiKey,
@@ -1447,13 +1478,9 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
             aspectRatio: project.aspectRatio,
           },
           identityPasses,
-        }),
-      });
-
-      const result = await res.json();
-      if (!res.ok || result.status === 'error') {
-        throw new Error(result.error || 'Bake failed');
-      }
+        },
+        (update) => set({ bakeProgress: update.message, bakeProgressDetail: update.detail ?? '' }),
+      );
 
       set((s) => ({
         shots: patchCurrentShot(s.shots, s.currentShot, {
@@ -1462,6 +1489,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         }),
         isBakingStartFrame: false,
         bakeProgress: '',
+        bakeProgressDetail: '',
         previewSubMode: 'model',
       }));
       get().showToast('Start frame baked');
@@ -1470,6 +1498,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         shots: patchCurrentShot(s.shots, s.currentShot, { bakeStatus: 'error' }),
         isBakingStartFrame: false,
         bakeProgress: '',
+        bakeProgressDetail: '',
       }));
       get().showToast(e instanceof Error ? e.message : 'Bake failed', 'error');
     }
@@ -1519,13 +1548,16 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const providerName = getImageProviderName(ai);
     const fingerprint = previewFramingFingerprint(shot.camera, project.aspectRatio);
 
-    set({ isPreviewFrameGenerating: true, previewFrameProgress: `Submitting to ${providerName}...` });
+    set({
+      isPreviewFrameGenerating: true,
+      previewFrameProgress: 'Preparing preview frame request',
+      previewFrameProgressDetail: `${providerName} · ${modelId} · ${refs.length} reference(s) · ${project.aspectRatio}`,
+    });
 
     try {
-      const res = await fetch('/api/preview-frame', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const result = await fetchWithGenerationProgress<{ status: string; imageUrl?: string; error?: string }>(
+        '/api/preview-frame',
+        {
           providerId: imageProviderId,
           isCustom,
           apiKey,
@@ -1535,13 +1567,10 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
           aspectRatio: project.aspectRatio,
           refs,
           cinematographyRefs: isCinematographyRefs(shot),
-        }),
-      });
-
-      const result = await res.json();
-      if (!res.ok || result.status === 'error') {
-        throw new Error(result.error || 'Preview frame generation failed');
-      }
+        },
+        (update) =>
+          set({ previewFrameProgress: update.message, previewFrameProgressDetail: update.detail ?? '' }),
+      );
 
       set((s) => ({
         shots: patchCurrentShot(s.shots, s.currentShot, {
@@ -1551,10 +1580,15 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         isPreviewFrameGenerating: false,
         previewSubMode: 'model',
         previewFrameProgress: '',
+        previewFrameProgressDetail: '',
       }));
       get().showToast('Preview frame generated');
     } catch (e) {
-      set({ isPreviewFrameGenerating: false, previewFrameProgress: '' });
+      set({
+        isPreviewFrameGenerating: false,
+        previewFrameProgress: '',
+        previewFrameProgressDetail: '',
+      });
       get().showToast(e instanceof Error ? e.message : 'Preview frame failed', 'error');
     }
   },
@@ -1808,13 +1842,23 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     }
     const providerName = getVideoProviderName(ai);
 
-    set({ isGenerating: true, showPreviewSuccess: false, progressText: `Submitting to ${providerName}...` });
+    set({
+      isGenerating: true,
+      showPreviewSuccess: false,
+      progressText: 'Preparing video generation request',
+      progressDetail: `${providerName} · ${modelId ?? 'default model'} · ${refs.length} ref(s) · ${project.duration}s · ${project.aspectRatio}`,
+    });
 
     try {
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const result = await fetchWithGenerationProgress<{
+        status: string;
+        videoUrl?: string;
+        posterUrl?: string;
+        providerJobId?: string;
+        error?: string;
+      }>(
+        '/api/generate',
+        {
           providerId: videoProviderId,
           isCustom,
           apiKey,
@@ -1827,13 +1871,9 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
           aspectRatio: project.aspectRatio,
           refs,
           cinematographyRefs: isCinematographyRefs(shot),
-        }),
-      });
-
-      const result = await res.json();
-      if (!res.ok || result.status === 'error') {
-        throw new Error(result.error || 'Generation failed');
-      }
+        },
+        (update) => set({ progressText: update.message, progressDetail: update.detail ?? '' }),
+      );
 
       const videoUrl = result.videoUrl ?? null;
       if (!videoUrl) {
@@ -1852,12 +1892,13 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         previewSuccessProvider: `${getVideoProviderName(ai)}${result.providerJobId ? ` · Job ${result.providerJobId}` : ''}`,
         previewSuccessPrompt: combinedPrompt,
         progressText: '',
+        progressDetail: '',
       }));
       get().showToast('Video generation complete!');
 
       setTimeout(() => set({ showPreviewSuccess: false }), 5000);
     } catch (e) {
-      set({ isGenerating: false, progressText: '' });
+      set({ isGenerating: false, progressText: '', progressDetail: '' });
       get().showToast(e instanceof Error ? e.message : 'Generation failed', 'error');
     }
   },

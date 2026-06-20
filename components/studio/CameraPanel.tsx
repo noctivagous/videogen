@@ -22,6 +22,8 @@ import { SUBJECT_COUNT_OPTIONS } from '@/lib/constants/subject-count-options';
 import { ApertureDiagram } from '@/components/ui/ApertureDiagram';
 import { APERTURE_STOPS, apertureStopIndex, formatApertureLabel } from '@/lib/constants/aperture';
 import { DOF_OPTIONS } from '@/lib/constants/dof-options';
+import { PromptIncludeToggle } from '@/components/studio/PromptIncludeToggle';
+import { resolveCameraPromptInclusion } from '@/lib/constants/camera-prompt-inclusion';
 import { RangeSlider } from '@/components/ui/RangeSlider';
 import { Select } from '@/components/ui/Select';
 import { VisualDropdown } from '@/components/ui/VisualDropdown';
@@ -43,18 +45,38 @@ export function CameraPanel() {
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
   const frame = getShotFrameComposition(shot);
   const compositionLabel = getCameraCompositionLabel(camera, frame);
+  const inclusion = resolveCameraPromptInclusion(camera);
   const showCoverage = camera.subjectCount === '1s';
   const placementVisible = showPlacementGrid(frame.guide);
   const headroomVisible = showHeadroomControl(camera.fieldSize);
+
+  const togglePromptInclusion = (patch: Partial<typeof inclusion>) => {
+    setCamera({
+      promptInclusion: {
+        ...inclusion,
+        ...patch,
+      },
+    });
+  };
+
   return (
     <div className="p-4" {...uiSectionProps(UI_SECTIONS.studioCameraControls, { id: false })}>
-      <div className="flex items-center gap-2 mb-4">
-        <svg className="w-5 h-5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-        <h3 className="camera-panel-heading font-semibold text-sm uppercase tracking-wider">Camera</h3>
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2 min-w-0">
+          <svg className="w-5 h-5 text-brand-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <h3 className="camera-panel-heading font-semibold text-sm uppercase tracking-wider">Camera</h3>
+        </div>
+        <PromptIncludeToggle
+          pressed={inclusion.includeInPrompt}
+          onToggle={() => togglePromptInclusion({ includeInPrompt: !inclusion.includeInPrompt })}
+        />
       </div>
+      <p className="text-[10px] text-gray-500 mb-4 -mt-2">
+        Toggles only affect the text prompt. Controls always apply to preview and start-frame bake.
+      </p>
 
       <div className="border-t border-surface-700 mb-4" aria-hidden />
 
@@ -63,16 +85,22 @@ export function CameraPanel() {
           className="space-y-4"
           {...uiSectionProps(UI_SECTIONS.studioCameraShotSetup, { id: false })}
         >
-          <div className="flex items-center gap-2 px-1">
-            <svg className="w-4 h-4 text-brand-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"
-              />
-            </svg>
-            <span className="camera-panel-subheading text-xs font-semibold uppercase tracking-wider">Shot Setup</span>
+          <div className="flex items-center justify-between gap-3 px-1">
+            <div className="flex items-center gap-2 min-w-0">
+              <svg className="w-4 h-4 text-brand-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"
+                />
+              </svg>
+              <span className="camera-panel-subheading text-xs font-semibold uppercase tracking-wider">Shot Setup</span>
+            </div>
+            <PromptIncludeToggle
+              pressed={inclusion.shotSetup}
+              onToggle={() => togglePromptInclusion({ shotSetup: !inclusion.shotSetup })}
+            />
           </div>
 
         <VisualDropdown

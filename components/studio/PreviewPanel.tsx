@@ -11,6 +11,7 @@ import { ReferenceSlots } from '@/components/studio/ReferenceSlots';
 import { useThemeTransformConnectorContext } from '@/components/studio/ThemeTransformConnectorProvider';
 import { GeneratedVideoStrip } from '@/components/studio/GeneratedVideoStrip';
 import { FrameViewSegment } from '@/components/studio/FrameViewSegment';
+import { GenerationProgressOverlay } from '@/components/studio/GenerationProgressOverlay';
 import { ModelPreviewScene } from '@/components/studio/ModelPreviewScene';
 import { PreviewSubModeSegment } from '@/components/studio/PreviewSubModeSegment';
 import { PromptStackView } from '@/components/studio/PromptStackView';
@@ -79,7 +80,9 @@ export function PreviewPanel() {
   const isGenerating = useStudioStore((s) => s.isGenerating);
   const isPreviewFrameGenerating = useStudioStore((s) => s.isPreviewFrameGenerating);
   const progressText = useStudioStore((s) => s.progressText);
+  const progressDetail = useStudioStore((s) => s.progressDetail);
   const previewFrameProgress = useStudioStore((s) => s.previewFrameProgress);
+  const previewFrameProgressDetail = useStudioStore((s) => s.previewFrameProgressDetail);
   const showPreviewSuccess = useStudioStore((s) => s.showPreviewSuccess);
   const previewSuccessProvider = useStudioStore((s) => s.previewSuccessProvider);
   const previewSuccessPrompt = useStudioStore((s) => s.previewSuccessPrompt);
@@ -96,6 +99,7 @@ export function PreviewPanel() {
   const removeMannequin = useStudioStore((s) => s.removeMannequin);
   const isBakingStartFrame = useStudioStore((s) => s.isBakingStartFrame);
   const bakeProgress = useStudioStore((s) => s.bakeProgress);
+  const bakeProgressDetail = useStudioStore((s) => s.bakeProgressDetail);
   const ai = useStudioStore((s) => s.ai);
   const [selectedMannequinId, setSelectedMannequinId] = useState<string | null>(null);
 
@@ -360,31 +364,33 @@ export function PreviewPanel() {
                 className="absolute inset-0 z-20 bg-surface-900/90 flex items-center justify-center backdrop-blur-sm"
                 {...uiSectionProps(UI_SECTIONS.studioPreviewGeneratingOverlay)}
               >
-                <div className="text-center">
-                  <div className="w-16 h-16 border-4 border-surface-600 border-t-brand-500 rounded-full animate-spin mx-auto mb-4" />
-                  <p className="text-sm text-gray-300 font-medium">Generating video...</p>
-                  <p className="text-xs text-gray-500 mt-1">{progressText}</p>
-                </div>
+                <GenerationProgressOverlay
+                  title="Generating video"
+                  message={progressText || 'Starting…'}
+                  detail={progressDetail}
+                />
               </div>
             )}
 
             {isPreviewFrameGenerating && (
               <div className="absolute inset-0 z-20 bg-surface-900/90 flex items-center justify-center backdrop-blur-sm">
-                <div className="text-center">
-                  <div className="w-12 h-12 border-4 border-surface-600 border-t-brand-500 rounded-full animate-spin mx-auto mb-3" />
-                  <p className="text-sm text-gray-300 font-medium">Generating preview frame...</p>
-                  <p className="text-xs text-gray-500 mt-1">{previewFrameProgress}</p>
-                </div>
+                <GenerationProgressOverlay
+                  title="Generating preview frame"
+                  message={previewFrameProgress || 'Starting…'}
+                  detail={previewFrameProgressDetail}
+                  size="sm"
+                />
               </div>
             )}
 
             {isBakingStartFrame && (
               <div className="absolute inset-0 z-20 bg-surface-900/90 flex items-center justify-center backdrop-blur-sm">
-                <div className="text-center">
-                  <div className="w-12 h-12 border-4 border-surface-600 border-t-brand-500 rounded-full animate-spin mx-auto mb-3" />
-                  <p className="text-sm text-gray-300 font-medium">Baking start frame...</p>
-                  <p className="text-xs text-gray-500 mt-1">{bakeProgress}</p>
-                </div>
+                <GenerationProgressOverlay
+                  title="Baking start frame"
+                  message={bakeProgress || 'Starting…'}
+                  detail={bakeProgressDetail}
+                  size="sm"
+                />
               </div>
             )}
           </div>

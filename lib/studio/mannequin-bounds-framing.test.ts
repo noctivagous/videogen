@@ -9,6 +9,8 @@ import { mannequinTrim, mannequinVariantFrom } from '@/lib/constants/mannequin-a
 import {
   anchorToBoundsFrame,
   boundsFrameToAnchor,
+  boundsFrameToInsetStyle,
+  previewBoundsFrameFromMannequin,
   defaultBoundsForFieldSize,
   fieldSizeAnchor,
   maxWidthToFrameHeight,
@@ -17,6 +19,7 @@ import {
   type MannequinBoundsFrame,
 } from '@/lib/studio/mannequin-bounds-framing';
 import { MANNEQUIN_SCALE_MAX } from '@/lib/studio/mannequin-layout';
+import { bakeContentInsetsFromAnchor } from '@/lib/studio/mannequin-bounds-bake-parity';
 import { mannequinFieldSizeAnchor } from '@/lib/studio/mannequin-sync';
 import type { AspectRatio, FieldSize, MannequinAge, MannequinGender } from '@/lib/types/studio';
 
@@ -58,17 +61,14 @@ function roundTripBounds(
 }
 
 describe('mannequin bounds framing round-trip', () => {
-  it.each([
-    ['ecu', -0.3, 0, 3],
-    ['cu', 0.2, 0.025, 1.7],
-    ['mcu', 0.290625, 0.058333, 0.987],
-  ] as const)(
-    '%s preset matches expected bounds for male adult',
-    (fieldSize, insetLeft, insetTop, widthToFrameHeight) => {
+  it.each(['ecu', 'cu', 'mcu'] as const)(
+    '%s preset matches table bounds for male adult',
+    (fieldSize) => {
       const bounds = defaultBoundsForFieldSize(fieldSize, 'normal', 0.5, '16:9', variant());
-      expect(bounds.insetLeft).toBeCloseTo(insetLeft, 4);
-      expect(bounds.insetTop).toBeCloseTo(insetTop, 4);
-      expect(bounds.widthToFrameHeight).toBeCloseTo(widthToFrameHeight, 4);
+      const preset = FIELD_SIZE_BOUNDS_PRESETS[fieldSize]['male-adult'];
+      expect(bounds.insetLeft).toBeCloseTo(preset.insetLeft, 4);
+      expect(bounds.insetTop).toBeCloseTo(preset.insetTop, 4);
+      expect(bounds.widthToFrameHeight).toBeCloseTo(preset.widthToFrameHeight, 4);
     },
   );
 
@@ -137,7 +137,7 @@ describe('mannequin bounds framing round-trip', () => {
     expect(bounds.widthToFrameHeight).toBeCloseTo(1.7, EPS);
   });
 
-  it('insetTop matches trim-aware hit-target top for CU', () => {
+  it('insetTop matches bake draw content top for CU', () => {
     const shot = {
       camera: { fieldSize: 'cu' as const },
       frameComposition: { placement: 'cell-2-0', headroom: 'normal' as const },
@@ -145,12 +145,9 @@ describe('mannequin bounds framing round-trip', () => {
     const mannequinVariant = variant();
     const anchor = mannequinFieldSizeAnchor(shot, mannequinVariant, '16:9');
     const mannequin = { ...anchor, ...mannequinVariant };
-    const trim = mannequinTrim(mannequinVariantFrom(mannequin));
-    const visualHeight = 0.55 * anchor.scale;
-    const pngHeight = visualHeight / trim.contentHeightRatio;
-    const hitTargetTop = anchor.y - pngHeight * (1 - trim.paddingTop);
+    const contentTop = anchor.y - 0.55 * anchor.scale;
     const bounds = anchorToBoundsFrame(mannequin, '16:9', 1 / 6);
-    expect(bounds.insetTop).toBeCloseTo(hitTargetTop, EPS);
+    expect(bounds.insetTop).toBeCloseTo(contentTop, EPS);
   });
 
   it('patchBoundsFrame left edit translates without changing scale', () => {
@@ -212,6 +209,45 @@ describe('mannequin scale limits', () => {
   });
 });
 
+describe('previewBoundsFrameFromMannequin', () => {
+  it('tracks absolute on-screen position when placement is off-center', () => {
+    const shot = {
+      camera: { fieldSize: 'cu' as const },
+      frameComposition: { placement: 'cell-2-0', headroom: 'normal' as const },
+    } as Parameters<typeof mannequinFieldSizeAnchor>[0];
+    const mannequinVariant = variant();
+    const anchor = mannequinFieldSizeAnchor(shot, mannequinVariant, '16:9');
+    const mannequin = { ...anchor, ...mannequinVariant };
+
+    const inspectorBounds = anchorToBoundsFrame(mannequin, '16:9', 1 / 6);
+    const previewBounds = previewBoundsFrameFromMannequin(mannequin, '16:9');
+    const bakeBounds = bakeContentInsetsFromAnchor(mannequin, '16:9');
+
+    expect(inspectorBounds.insetLeft).toBeCloseTo(0.2, EPS);
+    expect(previewBounds.insetLeft).not.toBeCloseTo(inspectorBounds.insetLeft, 2);
+    expectBoundsClose(previewBounds, bakeBounds);
+  });
+});
+
+describe('boundsFrameToInsetStyle', () => {
+  it('maps relational insets to percentage CSS insets', () => {
+    expect(
+      boundsFrameToInsetStyle({
+        insetLeft: 0.25,
+        insetRight: 0.35,
+        insetTop: 0.1,
+        insetBottom: -0.05,
+        widthToFrameHeight: 0.4,
+      }),
+    ).toEqual({
+      left: '25%',
+      top: '10%',
+      right: '35%',
+      bottom: '-5%',
+    });
+  });
+});
+
 describe('mannequin bounds presets coverage', () => {
   it.each(ALL_FIELD_SIZES)('field size %s has every demographic preset', (fieldSize) => {
     const table = FIELD_SIZE_BOUNDS_PRESETS[fieldSize];
@@ -225,13 +261,10 @@ describe('mannequin bounds presets coverage', () => {
     }
   });
 
-  it.each([
-    ['ecu', { insetLeft: -0.3, insetTop: 0, widthToFrameHeight: 3 }],
-    ['cu', { insetLeft: 0.2, insetTop: 0.025, widthToFrameHeight: 1.7 }],
-    ['mcu', { insetLeft: 0.290625, insetTop: 0.058333, widthToFrameHeight: 0.987 }],
-  ] as const)('%s table uses expected male values for all male demographics', (fieldSize, malePreset) => {
+  it('cu table has identical male demographic rows', () => {
+    const reference = FIELD_SIZE_BOUNDS_PRESETS.cu['male-adult'];
     for (const key of MANNEQUIN_DEMOGRAPHICS.filter((d) => d.startsWith('male-'))) {
-      expect(FIELD_SIZE_BOUNDS_PRESETS[fieldSize][key]).toMatchObject(malePreset);
+      expect(FIELD_SIZE_BOUNDS_PRESETS.cu[key]).toEqual(reference);
     }
   });
 });

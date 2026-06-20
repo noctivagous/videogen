@@ -5,6 +5,7 @@ import {
   NO_MODEL_SELECTED_ERROR,
   requireModelId,
 } from '@/lib/studio/generation/adapters/shared';
+import { wrapProgressReporter } from '@/lib/studio/generation/progress';
 import type { PreviewFrameRequest, PreviewFrameResult } from '@/lib/studio/generation/preview-frame-types';
 
 const XAI_API = 'https://api.x.ai/v1';
@@ -24,6 +25,7 @@ function parseImageGenerationResponse(
 }
 
 async function generateWithXAIImage(req: PreviewFrameRequest): Promise<PreviewFrameResult> {
+  const report = wrapProgressReporter(req.onProgress);
   const modelId = requireModelId(req.modelId);
   if (!modelId) return { status: 'error', error: NO_MODEL_SELECTED_ERROR };
 
@@ -31,6 +33,24 @@ async function generateWithXAIImage(req: PreviewFrameRequest): Promise<PreviewFr
   const resolved = refs.map((r) => resolveRefUrl(r.url));
   const useEditEndpoint = resolved.length > 0;
   const endpoint = useEditEndpoint ? `${XAI_API}/images/edits` : `${XAI_API}/images/generations`;
+
+  if (useEditEndpoint) {
+    report({
+      message:
+        resolved.length >= 2
+          ? 'Calling Grok Imagine multi-image edit'
+          : 'Calling Grok Imagine image edit',
+      detail:
+        resolved.length >= 2
+          ? `POST /v1/images/edits · ${modelId} · ${resolved.length} source images · ${req.aspectRatio}`
+          : `POST /v1/images/edits · ${modelId} · 1 source image · ${req.aspectRatio}`,
+    });
+  } else {
+    report({
+      message: 'Calling Grok Imagine image generation',
+      detail: `POST /v1/images/generations · ${modelId} · ${req.aspectRatio}`,
+    });
+  }
 
   const body: Record<string, unknown> = {
     model: modelId,
@@ -60,6 +80,8 @@ async function generateWithXAIImage(req: PreviewFrameRequest): Promise<PreviewFr
     return { status: 'error', error: formatApiError(res.status, text, 'xAI image generation failed') };
   }
 
+  report({ message: 'Processing image response', detail: 'Decoding Grok Imagine output' });
+
   const data = (await res.json()) as {
     data?: Array<{ url?: string; b64_json?: string }>;
   };
@@ -67,6 +89,7 @@ async function generateWithXAIImage(req: PreviewFrameRequest): Promise<PreviewFr
 }
 
 async function generateWithOpenAIImage(req: PreviewFrameRequest): Promise<PreviewFrameResult> {
+  const report = wrapProgressReporter(req.onProgress);
   const modelId = requireModelId(req.modelId);
   if (!modelId) return { status: 'error', error: NO_MODEL_SELECTED_ERROR };
 
@@ -78,6 +101,11 @@ async function generateWithOpenAIImage(req: PreviewFrameRequest): Promise<Previe
     '21:9': '1792x768',
   };
   const size = sizeMap[req.aspectRatio] || '1792x1024';
+
+  report({
+    message: 'Calling OpenAI image generation',
+    detail: `POST /v1/images/generations · ${modelId} · ${size}`,
+  });
 
   const res = await fetch(`${OPENAI_API}/images/generations`, {
     method: 'POST',
@@ -111,8 +139,13 @@ async function generateWithOpenAIImage(req: PreviewFrameRequest): Promise<Previe
 }
 
 async function generateWithReplicateImage(req: PreviewFrameRequest): Promise<PreviewFrameResult> {
+  const report = wrapProgressReporter(req.onProgress);
   const model = requireModelId(req.modelId);
   if (!model) return { status: 'error', error: NO_MODEL_SELECTED_ERROR };
+  report({
+    message: 'Submitting to Replicate',
+    detail: `POST /v1/predictions · ${model} · waiting for result`,
+  });
   const res = await fetch('https://api.replicate.com/v1/predictions', {
     method: 'POST',
     headers: {

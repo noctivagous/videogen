@@ -1,4 +1,8 @@
-import { boundsPresetForDemographic } from '@/lib/constants/mannequin-bounds-presets';
+import { boundsPresetForVariant } from '@/lib/constants/mannequin-bounds-presets';
+import {
+  MANNEQUIN_BOUNDS_REFERENCE_ASPECT,
+  MANNEQUIN_BOUNDS_REFERENCE_PLACEMENT_X,
+} from '@/lib/studio/mannequin-bounds-contract';
 import {
   mannequinTrim,
   mannequinVariantFrom,
@@ -22,6 +26,9 @@ export const MANNEQUIN_ASSET_ASPECT_RATIO = 321 / 1023;
 /**
  * Relational frame fit: inset distances from each bounds edge to the matching frame edge,
  * plus bounds width expressed relative to frame height.
+ *
+ * Full contract: lib/studio/mannequin-bounds-contract.ts
+ * Bake parity: lib/studio/mannequin-bounds-bake-parity.ts
  */
 export interface MannequinBoundsFrame {
   /** Frame left → bounds left (fraction of frame width). */
@@ -37,6 +44,36 @@ export interface MannequinBoundsFrame {
   insetBottom: number;
   /** Bounds width ÷ frame height (pixel ratio; equals boundsWidthFrac × aspect). */
   widthToFrameHeight: number;
+}
+
+/** CSS inset positioning for the alpha-content bounds box in the preview frame. */
+export function boundsFrameToInsetStyle(bounds: MannequinBoundsFrame): {
+  left: string;
+  top: string;
+  right: string;
+  bottom: string;
+} {
+  return {
+    left: `${bounds.insetLeft * 100}%`,
+    top: `${bounds.insetTop * 100}%`,
+    right: `${bounds.insetRight * 100}%`,
+    bottom: `${bounds.insetBottom * 100}%`,
+  };
+}
+
+/**
+ * Absolute frame-space bounds for preview overlays — matches on-screen mannequin layout.
+ * Inspector bounds use placementAnchorX to cancel grid shift; overlays must not.
+ */
+export function previewBoundsFrameFromMannequin(
+  mannequin: Pick<Mannequin, 'x' | 'y' | 'scale' | 'gender' | 'age' | 'pose' | 'angle' | 'ageScale'>,
+  aspectRatio: AspectRatio = '16:9',
+): MannequinBoundsFrame {
+  return anchorToBoundsFrame(
+    mannequin,
+    aspectRatio,
+    MANNEQUIN_BOUNDS_REFERENCE_PLACEMENT_X,
+  );
 }
 
 export function parseAspectRatio(aspectRatio: AspectRatio | string): number {
@@ -83,36 +120,26 @@ function visualHeightFromWidth(
   return MANNEQUIN_BASE_HEIGHT_RATIO * scaleFromWidthToFrameHeight(widthToFrameHeight, trim);
 }
 
-/** Frame-top → content-bounds-top, given feet anchor Y and visual figure height. */
-function insetTopFromFeetY(
-  feetY: number,
-  visualHeight: number,
-  trim: MannequinTrim,
-): number {
-  const pngHeight = visualHeight / trim.contentHeightRatio;
-  return feetY - pngHeight * (1 - trim.paddingTop);
+/** Frame-top → alpha content top (matches mannequinDrawLayout / bake canvas). */
+function insetTopFromFeetY(feetY: number, visualHeight: number): number {
+  return feetY - visualHeight;
 }
 
-/** Feet anchor Y that places trim-aware content top at insetTop. */
-function feetYFromInsetTop(
-  insetTop: number,
-  visualHeight: number,
-  trim: MannequinTrim,
-): number {
-  const pngHeight = visualHeight / trim.contentHeightRatio;
-  return insetTop + pngHeight * (1 - trim.paddingTop);
+/** Feet anchor Y that places content top at insetTop. */
+function feetYFromInsetTop(insetTop: number, visualHeight: number): number {
+  return insetTop + visualHeight;
 }
 
-/** Vertical span from trim-aware content top down to the feet anchor. */
-function contentSpanToFeet(visualHeight: number, trim: MannequinTrim): number {
-  return (visualHeight / trim.contentHeightRatio) * (1 - trim.paddingTop);
+/** Vertical span from content top down to the feet anchor. */
+function contentSpanToFeet(visualHeight: number): number {
+  return visualHeight;
 }
 
 function syncBoundsVerticalInsets(
   bounds: MannequinBoundsFrame,
   trim: MannequinTrim,
 ): MannequinBoundsFrame {
-  const span = contentSpanToFeet(visualHeightFromWidth(bounds.widthToFrameHeight, trim), trim);
+  const span = contentSpanToFeet(visualHeightFromWidth(bounds.widthToFrameHeight, trim));
   return {
     ...bounds,
     insetBottom: 1 - bounds.insetTop - span,
@@ -158,8 +185,8 @@ function boundsFromPreset(
   );
 }
 
-/** Presets are authored at center placement (anchorX 0.5); horizontal offset lives in feet anchor x. */
-export const PRESET_REFERENCE_PLACEMENT_X = 0.5;
+/** @deprecated Use MANNEQUIN_BOUNDS_REFERENCE_PLACEMENT_X from mannequin-bounds-contract.ts */
+export const PRESET_REFERENCE_PLACEMENT_X = MANNEQUIN_BOUNDS_REFERENCE_PLACEMENT_X;
 
 function placementShiftX(anchorX: number): number {
   return anchorX - PRESET_REFERENCE_PLACEMENT_X;
@@ -178,7 +205,12 @@ export function defaultBoundsForFieldSize(
 ): MannequinBoundsFrame {
   const aspect = parseAspectRatio(aspectRatio);
   const trim = mannequinTrim(variant);
-  const preset = boundsPresetForDemographic(fieldSize, variant.gender, variant.age);
+  const preset = boundsPresetForVariant(
+    fieldSize,
+    variant.gender,
+    variant.age,
+    variant.angle,
+  );
   return applyHeadroomToBounds(boundsFromPreset(preset, aspect, trim), headroom);
 }
 
@@ -197,7 +229,7 @@ export function boundsFrameToAnchor(
 
   const scale = clampMannequinScale(scaleFromWidthToFrameHeight(synced.widthToFrameHeight, trim));
   const y = clampMannequinAnchor(
-    { x: 0.5, y: feetYFromInsetTop(synced.insetTop, height, trim) },
+    { x: 0.5, y: feetYFromInsetTop(synced.insetTop, height) },
     { maxY: maxFeetAnchorY({ scale }) },
   ).y;
   const x = synced.insetLeft + trim.feetCenterX * width + placementShiftX(anchorX);
@@ -218,7 +250,7 @@ export function anchorToBoundsFrame(
   const height = MANNEQUIN_BASE_HEIGHT_RATIO * effectiveMannequinScale(mannequin);
   const width = pngWidthFrac(height, trim, aspect);
   const insetBottom = 1 - mannequin.y;
-  const insetTop = insetTopFromFeetY(mannequin.y, height, trim);
+  const insetTop = insetTopFromFeetY(mannequin.y, height);
   const insetLeft = mannequin.x - trim.feetCenterX * width - placementShiftX(anchorX);
 
   return {

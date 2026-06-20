@@ -8,6 +8,7 @@ import {
   timedFetch,
 } from '@/lib/studio/generation/adapters/shared';
 import { augmentPromptForXAI } from '@/lib/studio/generation-prompt';
+import { formatXAIVideoPollStatus, wrapProgressReporter } from '@/lib/studio/generation/progress';
 import type { GenerationRequest, GenerationResult, ProviderTestResult } from '@/lib/studio/generation/types';
 import { inferModalitiesFromModelId, unionModalities } from '@/lib/studio/provider-modalities';
 import {
@@ -36,8 +37,9 @@ function xaiHeaders(apiKey: string): HeadersInit {
 async function pollXAIVideo(
   apiKey: string,
   requestId: string,
+  report: ReturnType<typeof wrapProgressReporter>,
 ): Promise<{ videoUrl?: string; error?: string }> {
-  for (let poll = 0; poll < XAI_VIDEO_MAX_POLLS; poll++) {
+  for (let poll = 1; poll <= XAI_VIDEO_MAX_POLLS; poll++) {
     await sleep(XAI_VIDEO_POLL_MS);
 
     const res = await fetch(`${XAI_API}/videos/${requestId}`, {
@@ -56,24 +58,35 @@ async function pollXAIVideo(
     };
 
     if (data.status === 'done') {
+      report({
+        message: 'Video render complete',
+        detail: `Job ${requestId.slice(0, 8)}… — downloading result`,
+      });
       const videoUrl = data.video?.url;
       if (!videoUrl) return { error: 'xAI returned no video URL' };
       return { videoUrl };
     }
 
     if (data.status === 'failed') {
-      return { error: data.error?.message || 'xAI video generation failed' };
+      const code = data.error?.code ? ` [${data.error.code}]` : '';
+      return { error: `${data.error?.message || 'xAI video generation failed'}${code}` };
     }
 
     if (data.status === 'expired') {
       return { error: 'xAI video request expired — try again' };
     }
+
+    report({
+      message: formatXAIVideoPollStatus(data.status, poll, XAI_VIDEO_MAX_POLLS),
+      detail: `Job ${requestId.slice(0, 8)}… — xAI polls every ${XAI_VIDEO_POLL_MS / 1000}s while status is pending`,
+    });
   }
 
   return { error: 'xAI video generation timed out — try a shorter clip or simpler prompt' };
 }
 
 export async function generateWithXAI(req: GenerationRequest): Promise<GenerationResult> {
+  const report = wrapProgressReporter(req.onProgress);
   try {
     const selected = requireModelId(req.modelId);
     if (!selected) {
@@ -94,6 +107,18 @@ export async function generateWithXAI(req: GenerationRequest): Promise<Generatio
       }
     }
 
+    const videoMode =
+      imageToVideoOnly || refs.length === 1
+        ? 'image-to-video'
+        : refs.length >= 2
+          ? 'reference-to-video'
+          : 'text-to-video';
+
+    report({
+      message: 'Preparing Grok Imagine video request',
+      detail: `${model} · ${videoMode} · ${duration}s · ${xaiVideoResolution(req.resolution)} · ${req.aspectRatio}`,
+    });
+
     const prompt = augmentPromptForXAI(req.prompt, refs, req.cinematographyRefs !== false);
 
     const body: Record<string, unknown> = {
@@ -105,11 +130,19 @@ export async function generateWithXAI(req: GenerationRequest): Promise<Generatio
     };
 
     if (imageToVideoOnly) {
+      report({ message: 'Uploading start frame', detail: 'POST /v1/videos/generations with image' });
       body.image = { url: resolveRefUrl(refs[0].url) };
     } else if (refs.length >= 2) {
+      report({
+        message: 'Uploading reference images',
+        detail: `POST /v1/videos/generations with ${refs.length} reference_images`,
+      });
       body.reference_images = refs.map((r) => ({ url: resolveRefUrl(r.url) }));
     } else if (refs.length === 1) {
+      report({ message: 'Uploading start frame', detail: 'POST /v1/videos/generations with image' });
       body.image = { url: resolveRefUrl(refs[0].url) };
+    } else {
+      report({ message: 'Submitting text-to-video prompt', detail: 'POST /v1/videos/generations' });
     }
 
     const res = await fetch(`${XAI_API}/videos/generations`, {
@@ -129,7 +162,12 @@ export async function generateWithXAI(req: GenerationRequest): Promise<Generatio
       return { status: 'error', error: 'xAI returned no request_id' };
     }
 
-    const polled = await pollXAIVideo(req.apiKey, requestId);
+    report({
+      message: 'Video job queued',
+      detail: `request_id ${requestId} — polling GET /v1/videos/{request_id} until status is done`,
+    });
+
+    const polled = await pollXAIVideo(req.apiKey, requestId, report);
     if (polled.error) {
       return { status: 'error', error: polled.error, providerJobId: requestId };
     }

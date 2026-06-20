@@ -2,6 +2,7 @@ import {
   CAMERA_ANGLE_LABELS,
   CAMERA_COVERAGE_LABELS,
 } from '@/lib/constants/camera';
+import { resolveCameraPromptInclusion } from '@/lib/constants/camera-prompt-inclusion';
 import { formatLensForPrompt } from '@/lib/constants/lens';
 import { buildVideoEnvironmentPrompt } from '@/lib/studio/video-environment-prompt';
 import { getShotFrameComposition } from '@/lib/studio/composition';
@@ -58,17 +59,22 @@ function pushSceneRows(
 }
 
 function getCameraPromptParts(camera: CameraSettings, frame: FrameComposition): PromptTableRow[] {
+  const inclusion = resolveCameraPromptInclusion(camera);
+  if (!inclusion.includeInPrompt) return [];
+
   const rows: PromptTableRow[] = [];
 
-  const field = FIELD_SIZE_PROMPTS[camera.fieldSize] ?? camera.fieldSize;
-  if (field) rows.push({ source: 'Camera · Field Size', text: field });
+  if (inclusion.shotSetup) {
+    const field = FIELD_SIZE_PROMPTS[camera.fieldSize] ?? camera.fieldSize;
+    if (field) rows.push({ source: 'Camera · Field Size', text: field });
 
-  const count = SUBJECT_COUNT_PROMPTS[camera.subjectCount] ?? camera.subjectCount;
-  if (count) rows.push({ source: 'Camera · Subject Count', text: count });
+    const count = SUBJECT_COUNT_PROMPTS[camera.subjectCount] ?? camera.subjectCount;
+    if (count) rows.push({ source: 'Camera · Subject Count', text: count });
 
-  if (camera.subjectCount === '1s' && camera.coverage !== 'clean') {
-    const coverage = CAMERA_COVERAGE_LABELS[camera.coverage];
-    if (coverage) rows.push({ source: 'Camera · Coverage', text: coverage.toLowerCase() });
+    if (camera.subjectCount === '1s' && camera.coverage !== 'clean') {
+      const coverage = CAMERA_COVERAGE_LABELS[camera.coverage];
+      if (coverage) rows.push({ source: 'Camera · Coverage', text: coverage.toLowerCase() });
+    }
   }
 
   const framing = getGenerationFramePrompt(camera.fieldSize, frame);
@@ -155,8 +161,10 @@ export function buildPromptTable(input: {
 
   rows.push(...getCameraPromptParts(camera, frame));
 
-  const motionRow = getMotionPromptPart(motion);
-  if (motionRow) rows.push(motionRow);
+  if (resolveCameraPromptInclusion(camera).includeInPrompt) {
+    const motionRow = getMotionPromptPart(motion);
+    if (motionRow) rows.push(motionRow);
+  }
 
   return rows;
 }

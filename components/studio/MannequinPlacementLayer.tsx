@@ -26,7 +26,9 @@ import {
 } from '@/lib/studio/mannequin-layout';
 import {
   anchorToBoundsFrame,
+  boundsFrameToInsetStyle,
   boundsFrameToMannequinPatch,
+  previewBoundsFrameFromMannequin,
   maxWidthToFrameHeight,
   patchBoundsFrame,
   type MannequinBoundsFrame,
@@ -45,6 +47,7 @@ import {
   isValidSubjectSlotAssignment,
 } from '@/lib/studio/mannequin-character-assignment';
 import { getReferenceSlotLabel } from '@/lib/studio/reference-slots';
+import { openContextMenu } from '@/components/ui/ContextMenuManager';
 import type { AspectRatio, Mannequin } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
 
@@ -66,6 +69,43 @@ interface BoundsFieldProps {
   min: number;
   max: number;
   onChange: (value: number) => void;
+}
+
+interface MannequinFacingArrowProps {
+  direction: 'left' | 'right';
+  label: string;
+  onClick: () => void;
+}
+
+function MannequinFacingArrow({ direction, label, onClick }: MannequinFacingArrowProps) {
+  return (
+    <button
+      type="button"
+      className={`mannequin-bounds-face-btn mannequin-bounds-face-btn--${direction}`}
+      aria-label={label}
+      title={label}
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+    >
+      <svg
+        className="mannequin-bounds-face-btn__icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        aria-hidden
+      >
+        {direction === 'left' ? (
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+        ) : (
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        )}
+      </svg>
+    </button>
+  );
 }
 
 function BoundsField({ label, value, min, max, onChange }: BoundsFieldProps) {
@@ -152,7 +192,9 @@ export function MannequinPlacementLayer({
       const target = e.target;
       if (!(target instanceof Element)) return;
       if (
-        target.closest('.mannequin-hit-target, .mannequin-inspector-panel, .mannequin-handle')
+        target.closest(
+          '.mannequin-hit-target, .mannequin-inspector-panel, .mannequin-handle, .mannequin-bounds-overlay, .mannequin-bounds-face-btn',
+        )
       ) {
         return;
       }
@@ -272,10 +314,52 @@ export function MannequinPlacementLayer({
     return anchorToBoundsFrame(selected, aspectRatio, placementX);
   }, [selected, aspectRatio, placementX]);
 
+  const selectedPreviewBounds = useMemo(() => {
+    if (!selected) return null;
+    return previewBoundsFrameFromMannequin(selected, aspectRatio);
+  }, [selected, aspectRatio]);
+
   const widthToHeightMax = useMemo(() => {
     if (!selected) return 2.5;
     return maxWidthToFrameHeight(mannequinTrim(mannequinVariantFrom(selected)));
   }, [selected]);
+
+  const handleRemove = useCallback(
+    (id: string) => {
+      onRemove(id);
+      onSelect(null);
+    },
+    [onRemove, onSelect],
+  );
+
+  const openMannequinContextMenu = useCallback(
+    (mannequin: Mannequin, clientX: number, clientY: number) => {
+      onSelect(mannequin.id);
+      openContextMenu({
+        x: clientX,
+        y: clientY,
+        items: [
+          {
+            id: 'delete',
+            label: 'Delete',
+            destructive: true,
+            onSelect: () => handleRemove(mannequin.id),
+          },
+        ],
+      });
+    },
+    [handleRemove, onSelect],
+  );
+
+  const rotateSelectedFacing = useCallback(
+    (direction: 'left' | 'right') => {
+      if (!selected) return;
+      onUpdate(selected.id, {
+        angle: rotateMannequinAngle(selected.angle, direction),
+      });
+    },
+    [onUpdate, selected],
+  );
 
   const applyBoundsPatch = useCallback(
     (patch: Partial<MannequinBoundsFrame>) => {
@@ -344,8 +428,14 @@ export function MannequinPlacementLayer({
               className="mannequin-hit-target absolute pointer-events-auto cursor-grab touch-none active:cursor-grabbing"
               style={mannequinHitTargetStyle(m)}
               onPointerDown={(e) => {
+                if (e.button !== 0) return;
                 onSelect(m.id);
                 startDrag(e, m, 'move');
+              }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openMannequinContextMenu(m, e.clientX, e.clientY);
               }}
             />
             {isPrincipal && characterConnector?.characterAssignmentEnabled && (
@@ -367,7 +457,7 @@ export function MannequinPlacementLayer({
                 type="button"
                 className="mannequin-handle absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-red-600 text-white text-xs leading-none z-20 pointer-events-auto"
                 onPointerDown={(e) => e.stopPropagation()}
-                onClick={() => onRemove(m.id)}
+                onClick={() => handleRemove(m.id)}
                 aria-label="Remove mannequin"
               >
                 ×
@@ -404,6 +494,25 @@ export function MannequinPlacementLayer({
           </div>
         );
       })}
+
+      {selected && selectedPreviewBounds && (
+        <div
+          className="mannequin-bounds-overlay"
+          style={boundsFrameToInsetStyle(selectedPreviewBounds)}
+        >
+          <div className="mannequin-bounds-overlay__frame" aria-hidden />
+          <MannequinFacingArrow
+            direction="left"
+            label="Rotate facing left"
+            onClick={() => rotateSelectedFacing('left')}
+          />
+          <MannequinFacingArrow
+            direction="right"
+            label="Rotate facing right"
+            onClick={() => rotateSelectedFacing('right')}
+          />
+        </div>
+      )}
 
       <div className="mannequin-inspector-panel absolute top-3 right-3 z-50 flex flex-col gap-2 min-w-[11.5rem] max-w-[14rem] bg-surface-900/90 border border-surface-700 rounded-lg p-2 text-[10px] pointer-events-auto">
         <div className="flex items-center gap-2">

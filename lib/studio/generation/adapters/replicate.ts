@@ -6,6 +6,7 @@ import {
   requireModelId,
   sleep,
 } from '@/lib/studio/generation/adapters/shared';
+import { wrapProgressReporter } from '@/lib/studio/generation/progress';
 import type { GenerationRequest, GenerationResult } from '@/lib/studio/generation/types';
 
 async function replicateFetch(path: string, apiKey: string, init?: RequestInit) {
@@ -30,10 +31,15 @@ function resolveModelPath(modelId: string): string {
 }
 
 export async function generateWithReplicate(req: GenerationRequest): Promise<GenerationResult> {
+  const report = wrapProgressReporter(req.onProgress);
   const modelId = requireModelId(req.modelId);
   if (!modelId) {
     return { status: 'error', error: NO_MODEL_SELECTED_ERROR };
   }
+  report({
+    message: 'Submitting to Replicate',
+    detail: `POST /v1/models/${modelId}/predictions`,
+  });
   const image = pickImageInput(req.refs);
   const input: Record<string, unknown> = {
     prompt: req.prompt,
@@ -60,6 +66,10 @@ export async function generateWithReplicate(req: GenerationRequest): Promise<Gen
     await sleep(POLL_INTERVAL_MS);
     result = await replicateFetch(`/predictions/${prediction.id}`, req.apiKey);
     polls++;
+    report({
+      message: `Replicate ${result.status ?? 'processing'}`,
+      detail: `Poll ${polls}/${MAX_POLLS} · job ${prediction.id}`,
+    });
   }
 
   if (result.status === 'failed' || result.status === 'canceled') {
