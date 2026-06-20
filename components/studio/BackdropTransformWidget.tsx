@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import { bindBackdropTransformWidget } from '@/lib/studio/backdrop-transform-widget';
+import { BACKDROP_WIDGET_CURSORS } from '@/lib/studio/backdrop-transform-cursors';
 import { getBackdropFraming } from '@/lib/studio/backdrop-framing';
 import type { AspectRatio, Shot } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
@@ -82,11 +83,29 @@ export function BackdropTransformWidget({
   const { frameH, svgW, svgH, frameX, frameY, ringCx, ringCy, ringR } = layout;
   const handleR = 5;
 
+  const cursorStyle = {
+    '--cursor-rotate': BACKDROP_WIDGET_CURSORS.rotate,
+    '--cursor-rotate-active': BACKDROP_WIDGET_CURSORS['rotate-active'],
+    '--cursor-pan': BACKDROP_WIDGET_CURSORS.pan,
+    '--cursor-pan-active': BACKDROP_WIDGET_CURSORS['pan-active'],
+    '--cursor-scale-nwse': BACKDROP_WIDGET_CURSORS['scale-nwse'],
+    '--cursor-scale-nesw': BACKDROP_WIDGET_CURSORS['scale-nesw'],
+    '--cursor-scale-free': BACKDROP_WIDGET_CURSORS['scale-free'],
+    '--cursor-skew-x': BACKDROP_WIDGET_CURSORS['skew-x'],
+    '--cursor-skew-y': BACKDROP_WIDGET_CURSORS['skew-y'],
+    '--cursor-perspective': BACKDROP_WIDGET_CURSORS.perspective,
+    '--cursor-zoom': BACKDROP_WIDGET_CURSORS.zoom,
+    left,
+    top,
+    width: svgW,
+    height: svgH,
+  } as React.CSSProperties;
+
   return (
     <div
       ref={widgetRef}
       className="backdrop-transform-widget"
-      style={{ left, top, width: svgW, height: svgH }}
+      style={cursorStyle}
       onPointerDown={(e) => e.stopPropagation()}
     >
       <svg
@@ -120,6 +139,7 @@ export function BackdropTransformWidget({
         />
         <circle
           data-backdrop-widget="scale-tl"
+          data-backdrop-scale-cursor="nwse"
           className="backdrop-transform-widget__handle backdrop-transform-widget__handle--scale"
           cx={frameX}
           cy={frameY}
@@ -127,6 +147,7 @@ export function BackdropTransformWidget({
         />
         <circle
           data-backdrop-widget="scale-tr"
+          data-backdrop-scale-cursor="nesw"
           className="backdrop-transform-widget__handle backdrop-transform-widget__handle--scale"
           cx={frameX + WIDGET_FRAME_WIDTH}
           cy={frameY}
@@ -134,6 +155,7 @@ export function BackdropTransformWidget({
         />
         <circle
           data-backdrop-widget="scale-bl"
+          data-backdrop-scale-cursor="nesw"
           className="backdrop-transform-widget__handle backdrop-transform-widget__handle--scale"
           cx={frameX}
           cy={frameY + frameH}
@@ -141,6 +163,7 @@ export function BackdropTransformWidget({
         />
         <circle
           data-backdrop-widget="scale-br"
+          data-backdrop-scale-cursor="nwse"
           className="backdrop-transform-widget__handle backdrop-transform-widget__handle--scale"
           cx={frameX + WIDGET_FRAME_WIDTH}
           cy={frameY + frameH}
@@ -177,7 +200,7 @@ export function BackdropTransformWidget({
           y={svgH - 4}
           textAnchor="middle"
         >
-          scroll to zoom
+          shift + corner: free scale
         </text>
       </svg>
     </div>

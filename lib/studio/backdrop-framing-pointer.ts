@@ -9,6 +9,8 @@ export function bindBackdropFramingPointer(opts: {
   frameWidth: number;
   frameHeight: number;
   onFramingChange: (patch: Partial<BackdropFraming>) => void;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
 }): () => void {
   let startX = 0;
   let startY = 0;
@@ -41,6 +43,7 @@ export function bindBackdropFramingPointer(opts: {
     window.removeEventListener('pointerup', onUp);
     window.removeEventListener('pointercancel', onUp);
     opts.element.releasePointerCapture?.(event.pointerId);
+    opts.onDragEnd?.();
   };
 
   const onDown = (event: PointerEvent) => {
@@ -50,6 +53,7 @@ export function bindBackdropFramingPointer(opts: {
     startX = event.clientX;
     startY = event.clientY;
     startFraming = opts.getFraming();
+    opts.onDragStart?.();
     opts.element.setPointerCapture(event.pointerId);
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);

@@ -144,18 +144,114 @@ export type BackdropHandleKind =
   | 'skew-y'
   | 'perspective';
 
-export function resizeFramingFromCorner(
+type BackdropCorner = 'corner-tl' | 'corner-tr' | 'corner-bl' | 'corner-br';
+
+function oppositeCorner(corner: BackdropCorner): BackdropCorner {
+  switch (corner) {
+    case 'corner-tl':
+      return 'corner-br';
+    case 'corner-tr':
+      return 'corner-bl';
+    case 'corner-bl':
+      return 'corner-tr';
+    case 'corner-br':
+      return 'corner-tl';
+  }
+}
+
+function cornerPoint(
+  rect: BackdropDrawRect,
+  corner: BackdropCorner,
+): { x: number; y: number } {
+  switch (corner) {
+    case 'corner-tl':
+      return { x: rect.x, y: rect.y };
+    case 'corner-tr':
+      return { x: rect.x + rect.width, y: rect.y };
+    case 'corner-bl':
+      return { x: rect.x, y: rect.y + rect.height };
+    case 'corner-br':
+      return { x: rect.x + rect.width, y: rect.y + rect.height };
+  }
+}
+
+function centerFromAnchoredCorner(
+  anchor: { x: number; y: number },
+  anchorCorner: BackdropCorner,
+  width: number,
+  height: number,
+): { x: number; y: number } {
+  switch (anchorCorner) {
+    case 'corner-tl':
+      return { x: anchor.x + width / 2, y: anchor.y + height / 2 };
+    case 'corner-tr':
+      return { x: anchor.x - width / 2, y: anchor.y + height / 2 };
+    case 'corner-bl':
+      return { x: anchor.x + width / 2, y: anchor.y - height / 2 };
+    case 'corner-br':
+      return { x: anchor.x - width / 2, y: anchor.y - height / 2 };
+  }
+}
+
+function offsetsFromDrawCenter(
+  centerX: number,
+  centerY: number,
+  width: number,
+  height: number,
+  frameWidth: number,
+  frameHeight: number,
+): Pick<BackdropFraming, 'offsetX' | 'offsetY'> {
+  const maxPanX = Math.max(0, (width - frameWidth) / 2);
+  const maxPanY = Math.max(0, (height - frameHeight) / 2);
+  return {
+    offsetX: maxPanX > 0 ? clampFraming((centerX - frameWidth / 2) / maxPanX, -1, 1) : 0,
+    offsetY: maxPanY > 0 ? clampFraming((centerY - frameHeight / 2) / maxPanY, -1, 1) : 0,
+  };
+}
+
+/** Scale from dragged corner; opposite corner stays fixed. Uniform unless shiftKey. */
+export function resizeFramingFromCornerAnchored(
   framing: BackdropFraming,
-  corner: 'corner-tl' | 'corner-tr' | 'corner-bl' | 'corner-br',
+  corner: BackdropCorner,
+  imageWidth: number,
+  imageHeight: number,
+  frameWidth: number,
+  frameHeight: number,
   deltaX: number,
   deltaY: number,
-): Pick<BackdropFraming, 'scaleX' | 'scaleY'> {
+  uniform: boolean,
+): Partial<BackdropFraming> {
+  const rect = computeBackdropDrawRect(framing, imageWidth, imageHeight, frameWidth, frameHeight);
   const sensitivity = 0.003;
   const dx = corner === 'corner-tr' || corner === 'corner-br' ? deltaX : -deltaX;
   const dy = corner === 'corner-bl' || corner === 'corner-br' ? deltaY : -deltaY;
+  const anchorCorner = oppositeCorner(corner);
+  const anchor = cornerPoint(rect, anchorCorner);
+
+  if (uniform) {
+    const delta = ((dx + dy) / 2) * sensitivity;
+    const newScale = clampFraming(framing.scale + delta, 0.25, 4);
+    const ratio = framing.scale > 0 ? newScale / framing.scale : 1;
+    const newWidth = rect.width * ratio;
+    const newHeight = rect.height * ratio;
+    const center = centerFromAnchoredCorner(anchor, anchorCorner, newWidth, newHeight);
+    return {
+      scale: newScale,
+      ...offsetsFromDrawCenter(center.x, center.y, newWidth, newHeight, frameWidth, frameHeight),
+    };
+  }
+
+  const newScaleX = clampFraming(framing.scaleX + dx * sensitivity, 0.25, 4);
+  const newScaleY = clampFraming(framing.scaleY + dy * sensitivity, 0.25, 4);
+  const widthRatio = framing.scaleX > 0 ? newScaleX / framing.scaleX : 1;
+  const heightRatio = framing.scaleY > 0 ? newScaleY / framing.scaleY : 1;
+  const newWidth = rect.width * widthRatio;
+  const newHeight = rect.height * heightRatio;
+  const center = centerFromAnchoredCorner(anchor, anchorCorner, newWidth, newHeight);
   return {
-    scaleX: clampFraming(framing.scaleX + dx * sensitivity, 0.25, 4),
-    scaleY: clampFraming(framing.scaleY + dy * sensitivity, 0.25, 4),
+    scaleX: newScaleX,
+    scaleY: newScaleY,
+    ...offsetsFromDrawCenter(center.x, center.y, newWidth, newHeight, frameWidth, frameHeight),
   };
 }
 

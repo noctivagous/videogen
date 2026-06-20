@@ -1,7 +1,14 @@
 import {
+  activeCursorForWidget,
+  BACKDROP_WIDGET_CURSORS,
+  BACKDROP_WIDGET_DRAGGING_CLASS,
+  cursorForScaleCorner,
+  type BackdropWidgetCursorKind,
+} from '@/lib/studio/backdrop-transform-cursors';
+import {
   panFramingByPixelDelta,
   perspectiveFramingFromDrag,
-  resizeFramingFromCorner,
+  resizeFramingFromCornerAnchored,
   scaleFramingFromWheel,
   skewFramingFromDrag,
 } from '@/lib/studio/backdrop-framing';
@@ -17,6 +24,35 @@ export type BackdropWidgetKind =
   | 'skew-x'
   | 'skew-y'
   | 'perspective';
+
+const SCALE_CORNER_MAP = {
+  'scale-tl': 'corner-tl',
+  'scale-tr': 'corner-tr',
+  'scale-bl': 'corner-bl',
+  'scale-br': 'corner-br',
+} as const;
+
+function applyDraggingCursor(kind: BackdropWidgetKind, shiftKey: boolean) {
+  let cursor: BackdropWidgetCursorKind | null = null;
+  if (
+    kind === 'scale-tl' ||
+    kind === 'scale-tr' ||
+    kind === 'scale-bl' ||
+    kind === 'scale-br'
+  ) {
+    cursor = cursorForScaleCorner(kind, shiftKey);
+  } else {
+    cursor = activeCursorForWidget(kind);
+  }
+  if (!cursor) return;
+  document.body.classList.add(BACKDROP_WIDGET_DRAGGING_CLASS);
+  document.body.style.setProperty('--backdrop-active-cursor', BACKDROP_WIDGET_CURSORS[cursor]);
+}
+
+function clearDraggingCursor() {
+  document.body.classList.remove(BACKDROP_WIDGET_DRAGGING_CLASS);
+  document.body.style.removeProperty('--backdrop-active-cursor');
+}
 
 export function bindBackdropTransformWidget(opts: {
   element: HTMLElement;
@@ -35,10 +71,18 @@ export function bindBackdropTransformWidget(opts: {
   let startAngle = 0;
   let widgetCenterX = 0;
   let widgetCenterY = 0;
+  let wheelCursorTimer: ReturnType<typeof setTimeout> | null = null;
 
   const onWheel = (event: WheelEvent) => {
     event.preventDefault();
+    document.body.classList.add(BACKDROP_WIDGET_DRAGGING_CLASS);
+    document.body.style.setProperty('--backdrop-active-cursor', BACKDROP_WIDGET_CURSORS.zoom);
     opts.onFramingChange(scaleFramingFromWheel(opts.getFraming(), event.deltaY));
+    if (wheelCursorTimer) clearTimeout(wheelCursorTimer);
+    wheelCursorTimer = setTimeout(() => {
+      wheelCursorTimer = null;
+      if (!activeWidget) clearDraggingCursor();
+    }, 150);
   };
 
   const onMove = (event: PointerEvent) => {
@@ -46,6 +90,10 @@ export function bindBackdropTransformWidget(opts: {
     event.preventDefault();
     const deltaX = event.clientX - startX;
     const deltaY = event.clientY - startY;
+
+    if (activeWidget.startsWith('scale-')) {
+      applyDraggingCursor(activeWidget, event.shiftKey);
+    }
 
     switch (activeWidget) {
       case 'pan':
@@ -62,23 +110,21 @@ export function bindBackdropTransformWidget(opts: {
         );
         break;
       case 'scale-tl':
-        opts.onFramingChange(
-          resizeFramingFromCorner(startFraming, 'corner-tl', deltaX, deltaY),
-        );
-        break;
       case 'scale-tr':
-        opts.onFramingChange(
-          resizeFramingFromCorner(startFraming, 'corner-tr', deltaX, deltaY),
-        );
-        break;
       case 'scale-bl':
-        opts.onFramingChange(
-          resizeFramingFromCorner(startFraming, 'corner-bl', deltaX, deltaY),
-        );
-        break;
       case 'scale-br':
         opts.onFramingChange(
-          resizeFramingFromCorner(startFraming, 'corner-br', deltaX, deltaY),
+          resizeFramingFromCornerAnchored(
+            startFraming,
+            SCALE_CORNER_MAP[activeWidget],
+            opts.imageWidth,
+            opts.imageHeight,
+            opts.frameWidth,
+            opts.frameHeight,
+            deltaX,
+            deltaY,
+            !event.shiftKey,
+          ),
         );
         break;
       case 'rotate': {
@@ -103,6 +149,7 @@ export function bindBackdropTransformWidget(opts: {
 
   const onUp = (event: PointerEvent) => {
     activeWidget = null;
+    clearDraggingCursor();
     window.removeEventListener('pointermove', onMove);
     window.removeEventListener('pointerup', onUp);
     window.removeEventListener('pointercancel', onUp);
@@ -125,6 +172,7 @@ export function bindBackdropTransformWidget(opts: {
     startY = event.clientY;
     startFraming = opts.getFraming();
     opts.onSelect?.();
+    applyDraggingCursor(widget, event.shiftKey);
 
     if (widget === 'rotate') {
       const rect = opts.element.getBoundingClientRect();
@@ -148,5 +196,6 @@ export function bindBackdropTransformWidget(opts: {
     window.removeEventListener('pointermove', onMove);
     window.removeEventListener('pointerup', onUp);
     window.removeEventListener('pointercancel', onUp);
+    clearDraggingCursor();
   };
 }

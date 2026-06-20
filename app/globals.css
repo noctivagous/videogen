@@ -131,8 +131,11 @@
   position: absolute;
   pointer-events: auto;
   touch-action: none;
-  cursor: pointer;
   background: transparent;
+}
+
+.backdrop-framing-hit-target--active {
+  z-index: 14;
 }
 
 .backdrop-framing-bounds-outline {
@@ -155,45 +158,65 @@
   overflow: visible;
 }
 
-.backdrop-transform-widget__rotate-ring {
-  cursor: grab;
-  opacity: 0.9;
+.backdrop-transform-widget [data-backdrop-widget='rotate'] {
+  cursor: var(--cursor-rotate, grab);
 }
 
-.backdrop-transform-widget__rotate-ring:active {
-  cursor: grabbing;
+.backdrop-transform-widget [data-backdrop-widget='pan'] {
+  cursor: var(--cursor-pan, move);
+}
+
+.backdrop-transform-widget [data-backdrop-scale-cursor='nwse'] {
+  cursor: var(--cursor-scale-nwse, nwse-resize);
+}
+
+.backdrop-transform-widget [data-backdrop-scale-cursor='nesw'] {
+  cursor: var(--cursor-scale-nesw, nesw-resize);
+}
+
+.backdrop-transform-widget [data-backdrop-widget='skew-x'] {
+  cursor: var(--cursor-skew-x, ew-resize);
+}
+
+.backdrop-transform-widget [data-backdrop-widget='skew-y'] {
+  cursor: var(--cursor-skew-y, ns-resize);
+}
+
+.backdrop-transform-widget [data-backdrop-widget='perspective'] {
+  cursor: var(--cursor-perspective, ns-resize);
+}
+
+body.backdrop-widget-dragging,
+body.backdrop-widget-dragging * {
+  cursor: var(--backdrop-active-cursor, grabbing) !important;
+}
+
+.backdrop-transform-widget__rotate-ring {
+  opacity: 0.9;
 }
 
 .backdrop-transform-widget__frame {
   fill: rgba(15, 15, 20, 0.55);
   stroke: rgba(129, 140, 248, 0.95);
   stroke-width: 1.5;
-  cursor: grab;
-}
-
-.backdrop-transform-widget__frame:active {
-  cursor: grabbing;
 }
 
 .backdrop-transform-widget__handle--scale {
   fill: #6366f1;
   stroke: #fff;
   stroke-width: 1.5;
-  cursor: nwse-resize;
 }
 
 .backdrop-transform-widget__handle--skew {
   fill: #a78bfa;
   stroke: #fff;
   stroke-width: 1;
-  cursor: crosshair;
 }
 
 .backdrop-transform-widget__handle--perspective {
   fill: #c4b5fd;
   stroke: #fff;
   stroke-width: 1;
-  cursor: ns-resize;
 }
 
 .backdrop-transform-widget__hint {

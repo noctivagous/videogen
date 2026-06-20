@@ -2,6 +2,11 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { BackdropTransformWidget } from '@/components/studio/BackdropTransformWidget';
+import {
+  BACKDROP_WIDGET_CURSORS,
+  BACKDROP_WIDGET_DRAGGING_CLASS,
+} from '@/lib/studio/backdrop-transform-cursors';
+import { bindBackdropFramingPointer } from '@/lib/studio/backdrop-framing-pointer';
 import { UI_SECTIONS } from '@/lib/constants/ui-sections';
 import {
   computeBackdropDrawRect,
@@ -67,12 +72,18 @@ export function BackdropFramingControlsStage({
 }: BackdropFramingControlsStageProps) {
   const backdropSelected = useStudioStore((s) => s.backdropSelected);
   const setBackdropSelected = useStudioStore((s) => s.setBackdropSelected);
+  const setBackdropFraming = useStudioStore((s) => s.setBackdropFraming);
+  const hitTargetRef = useRef<HTMLDivElement>(null);
   const [frameBox, setFrameBox] = useState<FrameBox | null>(null);
   const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
 
   const framing = getBackdropFraming(shot, aspectRatio);
   const framingRef = useRef(framing);
   framingRef.current = framing;
+  const frameBoxRef = useRef(frameBox);
+  frameBoxRef.current = frameBox;
+  const imageSizeRef = useRef(imageSize);
+  imageSizeRef.current = imageSize;
 
   const updateFrameBox = useCallback(() => {
     const frame = resolveFrameElement(frameRef);
@@ -136,11 +147,12 @@ export function BackdropFramingControlsStage({
   }, [imageUrl]);
 
   useEffect(() => {
-    const stage = stageRef.current;
-    if (!stage || !frameBox || !imageSize || framing.locked) return;
-
-    const onPointerDown = (event: PointerEvent) => {
+    const onPointerDownCapture = (event: PointerEvent) => {
       if (event.button !== 0) return;
+      const fb = frameBoxRef.current;
+      const is = imageSizeRef.current;
+      if (!fb || !is || framingRef.current.locked) return;
+
       const target = event.target as HTMLElement;
       if (
         target.closest('.backdrop-transform-widget') ||
@@ -155,15 +167,14 @@ export function BackdropFramingControlsStage({
       const frameRect = frame.getBoundingClientRect();
       const localX = event.clientX - frameRect.left;
       const localY = event.clientY - frameRect.top;
-      const current = framingRef.current;
 
       if (
         !isPointInBackdropImage(
-          current,
-          imageSize.width,
-          imageSize.height,
-          frameBox.width,
-          frameBox.height,
+          framingRef.current,
+          is.width,
+          is.height,
+          fb.width,
+          fb.height,
           localX,
           localY,
         )
@@ -172,9 +183,41 @@ export function BackdropFramingControlsStage({
       }
     };
 
-    stage.addEventListener('pointerdown', onPointerDown);
-    return () => stage.removeEventListener('pointerdown', onPointerDown);
-  }, [stageRef, frameRef, frameBox, imageSize, framing.locked, setBackdropSelected]);
+    window.addEventListener('pointerdown', onPointerDownCapture, true);
+    return () => window.removeEventListener('pointerdown', onPointerDownCapture, true);
+  }, [frameRef, setBackdropSelected]);
+
+  useEffect(() => {
+    const element = hitTargetRef.current;
+    if (!element || !frameBox || !imageSize || framing.locked || !backdropSelected) return;
+
+    return bindBackdropFramingPointer({
+      element,
+      getFraming: () => framingRef.current,
+      imageWidth: imageSize.width,
+      imageHeight: imageSize.height,
+      frameWidth: frameBox.width,
+      frameHeight: frameBox.height,
+      onFramingChange: (patch) => setBackdropFraming(patch),
+      onDragStart: () => {
+        document.body.classList.add(BACKDROP_WIDGET_DRAGGING_CLASS);
+        document.body.style.setProperty(
+          '--backdrop-active-cursor',
+          BACKDROP_WIDGET_CURSORS['pan-active'],
+        );
+      },
+      onDragEnd: () => {
+        document.body.classList.remove(BACKDROP_WIDGET_DRAGGING_CLASS);
+        document.body.style.removeProperty('--backdrop-active-cursor');
+      },
+    });
+  }, [
+    backdropSelected,
+    frameBox,
+    imageSize,
+    framing.locked,
+    setBackdropFraming,
+  ]);
 
   if (!frameBox || !imageSize || framing.locked) return null;
 
@@ -198,6 +241,7 @@ export function BackdropFramingControlsStage({
   const widgetTop = rect.y + rect.height / 2 - widgetH / 2;
 
   const handleHitTargetDown = (event: React.PointerEvent) => {
+    if (backdropSelected) return;
     event.stopPropagation();
     setBackdropSelected(true);
   };
@@ -213,7 +257,8 @@ export function BackdropFramingControlsStage({
       }}
     >
       <div
-        className="backdrop-framing-hit-target"
+        ref={hitTargetRef}
+        className={`backdrop-framing-hit-target ${backdropSelected ? 'backdrop-framing-hit-target--active' : ''}`}
         style={{
           left: rect.x,
           top: rect.y,
@@ -221,6 +266,7 @@ export function BackdropFramingControlsStage({
           height: rect.height,
           transform: boxTransform || undefined,
           transformOrigin: 'center center',
+          cursor: BACKDROP_WIDGET_CURSORS.pan,
         }}
         onPointerDown={handleHitTargetDown}
       />
