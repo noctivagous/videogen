@@ -1,5 +1,6 @@
 'use client';
 
+import { BackdropFramingLockToggle } from '@/components/studio/BackdropFramingLockToggle';
 import { RESOLUTION_PRESETS } from '@/lib/constants/resolutions';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import type { AspectRatio } from '@/lib/types/studio';
@@ -16,6 +17,8 @@ export function PreviewProjectSettingsBar() {
       className="preview-project-settings-bar flex items-center gap-2 flex-wrap justify-end"
       {...uiSectionProps(UI_SECTIONS.studioPreviewResolutionBadge)}
     >
+      <BackdropFramingLockToggle />
+
       <div className="flex items-center gap-2 bg-surface-800 rounded-lg px-3 py-2 border border-surface-700">
         <select
           value={project.aspectRatio}

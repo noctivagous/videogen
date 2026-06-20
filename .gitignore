@@ -4,6 +4,9 @@ node_modules/
 out/
 *.tsbuildinfo
 
+# Stock pipeline local cache (generated cutouts, model weights, logs)
+scripts/.cache/
+
 # Environment variables & local secrets (never commit API keys)
 .env
 .env.*

@@ -300,6 +300,42 @@ export function framingCssTransform(
   return parts.join(' ');
 }
 
+/** Canvas matrix matching framingToLayerStyle + framingCssTransform (left/top 50%, origin center). */
+export function buildBackdropFramingMatrix(
+  framing: BackdropFraming,
+  imageWidth: number,
+  imageHeight: number,
+  frameWidth: number,
+  frameHeight: number,
+): { matrix: DOMMatrix; baseW: number; baseH: number } {
+  const baseline = computeCoverBaselineScale(imageWidth, imageHeight, frameWidth, frameHeight);
+  const baseW = imageWidth * baseline;
+  const baseH = imageHeight * baseline;
+  const rect = computeBackdropDrawRect(framing, imageWidth, imageHeight, frameWidth, frameHeight);
+  const offsetX = rect.x + rect.width / 2 - frameWidth / 2;
+  const offsetY = rect.y + rect.height / 2 - frameHeight / 2;
+  const originX = baseW / 2;
+  const originY = baseH / 2;
+
+  const matrix = new DOMMatrix()
+    .translate(frameWidth / 2, frameHeight / 2)
+    .translate(originX, originY);
+
+  if (framing.perspective > 0) {
+    matrix.multiplySelf(new DOMMatrix(`perspective(${framing.perspective}px)`));
+  }
+
+  matrix
+    .translateSelf(-baseW / 2 + offsetX, -baseH / 2 + offsetY)
+    .rotateSelf(framing.rotation)
+    .skewXSelf(framing.skewX)
+    .skewYSelf(framing.skewY)
+    .scaleSelf(framing.scale * framing.scaleX, framing.scale * framing.scaleY)
+    .translateSelf(-originX, -originY);
+
+  return { matrix, baseW, baseH };
+}
+
 export function clearBackdropCropStatus(
   status: Partial<Record<AspectRatio, BackdropCropStatus>> | undefined,
   aspect?: AspectRatio,
@@ -495,12 +531,13 @@ export async function renderBackdropCropBlob({
 
   const sourceW = 'width' in source ? (source as HTMLCanvasElement).width : naturalW;
   const sourceH = 'height' in source ? (source as HTMLCanvasElement).height : naturalH;
-  const rect = computeBackdropDrawRect(framing, sourceW, sourceH, outputWidth, outputHeight);
-  const panOffsetX = rect.x + rect.width / 2 - outputWidth / 2;
-  const panOffsetY = rect.y + rect.height / 2 - outputHeight / 2;
-  const baseline = computeCoverBaselineScale(sourceW, sourceH, outputWidth, outputHeight);
-  const drawW = sourceW * baseline * Math.max(0.25, framing.scale) * Math.max(0.25, framing.scaleX);
-  const drawH = sourceH * baseline * Math.max(0.25, framing.scale) * Math.max(0.25, framing.scaleY);
+  const { matrix, baseW, baseH } = buildBackdropFramingMatrix(
+    framing,
+    sourceW,
+    sourceH,
+    outputWidth,
+    outputHeight,
+  );
 
   const canvas = document.createElement('canvas');
   canvas.width = outputWidth;
@@ -517,21 +554,8 @@ export async function renderBackdropCropBlob({
   ctx.beginPath();
   ctx.rect(0, 0, outputWidth, outputHeight);
   ctx.clip();
-  ctx.translate(outputWidth / 2 + panOffsetX, outputHeight / 2 + panOffsetY);
-  if (framing.perspective > 0) {
-    const perspectiveScale = framing.perspective / (framing.perspective + drawH * 0.5);
-    ctx.scale(1, perspectiveScale);
-  }
-  ctx.rotate((framing.rotation * Math.PI) / 180);
-  ctx.transform(
-    1,
-    Math.tan((framing.skewY * Math.PI) / 180),
-    Math.tan((framing.skewX * Math.PI) / 180),
-    1,
-    0,
-    0,
-  );
-  ctx.drawImage(source, -drawW / 2, -drawH / 2, drawW, drawH);
+  ctx.setTransform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f);
+  ctx.drawImage(source, 0, 0, baseW, baseH);
   ctx.restore();
 
   return new Promise((resolve, reject) => {

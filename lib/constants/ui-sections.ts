@@ -51,6 +51,7 @@ export const UI_SECTIONS = {
   studioPreviewResolutionBadge: { id: 'studio-preview-resolution-badge', name: 'Project Settings' },
   studioPreviewBackdropFraming: { id: 'studio-preview-backdrop-framing', name: 'Backdrop Framing Layer' },
   studioPreviewBackdropFramingLock: { id: 'studio-preview-backdrop-framing-lock', name: 'Backdrop Framing Lock' },
+  studioPreviewBackdropLockToggle: { id: 'studio-preview-backdrop-lock-toggle', name: 'Backdrop Lock Toggle' },
 
   studioCameraControls: { id: 'studio-camera-controls', name: 'Camera Controls' },
   studioCameraShotSetup: { id: 'studio-camera-shot-setup', name: 'Shot Setup Controls' },
