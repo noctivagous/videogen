@@ -2,14 +2,23 @@ import {
   panFramingByPixelDelta,
   perspectiveFramingFromDrag,
   resizeFramingFromCorner,
-  rotateFramingFromDrag,
   scaleFramingFromWheel,
   skewFramingFromDrag,
-  type BackdropHandleKind,
 } from '@/lib/studio/backdrop-framing';
 import type { BackdropFraming } from '@/lib/types/studio';
 
-export function bindBackdropFramingHandles(opts: {
+export type BackdropWidgetKind =
+  | 'rotate'
+  | 'pan'
+  | 'scale-tl'
+  | 'scale-tr'
+  | 'scale-bl'
+  | 'scale-br'
+  | 'skew-x'
+  | 'skew-y'
+  | 'perspective';
+
+export function bindBackdropTransformWidget(opts: {
   element: HTMLElement;
   getFraming: () => BackdropFraming;
   imageWidth: number;
@@ -19,25 +28,27 @@ export function bindBackdropFramingHandles(opts: {
   onFramingChange: (patch: Partial<BackdropFraming>) => void;
   onSelect?: () => void;
 }): () => void {
-  let activeHandle: BackdropHandleKind | null = null;
+  let activeWidget: BackdropWidgetKind | null = null;
   let startX = 0;
   let startY = 0;
   let startFraming: BackdropFraming = opts.getFraming();
+  let startAngle = 0;
+  let widgetCenterX = 0;
+  let widgetCenterY = 0;
 
   const onWheel = (event: WheelEvent) => {
-    if (!activeHandle) return;
     event.preventDefault();
     opts.onFramingChange(scaleFramingFromWheel(opts.getFraming(), event.deltaY));
   };
 
   const onMove = (event: PointerEvent) => {
-    if (!activeHandle) return;
+    if (!activeWidget) return;
     event.preventDefault();
     const deltaX = event.clientX - startX;
     const deltaY = event.clientY - startY;
 
-    switch (activeHandle) {
-      case 'move':
+    switch (activeWidget) {
+      case 'pan':
         opts.onFramingChange(
           panFramingByPixelDelta(
             startFraming,
@@ -50,17 +61,32 @@ export function bindBackdropFramingHandles(opts: {
           ),
         );
         break;
-      case 'corner-tl':
-      case 'corner-tr':
-      case 'corner-bl':
-      case 'corner-br':
+      case 'scale-tl':
         opts.onFramingChange(
-          resizeFramingFromCorner(startFraming, activeHandle, deltaX, deltaY),
+          resizeFramingFromCorner(startFraming, 'corner-tl', deltaX, deltaY),
         );
         break;
-      case 'rotate':
-        opts.onFramingChange(rotateFramingFromDrag(startFraming, deltaX, deltaY));
+      case 'scale-tr':
+        opts.onFramingChange(
+          resizeFramingFromCorner(startFraming, 'corner-tr', deltaX, deltaY),
+        );
         break;
+      case 'scale-bl':
+        opts.onFramingChange(
+          resizeFramingFromCorner(startFraming, 'corner-bl', deltaX, deltaY),
+        );
+        break;
+      case 'scale-br':
+        opts.onFramingChange(
+          resizeFramingFromCorner(startFraming, 'corner-br', deltaX, deltaY),
+        );
+        break;
+      case 'rotate': {
+        const angle = Math.atan2(event.clientY - widgetCenterY, event.clientX - widgetCenterX);
+        const deltaDeg = ((angle - startAngle) * 180) / Math.PI;
+        opts.onFramingChange({ rotation: startFraming.rotation + deltaDeg });
+        break;
+      }
       case 'skew-x':
         opts.onFramingChange(skewFramingFromDrag(startFraming, 'skew-x', deltaX, deltaY));
         break;
@@ -76,40 +102,48 @@ export function bindBackdropFramingHandles(opts: {
   };
 
   const onUp = (event: PointerEvent) => {
-    activeHandle = null;
+    activeWidget = null;
     window.removeEventListener('pointermove', onMove);
     window.removeEventListener('pointerup', onUp);
     window.removeEventListener('pointercancel', onUp);
     opts.element.releasePointerCapture?.(event.pointerId);
   };
 
-  const onHandleDown = (event: PointerEvent) => {
+  const onWidgetDown = (event: PointerEvent) => {
     const target = (event.target as HTMLElement | null)?.closest<HTMLElement>(
-      '[data-backdrop-handle]',
+      '[data-backdrop-widget]',
     );
     if (!target || event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
 
-    const handle = target.dataset.backdropHandle as BackdropHandleKind | undefined;
-    if (!handle) return;
+    const widget = target.dataset.backdropWidget as BackdropWidgetKind | undefined;
+    if (!widget) return;
 
-    activeHandle = handle;
+    activeWidget = widget;
     startX = event.clientX;
     startY = event.clientY;
     startFraming = opts.getFraming();
     opts.onSelect?.();
+
+    if (widget === 'rotate') {
+      const rect = opts.element.getBoundingClientRect();
+      widgetCenterX = rect.left + rect.width / 2;
+      widgetCenterY = rect.top + rect.height / 2;
+      startAngle = Math.atan2(startY - widgetCenterY, startX - widgetCenterX);
+    }
+
     opts.element.setPointerCapture(event.pointerId);
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
     window.addEventListener('pointercancel', onUp);
   };
 
-  opts.element.addEventListener('pointerdown', onHandleDown);
+  opts.element.addEventListener('pointerdown', onWidgetDown);
   opts.element.addEventListener('wheel', onWheel, { passive: false });
 
   return () => {
-    opts.element.removeEventListener('pointerdown', onHandleDown);
+    opts.element.removeEventListener('pointerdown', onWidgetDown);
     opts.element.removeEventListener('wheel', onWheel);
     window.removeEventListener('pointermove', onMove);
     window.removeEventListener('pointerup', onUp);

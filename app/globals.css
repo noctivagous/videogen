@@ -120,66 +120,90 @@
   outline-offset: -1px;
 }
 
-.backdrop-framing-handles {
-  pointer-events: auto;
-  touch-action: none;
+.backdrop-framing-controls-stage {
+  position: absolute;
+  z-index: 15;
+  overflow: visible;
+  pointer-events: none;
 }
 
-.backdrop-framing-handles .backdrop-framing-box {
+.backdrop-framing-hit-target {
+  position: absolute;
   pointer-events: auto;
-  outline: 2px dashed rgba(99, 102, 241, 0.85);
+  touch-action: none;
+  cursor: pointer;
+  background: transparent;
+}
+
+.backdrop-framing-bounds-outline {
+  position: absolute;
+  pointer-events: none;
+  outline: 2px dashed rgba(99, 102, 241, 0.75);
   outline-offset: -1px;
 }
 
-.backdrop-framing-handle {
+.backdrop-transform-widget {
   position: absolute;
-  width: 12px;
-  height: 12px;
-  border-radius: 2px;
-  background: #6366f1;
-  border: 2px solid #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
   touch-action: none;
-  z-index: 1;
+  color: #818cf8;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
 }
 
-.backdrop-framing-handle--move {
-  width: auto;
-  height: auto;
-  border: none;
-  background: transparent;
-  box-shadow: none;
-  border-radius: 0;
+.backdrop-transform-widget__svg {
+  display: block;
+  overflow: visible;
+}
+
+.backdrop-transform-widget__rotate-ring {
+  cursor: grab;
+  opacity: 0.9;
+}
+
+.backdrop-transform-widget__rotate-ring:active {
+  cursor: grabbing;
+}
+
+.backdrop-transform-widget__frame {
+  fill: rgba(15, 15, 20, 0.55);
+  stroke: rgba(129, 140, 248, 0.95);
+  stroke-width: 1.5;
   cursor: grab;
 }
 
-.backdrop-framing-handle--corner-tl,
-.backdrop-framing-handle--corner-tr,
-.backdrop-framing-handle--corner-bl,
-.backdrop-framing-handle--corner-br {
+.backdrop-transform-widget__frame:active {
+  cursor: grabbing;
+}
+
+.backdrop-transform-widget__handle--scale {
+  fill: #6366f1;
+  stroke: #fff;
+  stroke-width: 1.5;
   cursor: nwse-resize;
 }
 
-.backdrop-framing-handle--corner-tr,
-.backdrop-framing-handle--corner-bl {
-  cursor: nesw-resize;
-}
-
-.backdrop-framing-handle--rotate {
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  cursor: grab;
-}
-
-.backdrop-framing-handle--skew-x,
-.backdrop-framing-handle--skew-y,
-.backdrop-framing-handle--perspective {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: #a78bfa;
+.backdrop-transform-widget__handle--skew {
+  fill: #a78bfa;
+  stroke: #fff;
+  stroke-width: 1;
   cursor: crosshair;
+}
+
+.backdrop-transform-widget__handle--perspective {
+  fill: #c4b5fd;
+  stroke: #fff;
+  stroke-width: 1;
+  cursor: ns-resize;
+}
+
+.backdrop-transform-widget__hint {
+  fill: rgba(161, 161, 170, 0.85);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  pointer-events: none;
+  user-select: none;
 }
 
 .composition-overlay--backdrop-pan {

@@ -245,20 +245,54 @@ export interface BackdropDrawRect {
   scale: number;
 }
 
-/** Handle UI box: the visible crop window (frame) when the image covers it, else the draw rect. */
-export function computeBackdropHandleBox(
+function inverseRotateSkewPoint(
+  px: number,
+  py: number,
+  rotationDeg: number,
+  skewXDeg: number,
+  skewYDeg: number,
+): { x: number; y: number } {
+  const rot = (-rotationDeg * Math.PI) / 180;
+  const cos = Math.cos(rot);
+  const sin = Math.sin(rot);
+  let x = px * cos - py * sin;
+  let y = px * sin + py * cos;
+
+  const skewX = (skewXDeg * Math.PI) / 180;
+  const skewY = (skewYDeg * Math.PI) / 180;
+  const tanX = Math.tan(skewX);
+  const tanY = Math.tan(skewY);
+  const det = 1 - tanX * tanY;
+  if (Math.abs(det) > 0.01) {
+    const ix = (x - tanY * y) / det;
+    const iy = (y - tanX * x) / det;
+    x = ix;
+    y = iy;
+  }
+  return { x, y };
+}
+
+/** Frame-local point test against the transformed backdrop image bounds. */
+export function isPointInBackdropImage(
   framing: BackdropFraming,
   imageWidth: number,
   imageHeight: number,
   frameWidth: number,
   frameHeight: number,
-): BackdropDrawRect {
+  localX: number,
+  localY: number,
+): boolean {
   const rect = computeBackdropDrawRect(framing, imageWidth, imageHeight, frameWidth, frameHeight);
-  const coversFrame = rect.width >= frameWidth - 1 && rect.height >= frameHeight - 1;
-  if (coversFrame) {
-    return { x: 0, y: 0, width: frameWidth, height: frameHeight, scale: rect.scale };
-  }
-  return rect;
+  const cx = rect.x + rect.width / 2;
+  const cy = rect.y + rect.height / 2;
+  const local = inverseRotateSkewPoint(
+    localX - cx,
+    localY - cy,
+    framing.rotation,
+    framing.skewX,
+    framing.skewY,
+  );
+  return Math.abs(local.x) <= rect.width / 2 && Math.abs(local.y) <= rect.height / 2;
 }
 
 export function computeBackdropDrawRect(

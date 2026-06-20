@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
-import { BackdropFramingHandles } from '@/components/studio/BackdropFramingHandles';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import {
   framingToLayerStyle,
@@ -270,7 +269,6 @@ export function BackdropFramingEditStack({
   shot,
   aspectRatio,
 }: BackdropFramingEditStackProps) {
-  const setBackdropSelected = useStudioStore((s) => s.setBackdropSelected);
   const backdropSelected = useStudioStore((s) => s.backdropSelected);
   const framing = getBackdropFraming(shot, aspectRatio);
   const layerRef = useRef<HTMLDivElement>(null);
@@ -317,11 +315,6 @@ export function BackdropFramingEditStack({
   }, [frameRef, updateFrameBox]);
 
   useEffect(() => {
-    setBackdropSelected(true);
-    return () => setBackdropSelected(false);
-  }, [imageUrl, aspectRatio, shot.id, setBackdropSelected]);
-
-  useEffect(() => {
     let cancelled = false;
     loadImageElement(imageUrl)
       .then((img) => {
@@ -339,20 +332,11 @@ export function BackdropFramingEditStack({
     };
   }, [imageUrl]);
 
-  const handleSelect = useCallback(
-    (event: React.PointerEvent) => {
-      if ((event.target as HTMLElement).closest('[data-backdrop-handle]')) return;
-      setBackdropSelected(true);
-    },
-    [setBackdropSelected],
-  );
-
   return (
     <div ref={layerRef} className="backdrop-framing-edit-stack absolute inset-0 z-[1]">
       <div
-        className={`backdrop-framing-layer backdrop-framing-layer--bright backdrop-framing-layer--interactive ${backdropSelected ? 'backdrop-framing-layer--selected' : ''}`}
+        className={`backdrop-framing-layer backdrop-framing-layer--bright ${backdropSelected ? 'backdrop-framing-layer--selected' : ''}`}
         style={{ inset: 0, width: '100%', height: '100%' }}
-        onPointerDown={handleSelect}
       >
         {frameBox && imageSize ? (
           <BackdropFramingImage
@@ -365,16 +349,6 @@ export function BackdropFramingEditStack({
           />
         ) : null}
       </div>
-      {frameBox && imageSize ? (
-        <BackdropFramingHandles
-          shot={shot}
-          aspectRatio={aspectRatio}
-          imageWidth={imageSize.width}
-          imageHeight={imageSize.height}
-          frameWidth={frameBox.width}
-          frameHeight={frameBox.height}
-        />
-      ) : null}
     </div>
   );
 }
