@@ -120,11 +120,19 @@
   outline-offset: -1px;
 }
 
-.backdrop-framing-controls-stage {
-  position: absolute;
-  z-index: 15;
+.backdrop-framing-controls-in-frame {
+  z-index: 8;
   overflow: visible;
-  pointer-events: none;
+}
+
+.backdrop-framing-widget-layer {
+  z-index: 50;
+  overflow: visible;
+}
+
+.backdrop-framing-controls-overflow {
+  z-index: 5;
+  overflow: visible;
 }
 
 .backdrop-framing-hit-target {
@@ -138,8 +146,16 @@
   position: absolute;
   pointer-events: auto;
   touch-action: none;
-  z-index: 1;
   background: transparent;
+}
+
+.backdrop-framing-pan-layer--in-frame {
+  z-index: 1;
+}
+
+.backdrop-framing-pan-layer--overflow,
+.backdrop-framing-hit-target--overflow {
+  z-index: 1;
 }
 
 .backdrop-framing-bounds-outline {
@@ -149,9 +165,13 @@
   outline-offset: -1px;
 }
 
+.backdrop-framing-widget-layer .backdrop-transform-widget {
+  z-index: 1;
+}
+
 .backdrop-transform-widget {
   position: absolute;
-  z-index: 20;
+  z-index: 1;
   pointer-events: auto;
   touch-action: none;
   color: #818cf8;

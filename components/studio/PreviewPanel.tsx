@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import { BackdropFramingEditStack, BackdropFramingLayer } from '@/components/studio/BackdropFramingLayer';
-import { BackdropFramingControlsStage } from '@/components/studio/BackdropFramingControls';
+import {
+  BackdropFramingControlsInFrame,
+  BackdropFramingControlsOverflow,
+} from '@/components/studio/BackdropFramingControls';
 import { CompositionOverlay } from '@/components/studio/CompositionOverlay';
 import { ReferenceSlots } from '@/components/studio/ReferenceSlots';
 import { useThemeTransformConnectorContext } from '@/components/studio/ThemeTransformConnectorProvider';
@@ -233,7 +236,7 @@ export function PreviewPanel() {
                 part="dimmed"
                 positionMode="stage"
               />
-              <BackdropFramingControlsStage
+              <BackdropFramingControlsOverflow
                 stageRef={previewStageRef}
                 frameRef={previewFrameRef}
                 imageUrl={backdropSourceUrl}
@@ -264,7 +267,7 @@ export function PreviewPanel() {
               {...uiSectionProps(UI_SECTIONS.studioPreviewFrame)}
             >
           <div
-            className={`absolute inset-0 ${showFramingBackdrop ? 'bg-transparent' : 'bg-surface-900'}`}
+            className={`absolute inset-0 ${showFramingBackdrop ? 'bg-transparent' : 'bg-surface-900'} ${showBackdropEditStack ? 'pointer-events-none' : ''}`}
             {...uiSectionProps(UI_SECTIONS.studioPreviewContent)}
           >
             {backdropCropCommitted && shot && backdropSourceUrl && (
@@ -330,10 +333,20 @@ export function PreviewPanel() {
             )}
           </div>
 
+          {showBackdropEditStack && shot && backdropSourceUrl && (
+            <BackdropFramingControlsInFrame
+              stageRef={previewStageRef}
+              frameRef={previewFrameRef}
+              imageUrl={backdropSourceUrl}
+              shot={shot}
+              aspectRatio={aspectRatio}
+            />
+          )}
+
           {showFramingGuides && <CompositionOverlay allowBackdropPan={showFramingBackdrop} />}
 
           {frameView === 'preview' && (
-            <div className="absolute top-3 left-3 z-30">
+            <div className="absolute top-3 left-3 z-30 pointer-events-auto">
               <PreviewSubModeSegment
                 value={previewSubMode}
                 onChange={setPreviewSubMode}
@@ -344,7 +357,7 @@ export function PreviewPanel() {
           )}
 
           <div
-            className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-surface-900/80 backdrop-blur-md rounded-xl px-4 py-2 border border-surface-700 opacity-0 group-hover:opacity-100 transition-all z-20"
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-surface-900/80 backdrop-blur-md rounded-xl px-4 py-2 border border-surface-700 opacity-0 group-hover:opacity-100 transition-all z-20 pointer-events-none group-hover:pointer-events-auto"
             {...uiSectionProps(UI_SECTIONS.studioPreviewHoverBar)}
           >
             <button

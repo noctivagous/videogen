@@ -48,6 +48,11 @@ function measureFrameOnStage(
   };
 }
 
+function measureLayerBox(layer: HTMLElement): FrameBox {
+  const rect = layer.getBoundingClientRect();
+  return { left: 0, top: 0, width: rect.width, height: rect.height };
+}
+
 function widgetSize(aspectRatio: AspectRatio): { width: number; height: number } {
   const [w, h] = aspectRatio.split(':').map(Number);
   const ratio = w && h ? w / h : 16 / 9;
@@ -55,7 +60,15 @@ function widgetSize(aspectRatio: AspectRatio): { width: number; height: number }
   return { width: WIDGET_FRAME_WIDTH + RING_PAD * 2, height: frameH + RING_PAD * 2 };
 }
 
-interface BackdropFramingControlsStageProps {
+function overflowClipPath(frameBox: FrameBox): string {
+  const fl = frameBox.left;
+  const ft = frameBox.top;
+  const fr = fl + frameBox.width;
+  const fb = ft + frameBox.height;
+  return `polygon(evenodd, 0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%, ${fl}px ${ft}px, ${fr}px ${ft}px, ${fr}px ${fb}px, ${fl}px ${fb}px, ${fl}px ${ft}px)`;
+}
+
+interface BackdropFramingControlsProps {
   stageRef: RefObject<HTMLElement | null>;
   frameRef: RefObject<HTMLElement | null>;
   imageUrl: string;
@@ -63,19 +76,17 @@ interface BackdropFramingControlsStageProps {
   aspectRatio: AspectRatio;
 }
 
-export function BackdropFramingControlsStage({
+function useBackdropFramingControls({
   stageRef,
   frameRef,
   imageUrl,
   shot,
   aspectRatio,
-}: BackdropFramingControlsStageProps) {
+  frameBox,
+}: BackdropFramingControlsProps & { frameBox: FrameBox | null }) {
   const backdropSelected = useStudioStore((s) => s.backdropSelected);
   const setBackdropSelected = useStudioStore((s) => s.setBackdropSelected);
   const setBackdropFraming = useStudioStore((s) => s.setBackdropFraming);
-  const hitTargetRef = useRef<HTMLDivElement>(null);
-  const panLayerRef = useRef<HTMLDivElement>(null);
-  const [frameBox, setFrameBox] = useState<FrameBox | null>(null);
   const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
 
   const framing = getBackdropFraming(shot, aspectRatio);
@@ -85,49 +96,6 @@ export function BackdropFramingControlsStage({
   frameBoxRef.current = frameBox;
   const imageSizeRef = useRef(imageSize);
   imageSizeRef.current = imageSize;
-
-  const updateFrameBox = useCallback(() => {
-    const frame = resolveFrameElement(frameRef);
-    if (!frame) return;
-    const next = measureFrameOnStage(stageRef.current, frame);
-    if (next.width <= 0 || next.height <= 0) return;
-    setFrameBox(next);
-  }, [stageRef, frameRef]);
-
-  useLayoutEffect(() => {
-    let cancelled = false;
-    let raf = 0;
-    let observer: ResizeObserver | null = null;
-
-    const setup = () => {
-      if (cancelled) return;
-      updateFrameBox();
-
-      const observeTargets = new Set<HTMLElement>();
-      const frame = resolveFrameElement(frameRef);
-      if (frame) observeTargets.add(frame);
-      if (stageRef.current) observeTargets.add(stageRef.current);
-
-      if (observeTargets.size === 0) {
-        raf = requestAnimationFrame(setup);
-        return;
-      }
-
-      observer?.disconnect();
-      observer = new ResizeObserver(updateFrameBox);
-      for (const target of observeTargets) observer.observe(target);
-      window.addEventListener('resize', updateFrameBox);
-    };
-
-    setup();
-
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(raf);
-      observer?.disconnect();
-      window.removeEventListener('resize', updateFrameBox);
-    };
-  }, [stageRef, frameRef, updateFrameBox]);
 
   useEffect(() => {
     let cancelled = false;
@@ -189,39 +157,38 @@ export function BackdropFramingControlsStage({
     return () => window.removeEventListener('pointerdown', onPointerDownCapture, true);
   }, [frameRef, setBackdropSelected]);
 
-  useEffect(() => {
-    const element = panLayerRef.current;
-    if (!element || !frameBox || !imageSize || framing.locked || !backdropSelected) return;
+  const bindPanLayer = useCallback(
+    (element: HTMLElement | null) => {
+      if (!element || !frameBox || !imageSize || framing.locked) return;
 
-    return bindBackdropFramingPointer({
-      element,
-      getFraming: () => framingRef.current,
-      imageWidth: imageSize.width,
-      imageHeight: imageSize.height,
-      frameWidth: frameBox.width,
-      frameHeight: frameBox.height,
-      onFramingChange: (patch) => setBackdropFraming(patch),
-      onDragStart: () => {
-        document.body.classList.add(BACKDROP_WIDGET_DRAGGING_CLASS);
-        document.body.style.setProperty(
-          '--backdrop-active-cursor',
-          BACKDROP_WIDGET_CURSORS['pan-active'],
-        );
-      },
-      onDragEnd: () => {
-        document.body.classList.remove(BACKDROP_WIDGET_DRAGGING_CLASS);
-        document.body.style.removeProperty('--backdrop-active-cursor');
-      },
-    });
-  }, [
-    backdropSelected,
-    frameBox,
-    imageSize,
-    framing.locked,
-    setBackdropFraming,
-  ]);
+      return bindBackdropFramingPointer({
+        element,
+        getFraming: () => framingRef.current,
+        imageWidth: imageSize.width,
+        imageHeight: imageSize.height,
+        frameWidth: frameBox.width,
+        frameHeight: frameBox.height,
+        onFramingChange: (patch) => setBackdropFraming(patch),
+        onDragStart: () => {
+          setBackdropSelected(true);
+          document.body.classList.add(BACKDROP_WIDGET_DRAGGING_CLASS);
+          document.body.style.setProperty(
+            '--backdrop-active-cursor',
+            BACKDROP_WIDGET_CURSORS['pan-active'],
+          );
+        },
+        onDragEnd: () => {
+          document.body.classList.remove(BACKDROP_WIDGET_DRAGGING_CLASS);
+          document.body.style.removeProperty('--backdrop-active-cursor');
+        },
+      });
+    },
+    [frameBox, imageSize, framing.locked, setBackdropFraming, setBackdropSelected],
+  );
 
-  if (!frameBox || !imageSize || framing.locked) return null;
+  if (!frameBox || !imageSize || framing.locked) {
+    return null;
+  }
 
   const rect = computeBackdropDrawRect(
     framing,
@@ -238,15 +205,6 @@ export function BackdropFramingControlsStage({
     .filter(Boolean)
     .join(' ');
 
-  const { width: widgetW, height: widgetH } = widgetSize(aspectRatio);
-  const widgetLeft = rect.x + rect.width / 2 - widgetW / 2;
-  const widgetTop = rect.y + rect.height / 2 - widgetH / 2;
-
-  const handleHitTargetDown = (event: React.PointerEvent) => {
-    event.stopPropagation();
-    setBackdropSelected(true);
-  };
-
   const imageLayerStyle = {
     left: rect.x,
     top: rect.y,
@@ -256,49 +214,206 @@ export function BackdropFramingControlsStage({
     transformOrigin: 'center center' as const,
   };
 
+  const { width: widgetW, height: widgetH } = widgetSize(aspectRatio);
+
+  return {
+    backdropSelected,
+    setBackdropSelected,
+    framing,
+    imageSize,
+    frameBox,
+    imageLayerStyle,
+    widgetLeft: rect.x + rect.width / 2 - widgetW / 2,
+    widgetTop: rect.y + rect.height / 2 - widgetH / 2,
+    bindPanLayer,
+    shot,
+    aspectRatio,
+  };
+}
+
+/** Inside #studio-preview-frame — below composition chrome (z-8 pan), widget at z-50. */
+export function BackdropFramingControlsInFrame(props: BackdropFramingControlsProps) {
+  const panLayerRef = useRef<HTMLDivElement>(null);
+  const [measuredFrameBox, setMeasuredFrameBox] = useState<FrameBox | null>(null);
+
+  const updateFrameBox = useCallback(() => {
+    const frame = resolveFrameElement(props.frameRef);
+    if (!frame) return;
+    const rect = frame.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+    setMeasuredFrameBox({ left: 0, top: 0, width: rect.width, height: rect.height });
+  }, [props.frameRef]);
+
+  useLayoutEffect(() => {
+    let cancelled = false;
+    let raf = 0;
+    let observer: ResizeObserver | null = null;
+
+    const setup = () => {
+      if (cancelled) return;
+      updateFrameBox();
+      const frame = resolveFrameElement(props.frameRef);
+      if (!frame) {
+        raf = requestAnimationFrame(setup);
+        return;
+      }
+      observer?.disconnect();
+      observer = new ResizeObserver(updateFrameBox);
+      observer.observe(frame);
+      window.addEventListener('resize', updateFrameBox);
+    };
+
+    setup();
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+      observer?.disconnect();
+      window.removeEventListener('resize', updateFrameBox);
+    };
+  }, [props.frameRef, updateFrameBox]);
+
+  const state = useBackdropFramingControls({ ...props, frameBox: measuredFrameBox });
+  const bindPanLayer = state?.bindPanLayer;
+
+  useEffect(() => {
+    if (!bindPanLayer) return;
+    return bindPanLayer(panLayerRef.current);
+  }, [bindPanLayer]);
+
+  if (!state) return null;
+
+  const {
+    backdropSelected,
+    imageLayerStyle,
+    widgetLeft,
+    widgetTop,
+    shot,
+    aspectRatio,
+    imageSize,
+    frameBox: controlFrameBox,
+  } = state;
+
   return (
-    <div
-      className="backdrop-framing-controls-stage"
-      style={{
-        left: frameBox.left,
-        top: frameBox.top,
-        width: frameBox.width,
-        height: frameBox.height,
-      }}
-    >
-      {!backdropSelected ? (
+    <>
+      <div className="backdrop-framing-controls-in-frame absolute inset-0 pointer-events-none">
         <div
-          ref={hitTargetRef}
-          className="backdrop-framing-hit-target"
+          ref={panLayerRef}
+          className="backdrop-framing-pan-layer backdrop-framing-pan-layer--in-frame"
           style={{
             ...imageLayerStyle,
             cursor: BACKDROP_WIDGET_CURSORS.pan,
           }}
-          onPointerDown={handleHitTargetDown}
         />
-      ) : (
-        <>
-          <div
-            ref={panLayerRef}
-            className="backdrop-framing-pan-layer"
-            style={{
-              ...imageLayerStyle,
-              cursor: BACKDROP_WIDGET_CURSORS.pan,
-            }}
-          />
+        {backdropSelected && (
           <div className="backdrop-framing-bounds-outline" style={imageLayerStyle} />
+        )}
+      </div>
+      {backdropSelected && (
+        <div className="backdrop-framing-widget-layer absolute inset-0 pointer-events-none">
           <BackdropTransformWidget
             shot={shot}
             aspectRatio={aspectRatio}
             imageWidth={imageSize.width}
             imageHeight={imageSize.height}
-            frameWidth={frameBox.width}
-            frameHeight={frameBox.height}
+            frameWidth={controlFrameBox.width}
+            frameHeight={controlFrameBox.height}
             left={widgetLeft}
             top={widgetTop}
           />
-        </>
+        </div>
       )}
+    </>
+  );
+}
+
+/** On preview stage — pan/select only in dimmed overflow outside the frame (z-5, below frame UI). */
+export function BackdropFramingControlsOverflow(props: BackdropFramingControlsProps) {
+  const panLayerRef = useRef<HTMLDivElement>(null);
+  const [stageFrameBox, setStageFrameBox] = useState<FrameBox | null>(null);
+
+  const updateStageFrameBox = useCallback(() => {
+    const frame = resolveFrameElement(props.frameRef);
+    if (!frame) return;
+    const next = measureFrameOnStage(props.stageRef.current, frame);
+    if (next.width <= 0 || next.height <= 0) return;
+    setStageFrameBox(next);
+  }, [props.stageRef, props.frameRef]);
+
+  useLayoutEffect(() => {
+    let cancelled = false;
+    let raf = 0;
+    let observer: ResizeObserver | null = null;
+
+    const setup = () => {
+      if (cancelled) return;
+      updateStageFrameBox();
+      const frame = resolveFrameElement(props.frameRef);
+      if (!frame && !props.stageRef.current) {
+        raf = requestAnimationFrame(setup);
+        return;
+      }
+      observer?.disconnect();
+      observer = new ResizeObserver(updateStageFrameBox);
+      if (frame) observer.observe(frame);
+      if (props.stageRef.current) observer.observe(props.stageRef.current);
+      window.addEventListener('resize', updateStageFrameBox);
+    };
+
+    setup();
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+      observer?.disconnect();
+      window.removeEventListener('resize', updateStageFrameBox);
+    };
+  }, [props.stageRef, props.frameRef, updateStageFrameBox]);
+
+  const frameBox = stageFrameBox
+    ? { left: 0, top: 0, width: stageFrameBox.width, height: stageFrameBox.height }
+    : null;
+
+  const state = useBackdropFramingControls({ ...props, frameBox });
+  const bindPanLayer = state?.bindPanLayer;
+
+  useEffect(() => {
+    if (!bindPanLayer) return;
+    return bindPanLayer(panLayerRef.current);
+  }, [bindPanLayer]);
+
+  if (!state || !stageFrameBox) return null;
+
+  const { imageLayerStyle, imageSize, framing } = state;
+
+  const rect = computeBackdropDrawRect(
+    framing,
+    imageSize.width,
+    imageSize.height,
+    stageFrameBox.width,
+    stageFrameBox.height,
+  );
+
+  const overflowLayerStyle = {
+    position: 'absolute' as const,
+    left: stageFrameBox.left + rect.x,
+    top: stageFrameBox.top + rect.y,
+    width: rect.width,
+    height: rect.height,
+    transform: imageLayerStyle.transform,
+    transformOrigin: imageLayerStyle.transformOrigin,
+    clipPath: overflowClipPath(stageFrameBox),
+    WebkitClipPath: overflowClipPath(stageFrameBox),
+  };
+
+  return (
+    <div className="backdrop-framing-controls-overflow absolute inset-0 pointer-events-none">
+      <div
+        ref={panLayerRef}
+        className="backdrop-framing-pan-layer backdrop-framing-pan-layer--overflow"
+        style={{
+          ...overflowLayerStyle,
+          cursor: BACKDROP_WIDGET_CURSORS.pan,
+        }}
+      />
     </div>
   );
 }

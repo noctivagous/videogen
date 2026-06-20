@@ -333,7 +333,7 @@ export function BackdropFramingEditStack({
   }, [imageUrl]);
 
   return (
-    <div ref={layerRef} className="backdrop-framing-edit-stack absolute inset-0 z-[1]">
+    <div ref={layerRef} className="backdrop-framing-edit-stack absolute inset-0 z-[1] pointer-events-none">
       <div
         className={`backdrop-framing-layer backdrop-framing-layer--bright ${backdropSelected ? 'backdrop-framing-layer--selected' : ''}`}
         style={{ inset: 0, width: '100%', height: '100%' }}
