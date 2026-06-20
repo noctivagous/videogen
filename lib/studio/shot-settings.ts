@@ -19,6 +19,7 @@ import {
   STOCK_REFERENCE_ROLES,
 } from '@/lib/constants/stock-project';
 import { stripLegacySceneBoilerplate } from '@/lib/studio/legacy-scene-boilerplate';
+import { normalizeReferenceSlotArrays } from '@/lib/studio/reference-slots';
 import { migrateShotGeneratedVideos } from '@/lib/studio/shot-videos';
 import { normalizeThemeTransformLighting } from '@/lib/constants/theme-transform-lighting';
 import { normalizeVideoEnvironment } from '@/lib/constants/video-environment';
@@ -172,16 +173,23 @@ function migrateReferenceSlotOrder<T extends {
   const [s0, s1, s2] = swapTriplet(shot.themeTransformStatus, 'idle');
   const [e0, e1, e2] = swapTriplet(shot.themeTransformError, null);
   const [f0, f1, f2] = swapTriplet(shot.themeTransformFingerprint, null);
+  const refTail = (shot.references ?? []).slice(3);
+  const transformedTail = (shot.transformedReferences ?? []).slice(3);
+  const linkedTail = (shot.themeTransformLinked ?? []).slice(3);
+  const statusTail = (shot.themeTransformStatus ?? []).slice(3);
+  const errorTail = (shot.themeTransformError ?? []).slice(3);
+  const fingerprintTail = (shot.themeTransformFingerprint ?? []).slice(3);
+  const roleTail = shot.referenceRoles.slice(3);
 
   return {
     ...shot,
-    referenceRoles: ['Backdrop', 'Subject', roles[2] ?? 'Style'],
-    references: [r0, r1, r2],
-    transformedReferences: [t0, t1, t2],
-    themeTransformLinked: [l0, l1, l2],
-    themeTransformStatus: [s0, s1, s2],
-    themeTransformError: [e0, e1, e2],
-    themeTransformFingerprint: [f0, f1, f2],
+    referenceRoles: ['Backdrop', 'Subject', roles[2] ?? 'Style', ...roleTail],
+    references: [r0, r1, r2, ...refTail],
+    transformedReferences: [t0, t1, t2, ...transformedTail],
+    themeTransformLinked: [l0, l1, l2, ...linkedTail],
+    themeTransformStatus: [s0, s1, s2, ...statusTail],
+    themeTransformError: [e0, e1, e2, ...errorTail],
+    themeTransformFingerprint: [f0, f1, f2, ...fingerprintTail],
   };
 }
 
@@ -237,7 +245,7 @@ export function migrateShot(
     themeTransformFingerprint: shot.themeTransformFingerprint,
   });
 
-  return {
+  const migratedShot: Shot = {
     id: shot.id,
     name: shot.name,
     duration: shot.duration ?? 5,
@@ -291,6 +299,11 @@ export function migrateShot(
     backdropFramingByAspect: shot.backdropFramingByAspect ?? {},
     backdropCropsByAspect: shot.backdropCropsByAspect ?? {},
     backdropCropStatusByAspect: shot.backdropCropStatusByAspect ?? {},
+  };
+
+  return {
+    ...migratedShot,
+    ...normalizeReferenceSlotArrays(migratedShot),
   };
 }
 

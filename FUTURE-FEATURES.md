@@ -1,9 +1,76 @@
 FUTURE FEATURES
 
 
+#studio-preview-frame - the preview frame
+
+---------
+
 Pure text modifiers often give inconsistent or 
 subtle results across motion and different models.
 
+---------
+
+App will be founded on model workflows for production
+of shots.
+
+SHOT WORKFLOWS - workflow dropdown button
+	1) Manual - no UI driven conveniences, just image
+	reference slots, prompt slots.
+	
+	2) Backdrop without Character(s)
+		requires: character / subject sheet
+		- Treats Image1 as the backdrop, Image2 as 
+		subject 1.
+		- Character sheet is what the prompt
+		drives.
+		
+		
+	3) Place Character(s) into Backdrop
+		requires: character / subject sheet
+		- Character sheet is used to pre-generate
+		the character in the backdrop in the app 
+		with an image model, and then the 
+		character sheet image is included
+		in the AI video model payload to inform
+		movements.  That is, Image1 is
+		the backdrop + character(s) already provided
+		in a single image.
+		Other image reference slots are to inform
+		with character sheets and other information.
+		
+		(may optionally work with 
+		image2video since it prepares
+		the starting image.)
+		
+	4) others: start frame and end frame.
+	
+	5) Start with image, image2video
+	
+	6) Motion transfer (e.g. Viggle)
+
+
+
+FEATURE:
+Insert character into backdrop according to framing
+and composition settings, which means make Image1
+a generated frame from an image model of the character
+from the character sheet, then submit to AI model with 
+character sheet so that the model animates the character
+correctly starting with the exact position.
+
+vs. initial mode: 
+backdrop with no character in it.
+backdrop with character in it based on character sheet.
+	- backdrop + subject + prompt -> new backdrop
+	with character(s) placed in scene ahead of time,
+	then character sheet to guide.
+
+---------
+
+	Image Editor: 
+		procedural: flip horizontally, apply filter, color.
+		AI: add object, remove object, etc.
+		
 ---------
 
 Remove the purple from the GUI since it distracts
@@ -22,6 +89,8 @@ image reference and open it in an image editor
 and then changes.
 
 ---------
+As soon as the user locks the backdrop, a progress indicator circle starts rotating over the lock, a background process should start that crops it, puts a checkmark over the lock when it is finished, and then that is what is shown in the studio-preview-frame (no longer any excess).  If the user unlocks it, the editing mode of the backdrop is shown again.  2) If the user doesn't lock the backdrop, the crop will be generated with existing conditions just before video generation and image preview generation but won't lock it (a stored crop).  Until a backdrop is locked, it can be moved around but it should be moved around with handles on all of the corners when it has been selected and clicking outside of it will deselect the backdrop.  This also means that we can have other transforms applied to the backdrop in relation to the frame, such as shear, rotation, skew, and perspective.  
+
 
 If the backdrop image reference is bigger or smaller than the
 aspect ratio of the frame in any dimension, this can be shown

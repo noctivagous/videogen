@@ -14,6 +14,12 @@ export function emptyThemeTransformArray<T>(fill: T): T[] {
   return Array.from({ length: THEME_TRANSFORM_SLOT_COUNT }, () => fill);
 }
 
+export function ensureSlotArrayLength<T>(arr: T[] | undefined, length: number, fill: T): T[] {
+  const next = [...(arr ?? [])];
+  while (next.length < length) next.push(fill);
+  return next;
+}
+
 export function defaultThemeTransformStatus(): ThemeTransformSlotStatus[] {
   return emptyThemeTransformArray('idle');
 }

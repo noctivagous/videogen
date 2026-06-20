@@ -80,6 +80,8 @@ export const UI_SECTIONS = {
   studioBottomShotTimeline: { id: 'studio-bottom-shot-timeline', name: 'Shot Timeline' },
 
   studioReferenceSlot: { id: 'studio-reference-slot', name: 'Reference Slot' },
+  studioReferenceSlotAdd: { id: 'studio-reference-slot-add', name: 'Add Reference Slot' },
+  studioReferenceSlotRemove: { id: 'studio-reference-slot-remove', name: 'Remove Reference Slot' },
   studioShotTimeline: { id: 'studio-shot-timeline', name: 'Shot List' },
   studioShotItem: { id: 'studio-shot-item', name: 'Shot Item' },
 

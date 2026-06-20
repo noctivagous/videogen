@@ -60,7 +60,11 @@ import {
   renderBackdropCropDataUrl,
 } from '@/lib/studio/backdrop-framing';
 import { parseResolution } from '@/lib/studio/generation/adapters/shared';
-import { isCinematographyRefs } from '@/lib/studio/reference-slots';
+import {
+  appendReferenceSlotPatch,
+  isCinematographyRefs,
+  removeReferenceSlotPatch,
+} from '@/lib/studio/reference-slots';
 import { restrictsReferenceSlotsToFirst } from '@/lib/studio/xai-video-models';
 import { applyFrameCompositionSmartDefaults } from '@/lib/studio/composition';
 import {
@@ -284,6 +288,8 @@ interface StudioStore {
   selectGeneratedVideo: (index: number) => void;
   deleteGeneratedVideo: (id: string) => void;
   setReference: (index: number, dataUrl: string | null) => void;
+  addReferenceSlot: () => void;
+  removeReferenceSlot: (index: number) => void;
   backdropSelected: boolean;
   setBackdropSelected: (selected: boolean) => void;
   setBackdropFraming: (patch: Partial<BackdropFraming>) => void;
@@ -904,6 +910,36 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     if (isBackdropSlot) {
       set({ backdropSelected: false });
     }
+  },
+
+  addReferenceSlot() {
+    const shot = get().getCurrentShot();
+    if (!shot) return;
+    set((s) => ({
+      shots: patchCurrentShot(s.shots, s.currentShot, appendReferenceSlotPatch(shot)),
+    }));
+  },
+
+  removeReferenceSlot(index) {
+    const shot = get().getCurrentShot();
+    if (!shot) return;
+    const patch = removeReferenceSlotPatch(shot, index);
+    if (!patch) return;
+    const isBackdropSlot = index === getBackdropSlotIndex(shot);
+    set((s) => ({
+      ...(isBackdropSlot ? { backdropSelected: false } : {}),
+      shots: patchCurrentShot(s.shots, s.currentShot, {
+        ...patch,
+        ...(isBackdropSlot
+          ? {
+              backdropCropsByAspect: clearBackdropCrops(shot.backdropCropsByAspect),
+              backdropCropStatusByAspect: clearBackdropCropStatus(shot.backdropCropStatusByAspect),
+              backdropFramingByAspect: {},
+            }
+          : {}),
+        ...patchThemeTransformInvalidation(shot, [index], 'source'),
+      }),
+    }));
   },
 
   setBackdropFraming(patch) {

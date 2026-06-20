@@ -7,7 +7,13 @@ import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { resolveReferenceDisplayUrl } from '@/lib/storage/reference-url';
 import { getBackdropCropStatus, getBackdropSlotIndex } from '@/lib/studio/backdrop-framing';
 import { getEffectiveModelId } from '@/lib/studio/provider-modalities';
-import { getReferenceSlotLabel, isCinematographyRefs } from '@/lib/studio/reference-slots';
+import {
+  getReferenceSlotCount,
+  getReferenceSlotIndices,
+  getReferenceSlotLabel,
+  isCinematographyRefs,
+  MIN_REFERENCE_SLOTS,
+} from '@/lib/studio/reference-slots';
 import { getThemeTransformStatus } from '@/lib/studio/theme-transform';
 import { restrictsReferenceSlotsToFirst } from '@/lib/studio/xai-video-models';
 import type { AspectRatio, ReferenceMode, ThemeTransformSlotStatus } from '@/lib/types/studio';
@@ -51,17 +57,25 @@ export function ReferenceSlots({ inletRefs, hoverInlet = null }: ReferenceSlotsP
   const currentShot = useStudioStore((s) => s.currentShot);
   const ai = useStudioStore((s) => s.ai);
   const setReference = useStudioStore((s) => s.setReference);
+  const addReferenceSlot = useStudioStore((s) => s.addReferenceSlot);
+  const removeReferenceSlot = useStudioStore((s) => s.removeReferenceSlot);
   const cycleReferenceRole = useStudioStore((s) => s.cycleReferenceRole);
   const setReferenceMode = useStudioStore((s) => s.setReferenceMode);
   const toggleBackdropFramingLock = useStudioStore((s) => s.toggleBackdropFramingLock);
   const project = useStudioStore((s) => s.project);
   const fileInputs = useRef<(HTMLInputElement | null)[]>([]);
-  const localInletRefs = useRef<(HTMLElement | null)[]>([null, null, null]);
+  const localInletRefs = useRef<(HTMLElement | null)[]>([]);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
+  const slotCount = getReferenceSlotCount(shot);
   const videoModelId = getEffectiveModelId(ai);
   const singleImageOnly = restrictsReferenceSlotsToFirst(ai.defaultVideoProvider, videoModelId);
+
+  useEffect(() => {
+    localInletRefs.current = localInletRefs.current.slice(0, slotCount);
+    if (inletRefs) inletRefs.current = inletRefs.current.slice(0, slotCount);
+  }, [slotCount, inletRefs]);
 
   useEffect(() => {
     const clearDrag = () => setDragOverIndex(null);
@@ -94,9 +108,19 @@ export function ReferenceSlots({ inletRefs, hoverInlet = null }: ReferenceSlotsP
   };
 
   const setInletRef = (index: number, el: HTMLElement | null) => {
+    while (localInletRefs.current.length <= index) {
+      localInletRefs.current.push(null);
+    }
     localInletRefs.current[index] = el;
-    if (inletRefs) inletRefs.current[index] = el;
+    if (inletRefs) {
+      while (inletRefs.current.length <= index) {
+        inletRefs.current.push(null);
+      }
+      inletRefs.current[index] = el;
+    }
   };
+
+  const slotIndices = getReferenceSlotIndices(shot);
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -119,7 +143,8 @@ export function ReferenceSlots({ inletRefs, hoverInlet = null }: ReferenceSlotsP
       </div>
 
       <div className="reference-slots-stack flex flex-col gap-2">
-        {[0, 1, 2].map((index) => {
+        {slotIndices.map((index) => {
+          const removable = index >= MIN_REFERENCE_SLOTS;
           const imgData = resolveReferenceDisplayUrl(shot.references[index]);
           const role = normalizeReferenceRole(shot.referenceRoles[index] ?? 'None');
           const label = getReferenceSlotLabel(shot, index, role);
@@ -307,9 +332,37 @@ export function ReferenceSlots({ inletRefs, hoverInlet = null }: ReferenceSlotsP
                   )}
                 </button>
               )}
+
+              {removable && (
+                <button
+                  type="button"
+                  onClick={() => removeReferenceSlot(index)}
+                  className="reference-slot-remove-btn"
+                  title="Remove reference slot"
+                  aria-label={`Remove reference slot ${index + 1}`}
+                  {...uiSectionProps(UI_SECTIONS.studioReferenceSlotRemove, { suffix: index })}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              )}
             </div>
           );
         })}
+
+        <button
+          type="button"
+          onClick={() => addReferenceSlot()}
+          className="reference-slot-add-btn"
+          title="Add reference slot"
+          aria-label="Add reference slot"
+          {...uiSectionProps(UI_SECTIONS.studioReferenceSlotAdd)}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
 
         {hasAnyImage && (
           <span className="sr-only">Reference images attached</span>
