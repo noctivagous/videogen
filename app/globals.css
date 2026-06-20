@@ -1236,7 +1236,7 @@ input[type="range"]::-moz-range-thumb:hover {
 
 .mannequin-bounds-overlay {
   position: absolute;
-  z-index: 12;
+  z-index: 1;
   pointer-events: none;
 }
 
@@ -1846,7 +1846,18 @@ input[type="range"]::-moz-range-thumb:hover {
   letter-spacing: 0.02em;
   border-radius: 7px;
   color: #a1a1aa;
+  background: #27272a;
   transition: color 0.15s ease, background 0.15s ease;
+}
+
+.preview-submode-segment .frame-view-segment-btn:not(.active):not(:disabled) {
+  background: #27272a;
+  color: #d4d4d8;
+}
+
+.preview-submode-segment .frame-view-segment-btn:disabled {
+  background: #18181b;
+  color: #52525b;
 }
 
 .frame-view-segment-btn:hover {

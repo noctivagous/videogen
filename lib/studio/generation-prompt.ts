@@ -162,20 +162,36 @@ export function buildXAIReferencePrompt(
   return '';
 }
 
+export interface BakeIdentityAssignment {
+  spatialLabel: string;
+  imageTag: string;
+  /** Human-readable mannequin facing from blocking (e.g. "Left Profile"). */
+  facingLabel?: string;
+}
+
 /** Reference instructions for xAI multi-image edit preview (<IMAGE_0> tags, 0-based). */
 export function buildMultiSubjectBakeIdentityPrompt(
-  assignments: Array<{ spatialLabel: string; imageTag: string }>,
+  assignments: BakeIdentityAssignment[],
   sceneImageTag: string,
 ): string {
-  const figureClauses = assignments.map(({ spatialLabel, imageTag }) => {
+  const figureClauses = assignments.map(({ spatialLabel, imageTag, facingLabel }) => {
     const figureNoun = spatialLabel === 'sole' ? 'figure' : `${spatialLabel} figure`;
-    return `The ${figureNoun} — face, body, and wardrobe only — comes from ${imageTag}.`;
+    const facingClause = facingLabel
+      ? ` The ${figureNoun} in ${sceneImageTag} is already posed ${facingLabel} — keep that exact pose, facing, scale, and screen position.`
+      : ` The ${figureNoun} in ${sceneImageTag} already has the correct pose, facing, scale, and position.`;
+    return (
+      `Apply face, skin, hair, body build, and wardrobe from ${imageTag} onto the existing ${figureNoun} in ${sceneImageTag}.` +
+      facingClause +
+      ` Do not copy pose, facing, body orientation, scale, or camera distance from ${imageTag}.`
+    );
   });
 
   const parts = [
+    `Edit ${sceneImageTag} in place — do not add new figures or change the camera framing.`,
     ...figureClauses,
-    'Ignore all backgrounds in character reference images.',
-    `Scene composition, positions, scale, lighting, and backdrop come entirely from ${sceneImageTag}.`,
+    'Ignore all backgrounds, poses, and compositions in character reference images.',
+    `${sceneImageTag} is the locked composition — preserve every figure position, pose, facing, scale, depth, lighting, and backdrop exactly.`,
+    'Only change the photorealistic appearance of assigned figures to match their character references.',
   ];
   if (assignments.length > 1) {
     parts.push('Do not swap identities between figures.');

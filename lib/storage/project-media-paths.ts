@@ -34,6 +34,8 @@ function walkShotUrls(
   if (shot.thumbnail) visit(`${base}.thumbnail`, shot.thumbnail);
   if (shot.videoUrl) visit(`${base}.videoUrl`, shot.videoUrl);
   if (shot.previewFrameUrl) visit(`${base}.previewFrameUrl`, shot.previewFrameUrl);
+  if (shot.bakedStartFrame) visit(`${base}.bakedStartFrame`, shot.bakedStartFrame);
+  if (shot.bakedIntermediateFrame) visit(`${base}.bakedIntermediateFrame`, shot.bakedIntermediateFrame);
 
   shot.references.forEach((ref, refIndex) => {
     if (ref) visit(`${base}.references.${refIndex}`, ref);

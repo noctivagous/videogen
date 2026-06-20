@@ -7,6 +7,31 @@ import {
   createNdjsonProgressStreamResponse,
   wantsProgressStream,
 } from '@/lib/studio/generation/progress-stream.server';
+import { resolveProviderApiKey } from '@/lib/storage/server-provider-keys.server';
+
+export const maxDuration = 300;
+
+function resolveBakeStartFrameRequest(body: BakeStartFrameRequest): BakeStartFrameRequest | null {
+  const inpaintKey = resolveProviderApiKey(body.inpaint.providerId, body.inpaint.apiKey);
+  if (!inpaintKey) return null;
+
+  const identityPasses =
+    body.identityPasses ?? (body.identityPass ? [body.identityPass] : []);
+
+  const resolvedPasses: BakeStartFrameRequest['identityPasses'] = [];
+  for (const pass of identityPasses) {
+    const apiKey = resolveProviderApiKey(pass.providerId, pass.apiKey);
+    if (!apiKey) return null;
+    resolvedPasses.push({ ...pass, apiKey });
+  }
+
+  return {
+    ...body,
+    inpaint: { ...body.inpaint, apiKey: inpaintKey },
+    identityPasses: resolvedPasses,
+    identityPass: undefined,
+  };
+}
 
 async function runBakeStartFrame(
   body: BakeStartFrameRequest,
@@ -20,6 +45,7 @@ async function runBakeStartFrame(
     return { status: 'error', error: inpaintResult.error ?? 'Pass 1 failed' };
   }
 
+  const intermediateUrl = inpaintResult.imageUrl;
   let finalUrl = inpaintResult.imageUrl;
   const identityPasses =
     body.identityPasses ?? (body.identityPass ? [body.identityPass] : []);
@@ -71,25 +97,36 @@ async function runBakeStartFrame(
     report({ message: 'Bake complete', detail: 'Start frame locked with character identity applied' });
   }
 
+  if (!finalUrl) {
+    return { status: 'error', error: 'Bake finished without an image URL' };
+  }
+
   return {
     status: 'complete',
     imageUrl: finalUrl,
+    intermediateImageUrl: intermediateUrl,
   };
 }
 
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as BakeStartFrameRequest & { streamProgress?: boolean };
-
-    if (wantsProgressStream(body)) {
-      return createNdjsonProgressStreamResponse(
-        (report) => runBakeStartFrame(body, report),
-        (result) => result.status === 'error',
-        { errorStatus: 400 },
+    const resolved = resolveBakeStartFrameRequest(body);
+    if (!resolved) {
+      return NextResponse.json(
+        { status: 'error', error: 'API key is required' } satisfies BakeStartFrameResult,
+        { status: 400 },
       );
     }
 
-    const result = await runBakeStartFrame(body, () => {});
+    if (wantsProgressStream(body)) {
+      return createNdjsonProgressStreamResponse(
+        (report) => runBakeStartFrame(resolved, report),
+        (result) => result.status === 'error',
+      );
+    }
+
+    const result = await runBakeStartFrame(resolved, () => {});
     return NextResponse.json(result, { status: result.status === 'error' ? 400 : 200 });
   } catch (e) {
     return NextResponse.json(

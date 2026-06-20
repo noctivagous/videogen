@@ -42,8 +42,10 @@ export async function fetchWithGenerationProgress<T extends { status: string }>(
 
   while (true) {
     const { done, value } = await reader.read();
+    if (value) {
+      buffer += decoder.decode(value, { stream: !done });
+    }
     if (done) break;
-    buffer += decoder.decode(value, { stream: true });
 
     let newlineIndex = buffer.indexOf('\n');
     while (newlineIndex >= 0) {
@@ -78,12 +80,15 @@ export async function fetchWithGenerationProgress<T extends { status: string }>(
   if (!finalResult) {
     throw new GenerationProgressStreamError('Progress stream ended without a result');
   }
-  if (!res.ok || finalResult.status === 'error') {
+  if (finalResult.status === 'error') {
     const err =
       typeof finalResult === 'object' && finalResult !== null && 'error' in finalResult && typeof finalResult.error === 'string'
         ? finalResult.error
         : 'Request failed';
     throw new GenerationProgressStreamError(err);
+  }
+  if (!res.ok) {
+    throw new GenerationProgressStreamError(`Request failed (${res.status})`);
   }
   return finalResult;
 }

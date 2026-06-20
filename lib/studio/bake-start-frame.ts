@@ -40,6 +40,27 @@ export async function bakeBlobsToDataUrls(output: BakeFrameOutput): Promise<{
   return { imageUrl, compositeUrl, maskUrl };
 }
 
+/** Prefer an inline data URL so the baked frame survives reloads and displays reliably. */
+export async function persistBakedImageUrl(imageUrl: string): Promise<string> {
+  if (
+    imageUrl.startsWith('data:') ||
+    imageUrl.startsWith('blob:') ||
+    imageUrl.startsWith('/api/') ||
+    imageUrl.startsWith('/stock/') ||
+    imageUrl.startsWith('assets/')
+  ) {
+    return imageUrl;
+  }
+
+  try {
+    const res = await fetch(imageUrl);
+    if (!res.ok) return imageUrl;
+    return blobToDataUrl(await res.blob());
+  } catch {
+    return imageUrl;
+  }
+}
+
 async function loadImageElement(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();

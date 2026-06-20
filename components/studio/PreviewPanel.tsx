@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { BakedImageVariantSegment } from '@/components/studio/BakedImageVariantSegment';
 import { BackdropFramingEditStack, BackdropFramingLayer } from '@/components/studio/BackdropFramingLayer';
 import {
   BackdropFramingControlsInFrame,
@@ -19,6 +20,7 @@ import { ReferencePreviewScene } from '@/components/studio/ReferencePreviewScene
 import { PreviewProjectSettingsBar } from '@/components/studio/PreviewProjectSettingsBar';
 import { WorkflowDropdown } from '@/components/studio/WorkflowDropdown';
 import { MannequinPlacementLayer } from '@/components/studio/MannequinPlacementLayer';
+import type { BakedImageVariant } from '@/lib/types/studio';
 import {
   canAddMannequin,
   isLockStartFrame,
@@ -102,6 +104,7 @@ export function PreviewPanel() {
   const bakeProgressDetail = useStudioStore((s) => s.bakeProgressDetail);
   const ai = useStudioStore((s) => s.ai);
   const [selectedMannequinId, setSelectedMannequinId] = useState<string | null>(null);
+  const [bakedImageVariant, setBakedImageVariant] = useState<BakedImageVariant>('final');
 
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
   const mannequins = useMemo(
@@ -113,10 +116,24 @@ export function PreviewPanel() {
   const generatedVideoCount = getGeneratedVideoCount(shot);
   const lockStartFrame = isLockStartFrame(shot);
   const bakedPreviewUrl = shot?.bakedStartFrame ?? null;
+  const bakedIntermediateUrl = shot?.bakedIntermediateFrame ?? null;
+  const hasBakeVariantChoice =
+    lockStartFrame &&
+    Boolean(bakedIntermediateUrl) &&
+    Boolean(bakedPreviewUrl) &&
+    bakedIntermediateUrl !== bakedPreviewUrl;
+  const activeBakedUrl =
+    bakedImageVariant === 'intermediate' && bakedIntermediateUrl
+      ? bakedIntermediateUrl
+      : bakedPreviewUrl;
   const modelPreviewUrl =
-    lockStartFrame && bakedPreviewUrl
-      ? bakedPreviewUrl
+    lockStartFrame && activeBakedUrl
+      ? activeBakedUrl
       : shot?.previewFrameUrl ?? null;
+  const hasBakedImage = lockStartFrame
+    ? Boolean(bakedPreviewUrl)
+    : Boolean(shot?.previewFrameUrl);
+  const showModelPreview = Boolean(modelPreviewUrl) && previewSubMode === 'model';
   const shotDuration = shot?.duration ?? project.duration;
   const timecode = `00:00 / ${formatDuration(shotDuration)}`;
 
@@ -167,17 +184,25 @@ export function PreviewPanel() {
     }
   }, [frameView, generatedVideo, setFrameView]);
 
+  useEffect(() => {
+    if (!hasBakeVariantChoice && bakedImageVariant !== 'final') {
+      setBakedImageVariant('final');
+    }
+  }, [hasBakeVariantChoice, bakedImageVariant]);
+
   const previewBadge =
     frameView === 'generated' && generatedVideo
       ? 'Generated video'
-      : previewSubMode === 'model' && modelPreviewUrl
+      : showModelPreview
         ? lockStartFrame && bakedPreviewUrl
-          ? 'Baked start frame'
+          ? bakedImageVariant === 'intermediate' && hasBakeVariantChoice
+            ? 'Intermediate bake'
+            : 'Baked image'
           : 'AI model preview'
         : 'Blocking';
 
   const showFramingGuides =
-    frameView === 'preview' && previewSubMode === 'framing';
+    frameView === 'preview' && !showModelPreview && previewSubMode === 'framing';
 
   const aspectRatio = (project.aspectRatio || '16:9') as AspectRatio;
   const backdropSourceUrl = shot ? getEffectiveBackdropSourceUrl(shot, shot.lighting) : null;
@@ -186,7 +211,7 @@ export function PreviewPanel() {
   const showBackdropEditStack = showFramingBackdrop && !backdropCropCommitted;
 
   const renderPreviewContent = () => {
-    if (previewSubMode === 'model' && modelPreviewUrl) {
+    if (showModelPreview && modelPreviewUrl) {
       return (
         <ModelPreviewScene payload={payload} imageUrl={modelPreviewUrl} stale={modelStale} />
       );
@@ -320,7 +345,7 @@ export function PreviewPanel() {
             className={`absolute inset-0 ${showFramingBackdrop ? 'bg-transparent' : 'bg-surface-900'} ${showBackdropEditStack ? 'pointer-events-none' : ''}`}
             {...uiSectionProps(UI_SECTIONS.studioPreviewContent)}
           >
-            {backdropCropCommitted && shot && backdropSourceUrl && (
+            {backdropCropCommitted && shot && backdropSourceUrl && !showModelPreview && (
               <BackdropFramingLayer
                 stageRef={previewStageRef}
                 frameRef={previewFrameRef}
@@ -408,13 +433,19 @@ export function PreviewPanel() {
           {showFramingGuides && <CompositionOverlay allowBackdropPan={showFramingBackdrop} />}
 
           {frameView === 'preview' && (
-            <div className="absolute top-3 left-3 z-30 pointer-events-auto">
+            <div className="absolute top-3 left-3 z-30 pointer-events-auto flex flex-col gap-1.5">
               <PreviewSubModeSegment
                 value={previewSubMode}
                 onChange={setPreviewSubMode}
-                hasModelPreview={Boolean(modelPreviewUrl)}
+                hasBakedImage={hasBakedImage}
                 modelStale={modelStale}
               />
+              {previewSubMode === 'model' && hasBakeVariantChoice && (
+                <BakedImageVariantSegment
+                  value={bakedImageVariant}
+                  onChange={setBakedImageVariant}
+                />
+              )}
             </div>
           )}
 
@@ -464,7 +495,7 @@ export function PreviewPanel() {
               className={`px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-lg border ${
                 frameView === 'generated' && generatedVideo
                   ? 'text-brand-300 bg-brand-500/20 border-brand-500/40'
-                  : previewSubMode === 'model' && modelPreviewUrl && frameView === 'preview'
+                  : showModelPreview && frameView === 'preview'
                     ? 'text-brand-300 bg-brand-500/15 border-brand-500/30'
                     : 'text-gray-400 bg-surface-700/80 border-surface-600'
               }`}

@@ -338,6 +338,8 @@ export interface Shot {
   mannequins?: Mannequin[];
   /** Inpainted composite used as video start frame. */
   bakedStartFrame?: string | null;
+  /** xAI pass 1 result before character identity refinement. */
+  bakedIntermediateFrame?: string | null;
   bakeStatus?: BakeStatus;
 }
 
@@ -423,3 +425,5 @@ export type ToastType = 'success' | 'error';
 export type PreviewMode = 'vector' | '3d';
 
 export type PreviewSubMode = 'framing' | 'model';
+
+export type BakedImageVariant = 'intermediate' | 'final';

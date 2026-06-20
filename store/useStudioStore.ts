@@ -57,6 +57,7 @@ import { DEFAULT_XAI_BAKE_IMAGE_MODEL, WORKFLOW_OPTIONS } from '@/lib/constants/
 import {
   bakeBlobsToDataUrls,
   BAKE_XAI_EDIT_PROMPT,
+  persistBakedImageUrl,
   renderBakeFrames,
 } from '@/lib/studio/bake-start-frame';
 import { buildIdentityPassPlan } from '@/lib/studio/bake-identity-pass';
@@ -255,14 +256,13 @@ function mannequinResyncPatch(
   nextShot: Shot,
   reason: MannequinSyncReason,
   aspectRatio: AspectRatio = '16:9',
-): Pick<Shot, 'mannequins' | 'bakedStartFrame' | 'bakeStatus' | 'previewFrameFingerprint'> {
+): Pick<Shot, 'mannequins'> {
   return {
     mannequins: syncMannequinsFromShot(nextShot, prevShot.mannequins, {
       reason,
       prevShot,
       aspectRatio,
     }),
-    ...mannequinLayoutInvalidationPatch(),
   };
 }
 
@@ -366,6 +366,7 @@ interface StudioStore {
   updateMannequin: (id: string, patch: Partial<Mannequin>) => void;
   assignMannequinSubjectSlot: (mannequinId: string, slotIndex: number | null) => void;
   removeMannequin: (id: string) => void;
+  invalidateBakedFrame: () => void;
   bakeStartFrame: () => Promise<void>;
   applyThemeTransformSlot: (index: number) => Promise<void>;
 
@@ -1046,7 +1047,12 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         transformedReferences,
         themeTransformLinked: linked,
         ...(isLockStartFrame(shot)
-          ? { mannequins, bakeStatus: 'idle' as const, bakedStartFrame: null }
+          ? {
+              mannequins,
+              bakeStatus: 'idle' as const,
+              bakedStartFrame: null,
+              bakedIntermediateFrame: null,
+            }
           : {}),
         ...(isBackdropSlot
           ? {
@@ -1085,7 +1091,12 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       shots: patchCurrentShot(s.shots, s.currentShot, {
         ...patch,
         ...(isLockStartFrame(shot)
-          ? { mannequins, bakeStatus: 'idle' as const, bakedStartFrame: null }
+          ? {
+              mannequins,
+              bakeStatus: 'idle' as const,
+              bakedStartFrame: null,
+              bakedIntermediateFrame: null,
+            }
           : {}),
         ...(isBackdropSlot
           ? {
@@ -1264,7 +1275,12 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       shots: patchCurrentShot(s.shots, s.currentShot, {
         referenceRoles,
         ...(isLockStartFrame(shot) && mannequins !== shot.mannequins
-          ? { mannequins, bakeStatus: 'idle' as const, bakedStartFrame: null }
+          ? {
+              mannequins,
+              bakeStatus: 'idle' as const,
+              bakedStartFrame: null,
+              bakedIntermediateFrame: null,
+            }
           : {}),
       }),
     }));
@@ -1298,6 +1314,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         workflow,
         mannequins,
         bakedStartFrame: null,
+        bakedIntermediateFrame: null,
         bakeStatus: 'idle',
       }),
       previewSubMode: enableLockStart ? 'framing' : s.previewSubMode,
@@ -1317,8 +1334,6 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     set((s) => ({
       shots: patchCurrentShot(s.shots, s.currentShot, {
         mannequins: finalized,
-        bakeStatus: 'idle',
-        bakedStartFrame: null,
       }),
     }));
   },
@@ -1351,8 +1366,6 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     set((s) => ({
       shots: patchCurrentShot(s.shots, s.currentShot, {
         mannequins: finalizeMannequinsForShot(shot, mannequins),
-        bakeStatus: 'idle',
-        bakedStartFrame: null,
       }),
     }));
   },
@@ -1372,8 +1385,6 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     set((s) => ({
       shots: patchCurrentShot(s.shots, s.currentShot, {
         mannequins,
-        bakeStatus: 'idle',
-        bakedStartFrame: null,
       }),
     }));
   },
@@ -1388,10 +1399,18 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     set((s) => ({
       shots: patchCurrentShot(s.shots, s.currentShot, {
         mannequins,
-        bakeStatus: 'idle',
-        bakedStartFrame: null,
       }),
     }));
+  },
+
+  invalidateBakedFrame() {
+    const shot = get().getCurrentShot();
+    if (!shot || !isLockStartFrame(shot)) return;
+    if (shot.bakeStatus !== 'ready' || !shot.bakedStartFrame) return;
+    set((s) => ({
+      shots: patchCurrentShot(s.shots, s.currentShot, mannequinLayoutInvalidationPatch()),
+    }));
+    get().showToast('Baked frame invalidated');
   },
 
   async bakeStartFrame() {
@@ -1409,7 +1428,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 
     const xaiKey = getProviderApiKey('xai', false, ai);
     const xaiModelId = getEffectivePreviewModelId(ai) ?? DEFAULT_XAI_BAKE_IMAGE_MODEL;
-    if (!xaiKey) {
+    if (!isProviderConnected('xai', false, ai)) {
       get().showToast('Configure xAI API key in Settings for baking', 'error');
       return;
     }
@@ -1444,7 +1463,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       const identityPlan = buildIdentityPassPlan(shot, imageUrl, shot.lighting);
       let identityPasses: BakeStartFrameRequest['identityPasses'];
 
-      if (identityPlan && xaiKey && xaiModelId) {
+      if (identityPlan && xaiModelId) {
         identityPasses = identityPlan.passes.map((spec) => ({
           providerId: 'xai',
           isCustom: false,
@@ -1466,7 +1485,12 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
             : `Pass 1 only (no character assignment) · ${xaiModelId}`,
       });
 
-      const result = await fetchWithGenerationProgress<{ status: string; imageUrl?: string; error?: string }>(
+      const result = await fetchWithGenerationProgress<{
+        status: string;
+        imageUrl?: string;
+        intermediateImageUrl?: string;
+        error?: string;
+      }>(
         '/api/bake-start-frame',
         {
           inpaint: {
@@ -1482,15 +1506,33 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         (update) => set({ bakeProgress: update.message, bakeProgressDetail: update.detail ?? '' }),
       );
 
+      if (!result.imageUrl) {
+        throw new Error('Bake finished without an image URL');
+      }
+
+      set({
+        bakeProgress: 'Saving baked frame locally',
+        bakeProgressDetail: 'Inlining image for preview and project save',
+      });
+
+      const [bakedStartFrame, bakedIntermediateFrame] = await Promise.all([
+        persistBakedImageUrl(result.imageUrl),
+        result.intermediateImageUrl
+          ? persistBakedImageUrl(result.intermediateImageUrl)
+          : Promise.resolve(null),
+      ]);
+
       set((s) => ({
         shots: patchCurrentShot(s.shots, s.currentShot, {
-          bakedStartFrame: result.imageUrl ?? null,
+          bakedStartFrame,
+          bakedIntermediateFrame,
           bakeStatus: 'ready',
         }),
         isBakingStartFrame: false,
         bakeProgress: '',
         bakeProgressDetail: '',
         previewSubMode: 'model',
+        frameView: 'preview',
       }));
       get().showToast('Start frame baked');
     } catch (e) {

@@ -72,6 +72,7 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
   const cycleReferenceRole = useStudioStore((s) => s.cycleReferenceRole);
   const setReferenceMode = useStudioStore((s) => s.setReferenceMode);
   const bakeStartFrame = useStudioStore((s) => s.bakeStartFrame);
+  const invalidateBakedFrame = useStudioStore((s) => s.invalidateBakedFrame);
   const isBakingStartFrame = useStudioStore((s) => s.isBakingStartFrame);
   const toggleBackdropFramingLock = useStudioStore((s) => s.toggleBackdropFramingLock);
   const project = useStudioStore((s) => s.project);
@@ -141,6 +142,7 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
   const slotIndices = getReferenceSlotIndices(shot);
   const lockStartFrame = isLockStartFrame(shot);
   const workflowSteps = getWorkflowReferenceSteps(shot, shot?.lighting);
+  const bakeReady = shot.bakeStatus === 'ready' && Boolean(shot.bakedStartFrame);
 
   return (
     <>
@@ -183,14 +185,25 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
           </ol>
         )}
         {lockStartFrame && (
-          <button
-            type="button"
-            onClick={() => bakeStartFrame()}
-            disabled={isBakingStartFrame || workflowSteps.some((s) => !s.done && s.id !== 'bake')}
-            className="w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-lg bg-brand-600 hover:bg-brand-500 disabled:opacity-40 text-white"
-          >
-            {isBakingStartFrame ? 'Baking…' : 'Bake Start Frame'}
-          </button>
+          bakeReady ? (
+            <button
+              type="button"
+              onClick={() => invalidateBakedFrame()}
+              disabled={isBakingStartFrame}
+              className="w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-lg bg-surface-700 hover:bg-surface-600 disabled:opacity-40 text-gray-200 border border-surface-600"
+            >
+              Invalidate Baked Frame
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => bakeStartFrame()}
+              disabled={isBakingStartFrame || workflowSteps.some((s) => !s.done && s.id !== 'bake')}
+              className="w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-lg bg-brand-600 hover:bg-brand-500 disabled:opacity-40 text-white"
+            >
+              {isBakingStartFrame ? 'Baking…' : 'Bake Start Frame'}
+            </button>
+          )
         )}
       </div>
 

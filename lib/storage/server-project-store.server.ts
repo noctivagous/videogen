@@ -142,7 +142,7 @@ function sniffMimeFromBytes(bytes: Buffer): string | null {
 function mimeHintFromUploadPath(uploadPath: string): string | null {
   if (/\.videoUrl$|generatedVideos\.\d+\.url$/.test(uploadPath)) return 'video/mp4';
   if (
-    /transformedReferences|\.references\.|previewFrameUrl|thumbnail|posterUrl/.test(uploadPath)
+    /transformedReferences|\.references\.|previewFrameUrl|bakedStartFrame|bakedIntermediateFrame|thumbnail|posterUrl/.test(uploadPath)
   ) {
     return 'image/png';
   }

@@ -10,7 +10,6 @@ function encodeNdjsonLine<T>(event: NdjsonProgressEvent<T>): Uint8Array {
 export function createNdjsonProgressStreamResponse<T>(
   run: (report: GenerationProgressReporter) => Promise<T>,
   isError: (result: T) => boolean,
-  options?: { errorStatus?: number },
 ): Response {
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -54,7 +53,8 @@ export function createNdjsonProgressStreamResponse<T>(
       'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
     },
-    status: options?.errorStatus ?? 200,
+    // Always 200 — business errors are encoded as NDJSON `error` / result events.
+    status: 200,
   });
 }
 

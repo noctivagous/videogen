@@ -128,6 +128,19 @@ export function mannequinFeetBottomPct(y: number): number {
   return (1 - y) * 100;
 }
 
+/** Alpha-content bounds inside the placement PNG — tilts with mannequin rotation. */
+export function mannequinLocalBoundsStyle(
+  mannequin: Pick<Mannequin, 'gender' | 'age' | 'pose' | 'angle'>,
+): { top: string; bottom: string; left: string; right: string } {
+  const trim = mannequinTrim(mannequinVariantFrom(mannequin));
+  return {
+    top: `${trim.paddingTop * 100}%`,
+    bottom: `${trim.paddingBottom * 100}%`,
+    left: '0',
+    right: '0',
+  };
+}
+
 /** Interactive hit box inside the placement PNG — skips transparent padding. */
 export function mannequinHitTargetStyle(
   mannequin: Pick<Mannequin, 'gender' | 'age' | 'pose' | 'angle'>,

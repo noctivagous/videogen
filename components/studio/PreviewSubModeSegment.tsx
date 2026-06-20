@@ -7,18 +7,18 @@ interface PreviewSubModeSegmentProps {
   value: PreviewSubMode;
   onChange: (mode: PreviewSubMode) => void;
   modelStale?: boolean;
-  hasModelPreview?: boolean;
+  hasBakedImage?: boolean;
 }
 
 export function PreviewSubModeSegment({
   value,
   onChange,
   modelStale,
-  hasModelPreview,
+  hasBakedImage,
 }: PreviewSubModeSegmentProps) {
   return (
     <div
-      className="preview-submode-segment flex items-center gap-1"
+      className="frame-view-segment preview-submode-segment flex items-center gap-1"
       role="tablist"
       aria-label="Preview sub-mode"
       {...uiSectionProps(UI_SECTIONS.studioPreviewFrameViewSegment)}
@@ -30,7 +30,7 @@ export function PreviewSubModeSegment({
         className={`frame-view-segment-btn text-[10px] px-2 py-1 ${value === 'framing' ? 'active' : ''}`}
         onClick={() => onChange('framing')}
       >
-        Framing
+        Blocking
       </button>
       <button
         type="button"
@@ -38,11 +38,11 @@ export function PreviewSubModeSegment({
         aria-selected={value === 'model'}
         className={`frame-view-segment-btn text-[10px] px-2 py-1 relative ${value === 'model' ? 'active' : ''}`}
         onClick={() => onChange('model')}
-        disabled={!hasModelPreview}
-        title={hasModelPreview ? 'AI model preview' : 'Generate a quick preview first'}
+        disabled={!hasBakedImage}
+        title={hasBakedImage ? 'Baked start frame' : 'Bake a start frame first'}
       >
-        Model
-        {modelStale && hasModelPreview && (
+        Baked Image
+        {modelStale && hasBakedImage && (
           <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400" aria-label="Out of date" />
         )}
       </button>

@@ -3,15 +3,10 @@ import {
   mannequinSpatialLabel,
   type MannequinSpatialLabel,
 } from '@/lib/studio/mannequin-character-assignment';
-import {
-  augmentPromptForXAIImageEdit,
-  buildMultiSubjectBakeIdentityPrompt,
-} from '@/lib/studio/generation-prompt';
+import { buildMultiSubjectBakeIdentityPrompt } from '@/lib/studio/generation-prompt';
+import { mannequinAngleLabel } from '@/lib/studio/mannequin-rotation';
 import type { GenerationRef } from '@/lib/studio/generation/types';
 import type { LightingSettings, Mannequin, Shot } from '@/lib/types/studio';
-
-const SINGLE_SUBJECT_BASE_PROMPT =
-  'Place the subject from the character sheet into the scene, preserving exact position, scale, and lighting. Seamless photorealistic integration.';
 
 export interface BakeIdentityPassSpec {
   prompt: string;
@@ -26,6 +21,19 @@ function subjectSheetUrl(shot: Shot, slotIndex: number): string | null {
   return shot.references[slotIndex] ?? null;
 }
 
+function buildIdentityAssignments(
+  assigned: Mannequin[],
+  spatialContext: Mannequin[],
+): Array<{ spatialLabel: MannequinSpatialLabel; imageTag: string; facingLabel: string }> {
+  const sorted = [...assigned].sort((a, b) => a.x - b.x);
+  return sorted.map((mannequin, i) => ({
+    spatialLabel: mannequinSpatialLabel(mannequin, spatialContext),
+    // Scene is always <IMAGE_0> — character sheets start at <IMAGE_1>.
+    imageTag: `<IMAGE_${i + 1}>`,
+    facingLabel: mannequinAngleLabel(mannequin.angle),
+  }));
+}
+
 function buildPassForAssignments(
   shot: Shot,
   assigned: Mannequin[],
@@ -35,49 +43,24 @@ function buildPassForAssignments(
   if (assigned.length === 0) return null;
 
   const sorted = [...assigned].sort((a, b) => a.x - b.x);
-
-  if (sorted.length === 1) {
-    const mannequin = sorted[0];
+  const subjectRefs: GenerationRef[] = [];
+  for (const mannequin of sorted) {
     const slotIndex = mannequin.subjectSlotIndex;
     if (slotIndex == null) return null;
     const sheetUrl = subjectSheetUrl(shot, slotIndex);
     if (!sheetUrl) return null;
-    const refs: GenerationRef[] = [
-      { role: 'Subject', url: sheetUrl, slotIndex },
-      { role: 'Backdrop', url: sceneUrl, slotIndex: -1 },
-    ];
-    return {
-      prompt: augmentPromptForXAIImageEdit(SINGLE_SUBJECT_BASE_PROMPT, refs, true),
-      refs,
-    };
+    subjectRefs.push({ role: 'Subject', url: sheetUrl, slotIndex });
   }
 
-  const sheets: string[] = [];
-  const promptAssignments: Array<{ spatialLabel: MannequinSpatialLabel; imageTag: string }> = [];
-
-  for (let i = 0; i < sorted.length; i++) {
-    const mannequin = sorted[i];
-    const slotIndex = mannequin.subjectSlotIndex;
-    if (slotIndex == null) return null;
-    const sheetUrl = subjectSheetUrl(shot, slotIndex);
-    if (!sheetUrl) return null;
-    sheets.push(sheetUrl);
-    promptAssignments.push({
-      spatialLabel: mannequinSpatialLabel(mannequin, spatialContext),
-      imageTag: `<IMAGE_${i}>`,
-    });
-  }
-
+  // xAI multi-image edit follows the first input image for composition — scene must be first.
   const refs: GenerationRef[] = [
-    ...sorted.map((m, i) => ({
-      role: 'Subject' as const,
-      url: sheets[i]!,
-      slotIndex: m.subjectSlotIndex!,
-    })),
     { role: 'Backdrop', url: sceneUrl, slotIndex: -1 },
+    ...subjectRefs,
   ];
 
-  const sceneImageTag = `<IMAGE_${sorted.length}>`;
+  const sceneImageTag = '<IMAGE_0>';
+  const promptAssignments = buildIdentityAssignments(sorted, spatialContext);
+
   return {
     prompt: buildMultiSubjectBakeIdentityPrompt(promptAssignments, sceneImageTag),
     refs,
@@ -107,13 +90,13 @@ export function buildIdentityPassPlan(
   if (!thirdUrl) return null;
 
   const pass2Refs: GenerationRef[] = [
-    { role: 'Subject', url: thirdUrl, slotIndex: third.subjectSlotIndex },
     { role: 'Backdrop', url: bakedSceneUrl, slotIndex: -1 },
+    { role: 'Subject', url: thirdUrl, slotIndex: third.subjectSlotIndex },
   ];
   const pass2: BakeIdentityPassSpec = {
     prompt: buildMultiSubjectBakeIdentityPrompt(
-      [{ spatialLabel: mannequinSpatialLabel(third, assigned), imageTag: '<IMAGE_0>' }],
-      '<IMAGE_1>',
+      buildIdentityAssignments([third], assigned),
+      '<IMAGE_0>',
     ),
     refs: pass2Refs,
   };

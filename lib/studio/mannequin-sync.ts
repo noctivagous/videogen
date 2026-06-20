@@ -334,10 +334,11 @@ export function ensureMannequinsOnShot(shot: Shot): Mannequin[] {
 
 export function mannequinLayoutInvalidationPatch(): Pick<
   Shot,
-  'bakedStartFrame' | 'bakeStatus' | 'previewFrameFingerprint'
+  'bakedStartFrame' | 'bakedIntermediateFrame' | 'bakeStatus' | 'previewFrameFingerprint'
 > {
   return {
     bakedStartFrame: null,
+    bakedIntermediateFrame: null,
     bakeStatus: 'idle',
     previewFrameFingerprint: null,
   };

@@ -29,7 +29,6 @@ export async function POST(request: Request) {
       return createNdjsonProgressStreamResponse(
         run,
         (result) => result.status === 'error',
-        { errorStatus: 422 },
       );
     }
 

@@ -310,6 +310,7 @@ export function migrateShot(
     workflow: normalizeWorkflow(shot),
     mannequins: migrateMannequins(shot.mannequins),
     bakedStartFrame: shot.bakedStartFrame ?? null,
+    bakedIntermediateFrame: shot.bakedIntermediateFrame ?? null,
     bakeStatus: shot.bakeStatus ?? 'idle',
   };
 

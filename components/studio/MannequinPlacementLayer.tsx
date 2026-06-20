@@ -16,6 +16,7 @@ import {
   maxFeetAnchorY,
   mannequinFeetBottomPct,
   mannequinHitTargetStyle,
+  mannequinLocalBoundsStyle,
   mannequinPreviewHeightPct,
   mannequinPreviewTransform,
   pointerAngleFromFeetAnchor,
@@ -26,9 +27,7 @@ import {
 } from '@/lib/studio/mannequin-layout';
 import {
   anchorToBoundsFrame,
-  boundsFrameToInsetStyle,
   boundsFrameToMannequinPatch,
-  previewBoundsFrameFromMannequin,
   maxWidthToFrameHeight,
   patchBoundsFrame,
   type MannequinBoundsFrame,
@@ -314,11 +313,6 @@ export function MannequinPlacementLayer({
     return anchorToBoundsFrame(selected, aspectRatio, placementX);
   }, [selected, aspectRatio, placementX]);
 
-  const selectedPreviewBounds = useMemo(() => {
-    if (!selected) return null;
-    return previewBoundsFrameFromMannequin(selected, aspectRatio);
-  }, [selected, aspectRatio]);
-
   const widthToHeightMax = useMemo(() => {
     if (!selected) return 2.5;
     return maxWidthToFrameHeight(mannequinTrim(mannequinVariantFrom(selected)));
@@ -349,16 +343,6 @@ export function MannequinPlacementLayer({
       });
     },
     [handleRemove, onSelect],
-  );
-
-  const rotateSelectedFacing = useCallback(
-    (direction: 'left' | 'right') => {
-      if (!selected) return;
-      onUpdate(selected.id, {
-        angle: rotateMannequinAngle(selected.angle, direction),
-      });
-    },
-    [onUpdate, selected],
   );
 
   const applyBoundsPatch = useCallback(
@@ -453,6 +437,25 @@ export function MannequinPlacementLayer({
               className={`block h-full w-auto max-w-none pointer-events-none ${linkRingClass}`}
             />
             {isSelected && (
+              <div className="mannequin-bounds-overlay" style={mannequinLocalBoundsStyle(m)}>
+                <div className="mannequin-bounds-overlay__frame" aria-hidden />
+                <MannequinFacingArrow
+                  direction="left"
+                  label="Rotate facing left"
+                  onClick={() =>
+                    onUpdate(m.id, { angle: rotateMannequinAngle(m.angle, 'left') })
+                  }
+                />
+                <MannequinFacingArrow
+                  direction="right"
+                  label="Rotate facing right"
+                  onClick={() =>
+                    onUpdate(m.id, { angle: rotateMannequinAngle(m.angle, 'right') })
+                  }
+                />
+              </div>
+            )}
+            {isSelected && (
               <button
                 type="button"
                 className="mannequin-handle absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-red-600 text-white text-xs leading-none z-20 pointer-events-auto"
@@ -494,25 +497,6 @@ export function MannequinPlacementLayer({
           </div>
         );
       })}
-
-      {selected && selectedPreviewBounds && (
-        <div
-          className="mannequin-bounds-overlay"
-          style={boundsFrameToInsetStyle(selectedPreviewBounds)}
-        >
-          <div className="mannequin-bounds-overlay__frame" aria-hidden />
-          <MannequinFacingArrow
-            direction="left"
-            label="Rotate facing left"
-            onClick={() => rotateSelectedFacing('left')}
-          />
-          <MannequinFacingArrow
-            direction="right"
-            label="Rotate facing right"
-            onClick={() => rotateSelectedFacing('right')}
-          />
-        </div>
-      )}
 
       <div className="mannequin-inspector-panel absolute top-3 right-3 z-50 flex flex-col gap-2 min-w-[11.5rem] max-w-[14rem] bg-surface-900/90 border border-surface-700 rounded-lg p-2 text-[10px] pointer-events-auto">
         <div className="flex items-center gap-2">

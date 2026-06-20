@@ -44,5 +44,7 @@ export interface BakeStartFrameRequest {
 export interface BakeStartFrameResult {
   status: 'complete' | 'error';
   imageUrl?: string;
+  /** Pass 1 xAI edit result before identity refinement. */
+  intermediateImageUrl?: string;
   error?: string;
 }

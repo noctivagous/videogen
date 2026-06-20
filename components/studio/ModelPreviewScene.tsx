@@ -16,7 +16,7 @@ export function ModelPreviewScene({ payload, imageUrl, stale }: ModelPreviewScen
 
   return (
     <div
-      className="model-preview-scene absolute inset-0 overflow-hidden bg-[#242424]"
+      className="model-preview-scene absolute inset-0 z-[2] overflow-hidden bg-[#242424]"
       {...uiSectionProps(UI_SECTIONS.studioPreviewVectorScene)}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
