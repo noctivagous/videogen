@@ -7,6 +7,9 @@ out/
 # Stock pipeline local cache (generated cutouts, model weights, logs)
 scripts/.cache/
 
+# Local dev server project storage
+.data/
+
 # Environment variables & local secrets (never commit API keys)
 .env
 .env.*
