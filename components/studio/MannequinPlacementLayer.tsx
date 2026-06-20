@@ -231,11 +231,11 @@ export function MannequinPlacementLayer({
         {selected && (
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
-              <label className="text-gray-400">Facing</label>
+              <label className="text-gray-400">Face</label>
               <button
                 type="button"
                 className="w-6 h-6 rounded bg-surface-700 hover:bg-surface-600 text-gray-200 font-bold"
-                aria-label="Rotate facing left"
+                aria-label="Rotate face left"
                 onClick={() =>
                   onUpdate(selected.id, {
                     angle: rotateMannequinAngle(selected.angle, 'left'),
@@ -250,7 +250,7 @@ export function MannequinPlacementLayer({
               <button
                 type="button"
                 className="w-6 h-6 rounded bg-surface-700 hover:bg-surface-600 text-gray-200 font-bold"
-                aria-label="Rotate facing right"
+                aria-label="Rotate face right"
                 onClick={() =>
                   onUpdate(selected.id, {
                     angle: rotateMannequinAngle(selected.angle, 'right'),

@@ -21,10 +21,11 @@ export interface MannequinVariant {
   angle: MannequinAngle;
 }
 
+/** Per-age art exists at correct proportions — no extra scale multiplier. */
 export const MANNEQUIN_AGE_SCALE: Record<MannequinAge, number> = {
   adult: 1.0,
-  teen: 0.9,
-  child: 0.75,
+  teen: 1.0,
+  child: 1.0,
 };
 
 const ANGLE_FILES: Record<MannequinAngle, string> = {
@@ -32,13 +33,14 @@ const ANGLE_FILES: Record<MannequinAngle, string> = {
   threeQuarterLeft: 'three-quarter-left.png',
   threeQuarterRight: 'three-quarter-right.png',
   left: 'left-profile.png',
+  rearThreeQuarterLeft: 'rear-three-quarter-left.png',
   right: 'right-profile.png',
+  rearThreeQuarterRight: 'rear-three-quarter-right.png',
   back: 'back.png',
 };
 
-/** Art tier — teen/child reuse adult PNGs with ageScale multiplier. */
-export function resolveMannequinArtAge(age: MannequinAge): 'adult' {
-  return 'adult';
+export function resolveMannequinArtAge(age: MannequinAge): MannequinAge {
+  return age;
 }
 
 export function mannequinAssetId(variant: MannequinVariant): string {
@@ -73,18 +75,54 @@ export function mannequinEffectiveAgeScale(mannequin: Pick<Mannequin, 'age' | 'a
 }
 
 const MANNEQUIN_TRIM: Record<string, MannequinTrim> = {
-  'male-adult-standard-front': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.5 },
-  'male-adult-standard-threeQuarterLeft': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.4984 },
-  'male-adult-standard-threeQuarterRight': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.5 },
-  'male-adult-standard-left': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.4977 },
-  'male-adult-standard-right': { paddingBottom: 0.0049, paddingTop: 0.0049, contentHeightRatio: 0.9902, feetCenterX: 0.4952 },
-  'male-adult-standard-back': { paddingBottom: 0.0049, paddingTop: 0.0049, contentHeightRatio: 0.9902, feetCenterX: 0.5 },
+  'female-adult-standard-back': { paddingBottom: 0.0049, paddingTop: 0.0059, contentHeightRatio: 0.9893, feetCenterX: 0.4983 },
   'female-adult-standard-front': { paddingBottom: 0.0049, paddingTop: 0.0059, contentHeightRatio: 0.9892, feetCenterX: 0.4967 },
+  'female-adult-standard-left': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.4977 },
+  'female-adult-standard-rearThreeQuarterLeft': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.4982 },
+  'female-adult-standard-rearThreeQuarterRight': { paddingBottom: 0.0049, paddingTop: 0.0059, contentHeightRatio: 0.9893, feetCenterX: 0.4982 },
+  'female-adult-standard-right': { paddingBottom: 0.0049, paddingTop: 0.0059, contentHeightRatio: 0.9892, feetCenterX: 0.4974 },
   'female-adult-standard-threeQuarterLeft': { paddingBottom: 0.0049, paddingTop: 0.0059, contentHeightRatio: 0.9893, feetCenterX: 0.5 },
   'female-adult-standard-threeQuarterRight': { paddingBottom: 0.0068, paddingTop: 0.0059, contentHeightRatio: 0.9873, feetCenterX: 0.5 },
-  'female-adult-standard-left': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.4977 },
-  'female-adult-standard-right': { paddingBottom: 0.0049, paddingTop: 0.0059, contentHeightRatio: 0.9893, feetCenterX: 0.5 },
-  'female-adult-standard-back': { paddingBottom: 0.0049, paddingTop: 0.0059, contentHeightRatio: 0.9893, feetCenterX: 0.4983 },
+  'female-child-standard-back': { paddingBottom: 0.0049, paddingTop: 0.0059, contentHeightRatio: 0.9893, feetCenterX: 0.4969 },
+  'female-child-standard-front': { paddingBottom: 0.0049, paddingTop: 0.0049, contentHeightRatio: 0.9902, feetCenterX: 0.4984 },
+  'female-child-standard-left': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.498 },
+  'female-child-standard-rearThreeQuarterLeft': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.5 },
+  'female-child-standard-rearThreeQuarterRight': { paddingBottom: 0.0049, paddingTop: 0.0049, contentHeightRatio: 0.9902, feetCenterX: 0.4982 },
+  'female-child-standard-right': { paddingBottom: 0.0049, paddingTop: 0.0059, contentHeightRatio: 0.9893, feetCenterX: 0.4981 },
+  'female-child-standard-threeQuarterLeft': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.4966 },
+  'female-child-standard-threeQuarterRight': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.4968 },
+  'female-teen-standard-back': { paddingBottom: 0.0059, paddingTop: 0.0049, contentHeightRatio: 0.9893, feetCenterX: 0.4968 },
+  'female-teen-standard-front': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.4966 },
+  'female-teen-standard-left': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.5 },
+  'female-teen-standard-rearThreeQuarterLeft': { paddingBottom: 0.0049, paddingTop: 0.0049, contentHeightRatio: 0.9902, feetCenterX: 0.4981 },
+  'female-teen-standard-rearThreeQuarterRight': { paddingBottom: 0.0049, paddingTop: 0.0049, contentHeightRatio: 0.9902, feetCenterX: 0.4981 },
+  'female-teen-standard-right': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.4977 },
+  'female-teen-standard-threeQuarterLeft': { paddingBottom: 0.0049, paddingTop: 0.0059, contentHeightRatio: 0.9893, feetCenterX: 0.4982 },
+  'female-teen-standard-threeQuarterRight': { paddingBottom: 0.0059, paddingTop: 0.0049, contentHeightRatio: 0.9892, feetCenterX: 0.5 },
+  'male-adult-standard-back': { paddingBottom: 0.0049, paddingTop: 0.0049, contentHeightRatio: 0.9902, feetCenterX: 0.5 },
+  'male-adult-standard-front': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.5 },
+  'male-adult-standard-left': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.4977 },
+  'male-adult-standard-rearThreeQuarterLeft': { paddingBottom: 0.0049, paddingTop: 0.0059, contentHeightRatio: 0.9892, feetCenterX: 0.4984 },
+  'male-adult-standard-rearThreeQuarterRight': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.4983 },
+  'male-adult-standard-right': { paddingBottom: 0.0049, paddingTop: 0.0049, contentHeightRatio: 0.9902, feetCenterX: 0.4952 },
+  'male-adult-standard-threeQuarterLeft': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.4984 },
+  'male-adult-standard-threeQuarterRight': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.5 },
+  'male-child-standard-back': { paddingBottom: 0.0059, paddingTop: 0.0049, contentHeightRatio: 0.9893, feetCenterX: 0.4986 },
+  'male-child-standard-front': { paddingBottom: 0.0049, paddingTop: 0.0049, contentHeightRatio: 0.9902, feetCenterX: 0.4985 },
+  'male-child-standard-left': { paddingBottom: 0.0049, paddingTop: 0.0049, contentHeightRatio: 0.9902, feetCenterX: 0.4957 },
+  'male-child-standard-rearThreeQuarterLeft': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.4983 },
+  'male-child-standard-rearThreeQuarterRight': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.4984 },
+  'male-child-standard-right': { paddingBottom: 0.0059, paddingTop: 0.0049, contentHeightRatio: 0.9893, feetCenterX: 0.4979 },
+  'male-child-standard-threeQuarterLeft': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.4983 },
+  'male-child-standard-threeQuarterRight': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.4969 },
+  'male-teen-standard-back': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.5 },
+  'male-teen-standard-front': { paddingBottom: 0.0059, paddingTop: 0.0049, contentHeightRatio: 0.9893, feetCenterX: 0.4984 },
+  'male-teen-standard-left': { paddingBottom: 0.0049, paddingTop: 0.0059, contentHeightRatio: 0.9893, feetCenterX: 0.4958 },
+  'male-teen-standard-rearThreeQuarterLeft': { paddingBottom: 0.0049, paddingTop: 0.0059, contentHeightRatio: 0.9893, feetCenterX: 0.4983 },
+  'male-teen-standard-rearThreeQuarterRight': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.5 },
+  'male-teen-standard-right': { paddingBottom: 0.0049, paddingTop: 0.0049, contentHeightRatio: 0.9902, feetCenterX: 0.4978 },
+  'male-teen-standard-threeQuarterLeft': { paddingBottom: 0.0059, paddingTop: 0.0049, contentHeightRatio: 0.9893, feetCenterX: 0.4965 },
+  'male-teen-standard-threeQuarterRight': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.4983 },
 };
 
 export const MANNEQUIN_ANGLES = Object.keys(ANGLE_FILES) as MannequinAngle[];
@@ -129,14 +167,17 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 
 export function preloadMannequinAssets(): Promise<void> {
   const genders: MannequinGender[] = ['male', 'female'];
+  const ages: MannequinAge[] = ['adult', 'teen', 'child'];
   const loads: Promise<HTMLImageElement>[] = [];
   for (const gender of genders) {
-    for (const angle of MANNEQUIN_ANGLES) {
-      loads.push(
-        loadImage(
-          mannequinAssetPath({ gender, age: 'adult', pose: 'standard', angle }),
-        ),
-      );
+    for (const age of ages) {
+      for (const angle of MANNEQUIN_ANGLES) {
+        loads.push(
+          loadImage(
+            mannequinAssetPath({ gender, age, pose: 'standard', angle }),
+          ),
+        );
+      }
     }
   }
   return Promise.all(loads).then(() => undefined);

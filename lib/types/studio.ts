@@ -39,8 +39,10 @@ export type MannequinAngle =
   | 'threeQuarterLeft'
   | 'threeQuarterRight'
   | 'left'
-  | 'right'
-  | 'back';
+  | 'rearThreeQuarterLeft'
+  | 'back'
+  | 'rearThreeQuarterRight'
+  | 'right';
 
 export type MannequinGender = 'male' | 'female';
 

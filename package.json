@@ -23,6 +23,7 @@
     "stock:mannequin-angles": "node scripts/generate-mannequin-angles.mjs",
     "stock:process-mannequin-angles": "node scripts/process-mannequin-angles.mjs",
     "stock:process-mannequin-mode": "node scripts/process-mannequin-angles.mjs",
+    "stock:regenerate-mannequin-facings": "node scripts/regenerate-mannequin-facings.mjs",
     "stock:previews": "node scripts/generate-stock-previews.mjs",
     "stock:looks": "node scripts/generate-look-previews.mjs"
   },

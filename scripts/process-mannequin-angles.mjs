@@ -77,6 +77,7 @@ async function matteToPng(srcJpg, destPng) {
   const result = Array.isArray(output) ? output[0] : output;
   if (!result?.save) throw new Error('RMBG pipeline returned unexpected output');
 
+  fs.mkdirSync(path.dirname(destPng), { recursive: true });
   const tmpPng = `${destPng}.rmbg.tmp.png`;
   await result.save(tmpPng);
 
@@ -105,7 +106,6 @@ async function matteToPng(srcJpg, destPng) {
           .toBuffer()
       : trimmed;
 
-  fs.mkdirSync(path.dirname(destPng), { recursive: true });
   await sharp(resized).toFile(destPng);
   fs.unlinkSync(tmpPng);
   return resized;
@@ -119,9 +119,37 @@ function formatTrimBlock(results) {
   return `const MANNEQUIN_TRIM: Record<string, MannequinTrim> = {\n${lines.join('\n')}\n};`;
 }
 
+function parseExistingTrim(src) {
+  const existing = {};
+  const re =
+    /  '([^']+)': \{ paddingBottom: ([\d.]+), paddingTop: ([\d.]+), contentHeightRatio: ([\d.]+), feetCenterX: ([\d.]+) \},/g;
+  let m;
+  while ((m = re.exec(src)) !== null) {
+    existing[m[1]] = {
+      paddingBottom: Number(m[2]),
+      paddingTop: Number(m[3]),
+      contentHeightRatio: Number(m[4]),
+      feetCenterX: Number(m[5]),
+    };
+  }
+  return existing;
+}
+
 function patchTrimAssets(results) {
   const src = fs.readFileSync(TRIM_ASSETS_PATH, 'utf8');
-  const block = formatTrimBlock(results);
+  const merged = parseExistingTrim(src);
+  for (const { id, trim } of results) {
+    merged[id] = {
+      paddingBottom: trim.paddingBottom,
+      paddingTop: trim.paddingTop,
+      contentHeightRatio: trim.contentHeightRatio,
+      feetCenterX: trim.feetCenterX,
+    };
+  }
+  const sorted = Object.entries(merged)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([id, trim]) => ({ id, trim }));
+  const block = formatTrimBlock(sorted);
   const next = src.replace(
     /const MANNEQUIN_TRIM: Record<string, MannequinTrim> = \{[\s\S]*?\};/,
     block,

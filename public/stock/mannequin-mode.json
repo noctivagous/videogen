@@ -28,33 +28,104 @@
   },
   "variants": {
     "genders": [
-      { "id": "male", "label": "Male" },
-      { "id": "female", "label": "Female" }
+      {
+        "id": "male",
+        "label": "Male"
+      },
+      {
+        "id": "female",
+        "label": "Female"
+      }
     ],
     "ages": [
-      { "id": "adult", "label": "Adult", "ageScale": 1.0, "generateArt": true },
-      { "id": "teen", "label": "Teen", "ageScale": 0.9, "generateArt": false, "fallbackAge": "adult" },
-      { "id": "child", "label": "Child", "ageScale": 0.75, "generateArt": false, "fallbackAge": "adult" }
+      {
+        "id": "adult",
+        "label": "Adult",
+        "ageScale": 1,
+        "generateArt": true
+      },
+      {
+        "id": "teen",
+        "label": "Teen",
+        "ageScale": 0.9,
+        "generateArt": true,
+        "fallbackAge": "adult"
+      },
+      {
+        "id": "child",
+        "label": "Child",
+        "ageScale": 0.75,
+        "generateArt": true,
+        "fallbackAge": "adult"
+      }
     ],
     "poses": [
-      { "id": "standard", "label": "Standing", "enabled": true },
-      { "id": "walking", "label": "Walking", "enabled": false },
-      { "id": "seated", "label": "Seated", "enabled": false }
+      {
+        "id": "standard",
+        "label": "Standing",
+        "enabled": true
+      },
+      {
+        "id": "walking",
+        "label": "Walking",
+        "enabled": false
+      },
+      {
+        "id": "seated",
+        "label": "Seated",
+        "enabled": false
+      }
     ],
     "angles": [
-      { "id": "front", "label": "Front", "file": "front.png" },
-      { "id": "threeQuarterLeft", "label": "3/4 Left", "file": "three-quarter-left.png" },
-      { "id": "threeQuarterRight", "label": "3/4 Right", "file": "three-quarter-right.png" },
-      { "id": "left", "label": "Left Profile", "file": "left-profile.png" },
-      { "id": "right", "label": "Right Profile", "file": "right-profile.png" },
-      { "id": "back", "label": "Back", "file": "back.png" }
+      {
+        "id": "front",
+        "label": "Front",
+        "file": "front.png"
+      },
+      {
+        "id": "threeQuarterLeft",
+        "label": "3/4 Left",
+        "file": "three-quarter-left.png"
+      },
+      {
+        "id": "threeQuarterRight",
+        "label": "3/4 Right",
+        "file": "three-quarter-right.png"
+      },
+      {
+        "id": "left",
+        "label": "Left Profile",
+        "file": "left-profile.png"
+      },
+      {
+        "id": "rearThreeQuarterLeft",
+        "label": "Rear 3/4 Left",
+        "file": "rear-three-quarter-left.png"
+      },
+      {
+        "id": "back",
+        "label": "Back",
+        "file": "back.png"
+      },
+      {
+        "id": "rearThreeQuarterRight",
+        "label": "Rear 3/4 Right",
+        "file": "rear-three-quarter-right.png"
+      },
+      {
+        "id": "right",
+        "label": "Right Profile",
+        "file": "right-profile.png"
+      }
     ]
   },
   "angleCycle": [
     "front",
     "threeQuarterLeft",
     "left",
+    "rearThreeQuarterLeft",
     "back",
+    "rearThreeQuarterRight",
     "right",
     "threeQuarterRight"
   ],
@@ -110,6 +181,16 @@
       "prompt": "Full-body matte gray male display mannequin on neutral gray studio. Same wardrobe. Pure right profile: turned 90°, camera sees right side only. Arms at sides. Full shot head to toe. No text. Vertical 9:16."
     },
     {
+      "id": "male-adult-standard-rearThreeQuarterLeft",
+      "gender": "male",
+      "age": "adult",
+      "pose": "standard",
+      "angle": "rearThreeQuarterLeft",
+      "file": "mannequins/male/adult/standard/rear-three-quarter-left.png",
+      "generate": true,
+      "prompt": "Full-body matte gray male display mannequin on neutral gray studio. Same identity: side-parted hair, gray dress shirt, chino pants, belt, dress shoes. Rear three-quarter left view: body turned ~135° so camera sees back-left of head and torso — mostly back of head and left ear, slight left cheek, back of shirt and left shoulder. Arms at sides. Full shot head to toe. No text. Vertical 9:16."
+    },
+    {
       "id": "male-adult-standard-back",
       "gender": "male",
       "age": "adult",
@@ -118,6 +199,16 @@
       "file": "mannequins/male/adult/standard/back.png",
       "generate": true,
       "prompt": "Full-body matte gray male display mannequin on neutral gray studio. Back view: facing away, back of head with side-parted hair, back of shirt, belt, pants, shoes visible. No face. Arms at sides. Full shot head to toe. No text. Vertical 9:16."
+    },
+    {
+      "id": "male-adult-standard-rearThreeQuarterRight",
+      "gender": "male",
+      "age": "adult",
+      "pose": "standard",
+      "angle": "rearThreeQuarterRight",
+      "file": "mannequins/male/adult/standard/rear-three-quarter-right.png",
+      "generate": true,
+      "prompt": "Full-body matte gray male display mannequin on neutral gray studio. Same identity: side-parted hair, gray dress shirt, chino pants, belt, dress shoes. Rear three-quarter right view: body turned ~225° so camera sees back-right of head and torso — mostly back of head and right ear, slight right cheek, back of shirt and right shoulder. Arms at sides. Full shot head to toe. No text. Vertical 9:16."
     },
     {
       "id": "female-adult-standard-front",
@@ -167,7 +258,17 @@
       "angle": "right",
       "file": "mannequins/female/adult/standard/right-profile.png",
       "generate": true,
-      "prompt": "Full-body matte gray female display mannequin on neutral gray studio. Same wardrobe. Pure right profile: turned 90°. Arms at sides. Full shot head to toe. No text. Vertical 9:16."
+      "prompt": "Full-body Matte gray female display mannequin with sculpted facial features, clean bob hairstyle. Sculpted blouse with collar, sculpted skirt, sculpted flats — unified matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. RIGHT PROFILE view only: strict 90° side view, mannequin faces toward the RIGHT edge of the frame — nose, chin, and toes all point right. Camera sees the mannequin's left side (right ear hidden behind head). Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "female-adult-standard-rearThreeQuarterLeft",
+      "gender": "female",
+      "age": "adult",
+      "pose": "standard",
+      "angle": "rearThreeQuarterLeft",
+      "file": "mannequins/female/adult/standard/rear-three-quarter-left.png",
+      "generate": true,
+      "prompt": "Full-body matte gray female display mannequin on neutral gray studio. Same identity: bob hair, blouse, skirt, flats. Rear three-quarter left view: body turned ~135° so camera sees back-left of head and torso — mostly back of bob and left ear, slight left cheek, back of blouse and left shoulder. Arms at sides. Full shot head to toe. No text. Vertical 9:16."
     },
     {
       "id": "female-adult-standard-back",
@@ -178,6 +279,336 @@
       "file": "mannequins/female/adult/standard/back.png",
       "generate": true,
       "prompt": "Full-body matte gray female display mannequin on neutral gray studio. Back view: bob hair from behind, back of blouse and skirt, no face. Arms at sides. Full shot head to toe. No text. Vertical 9:16."
+    },
+    {
+      "id": "female-adult-standard-rearThreeQuarterRight",
+      "gender": "female",
+      "age": "adult",
+      "pose": "standard",
+      "angle": "rearThreeQuarterRight",
+      "file": "mannequins/female/adult/standard/rear-three-quarter-right.png",
+      "generate": true,
+      "prompt": "Full-body matte gray female display mannequin on neutral gray studio. Same identity: bob hair, blouse, skirt, flats. Rear three-quarter right view: body turned ~225° so camera sees back-right of head and torso — mostly back of bob and right ear, slight right cheek, back of blouse and right shoulder. Arms at sides. Full shot head to toe. No text. Vertical 9:16."
+    },
+    {
+      "id": "male-teen-standard-front",
+      "gender": "male",
+      "age": "teen",
+      "pose": "standard",
+      "angle": "front",
+      "file": "mannequins/male/teen/standard/front.png",
+      "generate": true,
+      "prompt": "Full-body Adolescent matte gray male display mannequin with teenage proportions (ages 14–16), lean adolescent build. Sculpted facial features, side-parted combed hair. Gray dress shirt with collar and buttons, chino pants, belt with buckle, dress shoes — unified matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. FRONT view only: mannequin faces camera directly, shoulders square, both eyes visible, nose centered. Arms relaxed at sides. Full shot head to toe filling 90% of tall frame. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "male-teen-standard-threeQuarterLeft",
+      "gender": "male",
+      "age": "teen",
+      "pose": "standard",
+      "angle": "threeQuarterLeft",
+      "file": "mannequins/male/teen/standard/three-quarter-left.png",
+      "generate": true,
+      "prompt": "Full-body Adolescent matte gray male display mannequin with teenage proportions (ages 14–16), lean adolescent build. Sculpted facial features, side-parted combed hair. Gray dress shirt with collar and buttons, chino pants, belt with buckle, dress shoes — unified matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. THREE-QUARTER LEFT view only: body and head turned 45° toward the LEFT side of the frame. Both eyes partially visible, nose points upper-left. More of the right shoulder recedes. Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "male-teen-standard-threeQuarterRight",
+      "gender": "male",
+      "age": "teen",
+      "pose": "standard",
+      "angle": "threeQuarterRight",
+      "file": "mannequins/male/teen/standard/three-quarter-right.png",
+      "generate": true,
+      "prompt": "Full-body Adolescent matte gray male display mannequin with teenage proportions (ages 14–16), lean adolescent build. Sculpted facial features, side-parted combed hair. Gray dress shirt with collar and buttons, chino pants, belt with buckle, dress shoes — unified matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. THREE-QUARTER RIGHT view only: body and head turned 45° toward the RIGHT side of the frame. Both eyes partially visible, nose points upper-right. More of the left shoulder recedes. Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "male-teen-standard-left",
+      "gender": "male",
+      "age": "teen",
+      "pose": "standard",
+      "angle": "left",
+      "file": "mannequins/male/teen/standard/left-profile.png",
+      "generate": true,
+      "prompt": "Full-body Adolescent matte gray male display mannequin with teenage proportions (ages 14–16), lean adolescent build. Sculpted facial features, side-parted combed hair. Gray dress shirt with collar and buttons, chino pants, belt with buckle, dress shoes — unified matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. LEFT PROFILE view only: strict 90° side view, mannequin faces toward the LEFT edge of the frame — nose, chin, and toes all point left. Camera sees the mannequin's right side (left ear hidden behind head). Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "male-teen-standard-right",
+      "gender": "male",
+      "age": "teen",
+      "pose": "standard",
+      "angle": "right",
+      "file": "mannequins/male/teen/standard/right-profile.png",
+      "generate": true,
+      "prompt": "Full-body Adolescent matte gray male display mannequin with teenage proportions (ages 14–16), lean adolescent build. Sculpted facial features, side-parted combed hair. Gray dress shirt with collar and buttons, chino pants, belt with buckle, dress shoes — unified matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. RIGHT PROFILE view only: strict 90° side view, mannequin faces toward the RIGHT edge of the frame — nose, chin, and toes all point right. Camera sees the mannequin's left side (right ear hidden behind head). Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "male-teen-standard-rearThreeQuarterLeft",
+      "gender": "male",
+      "age": "teen",
+      "pose": "standard",
+      "angle": "rearThreeQuarterLeft",
+      "file": "mannequins/male/teen/standard/rear-three-quarter-left.png",
+      "generate": true,
+      "prompt": "Full-body Adolescent matte gray male display mannequin with teenage proportions (ages 14–16), lean adolescent build. Sculpted facial features, side-parted combed hair. Gray dress shirt with collar and buttons, chino pants, belt with buckle, dress shoes — unified matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. REAR THREE-QUARTER LEFT view only: body turned ~135° so camera sees back-left — mostly back of head and left ear, slight left cheek, back of shirt and left shoulder prominent. Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "male-teen-standard-back",
+      "gender": "male",
+      "age": "teen",
+      "pose": "standard",
+      "angle": "back",
+      "file": "mannequins/male/teen/standard/back.png",
+      "generate": true,
+      "prompt": "Full-body Adolescent matte gray male display mannequin with teenage proportions (ages 14–16), lean adolescent build. Sculpted facial features, side-parted combed hair. Gray dress shirt with collar and buttons, chino pants, belt with buckle, dress shoes — unified matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. BACK view only: mannequin faces directly away from camera. Back of head, back of shirt and clothing visible. No face. Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "male-teen-standard-rearThreeQuarterRight",
+      "gender": "male",
+      "age": "teen",
+      "pose": "standard",
+      "angle": "rearThreeQuarterRight",
+      "file": "mannequins/male/teen/standard/rear-three-quarter-right.png",
+      "generate": true,
+      "prompt": "Full-body adolescent matte gray male display mannequin with teenage proportions (ages 14–16), lean adolescent build. Sculpted facial features, side-parted combed hair. Gray dress shirt with collar and buttons, chino pants, belt with buckle, dress shoes — unified matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. REAR THREE-QUARTER RIGHT view only — NOT rear-left: back mostly toward camera but body rotated so the mannequin's RIGHT side is closer to camera. Right shoulder and right side of back prominent; left shoulder recedes. Back of head visible with RIGHT ear showing; head turned slightly right showing right cheek in profile. Do NOT show left ear or left cheek. Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "female-teen-standard-front",
+      "gender": "female",
+      "age": "teen",
+      "pose": "standard",
+      "angle": "front",
+      "file": "mannequins/female/teen/standard/front.png",
+      "generate": true,
+      "prompt": "Full-body Adolescent matte gray female display mannequin with teenage proportions (ages 14–16). Sculpted facial features, clean bob hairstyle. Sculpted blouse with collar, sculpted skirt, sculpted flats — unified matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. FRONT view only: mannequin faces camera directly, shoulders square, both eyes visible, nose centered. Arms relaxed at sides. Full shot head to toe filling 90% of tall frame. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "female-teen-standard-threeQuarterLeft",
+      "gender": "female",
+      "age": "teen",
+      "pose": "standard",
+      "angle": "threeQuarterLeft",
+      "file": "mannequins/female/teen/standard/three-quarter-left.png",
+      "generate": true,
+      "prompt": "Full-body Adolescent matte gray female display mannequin with teenage proportions (ages 14–16). Sculpted facial features, clean bob hairstyle. Sculpted blouse with collar, sculpted skirt, sculpted flats — unified matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. THREE-QUARTER LEFT view only: body and head turned 45° toward the LEFT side of the frame. Both eyes partially visible, nose points upper-left. More of the right shoulder recedes. Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "female-teen-standard-threeQuarterRight",
+      "gender": "female",
+      "age": "teen",
+      "pose": "standard",
+      "angle": "threeQuarterRight",
+      "file": "mannequins/female/teen/standard/three-quarter-right.png",
+      "generate": true,
+      "prompt": "Full-body Adolescent matte gray female display mannequin with teenage proportions (ages 14–16). Sculpted facial features, clean bob hairstyle. Sculpted blouse with collar, sculpted skirt, sculpted flats — unified matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. THREE-QUARTER RIGHT view only: body and head turned 45° toward the RIGHT side of the frame. Both eyes partially visible, nose points upper-right. More of the left shoulder recedes. Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "female-teen-standard-left",
+      "gender": "female",
+      "age": "teen",
+      "pose": "standard",
+      "angle": "left",
+      "file": "mannequins/female/teen/standard/left-profile.png",
+      "generate": true,
+      "prompt": "Full-body Adolescent matte gray female display mannequin with teenage proportions (ages 14–16). Sculpted facial features, clean bob hairstyle. Sculpted blouse with collar, sculpted skirt, sculpted flats — unified matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. LEFT PROFILE view only: strict 90° side view, mannequin faces toward the LEFT edge of the frame — nose, chin, and toes all point left. Camera sees the mannequin's right side (left ear hidden behind head). Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "female-teen-standard-right",
+      "gender": "female",
+      "age": "teen",
+      "pose": "standard",
+      "angle": "right",
+      "file": "mannequins/female/teen/standard/right-profile.png",
+      "generate": true,
+      "prompt": "Full-body Adolescent matte gray female display mannequin with teenage proportions (ages 14–16). Sculpted facial features, clean bob hairstyle. Sculpted blouse with collar, sculpted skirt, sculpted flats — unified matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. RIGHT PROFILE view only: strict 90° side view, mannequin faces toward the RIGHT edge of the frame — nose, chin, and toes all point right. Camera sees the mannequin's left side (right ear hidden behind head). Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "female-teen-standard-rearThreeQuarterLeft",
+      "gender": "female",
+      "age": "teen",
+      "pose": "standard",
+      "angle": "rearThreeQuarterLeft",
+      "file": "mannequins/female/teen/standard/rear-three-quarter-left.png",
+      "generate": true,
+      "prompt": "Full-body Adolescent matte gray female display mannequin with teenage proportions (ages 14–16). Sculpted facial features, clean bob hairstyle. Sculpted blouse with collar, sculpted skirt, sculpted flats — unified matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. REAR THREE-QUARTER LEFT view only: body turned ~135° so camera sees back-left — mostly back of head and left ear, slight left cheek, back of shirt and left shoulder prominent. Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "female-teen-standard-back",
+      "gender": "female",
+      "age": "teen",
+      "pose": "standard",
+      "angle": "back",
+      "file": "mannequins/female/teen/standard/back.png",
+      "generate": true,
+      "prompt": "Full-body Adolescent matte gray female display mannequin with teenage proportions (ages 14–16). Sculpted facial features, clean bob hairstyle. Sculpted blouse with collar, sculpted skirt, sculpted flats — unified matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. BACK view only: mannequin faces directly away from camera. Back of head, back of shirt and clothing visible. No face. Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "female-teen-standard-rearThreeQuarterRight",
+      "gender": "female",
+      "age": "teen",
+      "pose": "standard",
+      "angle": "rearThreeQuarterRight",
+      "file": "mannequins/female/teen/standard/rear-three-quarter-right.png",
+      "generate": true,
+      "prompt": "Full-body Adolescent matte gray female display mannequin with teenage proportions (ages 14–16). Sculpted facial features, clean bob hairstyle. Sculpted blouse with collar, sculpted skirt, sculpted flats — unified matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. REAR THREE-QUARTER RIGHT view only: body turned ~225° so camera sees back-right — mostly back of head and right ear, slight right cheek, back of shirt and right shoulder prominent. Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "male-child-standard-front",
+      "gender": "male",
+      "age": "child",
+      "pose": "standard",
+      "angle": "front",
+      "file": "mannequins/male/child/standard/front.png",
+      "generate": true,
+      "prompt": "Full-body Child matte gray male display mannequin with young child proportions (ages 8–10), shorter stature, slightly larger head-to-body ratio. Sculpted facial features, side-parted hair. Gray dress shirt, chino pants, belt, dress shoes — child-sized matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. FRONT view only: mannequin faces camera directly, shoulders square, both eyes visible, nose centered. Arms relaxed at sides. Full shot head to toe filling 90% of tall frame. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "male-child-standard-threeQuarterLeft",
+      "gender": "male",
+      "age": "child",
+      "pose": "standard",
+      "angle": "threeQuarterLeft",
+      "file": "mannequins/male/child/standard/three-quarter-left.png",
+      "generate": true,
+      "prompt": "Full-body Child matte gray male display mannequin with young child proportions (ages 8–10), shorter stature, slightly larger head-to-body ratio. Sculpted facial features, side-parted hair. Gray dress shirt, chino pants, belt, dress shoes — child-sized matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. THREE-QUARTER LEFT view only: body and head turned 45° toward the LEFT side of the frame. Both eyes partially visible, nose points upper-left. More of the right shoulder recedes. Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "male-child-standard-threeQuarterRight",
+      "gender": "male",
+      "age": "child",
+      "pose": "standard",
+      "angle": "threeQuarterRight",
+      "file": "mannequins/male/child/standard/three-quarter-right.png",
+      "generate": true,
+      "prompt": "Full-body Child matte gray male display mannequin with young child proportions (ages 8–10), shorter stature, slightly larger head-to-body ratio. Sculpted facial features, side-parted hair. Gray dress shirt, chino pants, belt, dress shoes — child-sized matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. THREE-QUARTER RIGHT view only: body and head turned 45° toward the RIGHT side of the frame. Both eyes partially visible, nose points upper-right. More of the left shoulder recedes. Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "male-child-standard-left",
+      "gender": "male",
+      "age": "child",
+      "pose": "standard",
+      "angle": "left",
+      "file": "mannequins/male/child/standard/left-profile.png",
+      "generate": true,
+      "prompt": "Full-body Child matte gray male display mannequin with young child proportions (ages 8–10), shorter stature, slightly larger head-to-body ratio. Sculpted facial features, side-parted hair. Gray dress shirt, chino pants, belt, dress shoes — child-sized matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. LEFT PROFILE view only: strict 90° side view, mannequin faces toward the LEFT edge of the frame — nose, chin, and toes all point left. Camera sees the mannequin's right side (left ear hidden behind head). Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "male-child-standard-right",
+      "gender": "male",
+      "age": "child",
+      "pose": "standard",
+      "angle": "right",
+      "file": "mannequins/male/child/standard/right-profile.png",
+      "generate": true,
+      "prompt": "Full-body Child matte gray male display mannequin with young child proportions (ages 8–10), shorter stature, slightly larger head-to-body ratio. Sculpted facial features, side-parted hair. Gray dress shirt, chino pants, belt, dress shoes — child-sized matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. RIGHT PROFILE view only: strict 90° side view, mannequin faces toward the RIGHT edge of the frame — nose, chin, and toes all point right. Camera sees the mannequin's left side (right ear hidden behind head). Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "male-child-standard-rearThreeQuarterLeft",
+      "gender": "male",
+      "age": "child",
+      "pose": "standard",
+      "angle": "rearThreeQuarterLeft",
+      "file": "mannequins/male/child/standard/rear-three-quarter-left.png",
+      "generate": true,
+      "prompt": "Full-body Child matte gray male display mannequin with young child proportions (ages 8–10), shorter stature, slightly larger head-to-body ratio. Sculpted facial features, side-parted hair. Gray dress shirt, chino pants, belt, dress shoes — child-sized matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. REAR THREE-QUARTER LEFT view only: body turned ~135° so camera sees back-left — mostly back of head and left ear, slight left cheek, back of shirt and left shoulder prominent. Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "male-child-standard-back",
+      "gender": "male",
+      "age": "child",
+      "pose": "standard",
+      "angle": "back",
+      "file": "mannequins/male/child/standard/back.png",
+      "generate": true,
+      "prompt": "Full-body Child matte gray male display mannequin with young child proportions (ages 8–10), shorter stature, slightly larger head-to-body ratio. Sculpted facial features, side-parted hair. Gray dress shirt, chino pants, belt, dress shoes — child-sized matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. BACK view only: mannequin faces directly away from camera. Back of head, back of shirt and clothing visible. No face. Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "male-child-standard-rearThreeQuarterRight",
+      "gender": "male",
+      "age": "child",
+      "pose": "standard",
+      "angle": "rearThreeQuarterRight",
+      "file": "mannequins/male/child/standard/rear-three-quarter-right.png",
+      "generate": true,
+      "prompt": "Full-body Child matte gray male display mannequin with young child proportions (ages 8–10), shorter stature, slightly larger head-to-body ratio. Sculpted facial features, side-parted hair. Gray dress shirt, chino pants, belt, dress shoes — child-sized matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. REAR THREE-QUARTER RIGHT view only: body turned ~225° so camera sees back-right — mostly back of head and right ear, slight right cheek, back of shirt and right shoulder prominent. Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "female-child-standard-front",
+      "gender": "female",
+      "age": "child",
+      "pose": "standard",
+      "angle": "front",
+      "file": "mannequins/female/child/standard/front.png",
+      "generate": true,
+      "prompt": "Full-body Child matte gray female display mannequin with young child proportions (ages 8–10), shorter stature, slightly larger head-to-body ratio. Sculpted facial features, bob hairstyle. Sculpted blouse with collar, sculpted skirt, sculpted flats — child-sized matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. FRONT view only: mannequin faces camera directly, shoulders square, both eyes visible, nose centered. Arms relaxed at sides. Full shot head to toe filling 90% of tall frame. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "female-child-standard-threeQuarterLeft",
+      "gender": "female",
+      "age": "child",
+      "pose": "standard",
+      "angle": "threeQuarterLeft",
+      "file": "mannequins/female/child/standard/three-quarter-left.png",
+      "generate": true,
+      "prompt": "Full-body Child matte gray female display mannequin with young child proportions (ages 8–10), shorter stature, slightly larger head-to-body ratio. Sculpted facial features, bob hairstyle. Sculpted blouse with collar, sculpted skirt, sculpted flats — child-sized matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. THREE-QUARTER LEFT view only: body and head turned 45° toward the LEFT side of the frame. Both eyes partially visible, nose points upper-left. More of the right shoulder recedes. Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "female-child-standard-threeQuarterRight",
+      "gender": "female",
+      "age": "child",
+      "pose": "standard",
+      "angle": "threeQuarterRight",
+      "file": "mannequins/female/child/standard/three-quarter-right.png",
+      "generate": true,
+      "prompt": "Full-body Child matte gray female display mannequin with young child proportions (ages 8–10), shorter stature, slightly larger head-to-body ratio. Sculpted facial features, bob hairstyle. Sculpted blouse with collar, sculpted skirt, sculpted flats — child-sized matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. THREE-QUARTER RIGHT view only: body and head turned 45° toward the RIGHT side of the frame. Both eyes partially visible, nose points upper-right. More of the left shoulder recedes. Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "female-child-standard-left",
+      "gender": "female",
+      "age": "child",
+      "pose": "standard",
+      "angle": "left",
+      "file": "mannequins/female/child/standard/left-profile.png",
+      "generate": true,
+      "prompt": "Full-body Child matte gray female display mannequin with young child proportions (ages 8–10), shorter stature, slightly larger head-to-body ratio. Sculpted facial features, bob hairstyle. Sculpted blouse with collar, sculpted skirt, sculpted flats — child-sized matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. LEFT PROFILE view only: strict 90° side view, mannequin faces toward the LEFT edge of the frame — nose, chin, and toes all point left. Camera sees the mannequin's right side (left ear hidden behind head). Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "female-child-standard-right",
+      "gender": "female",
+      "age": "child",
+      "pose": "standard",
+      "angle": "right",
+      "file": "mannequins/female/child/standard/right-profile.png",
+      "generate": true,
+      "prompt": "Full-body Child matte gray female display mannequin with young child proportions (ages 8–10), shorter stature, slightly larger head-to-body ratio. Sculpted facial features, bob hairstyle. Sculpted blouse with collar, sculpted skirt, sculpted flats — child-sized matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. RIGHT PROFILE view only: strict 90° side view, mannequin faces toward the RIGHT edge of the frame — nose, chin, and toes all point right. Camera sees the mannequin's left side (right ear hidden behind head). Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "female-child-standard-rearThreeQuarterLeft",
+      "gender": "female",
+      "age": "child",
+      "pose": "standard",
+      "angle": "rearThreeQuarterLeft",
+      "file": "mannequins/female/child/standard/rear-three-quarter-left.png",
+      "generate": true,
+      "prompt": "Full-body Child matte gray female display mannequin with young child proportions (ages 8–10), shorter stature, slightly larger head-to-body ratio. Sculpted facial features, bob hairstyle. Sculpted blouse with collar, sculpted skirt, sculpted flats — child-sized matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. REAR THREE-QUARTER LEFT view only: body turned ~135° so camera sees back-left — mostly back of head and left ear, slight left cheek, back of shirt and left shoulder prominent. Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "female-child-standard-back",
+      "gender": "female",
+      "age": "child",
+      "pose": "standard",
+      "angle": "back",
+      "file": "mannequins/female/child/standard/back.png",
+      "generate": true,
+      "prompt": "Full-body Child matte gray female display mannequin with young child proportions (ages 8–10), shorter stature, slightly larger head-to-body ratio. Sculpted facial features, bob hairstyle. Sculpted blouse with collar, sculpted skirt, sculpted flats — child-sized matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. BACK view only: mannequin faces directly away from camera. Back of head, back of shirt and clothing visible. No face. Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "female-child-standard-rearThreeQuarterRight",
+      "gender": "female",
+      "age": "child",
+      "pose": "standard",
+      "angle": "rearThreeQuarterRight",
+      "file": "mannequins/female/child/standard/rear-three-quarter-right.png",
+      "generate": true,
+      "prompt": "Full-body Child matte gray female display mannequin with young child proportions (ages 8–10), shorter stature, slightly larger head-to-body ratio. Sculpted facial features, bob hairstyle. Sculpted blouse with collar, sculpted skirt, sculpted flats — child-sized matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. REAR THREE-QUARTER RIGHT view only: body turned ~225° so camera sees back-right — mostly back of head and right ear, slight right cheek, back of shirt and right shoulder prominent. Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
     }
   ]
 }

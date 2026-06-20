@@ -31,8 +31,10 @@ export const MANNEQUIN_ANGLE_OPTIONS: ReadonlyArray<{
   { value: 'threeQuarterLeft', label: '3/4 Left' },
   { value: 'threeQuarterRight', label: '3/4 Right' },
   { value: 'left', label: 'Left Profile' },
-  { value: 'right', label: 'Right Profile' },
+  { value: 'rearThreeQuarterLeft', label: 'Rear 3/4 Left' },
   { value: 'back', label: 'Back' },
+  { value: 'rearThreeQuarterRight', label: 'Rear 3/4 Right' },
+  { value: 'right', label: 'Right Profile' },
 ];
 
 export const MANNEQUIN_GENDER_OPTIONS: ReadonlyArray<{ value: MannequinGender; label: string }> = [

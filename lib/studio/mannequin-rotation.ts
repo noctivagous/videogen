@@ -5,7 +5,9 @@ export const MANNEQUIN_ANGLE_CYCLE: readonly MannequinAngle[] = [
   'front',
   'threeQuarterLeft',
   'left',
+  'rearThreeQuarterLeft',
   'back',
+  'rearThreeQuarterRight',
   'right',
   'threeQuarterRight',
 ] as const;
@@ -27,7 +29,9 @@ export function mannequinAngleLabel(angle: MannequinAngle): string {
     threeQuarterLeft: '3/4 Left',
     threeQuarterRight: '3/4 Right',
     left: 'Left Profile',
+    rearThreeQuarterLeft: 'Rear 3/4 Left',
     right: 'Right Profile',
+    rearThreeQuarterRight: 'Rear 3/4 Right',
     back: 'Back',
   };
   return labels[angle];
