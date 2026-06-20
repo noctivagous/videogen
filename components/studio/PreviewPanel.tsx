@@ -62,7 +62,7 @@ function fitPreviewFrame(
 export function PreviewPanel() {
   const previewStageRef = useRef<HTMLDivElement>(null);
   const previewFrameRef = useRef<HTMLDivElement>(null);
-  const { inletRefs, hoverInlet } = useThemeTransformConnectorContext();
+  const { slotRefs, hoverSlot } = useThemeTransformConnectorContext();
   const frameView = useStudioStore((s) => s.frameView);
   const setFrameView = useStudioStore((s) => s.setFrameView);
   const project = useStudioStore((s) => s.project);
@@ -253,7 +253,7 @@ export function PreviewPanel() {
                 className="preview-frame-stage__refs preview-panel-shot-image-references"
                 {...uiSectionProps(UI_SECTIONS.studioBottomReferences)}
               >
-                <ReferenceSlots inletRefs={inletRefs} hoverInlet={hoverInlet} />
+                <ReferenceSlots slotRefs={slotRefs} hoverSlot={hoverSlot} />
               </div>
             )}
             <div className="preview-frame-stage__settings">

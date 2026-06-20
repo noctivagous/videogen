@@ -16,9 +16,9 @@ import { useStudioStore } from '@/store/useStudioStore';
 
 export interface ThemeTransformConnectorContextValue {
   outletRef: RefObject<HTMLButtonElement | null>;
-  inletRefs: MutableRefObject<(HTMLElement | null)[]>;
+  slotRefs: MutableRefObject<(HTMLElement | null)[]>;
   startDrag: (e: React.PointerEvent<HTMLButtonElement>) => void;
-  hoverInlet: number | null;
+  hoverSlot: number | null;
 }
 
 const ThemeTransformConnectorContext = createContext<ThemeTransformConnectorContextValue | null>(null);
@@ -34,7 +34,7 @@ export function useThemeTransformConnectorContext(): ThemeTransformConnectorCont
 export function ThemeTransformConnectorProvider({ children }: { children: ReactNode }) {
   const connectorContainerRef = useRef<HTMLDivElement>(null);
   const themeOutletRef = useRef<HTMLButtonElement>(null);
-  const inletRefs = useRef<(HTMLElement | null)[]>([null, null, null]);
+  const slotRefs = useRef<(HTMLElement | null)[]>([null, null, null]);
   const lighting = useStudioStore((s) => s.lighting);
   const frameView = useStudioStore((s) => s.frameView);
   const applyThemeTransformSlot = useStudioStore((s) => s.applyThemeTransformSlot);
@@ -47,17 +47,17 @@ export function ThemeTransformConnectorProvider({ children }: { children: ReactN
     [applyThemeTransformSlot],
   );
 
-  const { startDrag, connectorLine, hoverInlet } = useThemeTransformConnector({
+  const { startDrag, connectorLine, hoverSlot } = useThemeTransformConnector({
     containerRef: connectorContainerRef,
     outletRef: themeOutletRef,
-    inletRefs,
+    slotRefs,
     onConnect: onThemeConnect,
     enabled: themeEnabled && frameView === 'preview',
   });
 
   return (
     <ThemeTransformConnectorContext.Provider
-      value={{ outletRef: themeOutletRef, inletRefs, startDrag, hoverInlet }}
+      value={{ outletRef: themeOutletRef, slotRefs, startDrag, hoverSlot }}
     >
       <div
         ref={connectorContainerRef}

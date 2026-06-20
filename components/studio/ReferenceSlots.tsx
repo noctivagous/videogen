@@ -16,8 +16,15 @@ import {
 } from '@/lib/studio/reference-slots';
 import { getThemeTransformStatus } from '@/lib/studio/theme-transform';
 import { restrictsReferenceSlotsToFirst } from '@/lib/studio/xai-video-models';
+import { ReferenceImageViewerModal } from '@/components/studio/ReferenceImageViewerModal';
 import type { AspectRatio, ReferenceMode, ThemeTransformSlotStatus } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
+
+interface ViewerSlot {
+  index: number;
+  url: string;
+  label: string;
+}
 
 function isImageDrag(e: DragEvent): boolean {
   const types = Array.from(e.dataTransfer.types);
@@ -48,11 +55,11 @@ function transformStatusLabel(status: ThemeTransformSlotStatus, linked: boolean)
 }
 
 export interface ReferenceSlotsProps {
-  inletRefs?: React.MutableRefObject<(HTMLElement | null)[]>;
-  hoverInlet?: number | null;
+  slotRefs?: React.MutableRefObject<(HTMLElement | null)[]>;
+  hoverSlot?: number | null;
 }
 
-export function ReferenceSlots({ inletRefs, hoverInlet = null }: ReferenceSlotsProps) {
+export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsProps) {
   const shots = useStudioStore((s) => s.shots);
   const currentShot = useStudioStore((s) => s.currentShot);
   const ai = useStudioStore((s) => s.ai);
@@ -64,8 +71,9 @@ export function ReferenceSlots({ inletRefs, hoverInlet = null }: ReferenceSlotsP
   const toggleBackdropFramingLock = useStudioStore((s) => s.toggleBackdropFramingLock);
   const project = useStudioStore((s) => s.project);
   const fileInputs = useRef<(HTMLInputElement | null)[]>([]);
-  const localInletRefs = useRef<(HTMLElement | null)[]>([]);
+  const localSlotRefs = useRef<(HTMLElement | null)[]>([]);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [viewerSlot, setViewerSlot] = useState<ViewerSlot | null>(null);
 
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
   const slotCount = getReferenceSlotCount(shot);
@@ -73,9 +81,9 @@ export function ReferenceSlots({ inletRefs, hoverInlet = null }: ReferenceSlotsP
   const singleImageOnly = restrictsReferenceSlotsToFirst(ai.defaultVideoProvider, videoModelId);
 
   useEffect(() => {
-    localInletRefs.current = localInletRefs.current.slice(0, slotCount);
-    if (inletRefs) inletRefs.current = inletRefs.current.slice(0, slotCount);
-  }, [slotCount, inletRefs]);
+    localSlotRefs.current = localSlotRefs.current.slice(0, slotCount);
+    if (slotRefs) slotRefs.current = slotRefs.current.slice(0, slotCount);
+  }, [slotCount, slotRefs]);
 
   useEffect(() => {
     const clearDrag = () => setDragOverIndex(null);
@@ -107,22 +115,27 @@ export function ReferenceSlots({ inletRefs, hoverInlet = null }: ReferenceSlotsP
     reader.readAsDataURL(file);
   };
 
-  const setInletRef = (index: number, el: HTMLElement | null) => {
-    while (localInletRefs.current.length <= index) {
-      localInletRefs.current.push(null);
+  const openFilePicker = (index: number) => {
+    fileInputs.current[index]?.click();
+  };
+
+  const setSlotRef = (index: number, el: HTMLElement | null) => {
+    while (localSlotRefs.current.length <= index) {
+      localSlotRefs.current.push(null);
     }
-    localInletRefs.current[index] = el;
-    if (inletRefs) {
-      while (inletRefs.current.length <= index) {
-        inletRefs.current.push(null);
+    localSlotRefs.current[index] = el;
+    if (slotRefs) {
+      while (slotRefs.current.length <= index) {
+        slotRefs.current.push(null);
       }
-      inletRefs.current[index] = el;
+      slotRefs.current[index] = el;
     }
   };
 
   const slotIndices = getReferenceSlotIndices(shot);
 
   return (
+    <>
     <div className="flex flex-col gap-1.5">
       <div className="image-references-header flex flex-col gap-1.5">
         <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-300">
@@ -154,23 +167,14 @@ export function ReferenceSlots({ inletRefs, hoverInlet = null }: ReferenceSlotsP
           const statusLabel = transformStatusLabel(status, linked);
           const transformedUrl = resolveReferenceDisplayUrl(shot.transformedReferences?.[index] ?? null);
           const showTransformed = linked && (transformedUrl || status === 'applying' || status === 'stale' || status === 'error');
-          const inletActive = hoverInlet === index && !slotDisabled && Boolean(imgData);
+          const themeTarget = hoverSlot === index && !slotDisabled && Boolean(imgData);
 
           return (
             <div key={index} className="reference-slot-row">
-              <button
-                type="button"
-                ref={(el) => setInletRef(index, el)}
-                className={`theme-transform-inlet ${inletActive ? 'theme-transform-inlet--active' : ''} ${linked ? 'theme-transform-inlet--linked' : ''} ${slotDisabled || !imgData ? 'theme-transform-inlet--disabled' : ''}`}
-                disabled={slotDisabled || !imgData}
-                aria-label={`Theme transform inlet for ${label}`}
-                tabIndex={-1}
-                {...uiSectionProps(UI_SECTIONS.studioThemeTransformInlet, { suffix: index })}
-              />
-
               <div className="reference-slot-column">
               <div
-                className={`reference-slot group ${imgData ? 'has-image' : ''} ${dragOverIndex === index ? 'drag-over' : ''} ${slotDisabled ? 'reference-slot--disabled' : ''}`}
+                ref={(el) => setSlotRef(index, imgData && !slotDisabled ? el : null)}
+                className={`reference-slot group ${imgData ? 'has-image' : ''} ${dragOverIndex === index ? 'drag-over' : ''} ${themeTarget ? 'reference-slot--theme-target' : ''} ${linked ? 'reference-slot--theme-linked' : ''} ${slotDisabled ? 'reference-slot--disabled' : ''}`}
                 title={
                   slotDisabled
                     ? 'Not sent to grok-imagine-video-1.5 — image-to-video uses Image 1 only'
@@ -179,9 +183,16 @@ export function ReferenceSlots({ inletRefs, hoverInlet = null }: ReferenceSlotsP
                 {...uiSectionProps(UI_SECTIONS.studioReferenceSlot, { suffix: index })}
                 onClick={(e) => {
                   if (slotDisabled) return;
-                  if (!(e.target as HTMLElement).closest('.reference-label') &&
-                      !(e.target as HTMLElement).closest('.reference-remove')) {
-                    fileInputs.current[index]?.click();
+                  const target = e.target as HTMLElement;
+                  if (
+                    target.closest('.reference-label') ||
+                    target.closest('.reference-remove') ||
+                    target.closest('.reference-replace')
+                  ) {
+                    return;
+                  }
+                  if (!imgData) {
+                    openFilePicker(index);
                   }
                 }}
                 onDragEnter={(e) => {
@@ -231,8 +242,31 @@ export function ReferenceSlots({ inletRefs, hoverInlet = null }: ReferenceSlotsP
                   <>
                     <button
                       type="button"
+                      className="reference-replace"
+                      disabled={slotDisabled}
+                      title="Replace image"
+                      aria-label={`Replace ${label} image`}
+                      onClick={(e) => {
+                        if (slotDisabled) return;
+                        e.stopPropagation();
+                        openFilePicker(index);
+                      }}
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
                       className="reference-remove"
                       disabled={slotDisabled}
+                      title="Remove image"
+                      aria-label={`Remove ${label} image`}
                       onClick={(e) => {
                         if (slotDisabled) return;
                         e.stopPropagation();
@@ -290,47 +324,78 @@ export function ReferenceSlots({ inletRefs, hoverInlet = null }: ReferenceSlotsP
               />
               </div>
 
-              {index === backdropSlotIndex && (
-                <button
-                  type="button"
-                  onClick={() => toggleBackdropFramingLock()}
-                  disabled={backdropLockPending}
-                  className={`backdrop-framing-lock-btn ${
-                    backdropLockError
-                      ? 'backdrop-framing-lock-btn--error'
-                      : backdropLockReady
-                        ? 'backdrop-framing-lock-btn--ready'
-                        : backdropFramingLocked
-                          ? 'backdrop-framing-lock-btn--locked'
-                          : ''
-                  }`}
-                  title={
-                    backdropLockPending
-                      ? 'Cropping backdrop…'
-                      : backdropLockError
-                        ? 'Backdrop crop failed — click to retry lock'
-                        : backdropFramingLocked
-                          ? 'Unlock backdrop framing'
-                          : 'Lock backdrop framing'
-                  }
-                  {...uiSectionProps(UI_SECTIONS.studioPreviewBackdropFramingLock)}
-                >
-                  {backdropLockPending ? (
-                    <span className="backdrop-framing-lock-btn__spinner" aria-hidden />
-                  ) : backdropLockReady ? (
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : backdropFramingLocked ? (
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                    </svg>
+              {(imgData || index === backdropSlotIndex) && (
+                <div className="reference-slot-actions">
+                  {imgData && (
+                    <button
+                      type="button"
+                      onClick={() => setViewerSlot({ index, url: imgData, label })}
+                      disabled={slotDisabled}
+                      className="reference-viewer-btn"
+                      title="View image"
+                      aria-label={`View ${label} image`}
+                      {...uiSectionProps(UI_SECTIONS.studioReferenceSlotViewer, { suffix: index })}
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                        />
+                      </svg>
+                    </button>
                   )}
-                </button>
+
+                  {index === backdropSlotIndex && (
+                    <button
+                      type="button"
+                      onClick={() => toggleBackdropFramingLock()}
+                      disabled={backdropLockPending}
+                      className={`backdrop-framing-lock-btn ${
+                        backdropLockError
+                          ? 'backdrop-framing-lock-btn--error'
+                          : backdropLockReady
+                            ? 'backdrop-framing-lock-btn--ready'
+                            : backdropFramingLocked
+                              ? 'backdrop-framing-lock-btn--locked'
+                              : ''
+                      }`}
+                      title={
+                        backdropLockPending
+                          ? 'Cropping backdrop…'
+                          : backdropLockError
+                            ? 'Backdrop crop failed — click to retry lock'
+                            : backdropFramingLocked
+                              ? 'Unlock backdrop framing'
+                              : 'Lock backdrop framing'
+                      }
+                      {...uiSectionProps(UI_SECTIONS.studioPreviewBackdropFramingLock)}
+                    >
+                      {backdropLockPending ? (
+                        <span className="backdrop-framing-lock-btn__spinner" aria-hidden />
+                      ) : backdropLockReady ? (
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : backdropFramingLocked ? (
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                        </svg>
+                      )}
+                    </button>
+                  )}
+                </div>
               )}
 
               {removable && (
@@ -369,5 +434,13 @@ export function ReferenceSlots({ inletRefs, hoverInlet = null }: ReferenceSlotsP
         )}
       </div>
     </div>
+
+    <ReferenceImageViewerModal
+      open={viewerSlot !== null}
+      imageUrl={viewerSlot?.url ?? ''}
+      label={viewerSlot?.label ?? 'Reference'}
+      onClose={() => setViewerSlot(null)}
+    />
+    </>
   );
 }

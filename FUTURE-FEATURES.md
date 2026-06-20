@@ -3,15 +3,34 @@ FUTURE FEATURES
 
 #studio-preview-frame - the preview frame
 
+#studio-bottom-references - image references
+
+---------
+
+
+---------
+
+
+Clicking on an image reference in #studio-bottom-references 
+should open it in a modal image viewer for viewing.  
+However, it can have a folder icon on hover and that carries out the
+function of opening a file navigation
+dialog to find a file on the file system.
+Clicking the red x continues to delete it
+from the slot.
+
 ---------
 
 Pure text modifiers often give inconsistent or 
 subtle results across motion and different models.
 
----------
 
 App will be founded on model workflows for production
 of shots.
+
+Above "Image Reference" floating panel is "Shot Workflow" 
+floating panel and beneath the title a dropdown menu
+for different shot workflows.
 
 SHOT WORKFLOWS - workflow dropdown button
 	1) Manual - no UI driven conveniences, just image

@@ -10,7 +10,7 @@ interface Point {
 export interface ThemeTransformConnectorProps {
   containerRef: RefObject<HTMLElement | null>;
   outletRef: RefObject<HTMLElement | null>;
-  inletRefs: RefObject<(HTMLElement | null)[]>;
+  slotRefs: RefObject<(HTMLElement | null)[]>;
   onConnect: (slotIndex: number) => void;
   enabled: boolean;
 }
@@ -24,21 +24,18 @@ function centerInContainer(el: HTMLElement, container: HTMLElement): Point {
   };
 }
 
-function hitInlet(
-  inlets: (HTMLElement | null)[],
+function hitSlotTarget(
+  slots: (HTMLElement | null)[],
   clientX: number,
   clientY: number,
 ): number | null {
-  const radius = 20;
-  for (let i = 0; i < inlets.length; i++) {
-    const el = inlets[i];
-    if (!el) continue;
+  for (let i = 0; i < slots.length; i++) {
+    const el = slots[i];
+    if (!el || !el.classList.contains('has-image')) continue;
     const r = el.getBoundingClientRect();
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
-    const dx = clientX - cx;
-    const dy = clientY - cy;
-    if (dx * dx + dy * dy <= radius * radius) return i;
+    if (clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom) {
+      return i;
+    }
   }
   return null;
 }
@@ -46,12 +43,12 @@ function hitInlet(
 export function useThemeTransformConnector({
   containerRef,
   outletRef,
-  inletRefs,
+  slotRefs,
   onConnect,
   enabled,
 }: ThemeTransformConnectorProps) {
   const [dragTo, setDragTo] = useState<Point | null>(null);
-  const [hoverInlet, setHoverInlet] = useState<number | null>(null);
+  const [hoverSlot, setHoverSlot] = useState<number | null>(null);
   const draggingRef = useRef(false);
 
   const finishDrag = useCallback(
@@ -59,11 +56,11 @@ export function useThemeTransformConnector({
       if (!draggingRef.current) return;
       draggingRef.current = false;
       setDragTo(null);
-      const slot = hitInlet(inletRefs.current, clientX, clientY);
-      setHoverInlet(null);
+      const slot = hitSlotTarget(slotRefs.current, clientX, clientY);
+      setHoverSlot(null);
       if (slot !== null) onConnect(slot);
     },
-    [inletRefs, onConnect],
+    [slotRefs, onConnect],
   );
 
   useEffect(() => {
@@ -73,7 +70,7 @@ export function useThemeTransformConnector({
       if (!draggingRef.current || !containerRef.current) return;
       const cr = containerRef.current.getBoundingClientRect();
       setDragTo({ x: e.clientX - cr.left, y: e.clientY - cr.top });
-      setHoverInlet(hitInlet(inletRefs.current, e.clientX, e.clientY));
+      setHoverSlot(hitSlotTarget(slotRefs.current, e.clientX, e.clientY));
     };
 
     const onUp = (e: PointerEvent) => finishDrag(e.clientX, e.clientY);
@@ -86,7 +83,7 @@ export function useThemeTransformConnector({
       window.removeEventListener('pointerup', onUp);
       window.removeEventListener('pointercancel', onUp);
     };
-  }, [enabled, containerRef, inletRefs, finishDrag]);
+  }, [enabled, containerRef, slotRefs, finishDrag]);
 
   const startDrag = useCallback(
     (e: React.PointerEvent) => {
@@ -103,14 +100,22 @@ export function useThemeTransformConnector({
     enabled && dragTo && containerRef.current && outletRef.current ? (
       <svg className="theme-transform-connector" aria-hidden>
         <line
-          className={`theme-transform-connector__line ${hoverInlet !== null ? 'theme-transform-connector__line--target' : ''}`}
+          className={`theme-transform-connector__line ${hoverSlot !== null ? 'theme-transform-connector__line--target' : ''}`}
           x1={centerInContainer(outletRef.current, containerRef.current).x}
           y1={centerInContainer(outletRef.current, containerRef.current).y}
-          x2={dragTo.x}
-          y2={dragTo.y}
+          x2={
+            hoverSlot !== null && slotRefs.current[hoverSlot]
+              ? centerInContainer(slotRefs.current[hoverSlot]!, containerRef.current).x
+              : dragTo.x
+          }
+          y2={
+            hoverSlot !== null && slotRefs.current[hoverSlot]
+              ? centerInContainer(slotRefs.current[hoverSlot]!, containerRef.current).y
+              : dragTo.y
+          }
         />
       </svg>
     ) : null;
 
-  return { startDrag, connectorLine, hoverInlet, isDragging: dragTo !== null };
+  return { startDrag, connectorLine, hoverSlot, isDragging: dragTo !== null };
 }

@@ -82,6 +82,8 @@ export const UI_SECTIONS = {
   studioReferenceSlot: { id: 'studio-reference-slot', name: 'Reference Slot' },
   studioReferenceSlotAdd: { id: 'studio-reference-slot-add', name: 'Add Reference Slot' },
   studioReferenceSlotRemove: { id: 'studio-reference-slot-remove', name: 'Remove Reference Slot' },
+  studioReferenceImageViewer: { id: 'studio-reference-image-viewer', name: 'Reference Image Viewer' },
+  studioReferenceSlotViewer: { id: 'studio-reference-slot-viewer', name: 'Reference Slot Viewer' },
   studioShotTimeline: { id: 'studio-shot-timeline', name: 'Shot List' },
   studioShotItem: { id: 'studio-shot-item', name: 'Shot Item' },
 

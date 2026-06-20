@@ -1,6 +1,7 @@
 'use client';
 
 import { ProviderCard } from '@/components/studio/ProviderCard';
+import { ManagedModal } from '@/components/ui/ModalManager';
 import {
   getAvailableImageModels,
   getAvailableVideoModels,
@@ -81,8 +82,6 @@ export function SettingsModal() {
   const addCustomProvider = useStudioStore((s) => s.addCustomProvider);
   const showToast = useStudioStore((s) => s.showToast);
 
-  if (!settingsOpen) return null;
-
   const sortedBuiltIn = sortBuiltInProviders(ai);
   const sortedCustom = sortCustomProviders(ai);
   const isCustomVideo = isCustomProvider(ai.defaultVideoProvider, ai);
@@ -105,12 +104,12 @@ export function SettingsModal() {
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
-      onClick={(e) => { if (e.target === e.currentTarget) closeSettings(); }}
+    <ManagedModal
+      open={settingsOpen}
+      onClose={closeSettings}
+      className="glass w-full max-w-6xl max-h-[92vh] rounded-3xl border border-surface-700 overflow-hidden flex flex-col modal"
       {...uiSectionProps(UI_SECTIONS.studioSettingsModal)}
     >
-      <div className="glass w-full max-w-6xl max-h-[92vh] rounded-3xl border border-surface-700 overflow-hidden flex flex-col modal" onClick={(e) => e.stopPropagation()}>
         <div className="px-6 py-5 border-b border-surface-700 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center">
@@ -204,7 +203,6 @@ export function SettingsModal() {
           <button type="button" onClick={closeSettings} className="px-6 py-2.5 rounded-2xl border border-surface-600 hover:bg-surface-700 text-sm font-medium">Close</button>
           <button type="button" onClick={handleSaveAll} className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 text-sm font-semibold">Save Changes</button>
         </div>
-      </div>
-    </div>
+    </ManagedModal>
   );
 }

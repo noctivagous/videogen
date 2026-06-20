@@ -1,6 +1,7 @@
 'use client';
 
 import { ModalityChips } from '@/components/studio/ModalityChips';
+import { ManagedModal } from '@/components/ui/ModalManager';
 import { useEffect, useState } from 'react';
 import { BUILT_IN_PROVIDERS } from '@/lib/constants/providers';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
@@ -116,12 +117,12 @@ export function ProviderEditModal() {
         : 'Test Connection';
 
   return (
-    <div
-      className="fixed inset-0 z-[250] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
-      onClick={(e) => { if (e.target === e.currentTarget) closeProviderEdit(); }}
+    <ManagedModal
+      open
+      onClose={closeProviderEdit}
+      className="glass w-full max-w-md rounded-3xl border border-surface-700 overflow-hidden modal"
       {...uiSectionProps(UI_SECTIONS.studioProviderEditModal)}
     >
-      <div className="glass w-full max-w-md rounded-3xl border border-surface-700 overflow-hidden modal" onClick={(e) => e.stopPropagation()}>
         <div className="px-6 py-5 border-b border-surface-700 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-2xl bg-surface-700 flex items-center justify-center text-2xl ring-1 ring-white/5">{displayIcon}</div>
@@ -293,7 +294,6 @@ export function ProviderEditModal() {
             </button>
           )}
         </div>
-      </div>
-    </div>
+    </ManagedModal>
   );
 }
