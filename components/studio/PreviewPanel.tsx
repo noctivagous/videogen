@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { BackdropFramingEditStack, BackdropFramingLayer } from '@/components/studio/BackdropFramingLayer';
 import {
   BackdropFramingControlsInFrame,
@@ -16,6 +16,13 @@ import { PreviewSubModeSegment } from '@/components/studio/PreviewSubModeSegment
 import { PromptStackView } from '@/components/studio/PromptStackView';
 import { ReferencePreviewScene } from '@/components/studio/ReferencePreviewScene';
 import { PreviewProjectSettingsBar } from '@/components/studio/PreviewProjectSettingsBar';
+import { WorkflowDropdown } from '@/components/studio/WorkflowDropdown';
+import { MannequinPlacementLayer } from '@/components/studio/MannequinPlacementLayer';
+import {
+  canAddMannequin,
+  isLockStartFrame,
+} from '@/lib/studio/workflow';
+import { migrateMannequins } from '@/lib/studio/migrate-mannequin';
 import { previewFramingFingerprint } from '@/lib/constants/subject-cutouts';
 import {
   getEffectiveBackdropSourceUrl,
@@ -83,13 +90,31 @@ export function PreviewPanel() {
   const setPreviewSubMode = useStudioStore((s) => s.setPreviewSubMode);
   const generatePreviewFrame = useStudioStore((s) => s.generatePreviewFrame);
   const resetBackdropFraming = useStudioStore((s) => s.resetBackdropFraming);
+  const setWorkflow = useStudioStore((s) => s.setWorkflow);
+  const mannequinModeActive = useStudioStore((s) => s.mannequinModeActive);
+  const setMannequinMode = useStudioStore((s) => s.setMannequinMode);
+  const addMannequin = useStudioStore((s) => s.addMannequin);
+  const updateMannequin = useStudioStore((s) => s.updateMannequin);
+  const removeMannequin = useStudioStore((s) => s.removeMannequin);
+  const isBakingStartFrame = useStudioStore((s) => s.isBakingStartFrame);
+  const bakeProgress = useStudioStore((s) => s.bakeProgress);
   const ai = useStudioStore((s) => s.ai);
+  const [selectedMannequinId, setSelectedMannequinId] = useState<string | null>(null);
 
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
+  const mannequins = useMemo(
+    () => migrateMannequins(shot?.mannequins),
+    [shot?.mannequins],
+  );
   const showOverlay = shot?.frameComposition?.showOverlay ?? true;
   const generatedVideo = getShotActiveVideoUrl(shot);
   const generatedVideoCount = getGeneratedVideoCount(shot);
-  const modelPreviewUrl = shot?.previewFrameUrl ?? null;
+  const lockStartFrame = isLockStartFrame(shot);
+  const bakedPreviewUrl = shot?.bakedStartFrame ?? null;
+  const modelPreviewUrl =
+    lockStartFrame && bakedPreviewUrl
+      ? bakedPreviewUrl
+      : shot?.previewFrameUrl ?? null;
   const shotDuration = shot?.duration ?? project.duration;
   const timecode = `00:00 / ${formatDuration(shotDuration)}`;
 
@@ -144,8 +169,12 @@ export function PreviewPanel() {
     frameView === 'generated' && generatedVideo
       ? 'Generated video'
       : previewSubMode === 'model' && modelPreviewUrl
-        ? 'AI model preview'
-        : 'Framing guide';
+        ? lockStartFrame && bakedPreviewUrl
+          ? 'Baked start frame'
+          : 'AI model preview'
+        : lockStartFrame && mannequinModeActive
+          ? 'Mannequin mode'
+          : 'Framing guide';
 
   const showFramingGuides =
     frameView === 'preview' && previewSubMode === 'framing';
@@ -160,6 +189,26 @@ export function PreviewPanel() {
     if (previewSubMode === 'model' && modelPreviewUrl) {
       return (
         <ModelPreviewScene payload={payload} imageUrl={modelPreviewUrl} stale={modelStale} />
+      );
+    }
+    if (lockStartFrame && mannequinModeActive && previewSubMode === 'framing') {
+      return (
+        <>
+          <ReferencePreviewScene
+            payload={payload}
+            backdropOnly
+            hideBackdrop={showFramingBackdrop}
+          />
+          <MannequinPlacementLayer
+            mannequins={mannequins}
+            selectedId={selectedMannequinId}
+            onSelect={setSelectedMannequinId}
+            onUpdate={updateMannequin}
+            canAdd={canAddMannequin(shot)}
+            onAdd={addMannequin}
+            onRemove={removeMannequin}
+          />
+        </>
       );
     }
     return (
@@ -196,7 +245,8 @@ export function PreviewPanel() {
         className="absolute inset-x-0 top-0 z-30 pointer-events-none flex items-start justify-between gap-3"
         {...uiSectionProps(UI_SECTIONS.studioPreviewMainChrome)}
       >
-        <div className="preview-panel-controls pointer-events-auto shrink-0">
+        <div className="preview-panel-controls pointer-events-auto shrink-0 flex flex-col gap-1.5">
+          <WorkflowDropdown shot={shot} onChange={setWorkflow} />
           <FrameViewSegment
             value={frameView}
             onChange={setFrameView}
@@ -331,6 +381,16 @@ export function PreviewPanel() {
                 </div>
               </div>
             )}
+
+            {isBakingStartFrame && (
+              <div className="absolute inset-0 z-20 bg-surface-900/90 flex items-center justify-center backdrop-blur-sm">
+                <div className="text-center">
+                  <div className="w-12 h-12 border-4 border-surface-600 border-t-brand-500 rounded-full animate-spin mx-auto mb-3" />
+                  <p className="text-sm text-gray-300 font-medium">Baking start frame...</p>
+                  <p className="text-xs text-gray-500 mt-1">{bakeProgress}</p>
+                </div>
+              </div>
+            )}
           </div>
 
           {showBackdropEditStack && shot && backdropSourceUrl && (
@@ -384,7 +444,26 @@ export function PreviewPanel() {
               </button>
             )}
             <div className="h-6 w-px bg-surface-600" />
-            {frameView === 'preview' && (
+            {frameView === 'preview' && lockStartFrame && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!mannequinModeActive) setPreviewSubMode('framing');
+                    setMannequinMode(!mannequinModeActive);
+                  }}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                    mannequinModeActive
+                      ? 'bg-amber-600/80 hover:bg-amber-500 text-white'
+                      : 'bg-surface-700 hover:bg-surface-600 text-gray-200'
+                  }`}
+                >
+                  Mannequin Mode
+                </button>
+                <div className="h-6 w-px bg-surface-600" />
+              </>
+            )}
+            {frameView === 'preview' && !lockStartFrame && (
               <>
                 <button
                   type="button"

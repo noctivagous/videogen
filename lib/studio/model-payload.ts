@@ -98,7 +98,7 @@ export function buildModelPayloadStack(input: {
   }
 
   if (videoProviderId === 'xai' && refs.length > 0) {
-    combinedPrompt = augmentPromptForXAI(combinedPrompt, refs, cinematographyRefs);
+    combinedPrompt = augmentPromptForXAI(combinedPrompt, refs, cinematographyRefs, shot);
   }
 
   const blocks: PayloadStackBlock[] = [

@@ -9,6 +9,8 @@ import { normalizeLensCamera } from '@/lib/constants/lens';
 import { isUserSubjectReference, normalizeStockSubjectRef } from '@/lib/constants/stock-demo';
 import { normalizeColorPalette } from '@/lib/constants/color-palette';
 import { DEFAULT_REFERENCE_MODE, normalizeReferenceMode } from '@/lib/constants/reference-modes';
+import { normalizeWorkflow } from '@/lib/constants/workflows';
+import { migrateMannequins } from '@/lib/studio/migrate-mannequin';
 import {
   STOCK_BACKDROP_REF,
   STOCK_CAMERA,
@@ -299,6 +301,10 @@ export function migrateShot(
     backdropFramingByAspect: shot.backdropFramingByAspect ?? {},
     backdropCropsByAspect: shot.backdropCropsByAspect ?? {},
     backdropCropStatusByAspect: shot.backdropCropStatusByAspect ?? {},
+    workflow: normalizeWorkflow(shot),
+    mannequins: migrateMannequins(shot.mannequins),
+    bakedStartFrame: shot.bakedStartFrame ?? null,
+    bakeStatus: shot.bakeStatus ?? 'idle',
   };
 
   return {

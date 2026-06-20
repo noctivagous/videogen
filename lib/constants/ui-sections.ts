@@ -35,6 +35,8 @@ export const UI_SECTIONS = {
   studioPreviewFrameViewSegment: { id: 'studio-preview-frame-view-segment', name: 'Frame View Segment' },
   studioPreviewShotLabel: { id: 'studio-preview-shot-label', name: 'Preview Shot Label' },
   studioPreviewMainChrome: { id: 'studio-preview-main-chrome', name: 'Preview Main Chrome' },
+  studioShotWorkflow: { id: 'studio-shot-workflow', name: 'Shot Workflow' },
+  studioMannequinPlacement: { id: 'studio-mannequin-placement', name: 'Mannequin Placement Layer' },
   studioPreviewColorPalette: { id: 'studio-preview-color-palette', name: 'Preview Color Palette' },
   studioThemeTransformer: { id: 'studio-theme-transformer', name: 'Theme Transformer' },
   studioThemeTransformerOutlet: { id: 'studio-theme-transformer-outlet', name: 'Theme Transformer Outlet' },

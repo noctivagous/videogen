@@ -20,6 +20,9 @@
     "stock:generate": "node scripts/generate-mannequin-cutouts.mjs",
     "stock:matte": "node scripts/matte-cutouts.mjs",
     "stock:pipeline": "node scripts/generate-mannequin-cutouts.mjs && node scripts/matte-cutouts.mjs",
+    "stock:mannequin-angles": "node scripts/generate-mannequin-angles.mjs",
+    "stock:process-mannequin-angles": "node scripts/process-mannequin-angles.mjs",
+    "stock:process-mannequin-mode": "node scripts/process-mannequin-angles.mjs",
     "stock:previews": "node scripts/generate-stock-previews.mjs",
     "stock:looks": "node scripts/generate-look-previews.mjs"
   },

@@ -1,0 +1,183 @@
+{
+  "version": 1,
+  "purpose": "Transparent mannequin placement assets for lock-start-frame / mannequin mode. Generate via Imagine skill; post-process with npm run stock:process-mannequin-mode.",
+  "conventions": {
+    "inherits": "public/stock/prompts.json global conventions (noText, environment, composition)",
+    "male": {
+      "subject": "Matte gray male display mannequin with sculpted facial features — defined eye sockets, brows, nose, lips, and chin. Side-parted combed hair.",
+      "wardrobe": "Smooth sculpted gray dress shirt with collar and button placket, sculpted chino pants, sculpted belt with visible buckle, sculpted dress shoes — unified matte gray hard-surface sculpt, minimal folds only, no fabric colors or realistic skin.",
+      "standardPose": "Neutral standing pose, facing camera, arms relaxed naturally at sides, hands at thigh level — no raised arms, no gestures."
+    },
+    "female": {
+      "subject": "Matte gray female display mannequin with sculpted facial features, clean bob hairstyle.",
+      "wardrobe": "Sculpted blouse with collar, sculpted skirt, sculpted flats — unified matte gray hard-surface sculpt matching male mannequin material, no fabric colors or realistic skin.",
+      "standardPose": "Neutral standing pose, facing camera, arms relaxed naturally at sides, hands at thigh level — no raised arms, no gestures."
+    },
+    "framing": "Full shot head to toe: entire standing body fills about 90% of tall frame height. Tiny headroom and footroom — shoes near bottom edge, hair near top edge.",
+    "studio": "Neutral gray seamless studio backdrop, soft even studio lighting, cinematic 35mm photographic look, dark desaturated muted tones.",
+    "noText": "Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, or signage."
+  },
+  "outputSpec": {
+    "format": "png",
+    "alpha": true,
+    "generationAspectRatio": "9:16",
+    "maxHeight": 1024,
+    "trimPad": 6,
+    "rawCacheDir": "scripts/.cache/mannequin-angles-raw",
+    "rawNaming": "{id}.jpg"
+  },
+  "variants": {
+    "genders": [
+      { "id": "male", "label": "Male" },
+      { "id": "female", "label": "Female" }
+    ],
+    "ages": [
+      { "id": "adult", "label": "Adult", "ageScale": 1.0, "generateArt": true },
+      { "id": "teen", "label": "Teen", "ageScale": 0.9, "generateArt": false, "fallbackAge": "adult" },
+      { "id": "child", "label": "Child", "ageScale": 0.75, "generateArt": false, "fallbackAge": "adult" }
+    ],
+    "poses": [
+      { "id": "standard", "label": "Standing", "enabled": true },
+      { "id": "walking", "label": "Walking", "enabled": false },
+      { "id": "seated", "label": "Seated", "enabled": false }
+    ],
+    "angles": [
+      { "id": "front", "label": "Front", "file": "front.png" },
+      { "id": "threeQuarterLeft", "label": "3/4 Left", "file": "three-quarter-left.png" },
+      { "id": "threeQuarterRight", "label": "3/4 Right", "file": "three-quarter-right.png" },
+      { "id": "left", "label": "Left Profile", "file": "left-profile.png" },
+      { "id": "right", "label": "Right Profile", "file": "right-profile.png" },
+      { "id": "back", "label": "Back", "file": "back.png" }
+    ]
+  },
+  "angleCycle": [
+    "front",
+    "threeQuarterLeft",
+    "left",
+    "back",
+    "right",
+    "threeQuarterRight"
+  ],
+  "samples": [
+    {
+      "id": "male-adult-standard-front",
+      "gender": "male",
+      "age": "adult",
+      "pose": "standard",
+      "angle": "front",
+      "file": "mannequins/male/adult/standard/front.png",
+      "generate": true,
+      "prompt": "Full-body matte gray male display mannequin on neutral gray seamless studio backdrop. Sculpted face with side-parted hair. Gray dress shirt with collar and buttons, chino pants, belt with buckle, dress shoes — unified matte gray hard-surface sculpt. Facing camera directly, arms at sides. Full shot head to toe filling 90% of tall frame. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "male-adult-standard-threeQuarterLeft",
+      "gender": "male",
+      "age": "adult",
+      "pose": "standard",
+      "angle": "threeQuarterLeft",
+      "file": "mannequins/male/adult/standard/three-quarter-left.png",
+      "generate": true,
+      "prompt": "Full-body matte gray male display mannequin on neutral gray studio. Same identity: side-parted hair, gray dress shirt, chino pants, belt, dress shoes. Three-quarter left view: body turned 45° toward camera-left, both eyes partially visible. Arms at sides. Full shot head to toe. Soft studio lighting. No text. Vertical 9:16."
+    },
+    {
+      "id": "male-adult-standard-threeQuarterRight",
+      "gender": "male",
+      "age": "adult",
+      "pose": "standard",
+      "angle": "threeQuarterRight",
+      "file": "mannequins/male/adult/standard/three-quarter-right.png",
+      "generate": true,
+      "prompt": "Full-body matte gray male display mannequin on neutral gray studio. Same identity: side-parted hair, gray dress shirt, chino pants, belt, dress shoes. Three-quarter right view: body turned 45° toward camera-right, both eyes partially visible. Arms at sides. Full shot head to toe. Soft studio lighting. No text. Vertical 9:16."
+    },
+    {
+      "id": "male-adult-standard-left",
+      "gender": "male",
+      "age": "adult",
+      "pose": "standard",
+      "angle": "left",
+      "file": "mannequins/male/adult/standard/left-profile.png",
+      "generate": true,
+      "prompt": "Full-body matte gray male display mannequin on neutral gray studio. Same wardrobe. Pure left profile: turned 90°, camera sees left side only, nose and ear in profile. Arms at sides. Full shot head to toe. No text. Vertical 9:16."
+    },
+    {
+      "id": "male-adult-standard-right",
+      "gender": "male",
+      "age": "adult",
+      "pose": "standard",
+      "angle": "right",
+      "file": "mannequins/male/adult/standard/right-profile.png",
+      "generate": true,
+      "prompt": "Full-body matte gray male display mannequin on neutral gray studio. Same wardrobe. Pure right profile: turned 90°, camera sees right side only. Arms at sides. Full shot head to toe. No text. Vertical 9:16."
+    },
+    {
+      "id": "male-adult-standard-back",
+      "gender": "male",
+      "age": "adult",
+      "pose": "standard",
+      "angle": "back",
+      "file": "mannequins/male/adult/standard/back.png",
+      "generate": true,
+      "prompt": "Full-body matte gray male display mannequin on neutral gray studio. Back view: facing away, back of head with side-parted hair, back of shirt, belt, pants, shoes visible. No face. Arms at sides. Full shot head to toe. No text. Vertical 9:16."
+    },
+    {
+      "id": "female-adult-standard-front",
+      "gender": "female",
+      "age": "adult",
+      "pose": "standard",
+      "angle": "front",
+      "file": "mannequins/female/adult/standard/front.png",
+      "generate": true,
+      "prompt": "Full-body matte gray female display mannequin on neutral gray seamless studio backdrop. Sculpted face with clean bob hairstyle. Sculpted blouse with collar, sculpted skirt, sculpted flats — unified matte gray hard-surface sculpt. Facing camera directly, arms at sides. Full shot head to toe filling 90% of tall frame. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+    },
+    {
+      "id": "female-adult-standard-threeQuarterLeft",
+      "gender": "female",
+      "age": "adult",
+      "pose": "standard",
+      "angle": "threeQuarterLeft",
+      "file": "mannequins/female/adult/standard/three-quarter-left.png",
+      "generate": true,
+      "prompt": "Full-body matte gray female display mannequin on neutral gray studio. Same identity: bob hair, blouse, skirt, flats. Three-quarter left view: body turned 45° toward camera-left. Arms at sides. Full shot head to toe. No text. Vertical 9:16."
+    },
+    {
+      "id": "female-adult-standard-threeQuarterRight",
+      "gender": "female",
+      "age": "adult",
+      "pose": "standard",
+      "angle": "threeQuarterRight",
+      "file": "mannequins/female/adult/standard/three-quarter-right.png",
+      "generate": true,
+      "prompt": "Full-body matte gray female display mannequin on neutral gray studio. Same identity: bob hair, blouse, skirt, flats. Three-quarter right view: body turned 45° toward camera-right. Arms at sides. Full shot head to toe. No text. Vertical 9:16."
+    },
+    {
+      "id": "female-adult-standard-left",
+      "gender": "female",
+      "age": "adult",
+      "pose": "standard",
+      "angle": "left",
+      "file": "mannequins/female/adult/standard/left-profile.png",
+      "generate": true,
+      "prompt": "Full-body matte gray female display mannequin on neutral gray studio. Same wardrobe. Pure left profile: turned 90°, bob hair and blouse from side. Arms at sides. Full shot head to toe. No text. Vertical 9:16."
+    },
+    {
+      "id": "female-adult-standard-right",
+      "gender": "female",
+      "age": "adult",
+      "pose": "standard",
+      "angle": "right",
+      "file": "mannequins/female/adult/standard/right-profile.png",
+      "generate": true,
+      "prompt": "Full-body matte gray female display mannequin on neutral gray studio. Same wardrobe. Pure right profile: turned 90°. Arms at sides. Full shot head to toe. No text. Vertical 9:16."
+    },
+    {
+      "id": "female-adult-standard-back",
+      "gender": "female",
+      "age": "adult",
+      "pose": "standard",
+      "angle": "back",
+      "file": "mannequins/female/adult/standard/back.png",
+      "generate": true,
+      "prompt": "Full-body matte gray female display mannequin on neutral gray studio. Back view: bob hair from behind, back of blouse and skirt, no face. Arms at sides. Full shot head to toe. No text. Vertical 9:16."
+    }
+  ]
+}

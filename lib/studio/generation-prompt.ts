@@ -23,6 +23,7 @@ import {
 } from '@/lib/studio/generation-prompt-constants';
 
 import { prepareSceneTextForGeneration } from '@/lib/studio/legacy-scene-boilerplate';
+import { shouldInjectFieldSizePrompt } from '@/lib/studio/workflow';
 
 import { buildVideoEnvironmentPrompt } from '@/lib/studio/video-environment-prompt';
 import { buildVideoLightingPrompt } from '@/lib/studio/video-lighting-prompt';
@@ -53,18 +54,24 @@ export function getGenerationFramePrompt(
 export function getGenerationCameraPrompt(
   camera: CameraSettings,
   frame: FrameComposition,
+  shot?: Shot,
 ): string {
-  const field = FIELD_SIZE_PROMPTS[camera.fieldSize] ?? camera.fieldSize;
+  const injectFieldSize = shouldInjectFieldSizePrompt(shot);
   const count = SUBJECT_COUNT_PROMPTS[camera.subjectCount] ?? camera.subjectCount;
 
-  const parts = [field, count];
+  const parts: string[] = [];
+  if (injectFieldSize) {
+    const field = FIELD_SIZE_PROMPTS[camera.fieldSize] ?? camera.fieldSize;
+    parts.push(field);
+  }
+  parts.push(count);
 
   if (camera.subjectCount === '1s' && camera.coverage !== 'clean') {
     const coverage = CAMERA_COVERAGE_LABELS[camera.coverage];
     if (coverage) parts.push(coverage.toLowerCase());
   }
 
-  const framing = getGenerationFramePrompt(camera.fieldSize, frame);
+  const framing = injectFieldSize ? getGenerationFramePrompt(camera.fieldSize, frame) : '';
   if (framing) parts.push(framing);
 
   parts.push(formatLensForPrompt(camera));
@@ -113,7 +120,22 @@ function xaiReferenceImageNumber(
 /** Reference instructions for xAI reference-to-video (<IMAGE_N> tags required by API). */
 export function buildXAIReferencePrompt(
   refs: Array<{ role: string; url: string }>,
+  shot?: Shot,
 ): string {
+  if (shot?.bakedStartFrame && shot.workflow === 'lock-start-frame') {
+    const startN = refs.findIndex((r) => r.role === 'Backdrop') + 1;
+    const subjectN = xaiReferenceImageNumber(refs, 'Subject');
+    if (startN > 0 && subjectN) {
+      return (
+        `Use <IMAGE_${startN}> as the locked start frame — preserve exact composition, subject positions, and scale. ` +
+        `Subject identity (face, body, wardrobe) comes from <IMAGE_${subjectN}> for motion and appearance consistency.`
+      );
+    }
+    if (startN > 0) {
+      return `Use <IMAGE_${startN}> as the locked start frame. Preserve exact composition and subject placement.`;
+    }
+  }
+
   const subjectN = xaiReferenceImageNumber(refs, 'Subject');
   const backdropN = xaiReferenceImageNumber(refs, 'Backdrop');
 
@@ -218,7 +240,7 @@ export function buildGenerationPrompt(input: {
     includeVideoLighting ? buildVideoLightingPrompt(lighting) : '';
   const videoEnvironmentLine =
     includeVideoEnvironment ? buildVideoEnvironmentPrompt(lighting) : '';
-  const cameraLine = getGenerationCameraPrompt(camera, frame);
+  const cameraLine = getGenerationCameraPrompt(camera, frame, shot);
   const motionLine = buildMotionPrompt(motion);
 
   const blocks = [sceneBlock, videoLightingLine, videoEnvironmentLine, cameraLine, motionLine];
@@ -235,9 +257,10 @@ export function augmentPromptForXAI(
   prompt: string,
   refs: Array<{ role: string; url: string }>,
   cinematographyRefs = true,
+  shot?: Shot,
 ): string {
   if (!cinematographyRefs) return prompt;
-  const xaiRef = buildXAIReferencePrompt(refs);
+  const xaiRef = buildXAIReferencePrompt(refs, shot);
   if (!xaiRef) return prompt;
   return `${xaiRef} ${prompt}`.trim();
 }

@@ -32,6 +32,43 @@ export type ReferenceRole = 'Subject' | 'Backdrop' | 'Style' | 'Depth' | 'Canny'
 /** How shot image reference slots are labeled and described in prompts. */
 export type ReferenceMode = 'auto-roles' | 'manual';
 
+export type Workflow = 'auto-place' | 'lock-start-frame' | 'broll' | 'motion-transfer';
+
+export type MannequinAngle =
+  | 'front'
+  | 'threeQuarterLeft'
+  | 'threeQuarterRight'
+  | 'left'
+  | 'right'
+  | 'back';
+
+export type MannequinGender = 'male' | 'female';
+
+export type MannequinAge = 'adult' | 'teen' | 'child';
+
+export type MannequinPose = 'standard' | 'walking' | 'seated';
+
+export type BakeStatus = 'idle' | 'baking' | 'ready' | 'error';
+
+export interface Mannequin {
+  id: string;
+  angle: MannequinAngle;
+  gender: MannequinGender;
+  age: MannequinAge;
+  pose: MannequinPose;
+  /** Normalized center X in frame space (0–1). */
+  x: number;
+  /** Normalized center Y in frame space (0–1). */
+  y: number;
+  /** Display scale multiplier (0.1–2.0). */
+  scale: number;
+  rotation: number;
+  /** @deprecated Use age — kept for persisted project migration. */
+  ageScale?: number;
+  /** For dirty-single foreground shoulder (default 1). */
+  opacity?: number;
+}
+
 export type ThemeTransformSlotStatus = 'idle' | 'applying' | 'ready' | 'stale' | 'error';
 
 export interface FrameComposition {
@@ -282,6 +319,13 @@ export interface Shot {
   backdropCropsByAspect?: Partial<Record<AspectRatio, string>>;
   /** Lock/crop pipeline status per aspect ratio. */
   backdropCropStatusByAspect?: Partial<Record<AspectRatio, BackdropCropStatus>>;
+  /** Shot workflow — drives UI panels and API methods. */
+  workflow?: Workflow;
+  /** User-placed mannequin placeholders (lock-start-frame). */
+  mannequins?: Mannequin[];
+  /** Inpainted composite used as video start frame. */
+  bakedStartFrame?: string | null;
+  bakeStatus?: BakeStatus;
 }
 
 export interface StudioProject {

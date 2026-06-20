@@ -2,6 +2,7 @@ import { normalizeReferenceRole } from '@/lib/constants/camera';
 import { resolveReferenceDisplayUrl } from '@/lib/storage/reference-url';
 import { getBackdropSlotIndex } from '@/lib/studio/backdrop-framing';
 import { getReferenceSlotLabel, isCinematographyRefs } from '@/lib/studio/reference-slots';
+import { buildWorkflowGenerationRefs } from '@/lib/studio/workflow';
 import { effectiveReferenceUrl } from '@/lib/studio/theme-transform';
 import type { AspectRatio, LightingSettings, ReferenceRole, Shot } from '@/lib/types/studio';
 
@@ -49,6 +50,9 @@ export function buildSlotReferenceRefs(
   aspectRatio?: AspectRatio,
 ): Array<{ role: ReferenceRole; url: string; slotIndex: number }> {
   if (!shot) return [];
+
+  const workflowRefs = buildWorkflowGenerationRefs(shot, lighting, aspectRatio);
+  if (workflowRefs) return workflowRefs;
 
   const resolvedLighting = lighting ?? shot.lighting;
   const cinematography = isCinematographyRefs(shot);

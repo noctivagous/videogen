@@ -16,6 +16,7 @@ import {
 } from '@/lib/studio/reference-slots';
 import { getThemeTransformStatus } from '@/lib/studio/theme-transform';
 import { restrictsReferenceSlotsToFirst } from '@/lib/studio/xai-video-models';
+import { getWorkflowReferenceSteps, isLockStartFrame } from '@/lib/studio/workflow';
 import { ReferenceImageViewerModal } from '@/components/studio/ReferenceImageViewerModal';
 import type { AspectRatio, ReferenceMode, ThemeTransformSlotStatus } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
@@ -68,6 +69,8 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
   const removeReferenceSlot = useStudioStore((s) => s.removeReferenceSlot);
   const cycleReferenceRole = useStudioStore((s) => s.cycleReferenceRole);
   const setReferenceMode = useStudioStore((s) => s.setReferenceMode);
+  const bakeStartFrame = useStudioStore((s) => s.bakeStartFrame);
+  const isBakingStartFrame = useStudioStore((s) => s.isBakingStartFrame);
   const toggleBackdropFramingLock = useStudioStore((s) => s.toggleBackdropFramingLock);
   const project = useStudioStore((s) => s.project);
   const fileInputs = useRef<(HTMLInputElement | null)[]>([]);
@@ -133,6 +136,8 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
   };
 
   const slotIndices = getReferenceSlotIndices(shot);
+  const lockStartFrame = isLockStartFrame(shot);
+  const workflowSteps = getWorkflowReferenceSteps(shot, shot?.lighting);
 
   return (
     <>
@@ -141,18 +146,46 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
         <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-300">
           Image References
         </span>
-        <select
-          value={referenceMode}
-          onChange={(e) => setReferenceMode(e.target.value as ReferenceMode)}
-          className="reference-mode-select w-full"
-          aria-label="Reference mode"
-        >
-          {REFERENCE_MODE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        {!lockStartFrame && (
+          <select
+            value={referenceMode}
+            onChange={(e) => setReferenceMode(e.target.value as ReferenceMode)}
+            className="reference-mode-select w-full"
+            aria-label="Reference mode"
+          >
+            {REFERENCE_MODE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        )}
+        {lockStartFrame && workflowSteps.length > 0 && (
+          <ol className="workflow-steps flex flex-col gap-1 text-[10px] text-gray-400">
+            {workflowSteps.map((step, i) => (
+              <li key={step.id} className="flex items-center gap-1.5">
+                <span
+                  className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
+                    step.done ? 'bg-brand-500/30 text-brand-300' : 'bg-surface-700 text-gray-500'
+                  }`}
+                >
+                  {step.done ? '✓' : i + 1}
+                </span>
+                <span className={step.done ? 'text-gray-300' : ''}>{step.label}</span>
+              </li>
+            ))}
+          </ol>
+        )}
+        {lockStartFrame && (
+          <button
+            type="button"
+            onClick={() => bakeStartFrame()}
+            disabled={isBakingStartFrame || workflowSteps.some((s) => !s.done && s.id !== 'bake')}
+            className="w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-lg bg-brand-600 hover:bg-brand-500 disabled:opacity-40 text-white"
+          >
+            {isBakingStartFrame ? 'Baking…' : 'Bake Start Frame'}
+          </button>
+        )}
       </div>
 
       <div className="reference-slots-stack flex flex-col gap-2">

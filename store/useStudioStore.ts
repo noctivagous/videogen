@@ -49,6 +49,25 @@ import {
   THEME_TRANSFORM_SLOT_COUNT,
 } from '@/lib/studio/theme-transform';
 import { DEFAULT_REFERENCE_MODE, normalizeReferenceMode } from '@/lib/constants/reference-modes';
+import type { Workflow } from '@/lib/types/studio';
+import type { Mannequin } from '@/lib/types/studio';
+import { migrateMannequin, migrateMannequins } from '@/lib/studio/migrate-mannequin';
+import { WORKFLOW_OPTIONS } from '@/lib/constants/workflows';
+import {
+  bakeBlobsToDataUrls,
+  BAKE_INPAINT_PROMPT,
+  renderBakeFrames,
+} from '@/lib/studio/bake-start-frame';
+import { augmentPromptForXAIImageEdit } from '@/lib/studio/generation-prompt';
+import type { BakeStartFrameRequest } from '@/lib/studio/generation/inpaint-types';
+import {
+  canAddMannequin,
+  createDefaultMannequin,
+  getSubjectSheetUrl,
+  getWorkflowReferenceSteps,
+  isLockStartFrame,
+  seedMannequinsForShot,
+} from '@/lib/studio/workflow';
 import {
   clearBackdropCrops,
   clearBackdropCropStatus,
@@ -251,6 +270,9 @@ interface StudioStore {
   previewMode: PreviewMode;
   frameView: FrameView;
   previewSubMode: PreviewSubMode;
+  mannequinModeActive: boolean;
+  isBakingStartFrame: boolean;
+  bakeProgress: string;
   isPreviewFrameGenerating: boolean;
   previewFrameProgress: string;
   projectLocationLabel: string | null;
@@ -299,6 +321,12 @@ interface StudioStore {
   commitBackdropCrop: () => Promise<void>;
   cycleReferenceRole: (index: number) => void;
   setReferenceMode: (mode: ReferenceMode) => void;
+  setWorkflow: (workflow: Workflow) => void;
+  setMannequinMode: (active: boolean) => void;
+  addMannequin: () => void;
+  updateMannequin: (id: string, patch: Partial<Mannequin>) => void;
+  removeMannequin: (id: string) => void;
+  bakeStartFrame: () => Promise<void>;
   applyThemeTransformSlot: (index: number) => Promise<void>;
 
   generate: () => Promise<void>;
@@ -384,6 +412,9 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   previewMode: 'vector',
   frameView: 'preview',
   previewSubMode: 'framing',
+  mannequinModeActive: false,
+  isBakingStartFrame: false,
+  bakeProgress: '',
   isPreviewFrameGenerating: false,
   previewFrameProgress: '',
   projectLocationLabel: null,
@@ -784,6 +815,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     set((s) => ({
       currentShot: id,
       previewSubMode: 'framing',
+      mannequinModeActive: false,
       backdropSelected: false,
       shots: s.shots.map((sh) => ({ ...sh, active: sh.id === id })),
       ...(shot ? shotActiveView(shot) : {}),
@@ -1110,6 +1142,197 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       shots: patchCurrentShot(s.shots, s.currentShot, { referenceMode: mode }),
     }));
     get().showToast(mode === 'auto-roles' ? 'Auto-roles reference mode' : 'Manual reference mode');
+  },
+
+  setWorkflow(workflow) {
+    const shot = get().getCurrentShot();
+    if (!shot || shot.workflow === workflow) return;
+    const option = WORKFLOW_OPTIONS.find((o) => o.value === workflow);
+    if (option && !option.enabled) {
+      get().showToast(`${option.label} is not available yet`, 'error');
+      return;
+    }
+    const enableLockStart = workflow === 'lock-start-frame';
+    set((s) => ({
+      shots: patchCurrentShot(s.shots, s.currentShot, {
+        workflow,
+        mannequins: enableLockStart ? seedMannequinsForShot({ ...shot, workflow }) : [],
+        bakedStartFrame: null,
+        bakeStatus: 'idle',
+      }),
+      mannequinModeActive: enableLockStart,
+      previewSubMode: enableLockStart ? 'framing' : s.previewSubMode,
+    }));
+    get().showToast(option?.label ?? workflow);
+  },
+
+  setMannequinMode(active) {
+    if (!active) {
+      set({ mannequinModeActive: false });
+      return;
+    }
+    const shot = get().getCurrentShot();
+    if (!shot || !isLockStartFrame(shot)) {
+      set({ mannequinModeActive: false });
+      return;
+    }
+    const needsSeed = (shot.mannequins?.length ?? 0) === 0;
+    set((s) => ({
+      mannequinModeActive: true,
+      previewSubMode: 'framing',
+      shots: needsSeed
+        ? patchCurrentShot(s.shots, s.currentShot, {
+            mannequins: seedMannequinsForShot(shot),
+            bakedStartFrame: null,
+            bakeStatus: 'idle',
+          })
+        : s.shots,
+    }));
+    if (needsSeed) {
+      get().showToast('Mannequin placed — drag to reposition');
+    }
+  },
+
+  addMannequin() {
+    const shot = get().getCurrentShot();
+    if (!canAddMannequin(shot)) {
+      get().showToast('Mannequin limit reached for this subject count', 'error');
+      return;
+    }
+    const mannequins = [...migrateMannequins(shot?.mannequins)];
+    mannequins.push(createDefaultMannequin());
+    set((s) => ({
+      shots: patchCurrentShot(s.shots, s.currentShot, { mannequins, bakeStatus: 'idle', bakedStartFrame: null }),
+      mannequinModeActive: true,
+    }));
+  },
+
+  updateMannequin(id, patch) {
+    const shot = get().getCurrentShot();
+    if (!shot) return;
+    const mannequins = migrateMannequins(shot.mannequins).map((m) =>
+      m.id === id ? migrateMannequin({ ...m, ...patch }) : m,
+    );
+    set((s) => ({
+      shots: patchCurrentShot(s.shots, s.currentShot, {
+        mannequins,
+        bakeStatus: 'idle',
+        bakedStartFrame: null,
+      }),
+    }));
+  },
+
+  removeMannequin(id) {
+    const shot = get().getCurrentShot();
+    if (!shot) return;
+    const mannequins = (shot.mannequins ?? []).filter((m) => m.id !== id);
+    set((s) => ({
+      shots: patchCurrentShot(s.shots, s.currentShot, {
+        mannequins,
+        bakeStatus: 'idle',
+        bakedStartFrame: null,
+      }),
+    }));
+  },
+
+  async bakeStartFrame() {
+    const state = get();
+    const { project, ai, shots, currentShot } = state;
+    const shot = getCurrentShotFromList(shots, currentShot);
+    if (!shot || !isLockStartFrame(shot)) return;
+
+    const steps = getWorkflowReferenceSteps(shot, shot.lighting);
+    const incomplete = steps.find((s) => !s.done && s.id !== 'bake');
+    if (incomplete) {
+      get().showToast(`Complete step: ${incomplete.label}`, 'error');
+      return;
+    }
+
+    const replicateKey = getProviderApiKey('replicate', false, ai);
+    if (!replicateKey) {
+      get().showToast('Configure Replicate API key in Settings for baking', 'error');
+      return;
+    }
+
+    set({
+      isBakingStartFrame: true,
+      bakeProgress: 'Rendering mannequin mask…',
+      shots: patchCurrentShot(shots, currentShot, { bakeStatus: 'baking' }),
+    });
+
+    try {
+      const bakeOutput = await renderBakeFrames({
+        shot,
+        aspectRatio: project.aspectRatio as AspectRatio,
+        resolution: project.resolution,
+        mannequins: shot.mannequins ?? [],
+      });
+      const { imageUrl, maskUrl } = await bakeBlobsToDataUrls(bakeOutput);
+
+      set({ bakeProgress: 'Inpainting with FLUX Fill…' });
+
+      const subjectUrl = getSubjectSheetUrl(shot, shot.lighting);
+      const xaiKey = getProviderApiKey('xai', false, ai);
+      const xaiModelId = getEffectivePreviewModelId(ai);
+      let identityPass: BakeStartFrameRequest['identityPass'];
+
+      if (subjectUrl && xaiKey && xaiModelId && isPreviewFrameSupported('xai', false)) {
+        const refs = [
+          { role: 'Subject', url: subjectUrl, slotIndex: 0 },
+          { role: 'Backdrop', url: imageUrl, slotIndex: 1 },
+        ];
+        const basePrompt =
+          'Place the subject from the character sheet into the scene, preserving exact position, scale, and lighting. Seamless photorealistic integration.';
+        identityPass = {
+          providerId: 'xai',
+          isCustom: false,
+          apiKey: xaiKey,
+          modelId: xaiModelId,
+          prompt: augmentPromptForXAIImageEdit(basePrompt, refs, true),
+          aspectRatio: project.aspectRatio,
+          refs,
+          cinematographyRefs: true,
+        };
+      }
+
+      const res = await fetch('/api/bake-start-frame', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          inpaint: {
+            providerId: 'replicate',
+            apiKey: replicateKey,
+            imageUrl,
+            maskUrl,
+            prompt: BAKE_INPAINT_PROMPT,
+          },
+          identityPass,
+        }),
+      });
+
+      const result = await res.json();
+      if (!res.ok || result.status === 'error') {
+        throw new Error(result.error || 'Bake failed');
+      }
+
+      set((s) => ({
+        shots: patchCurrentShot(s.shots, s.currentShot, {
+          bakedStartFrame: result.imageUrl ?? null,
+          bakeStatus: 'ready',
+        }),
+        isBakingStartFrame: false,
+        bakeProgress: '',
+        previewSubMode: 'model',
+      }));
+      get().showToast('Start frame baked');
+    } catch (e) {
+      set((s) => ({
+        shots: patchCurrentShot(s.shots, s.currentShot, { bakeStatus: 'error' }),
+        isBakingStartFrame: false,
+        bakeProgress: '',
+      }));
+      get().showToast(e instanceof Error ? e.message : 'Bake failed', 'error');
+    }
   },
 
   async generatePreviewFrame() {

@@ -21,6 +21,19 @@ from the slot.
 
 ---------
 
+Set the border-radius of #studio-preview-frame to 0.  
+
+---------
+
+
+Save color palette to Media Library.
+Load color palette from Media Library.
+
+	- Other presets for filmmaking can
+	be saved to the Media Library
+
+---------
+
 Pure text modifiers often give inconsistent or 
 subtle results across motion and different models.
 
@@ -33,7 +46,7 @@ floating panel and beneath the title a dropdown menu
 for different shot workflows.
 
 SHOT WORKFLOWS - workflow dropdown button
-	1) Manual - no UI driven conveniences, just image
+	1)  Manual - no UI driven conveniences, just image
 	reference slots, prompt slots.
 	
 	2) Backdrop without Character(s)
@@ -67,6 +80,7 @@ SHOT WORKFLOWS - workflow dropdown button
 	
 	6) Motion transfer (e.g. Viggle)
 
+	7) ...
 
 
 FEATURE:
