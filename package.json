@@ -2,6 +2,9 @@
   "name": "videogen",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "dev": "next dev",
     "dev:clean": "sh -c 'lsof -ti:3000,3001 | xargs kill -9 2>/dev/null; rm -rf .next && next dev \"$@\"' --",
@@ -10,6 +13,7 @@
     "start": "next start",
     "clean": "rm -rf .next",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "check:secrets": "git grep -nE 'r8_[A-Za-z0-9]{10,}|sk-[A-Za-z0-9]{20,}|hf_[A-Za-z0-9]{20,}' -- ':!package-lock.json' && exit 1 || exit 0",
     "stock:cutouts": "node scripts/generate-subject-cutouts.mjs",
     "stock:cutouts:import": "bash scripts/import-cutout.sh",
@@ -22,21 +26,21 @@
   "dependencies": {
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
-    "next": "^15.3.3",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
+    "next": "^16.2.9",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "three": "^0.170.0",
     "zustand": "^5.0.5"
   },
   "devDependencies": {
     "@huggingface/transformers": "^3.4.2",
-    "@types/node": "^22.15.21",
-    "@types/react": "^19.1.6",
-    "@types/react-dom": "^19.1.5",
+    "@types/node": "^26.0.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
     "@types/three": "^0.170.0",
     "@types/wicg-file-system-access": "^2023.10.7",
     "eslint": "^9.28.0",
-    "eslint-config-next": "^15.3.3",
+    "eslint-config-next": "^16.2.9",
     "playwright": "^1.61.0",
     "postcss": "^8.5.4",
     "sharp": "^0.34.2",

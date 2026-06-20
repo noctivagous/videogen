@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
+import { BackdropFramingEditStack, BackdropFramingLayer } from '@/components/studio/BackdropFramingLayer';
 import { CompositionOverlay } from '@/components/studio/CompositionOverlay';
 import { ReferenceSlots } from '@/components/studio/ReferenceSlots';
 import { useThemeTransformConnectorContext } from '@/components/studio/ThemeTransformConnectorProvider';
@@ -12,6 +13,11 @@ import { PromptStackView } from '@/components/studio/PromptStackView';
 import { ReferencePreviewScene } from '@/components/studio/ReferencePreviewScene';
 import { PreviewProjectSettingsBar } from '@/components/studio/PreviewProjectSettingsBar';
 import { previewFramingFingerprint } from '@/lib/constants/subject-cutouts';
+import {
+  getEffectiveBackdropSourceUrl,
+  isBackdropCropCommitted,
+} from '@/lib/studio/backdrop-framing';
+import type { AspectRatio } from '@/lib/types/studio';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { formatDuration } from '@/lib/studio/shot-display';
 import { getGeneratedVideoCount, getShotActiveVideoUrl } from '@/lib/studio/shot-videos';
@@ -72,6 +78,8 @@ export function PreviewPanel() {
   const previewSubMode = useStudioStore((s) => s.previewSubMode);
   const setPreviewSubMode = useStudioStore((s) => s.setPreviewSubMode);
   const generatePreviewFrame = useStudioStore((s) => s.generatePreviewFrame);
+  const resetBackdropFraming = useStudioStore((s) => s.resetBackdropFraming);
+  const setBackdropSelected = useStudioStore((s) => s.setBackdropSelected);
   const ai = useStudioStore((s) => s.ai);
 
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
@@ -139,6 +147,24 @@ export function PreviewPanel() {
   const showFramingGuides =
     frameView === 'preview' && previewSubMode === 'framing';
 
+  const aspectRatio = (project.aspectRatio || '16:9') as AspectRatio;
+  const backdropSourceUrl = shot ? getEffectiveBackdropSourceUrl(shot, shot.lighting) : null;
+  const backdropCropCommitted = shot ? isBackdropCropCommitted(shot, aspectRatio) : false;
+  const showFramingBackdrop = showFramingGuides && Boolean(backdropSourceUrl);
+  const showBackdropEditStack = showFramingBackdrop && !backdropCropCommitted;
+
+  const handlePreviewFramePointerDown = (event: React.PointerEvent) => {
+    if (!showBackdropEditStack) return;
+    const target = event.target as HTMLElement;
+    if (
+      target.closest('.backdrop-framing-handles') ||
+      target.closest('.backdrop-framing-layer--bright') ||
+      target.closest('.backdrop-framing-layer--dimmed')
+    ) {
+      return;
+    }
+    setBackdropSelected(false);
+  };
   const renderPreviewContent = () => {
     if (previewSubMode === 'model' && modelPreviewUrl) {
       return (
@@ -149,6 +175,7 @@ export function PreviewPanel() {
       <ReferencePreviewScene
         payload={payload}
         backdropOnly={previewSubMode === 'framing'}
+        hideBackdrop={showFramingBackdrop}
       />
     );
   };
@@ -207,8 +234,19 @@ export function PreviewPanel() {
           ref={previewStageRef}
           className="relative w-full h-full max-w-5xl mx-auto flex items-center justify-center min-h-0"
         >
+          {showBackdropEditStack && shot && backdropSourceUrl && (
+            <BackdropFramingLayer
+              stageRef={previewStageRef}
+              frameRef={previewFrameRef}
+              imageUrl={backdropSourceUrl}
+              shot={shot}
+              aspectRatio={aspectRatio}
+              part="dimmed"
+              positionMode="stage"
+            />
+          )}
           <div
-            className={`preview-frame-stage shrink-0 ${frameView === 'preview' ? 'preview-frame-stage--with-refs' : ''}`}
+            className={`preview-frame-stage shrink-0 relative z-10 ${frameView === 'preview' ? 'preview-frame-stage--with-refs' : ''}`}
           >
             {frameView === 'preview' && (
               <div
@@ -223,10 +261,35 @@ export function PreviewPanel() {
             </div>
             <div
               ref={previewFrameRef}
-              className="preview-frame-stage__frame preview-frame relative bg-surface-800 rounded-xl border-2 border-surface-700 overflow-hidden shadow-2xl group"
+              className={`preview-frame-stage__frame preview-frame relative rounded-xl border-2 border-surface-700 overflow-hidden shadow-2xl group ${
+                showFramingBackdrop ? 'bg-transparent' : 'bg-surface-800'
+              }`}
+              onPointerDown={handlePreviewFramePointerDown}
               {...uiSectionProps(UI_SECTIONS.studioPreviewFrame)}
             >
-          <div className="absolute inset-0 bg-surface-900" {...uiSectionProps(UI_SECTIONS.studioPreviewContent)}>
+          <div
+            className={`absolute inset-0 ${showFramingBackdrop ? 'bg-transparent' : 'bg-surface-900'}`}
+            {...uiSectionProps(UI_SECTIONS.studioPreviewContent)}
+          >
+            {backdropCropCommitted && shot && backdropSourceUrl && (
+              <BackdropFramingLayer
+                stageRef={previewStageRef}
+                frameRef={previewFrameRef}
+                imageUrl={backdropSourceUrl}
+                shot={shot}
+                aspectRatio={aspectRatio}
+                part="crop"
+                positionMode="frame"
+              />
+            )}
+            {showBackdropEditStack && shot && backdropSourceUrl && (
+              <BackdropFramingEditStack
+                frameRef={previewFrameRef}
+                imageUrl={backdropSourceUrl}
+                shot={shot}
+                aspectRatio={aspectRatio}
+              />
+            )}
             {renderMainContent()}
 
             {showPreviewSuccess && (
@@ -271,7 +334,7 @@ export function PreviewPanel() {
             )}
           </div>
 
-          {showFramingGuides && <CompositionOverlay />}
+          {showFramingGuides && <CompositionOverlay allowBackdropPan={showFramingBackdrop} />}
 
           {frameView === 'preview' && (
             <div className="absolute top-3 left-3 z-30">
@@ -299,6 +362,18 @@ export function PreviewPanel() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
               </svg>
             </button>
+            {showFramingGuides && backdropSourceUrl && (
+              <button
+                type="button"
+                onClick={() => resetBackdropFraming()}
+                className="p-2 hover:bg-surface-700 rounded-lg transition-all text-gray-400"
+                title="Reset backdrop framing"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
+            )}
             <div className="h-6 w-px bg-surface-600" />
             {frameView === 'preview' && (
               <>

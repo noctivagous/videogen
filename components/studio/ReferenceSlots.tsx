@@ -5,11 +5,12 @@ import { normalizeReferenceRole } from '@/lib/constants/camera';
 import { normalizeReferenceMode, REFERENCE_MODE_OPTIONS } from '@/lib/constants/reference-modes';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { resolveReferenceDisplayUrl } from '@/lib/storage/reference-url';
+import { getBackdropCropStatus, getBackdropSlotIndex } from '@/lib/studio/backdrop-framing';
 import { getEffectiveModelId } from '@/lib/studio/provider-modalities';
 import { getReferenceSlotLabel, isCinematographyRefs } from '@/lib/studio/reference-slots';
 import { getThemeTransformStatus } from '@/lib/studio/theme-transform';
 import { restrictsReferenceSlotsToFirst } from '@/lib/studio/xai-video-models';
-import type { ReferenceMode, ThemeTransformSlotStatus } from '@/lib/types/studio';
+import type { AspectRatio, ReferenceMode, ThemeTransformSlotStatus } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
 
 function isImageDrag(e: DragEvent): boolean {
@@ -52,6 +53,8 @@ export function ReferenceSlots({ inletRefs, hoverInlet = null }: ReferenceSlotsP
   const setReference = useStudioStore((s) => s.setReference);
   const cycleReferenceRole = useStudioStore((s) => s.cycleReferenceRole);
   const setReferenceMode = useStudioStore((s) => s.setReferenceMode);
+  const toggleBackdropFramingLock = useStudioStore((s) => s.toggleBackdropFramingLock);
+  const project = useStudioStore((s) => s.project);
   const fileInputs = useRef<(HTMLInputElement | null)[]>([]);
   const localInletRefs = useRef<(HTMLElement | null)[]>([null, null, null]);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -75,6 +78,13 @@ export function ReferenceSlots({ inletRefs, hoverInlet = null }: ReferenceSlotsP
   const referenceMode = normalizeReferenceMode(shot);
   const autoRoles = isCinematographyRefs(shot);
   const hasAnyImage = shot.references.some(Boolean);
+  const backdropSlotIndex = getBackdropSlotIndex(shot);
+  const aspectRatio = (project.aspectRatio || '16:9') as AspectRatio;
+  const backdropFramingLocked = Boolean(shot.backdropFramingByAspect?.[aspectRatio]?.locked);
+  const backdropCropStatus = getBackdropCropStatus(shot, aspectRatio);
+  const backdropLockPending = backdropCropStatus === 'pending';
+  const backdropLockReady = backdropCropStatus === 'ready' && backdropFramingLocked;
+  const backdropLockError = backdropCropStatus === 'error';
 
   const handleFile = (index: number, file: File | undefined) => {
     if (!file || !file.type.startsWith('image/')) return;
@@ -254,6 +264,49 @@ export function ReferenceSlots({ inletRefs, hoverInlet = null }: ReferenceSlotsP
                 onChange={(e) => handleFile(index, e.target.files?.[0])}
               />
               </div>
+
+              {index === backdropSlotIndex && (
+                <button
+                  type="button"
+                  onClick={() => toggleBackdropFramingLock()}
+                  disabled={backdropLockPending}
+                  className={`backdrop-framing-lock-btn ${
+                    backdropLockError
+                      ? 'backdrop-framing-lock-btn--error'
+                      : backdropLockReady
+                        ? 'backdrop-framing-lock-btn--ready'
+                        : backdropFramingLocked
+                          ? 'backdrop-framing-lock-btn--locked'
+                          : ''
+                  }`}
+                  title={
+                    backdropLockPending
+                      ? 'Cropping backdrop…'
+                      : backdropLockError
+                        ? 'Backdrop crop failed — click to retry lock'
+                        : backdropFramingLocked
+                          ? 'Unlock backdrop framing'
+                          : 'Lock backdrop framing'
+                  }
+                  {...uiSectionProps(UI_SECTIONS.studioPreviewBackdropFramingLock)}
+                >
+                  {backdropLockPending ? (
+                    <span className="backdrop-framing-lock-btn__spinner" aria-hidden />
+                  ) : backdropLockReady ? (
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : backdropFramingLocked ? (
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                    </svg>
+                  )}
+                </button>
+              )}
             </div>
           );
         })}

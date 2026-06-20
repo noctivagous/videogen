@@ -1,8 +1,14 @@
 'use client';
 
-import { ALLOW_SERVER_PROJECT_STORAGE } from '@/lib/constants/app-flags';
+import {
+  ALLOW_SERVER_PROJECT_STORAGE,
+  SERVER_PROJECT_STORAGE_DEV_DOWNLOAD_MEDIA_URLS,
+  SERVER_PROJECT_STORAGE_DEV_MODE,
+  SERVER_PROJECT_STORAGE_DEV_SESSION,
+} from '@/lib/constants/app-flags';
 import {
   collectProjectMediaUploads,
+  filterProjectMediaUploads,
   type ProjectMediaUpload,
 } from '@/lib/storage/project-media-paths';
 import { blobToDataUrl } from '@/lib/storage/project-assets';
@@ -14,7 +20,20 @@ export function isServerProjectStorageEnabled(): boolean {
   return ALLOW_SERVER_PROJECT_STORAGE;
 }
 
+export function isServerProjectStorageDevMode(): boolean {
+  return isServerProjectStorageEnabled() && SERVER_PROJECT_STORAGE_DEV_MODE;
+}
+
+export function shouldIngestRemoteMediaUrls(): boolean {
+  if (!isServerProjectStorageDevMode()) return true;
+  return SERVER_PROJECT_STORAGE_DEV_DOWNLOAD_MEDIA_URLS;
+}
+
 export function getServerProjectSessionId(): string {
+  if (isServerProjectStorageDevMode()) {
+    return SERVER_PROJECT_STORAGE_DEV_SESSION;
+  }
+
   let id = localStorage.getItem(SESSION_KEY);
   if (!id) {
     id = crypto.randomUUID();
@@ -30,7 +49,9 @@ async function inlineDataUrl(url: string): Promise<string> {
 }
 
 async function prepareUploads(project: StudioProject): Promise<ProjectMediaUpload[]> {
-  const raw = collectProjectMediaUploads(project);
+  const raw = filterProjectMediaUploads(collectProjectMediaUploads(project), {
+    ingestRemoteUrls: shouldIngestRemoteMediaUrls(),
+  });
   const uploads: ProjectMediaUpload[] = [];
 
   for (const item of raw) {
@@ -90,4 +111,3 @@ export async function clearServerProjectStorage(): Promise<void> {
     headers: { 'X-VideoGen-Session': sessionId },
   });
 }
-

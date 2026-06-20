@@ -107,6 +107,9 @@ export function createBlankShotSettings(): InheritedShotSettings {
     themeTransformStatus: defaultThemeTransformStatus(),
     themeTransformError: emptyThemeTransformArray(null),
     themeTransformLinked: emptyThemeTransformArray(false),
+    backdropFramingByAspect: {},
+    backdropCropsByAspect: {},
+    backdropCropStatusByAspect: {},
   };
 }
 
@@ -133,6 +136,9 @@ export function cloneInheritedShotSettings(source: Shot): InheritedShotSettings 
     themeTransformStatus: [...(source.themeTransformStatus ?? defaultThemeTransformStatus())],
     themeTransformError: [...(source.themeTransformError ?? emptyThemeTransformArray(null))],
     themeTransformLinked: [...(source.themeTransformLinked ?? emptyThemeTransformArray(false))],
+    backdropFramingByAspect: { ...(source.backdropFramingByAspect ?? {}) },
+    backdropCropsByAspect: { ...(source.backdropCropsByAspect ?? {}) },
+    backdropCropStatusByAspect: { ...(source.backdropCropStatusByAspect ?? {}) },
   };
 }
 
@@ -282,6 +288,9 @@ export function migrateShot(
     previewFrameUrl: shot.previewFrameUrl ?? null,
     previewFrameFingerprint: shot.previewFrameFingerprint ?? null,
     referenceMode: normalizeReferenceMode(shot),
+    backdropFramingByAspect: shot.backdropFramingByAspect ?? {},
+    backdropCropsByAspect: shot.backdropCropsByAspect ?? {},
+    backdropCropStatusByAspect: shot.backdropCropStatusByAspect ?? {},
   };
 }
 

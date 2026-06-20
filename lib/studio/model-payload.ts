@@ -78,7 +78,7 @@ export function buildModelPayloadStack(input: {
   const videoModelId = getEffectiveModelId(ai);
   const capabilities = getProviderCapabilities(videoProviderId, isCustom, videoModelId);
 
-  let refs = buildGenerationRefs(shot, lighting);
+  let refs = buildGenerationRefs(shot, lighting, project.aspectRatio);
   if (videoProviderId === 'xai' && isXAIImageToVideoOnlyModel(videoModelId)) {
     refs = filterRefsForImageToVideoOnly(refs);
   }

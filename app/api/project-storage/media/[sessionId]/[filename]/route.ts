@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import {
   isServerProjectStorageAllowed,
+  isServerProjectSessionAllowed,
   readServerMediaFile,
 } from '@/lib/storage/server-project-store.server';
 
@@ -13,6 +14,10 @@ export async function GET(
   }
 
   const { sessionId, filename } = await context.params;
+  if (!isServerProjectSessionAllowed(sessionId)) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
   const file = await readServerMediaFile(sessionId, filename);
   if (!file) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });

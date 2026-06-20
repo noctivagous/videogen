@@ -17,7 +17,7 @@ export function buildPreviewFramePayload(
 } {
   const shot = payload.shot;
   const cinematographyRefs = isCinematographyRefs(shot);
-  const refs = buildGenerationRefs(shot);
+  const refs = buildGenerationRefs(shot, payload.lighting, payload.project.aspectRatio);
 
   let prompt = buildGenerationPrompt({
     sceneSetup: shot?.sceneSetup ?? '',

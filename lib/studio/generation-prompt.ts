@@ -7,6 +7,7 @@ import {
 import { formatLensForPrompt } from '@/lib/constants/lens';
 import { buildSlotReferenceRefs } from '@/lib/studio/prompt-mentions';
 import type {
+  AspectRatio,
   CameraSettings,
   FrameComposition,
   LightingSettings,
@@ -87,8 +88,9 @@ function buildMotionPrompt(motion: MotionSettings): string {
 export function buildGenerationRefs(
   shot: Shot | undefined,
   lighting?: LightingSettings,
+  aspectRatio?: AspectRatio,
 ): Array<{ role: ReferenceRole; url: string; slotIndex: number }> {
-  return buildSlotReferenceRefs(shot, lighting);
+  return buildSlotReferenceRefs(shot, lighting, aspectRatio);
 }
 
 function xaiReferenceRoleIndices(refs: Array<{ role: string; url: string }>) {

@@ -49,6 +49,8 @@ export const UI_SECTIONS = {
   studioPreviewVideoVersions: { id: 'studio-preview-video-versions', name: 'Generated Video Versions' },
   studioPreviewBlockingLabel: { id: 'studio-preview-blocking-label', name: 'Blocking Preview Label' },
   studioPreviewResolutionBadge: { id: 'studio-preview-resolution-badge', name: 'Project Settings' },
+  studioPreviewBackdropFraming: { id: 'studio-preview-backdrop-framing', name: 'Backdrop Framing Layer' },
+  studioPreviewBackdropFramingLock: { id: 'studio-preview-backdrop-framing-lock', name: 'Backdrop Framing Lock' },
 
   studioCameraControls: { id: 'studio-camera-controls', name: 'Camera Controls' },
   studioCameraShotSetup: { id: 'studio-camera-shot-setup', name: 'Shot Setup Controls' },

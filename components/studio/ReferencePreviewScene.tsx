@@ -17,9 +17,15 @@ interface ReferencePreviewSceneProps {
   payload: ScenePreviewPayload;
   /** Framing mode: environment/backdrop only — subject placement comes from the composition overlay. */
   backdropOnly?: boolean;
+  /** Backdrop rendered by BackdropFramingLayer instead. */
+  hideBackdrop?: boolean;
 }
 
-export function ReferencePreviewScene({ payload, backdropOnly = false }: ReferencePreviewSceneProps) {
+export function ReferencePreviewScene({
+  payload,
+  backdropOnly = false,
+  hideBackdrop = false,
+}: ReferencePreviewSceneProps) {
   const frame = payload.shot?.frameComposition ?? DEFAULT_FRAME_COMPOSITION;
   const aspectRatio = payload.project.aspectRatio || '16:9';
   const cinematographyRefs = isCinematographyRefs(payload.shot);
@@ -27,7 +33,9 @@ export function ReferencePreviewScene({ payload, backdropOnly = false }: Referen
   const subjectUrl = getPreviewSubjectUrl(payload.shot, payload.camera);
 
   const backdropUrl =
-    cinematographyRefs || backdropOnly ? getBackdropReference(payload.shot) : null;
+    hideBackdrop || !(cinematographyRefs || backdropOnly)
+      ? null
+      : getBackdropReference(payload.shot);
 
   const backdropStyle = useMemo<CSSProperties>(
     () => getBackdropLayerStyle(frame.placement, payload.camera.angle),
@@ -66,7 +74,9 @@ export function ReferencePreviewScene({ payload, backdropOnly = false }: Referen
   if (backdropOnly) {
     return (
       <div
-        className="reference-preview-scene absolute inset-0 overflow-hidden bg-[#242424]"
+        className={`reference-preview-scene absolute inset-0 overflow-hidden ${
+          hideBackdrop ? 'bg-transparent pointer-events-none' : 'bg-[#242424]'
+        }`}
         {...uiSectionProps(UI_SECTIONS.studioPreviewVectorScene)}
       >
         {backdropUrl && (

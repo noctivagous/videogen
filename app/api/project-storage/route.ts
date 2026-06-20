@@ -4,6 +4,7 @@ import type { ProjectMediaUpload } from '@/lib/storage/project-media-paths';
 import {
   deleteServerProject,
   isServerProjectStorageAllowed,
+  isServerProjectSessionAllowed,
   loadServerProject,
   saveServerProject,
 } from '@/lib/storage/server-project-store.server';
@@ -28,6 +29,9 @@ export async function GET(request: Request) {
   if (!sessionId) {
     return NextResponse.json({ error: 'Missing session' }, { status: 400 });
   }
+  if (!isServerProjectSessionAllowed(sessionId)) {
+    return NextResponse.json({ error: 'Session not allowed' }, { status: 403 });
+  }
 
   const project = await loadServerProject(sessionId);
   return NextResponse.json({ project });
@@ -39,6 +43,9 @@ export async function POST(request: Request) {
   const sessionId = sessionFromRequest(request);
   if (!sessionId) {
     return NextResponse.json({ error: 'Missing session' }, { status: 400 });
+  }
+  if (!isServerProjectSessionAllowed(sessionId)) {
+    return NextResponse.json({ error: 'Session not allowed' }, { status: 403 });
   }
 
   try {
@@ -69,6 +76,9 @@ export async function DELETE(request: Request) {
   const sessionId = sessionFromRequest(request);
   if (!sessionId) {
     return NextResponse.json({ error: 'Missing session' }, { status: 400 });
+  }
+  if (!isServerProjectSessionAllowed(sessionId)) {
+    return NextResponse.json({ error: 'Session not allowed' }, { status: 403 });
   }
 
   await deleteServerProject(sessionId);

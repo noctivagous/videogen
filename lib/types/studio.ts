@@ -213,6 +213,26 @@ export interface MotionSettings {
   motionBlur: string;
 }
 
+export interface BackdropFraming {
+  /** Multiplier on top of cover-fit baseline (1 = fill frame). */
+  scale: number;
+  /** Non-uniform stretch on width axis (1 = no extra stretch). */
+  scaleX: number;
+  /** Non-uniform stretch on height axis (1 = no extra stretch). */
+  scaleY: number;
+  /** Normalized pan in frame space, -1..1 from center. */
+  offsetX: number;
+  offsetY: number;
+  rotation: number;
+  skewX: number;
+  skewY: number;
+  /** CSS perspective distance in px (0 = none). */
+  perspective: number;
+  locked: boolean;
+}
+
+export type BackdropCropStatus = 'none' | 'pending' | 'ready' | 'error';
+
 export interface GeneratedVideo {
   id: string;
   url: string;
@@ -256,6 +276,12 @@ export interface Shot {
   previewFrameUrl?: string | null;
   /** Fingerprint of camera/aspect when previewFrameUrl was generated */
   previewFrameFingerprint?: string | null;
+  /** Per-aspect pan/scale/lock for the backdrop reference slot. */
+  backdropFramingByAspect?: Partial<Record<AspectRatio, BackdropFraming>>;
+  /** Cropped backdrop per aspect ratio — sent to models instead of the raw upload. */
+  backdropCropsByAspect?: Partial<Record<AspectRatio, string>>;
+  /** Lock/crop pipeline status per aspect ratio. */
+  backdropCropStatusByAspect?: Partial<Record<AspectRatio, BackdropCropStatus>>;
 }
 
 export interface StudioProject {

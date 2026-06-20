@@ -12,13 +12,19 @@ import {
 import { bindPlacementDrag } from '@/lib/studio/placement-pointer';
 import { useStudioStore } from '@/store/useStudioStore';
 
-export function CompositionOverlay() {
+interface CompositionOverlayProps {
+  /** Let backdrop framing layer receive pan/zoom; placement marker stays draggable. */
+  allowBackdropPan?: boolean;
+}
+
+export function CompositionOverlay({ allowBackdropPan = false }: CompositionOverlayProps) {
   const shots = useStudioStore((s) => s.shots);
   const currentShot = useStudioStore((s) => s.currentShot);
   const toggleOverlay = useStudioStore((s) => s.toggleCompositionOverlay);
   const setShotFrameComposition = useStudioStore((s) => s.setShotFrameComposition);
 
   const overlayRef = useRef<HTMLDivElement>(null);
+  const markerRef = useRef<HTMLDivElement>(null);
 
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
   const frame = getShotFrameComposition(shot);
@@ -26,14 +32,15 @@ export function CompositionOverlay() {
   const placementInteractive = showPlacementGrid(frame.guide);
 
   useEffect(() => {
-    const overlay = overlayRef.current;
-    if (!overlay || !placementInteractive) return;
+    const target =
+      allowBackdropPan && markerRef.current ? markerRef.current : overlayRef.current;
+    if (!target || !placementInteractive) return;
 
     return bindPlacementDrag({
-      element: overlay,
+      element: target,
       onPlacement: (placement) => setShotFrameComposition({ placement }),
     });
-  }, [placementInteractive, setShotFrameComposition]);
+  }, [allowBackdropPan, placementInteractive, setShotFrameComposition]);
 
   if (!frame.showOverlay || frame.guide === 'none') {
     return null;
@@ -49,7 +56,11 @@ export function CompositionOverlay() {
     <div
       ref={overlayRef}
       className={`absolute inset-0 z-10 composition-overlay ${
-        placementInteractive ? 'composition-overlay-interactive' : 'pointer-events-none'
+        placementInteractive
+          ? allowBackdropPan
+            ? 'composition-overlay-interactive composition-overlay--backdrop-pan'
+            : 'composition-overlay-interactive'
+          : 'pointer-events-none'
       }`}
       {...uiSectionProps(UI_SECTIONS.studioPreviewCompositionOverlay)}
     >
@@ -60,6 +71,7 @@ export function CompositionOverlay() {
       />
       {markerPos && (
         <div
+          ref={markerRef}
           className="composition-placement-marker composition-placement-marker-draggable"
           style={{ left: `${markerPos.x}%`, top: `${markerPos.y}%` }}
           title={markerLabel}

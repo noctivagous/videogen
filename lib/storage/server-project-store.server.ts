@@ -4,6 +4,7 @@ import path from 'path';
 import { createHash } from 'crypto';
 import { validateStudioProject } from '@/lib/storage/project-io';
 import {
+  filterProjectMediaUploads,
   setValueAtPath,
   type ProjectMediaUpload,
 } from '@/lib/storage/project-media-paths';
@@ -15,12 +16,49 @@ const MEDIA_DIR = 'media';
 
 const MAX_INLINE_BYTES = 25 * 1024 * 1024;
 const MAX_REMOTE_BYTES = 200 * 1024 * 1024;
+const DEFAULT_DEV_SESSION = 'videogen-local-dev';
 
 export function isServerProjectStorageAllowed(): boolean {
   return (
     process.env.ALLOW_SERVER_PROJECT_STORAGE !== 'false' &&
     process.env.NEXT_PUBLIC_ALLOW_SERVER_PROJECT_STORAGE !== 'false'
   );
+}
+
+export function isServerProjectStorageDevMode(): boolean {
+  return (
+    process.env.NODE_ENV === 'development' &&
+    process.env.SERVER_PROJECT_STORAGE_DEV_MODE === 'true' &&
+    process.env.NEXT_PUBLIC_SERVER_PROJECT_STORAGE_DEV_MODE === 'true' &&
+    isServerProjectStorageAllowed()
+  );
+}
+
+export function serverProjectStorageDevSessionId(): string {
+  return (
+    process.env.SERVER_PROJECT_STORAGE_DEV_SESSION?.trim() ||
+    process.env.NEXT_PUBLIC_SERVER_PROJECT_STORAGE_DEV_SESSION?.trim() ||
+    DEFAULT_DEV_SESSION
+  );
+}
+
+/** Dev: skip downloading remote provider URLs unless explicitly enabled. */
+export function shouldIngestRemoteMediaUrls(): boolean {
+  if (!isServerProjectStorageDevMode()) return true;
+  return (
+    process.env.SERVER_PROJECT_STORAGE_DEV_DOWNLOAD_MEDIA_URLS === 'true' &&
+    process.env.NEXT_PUBLIC_SERVER_PROJECT_STORAGE_DEV_DOWNLOAD_MEDIA_URLS === 'true'
+  );
+}
+
+/** Reject shared dev session id when dev mode is not active (e.g. production). */
+export function isServerProjectSessionAllowed(sessionId: string): boolean {
+  if (!isServerProjectStorageAllowed()) return false;
+  const devSession = serverProjectStorageDevSessionId();
+  if (sessionId === devSession && !isServerProjectStorageDevMode()) {
+    return false;
+  }
+  return true;
 }
 
 function sessionDir(sessionId: string): string {
@@ -167,8 +205,11 @@ export async function saveServerProject(
 ): Promise<StudioProject> {
   const { root, media } = await ensureSessionDirs(sessionId);
   let nextProject = structuredClone(project);
+  const ingestUploads = filterProjectMediaUploads(uploads, {
+    ingestRemoteUrls: shouldIngestRemoteMediaUrls(),
+  });
 
-  for (const upload of uploads) {
+  for (const upload of ingestUploads) {
     const { bytes, mime } = await payloadForUpload(upload);
     const filename = filenameForUpload(upload, bytes, mime);
     const filePath = path.join(media, filename);

@@ -1,5 +1,5 @@
 import { normalizeReferenceRole } from '@/lib/constants/camera';
-import type { ReferenceRole, Shot, StudioProject } from '@/lib/types/studio';
+import type { AspectRatio, ReferenceRole, Shot, StudioProject } from '@/lib/types/studio';
 
 export const ASSETS_DIR = 'assets';
 
@@ -54,6 +54,15 @@ export function assetPathForTransformedReference(
 ): string {
   const slug = role.toLowerCase().replace(/[^a-z0-9]+/g, '-');
   return `${ASSETS_DIR}/shot-${String(shotId).padStart(2, '0')}-transformed-ref-${slotIndex}-${slug}.${ext}`;
+}
+
+export function assetPathForBackdropCrop(
+  shotId: number,
+  aspectRatio: AspectRatio,
+  ext: string,
+): string {
+  const slug = aspectRatio.replace(':', 'x');
+  return `${ASSETS_DIR}/shot-${String(shotId).padStart(2, '0')}-backdrop-crop-${slug}.${ext}`;
 }
 
 function extensionForMime(mime: string): string {
@@ -177,7 +186,34 @@ async function externalizeShotReferences(
       )
     : shot.transformedReferences;
 
-  return { ...shot, references, transformedReferences };
+  const backdropCropsByAspect = shot.backdropCropsByAspect
+    ? await externalizeBackdropCrops(assetsDir, shot)
+    : shot.backdropCropsByAspect;
+
+  return { ...shot, references, transformedReferences, backdropCropsByAspect };
+}
+
+async function externalizeBackdropCrops(
+  assetsDir: FileSystemDirectoryHandle,
+  shot: Shot,
+): Promise<Partial<Record<AspectRatio, string>>> {
+  const entries = Object.entries(shot.backdropCropsByAspect ?? {}) as [AspectRatio, string][];
+  const out: Partial<Record<AspectRatio, string>> = { ...shot.backdropCropsByAspect };
+
+  await Promise.all(
+    entries.map(async ([aspect, ref]) => {
+      if (!ref || !shouldExternalizeReference(ref)) return;
+      const blob = await blobFromInlineReference(ref);
+      if (!blob) return;
+      const ext = extensionForMime(blob.type);
+      const assetPath = assetPathForBackdropCrop(shot.id, aspect, ext);
+      await writeBlobToAssetPath(assetsDir, assetPath, blob);
+      registerAssetBlob(assetPath, blob);
+      out[aspect] = assetPath;
+    }),
+  );
+
+  return out;
 }
 
 export async function externalizeProjectReferences(
@@ -217,7 +253,32 @@ async function hydrateShotReferences(
     ? await hydrateReferenceList(assetsDir, shot.transformedReferences)
     : shot.transformedReferences;
 
-  return { ...shot, references, transformedReferences };
+  const backdropCropsByAspect = shot.backdropCropsByAspect
+    ? await hydrateBackdropCrops(assetsDir, shot.backdropCropsByAspect)
+    : shot.backdropCropsByAspect;
+
+  return { ...shot, references, transformedReferences, backdropCropsByAspect };
+}
+
+async function hydrateBackdropCrops(
+  assetsDir: FileSystemDirectoryHandle,
+  crops: Partial<Record<AspectRatio, string>>,
+): Promise<Partial<Record<AspectRatio, string>>> {
+  const out: Partial<Record<AspectRatio, string>> = { ...crops };
+  await Promise.all(
+    (Object.entries(crops) as [AspectRatio, string][]).map(async ([aspect, ref]) => {
+      if (!ref || !isProjectAssetPath(ref)) return;
+      const cached = getAssetBlobUrl(ref);
+      if (cached) {
+        out[aspect] = cached;
+        return;
+      }
+      const blob = await readBlobFromAssetPath(assetsDir, ref);
+      if (!blob) return;
+      out[aspect] = registerAssetBlob(ref, blob);
+    }),
+  );
+  return out;
 }
 
 export async function hydrateProjectReferences(

@@ -78,6 +78,118 @@
   align-self: start;
 }
 
+.backdrop-framing-layer {
+  position: absolute;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.backdrop-framing-layer--dimmed {
+  z-index: 0;
+}
+
+.backdrop-framing-layer--bright {
+  z-index: 1;
+  overflow: hidden;
+}
+
+.backdrop-framing-layer--interactive {
+  pointer-events: auto;
+  cursor: grab;
+}
+
+.backdrop-framing-image {
+  user-select: none;
+}
+
+.backdrop-framing-image--dimmed {
+  opacity: 0.42;
+}
+
+.backdrop-framing-layer--crop {
+  z-index: 1;
+  overflow: hidden;
+}
+
+.backdrop-framing-crop-image {
+  user-select: none;
+}
+
+.backdrop-framing-layer--selected {
+  outline: 1px solid rgba(99, 102, 241, 0.55);
+  outline-offset: -1px;
+}
+
+.backdrop-framing-handles {
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.backdrop-framing-handles .backdrop-framing-box {
+  pointer-events: auto;
+  outline: 2px dashed rgba(99, 102, 241, 0.85);
+  outline-offset: -1px;
+}
+
+.backdrop-framing-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  background: #6366f1;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  touch-action: none;
+  z-index: 1;
+}
+
+.backdrop-framing-handle--move {
+  width: auto;
+  height: auto;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  cursor: grab;
+}
+
+.backdrop-framing-handle--corner-tl,
+.backdrop-framing-handle--corner-tr,
+.backdrop-framing-handle--corner-bl,
+.backdrop-framing-handle--corner-br {
+  cursor: nwse-resize;
+}
+
+.backdrop-framing-handle--corner-tr,
+.backdrop-framing-handle--corner-bl {
+  cursor: nesw-resize;
+}
+
+.backdrop-framing-handle--rotate {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  cursor: grab;
+}
+
+.backdrop-framing-handle--skew-x,
+.backdrop-framing-handle--skew-y,
+.backdrop-framing-handle--perspective {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #a78bfa;
+  cursor: crosshair;
+}
+
+.composition-overlay--backdrop-pan {
+  pointer-events: none;
+}
+
+.composition-overlay--backdrop-pan .composition-placement-marker-draggable {
+  pointer-events: auto;
+}
+
 .studio-bottom-panel {
   background: #131316;
   border: 1px solid #1c1c21;
@@ -511,6 +623,37 @@ input[type="range"]::-moz-range-thumb:hover {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   padding: 0.5rem 0.625rem;
   flex-shrink: 0;
+}
+
+.backdrop-framing-lock-btn {
+  @apply flex shrink-0 items-center justify-center w-5 h-5 rounded-md border border-surface-700 bg-surface-900/80 text-gray-400 transition-all hover:border-brand-500 hover:text-white;
+  margin-top: calc((4rem - 1.25rem) / 2);
+}
+
+.backdrop-framing-lock-btn--locked {
+  @apply border-brand-500/50 text-brand-400;
+}
+
+.backdrop-framing-lock-btn--ready {
+  @apply border-emerald-500/50 text-emerald-400;
+}
+
+.backdrop-framing-lock-btn--error {
+  @apply border-red-500/50 text-red-400;
+}
+
+.backdrop-framing-lock-btn:disabled {
+  @apply opacity-70 cursor-wait;
+}
+
+.backdrop-framing-lock-btn__spinner {
+  display: block;
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 2px solid rgba(161, 161, 170, 0.35);
+  border-top-color: #a1a1aa;
+  border-radius: 999px;
+  animation: spin 0.8s linear infinite;
 }
 
 .reference-slot-row {

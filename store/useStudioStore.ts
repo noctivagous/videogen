@@ -49,6 +49,17 @@ import {
   THEME_TRANSFORM_SLOT_COUNT,
 } from '@/lib/studio/theme-transform';
 import { DEFAULT_REFERENCE_MODE, normalizeReferenceMode } from '@/lib/constants/reference-modes';
+import {
+  clearBackdropCrops,
+  clearBackdropCropStatus,
+  DEFAULT_BACKDROP_FRAMING,
+  getBackdropFraming,
+  getBackdropSlotIndex,
+  getEffectiveBackdropSourceUrl,
+  isBackdropTransformPatch,
+  renderBackdropCropDataUrl,
+} from '@/lib/studio/backdrop-framing';
+import { parseResolution } from '@/lib/studio/generation/adapters/shared';
 import { isCinematographyRefs } from '@/lib/studio/reference-slots';
 import { restrictsReferenceSlotsToFirst } from '@/lib/studio/xai-video-models';
 import { applyFrameCompositionSmartDefaults } from '@/lib/studio/composition';
@@ -102,6 +113,7 @@ import { downloadProject, pickAndLoadProject } from '@/lib/storage/project-io';
 import { resolveRefsForApi } from '@/lib/storage/reference-url';
 import {
   clearServerProjectStorage,
+  isServerProjectStorageDevMode,
   isServerProjectStorageEnabled,
   loadProjectFromServer,
 } from '@/lib/storage/server-project-storage';
@@ -113,6 +125,7 @@ import {
 import type {
   AIState,
   AspectRatio,
+  BackdropFraming,
   CameraSettings,
   FrameComposition,
   ColorPaletteSettings,
@@ -271,6 +284,13 @@ interface StudioStore {
   selectGeneratedVideo: (index: number) => void;
   deleteGeneratedVideo: (id: string) => void;
   setReference: (index: number, dataUrl: string | null) => void;
+  backdropSelected: boolean;
+  setBackdropSelected: (selected: boolean) => void;
+  setBackdropFraming: (patch: Partial<BackdropFraming>) => void;
+  toggleBackdropFramingLock: () => void;
+  resetBackdropFraming: () => void;
+  ensureBackdropCrop: () => Promise<void>;
+  commitBackdropCrop: () => Promise<void>;
   cycleReferenceRole: (index: number) => void;
   setReferenceMode: (mode: ReferenceMode) => void;
   applyThemeTransformSlot: (index: number) => Promise<void>;
@@ -314,6 +334,26 @@ interface StudioStore {
 }
 
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
+async function renderShotBackdropCrop(
+  get: () => StudioStore,
+): Promise<string> {
+  const { project, shots, currentShot } = get();
+  const shot = getCurrentShotFromList(shots, currentShot);
+  if (!shot) throw new Error('No active shot');
+
+  const aspect = (project.aspectRatio || '16:9') as AspectRatio;
+  const sourceUrl = getEffectiveBackdropSourceUrl(shot, shot.lighting);
+  if (!sourceUrl) throw new Error('No backdrop source');
+
+  const framing = getBackdropFraming(shot, aspect);
+  const { width, height } = parseResolution(project.resolution);
+  return renderBackdropCropDataUrl({
+    sourceUrl,
+    framing,
+    outputWidth: width,
+    outputHeight: height,
+  });
+}
 
 export const useStudioStore = create<StudioStore>((set, get) => ({
   project: stockState.project,
@@ -344,6 +384,11 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   projectLocationKind: null,
   projectSaveState: 'none',
   fileApiSupported: false,
+  backdropSelected: false,
+
+  setBackdropSelected(selected) {
+    set({ backdropSelected: selected });
+  },
 
   syncProjectFileUi() {
     set(projectFileUiState());
@@ -368,7 +413,17 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       let applied: ReturnType<typeof applyStudioProject> | null = null;
       let toastMessage: string | null = null;
 
-      if (isNativeFilePickerSupported()) {
+      const devServerStorage = isServerProjectStorageDevMode();
+
+      if (devServerStorage && isServerProjectStorageEnabled()) {
+        const serverProject = await loadProjectFromServer();
+        if (serverProject) {
+          applied = applyStudioProject(serverProject);
+          toastMessage = 'Restored shared dev project';
+        }
+      }
+
+      if (!applied && !devServerStorage && isNativeFilePickerSupported()) {
         const restored = await restoreProjectSession();
         if (restored) {
           applied = applyStudioProject(restored);
@@ -376,7 +431,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         }
       }
 
-      if (!applied) {
+      if (!applied && !devServerStorage) {
         const draft = loadStudioDraft();
         if (draft) {
           applied = applyStudioProject(draft);
@@ -387,7 +442,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         }
       }
 
-      if (!applied && isServerProjectStorageEnabled()) {
+      if (!applied && !devServerStorage && isServerProjectStorageEnabled()) {
         const serverProject = await loadProjectFromServer();
         if (serverProject) {
           applied = applyStudioProject(serverProject);
@@ -723,6 +778,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     set((s) => ({
       currentShot: id,
       previewSubMode: 'framing',
+      backdropSelected: false,
       shots: s.shots.map((sh) => ({ ...sh, active: sh.id === id })),
       ...(shot ? shotActiveView(shot) : {}),
     }));
@@ -829,15 +885,173 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     transformedReferences[index] = null;
     const linked = [...(shot.themeTransformLinked ?? emptyThemeTransformArray(false))];
     if (!dataUrl) linked[index] = false;
+    const isBackdropSlot = index === getBackdropSlotIndex(shot);
     set((s) => ({
       shots: patchCurrentShot(s.shots, s.currentShot, {
         references,
         transformedReferences,
         themeTransformLinked: linked,
+        ...(isBackdropSlot
+          ? {
+              backdropCropsByAspect: clearBackdropCrops(shot.backdropCropsByAspect),
+              backdropCropStatusByAspect: clearBackdropCropStatus(shot.backdropCropStatusByAspect),
+            }
+          : {}),
         ...patchThemeTransformInvalidation(shot, [index], 'source'),
       }),
     }));
     if (dataUrl) get().showToast('Reference image added');
+    if (isBackdropSlot) {
+      set({ backdropSelected: false });
+    }
+  },
+
+  setBackdropFraming(patch) {
+    const shot = get().getCurrentShot();
+    if (!shot) return;
+    const aspect = (get().project.aspectRatio || '16:9') as AspectRatio;
+    const current = getBackdropFraming(shot, aspect);
+    if (current.locked && isBackdropTransformPatch(patch)) {
+      return;
+    }
+    const next = { ...current, ...patch };
+    const clearsCrop = isBackdropTransformPatch(patch);
+    set((s) => ({
+      shots: patchCurrentShot(s.shots, s.currentShot, {
+        backdropFramingByAspect: {
+          ...(shot.backdropFramingByAspect ?? {}),
+          [aspect]: next,
+        },
+        ...(clearsCrop
+          ? {
+              backdropCropsByAspect: clearBackdropCrops(shot.backdropCropsByAspect, aspect),
+              backdropCropStatusByAspect: clearBackdropCropStatus(
+                shot.backdropCropStatusByAspect,
+                aspect,
+              ),
+            }
+          : {}),
+      }),
+    }));
+  },
+
+  async commitBackdropCrop() {
+    const shot = get().getCurrentShot();
+    if (!shot) return;
+    const aspect = (get().project.aspectRatio || '16:9') as AspectRatio;
+
+    try {
+      const dataUrl = await renderShotBackdropCrop(get);
+      const latest = get().getCurrentShot();
+      if (!latest) return;
+      set((s) => ({
+        shots: patchCurrentShot(s.shots, s.currentShot, {
+          backdropCropsByAspect: {
+            ...(latest.backdropCropsByAspect ?? {}),
+            [aspect]: dataUrl,
+          },
+          backdropCropStatusByAspect: {
+            ...(latest.backdropCropStatusByAspect ?? {}),
+            [aspect]: 'ready',
+          },
+        }),
+      }));
+    } catch {
+      const latest = get().getCurrentShot();
+      if (!latest) return;
+      set((s) => ({
+        shots: patchCurrentShot(s.shots, s.currentShot, {
+          backdropFramingByAspect: {
+            ...(latest.backdropFramingByAspect ?? {}),
+            [aspect]: { ...getBackdropFraming(latest, aspect), locked: false },
+          },
+          backdropCropStatusByAspect: {
+            ...(latest.backdropCropStatusByAspect ?? {}),
+            [aspect]: 'error',
+          },
+        }),
+      }));
+      get().showToast('Failed to crop backdrop', 'error');
+    }
+  },
+
+  toggleBackdropFramingLock() {
+    const shot = get().getCurrentShot();
+    if (!shot) return;
+    const aspect = (get().project.aspectRatio || '16:9') as AspectRatio;
+    const current = getBackdropFraming(shot, aspect);
+    const cropStatus = shot.backdropCropStatusByAspect?.[aspect] ?? 'none';
+
+    if (cropStatus === 'pending') return;
+
+    if (current.locked) {
+      set((s) => ({
+        backdropSelected: false,
+        shots: patchCurrentShot(s.shots, s.currentShot, {
+          backdropFramingByAspect: {
+            ...(shot.backdropFramingByAspect ?? {}),
+            [aspect]: { ...current, locked: false },
+          },
+          backdropCropsByAspect: clearBackdropCrops(shot.backdropCropsByAspect, aspect),
+          backdropCropStatusByAspect: clearBackdropCropStatus(shot.backdropCropStatusByAspect, aspect),
+        }),
+      }));
+      return;
+    }
+
+    set((s) => ({
+      backdropSelected: false,
+      shots: patchCurrentShot(s.shots, s.currentShot, {
+        backdropFramingByAspect: {
+          ...(shot.backdropFramingByAspect ?? {}),
+          [aspect]: { ...current, locked: true },
+        },
+        backdropCropStatusByAspect: {
+          ...(shot.backdropCropStatusByAspect ?? {}),
+          [aspect]: 'pending',
+        },
+      }),
+    }));
+    void get().commitBackdropCrop();
+  },
+
+  resetBackdropFraming() {
+    const shot = get().getCurrentShot();
+    if (!shot) return;
+    const aspect = (get().project.aspectRatio || '16:9') as AspectRatio;
+    set((s) => ({
+      backdropSelected: false,
+      shots: patchCurrentShot(s.shots, s.currentShot, {
+        backdropFramingByAspect: {
+          ...(shot.backdropFramingByAspect ?? {}),
+          [aspect]: { ...DEFAULT_BACKDROP_FRAMING },
+        },
+        backdropCropsByAspect: clearBackdropCrops(shot.backdropCropsByAspect, aspect),
+        backdropCropStatusByAspect: clearBackdropCropStatus(shot.backdropCropStatusByAspect, aspect),
+      }),
+    }));
+  },
+
+  async ensureBackdropCrop() {
+    const shot = get().getCurrentShot();
+    if (!shot) return;
+    const aspect = (get().project.aspectRatio || '16:9') as AspectRatio;
+
+    try {
+      const dataUrl = await renderShotBackdropCrop(get);
+      const latest = get().getCurrentShot();
+      if (!latest) return;
+      set((s) => ({
+        shots: patchCurrentShot(s.shots, s.currentShot, {
+          backdropCropsByAspect: {
+            ...(latest.backdropCropsByAspect ?? {}),
+            [aspect]: dataUrl,
+          },
+        }),
+      }));
+    } catch {
+      // Generation will surface errors if crop remains unavailable.
+    }
   },
 
   cycleReferenceRole(index) {
@@ -863,6 +1077,8 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   },
 
   async generatePreviewFrame() {
+    await get().ensureBackdropCrop();
+
     const state = get();
     const { project, ai, shots, currentShot } = state;
     const shot = getCurrentShotFromList(shots, currentShot);
@@ -1072,6 +1288,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       const fingerprints = [...(shot.themeTransformFingerprint ?? emptyThemeTransformArray(null))];
       fingerprints[index] = fingerprint;
 
+      const isBackdropSlot = index === getBackdropSlotIndex(shot);
       set((s) => ({
         shots: patchCurrentShot(s.shots, s.currentShot, {
           transformedReferences,
@@ -1082,8 +1299,29 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
             next[index] = null;
             return next;
           })(),
+          ...(isBackdropSlot
+            ? {
+                backdropCropsByAspect: clearBackdropCrops(shot.backdropCropsByAspect),
+                backdropCropStatusByAspect: clearBackdropCropStatus(shot.backdropCropStatusByAspect),
+              }
+            : {}),
         }),
       }));
+      if (isBackdropSlot) {
+        const aspect = (get().project.aspectRatio || '16:9') as AspectRatio;
+        const latest = get().getCurrentShot();
+        if (latest && getBackdropFraming(latest, aspect).locked) {
+          set((s) => ({
+            shots: patchCurrentShot(s.shots, s.currentShot, {
+              backdropCropStatusByAspect: {
+                ...(latest.backdropCropStatusByAspect ?? {}),
+                [aspect]: 'pending',
+              },
+            }),
+          }));
+          void get().commitBackdropCrop();
+        }
+      }
       get().showToast('Reference color grade applied');
     } catch (e) {
       const nextStatus = [...(shot.themeTransformStatus ?? defaultThemeTransformStatus())];
@@ -1101,6 +1339,8 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   },
 
   async generate() {
+    await get().ensureBackdropCrop();
+
     const state = get();
     const { project, ai, shots, currentShot } = state;
     const shot = getCurrentShotFromList(shots, currentShot);

@@ -48,6 +48,14 @@ function walkShotUrls(
   });
 }
 
+export function filterProjectMediaUploads(
+  uploads: ProjectMediaUpload[],
+  options: { ingestRemoteUrls: boolean },
+): ProjectMediaUpload[] {
+  if (options.ingestRemoteUrls) return uploads;
+  return uploads.filter((upload) => upload.kind !== 'remote');
+}
+
 export function collectProjectMediaUploads(project: StudioProject): ProjectMediaUpload[] {
   const uploads: ProjectMediaUpload[] = [];
 

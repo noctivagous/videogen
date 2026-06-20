@@ -6,6 +6,64 @@ subtle results across motion and different models.
 
 ---------
 
+Remove the purple from the GUI since it distracts
+from color grading.  Replace with prosumer shading.
+
+---------
+
+Image editor AI features: 1) object removal  2) object cleanup
+3) object addition  4) image synthesis (new image by combining
+with one or more other images).
+
+---------
+
+The user should be able to right-click on any
+image reference and open it in an image editor
+and then changes.
+
+---------
+
+If the backdrop image reference is bigger or smaller than the
+aspect ratio of the frame in any dimension, this can be shown
+in the studio-preview-panel area, with the excess that goes
+outside the frame being lighter. The backdrop can then be 
+moved around and scaled.  If it is too small,
+the app will scale it up, better if with an embedded
+scaling model that comes with the app.  The user will be
+able to lock and unlock the backdrop position and scaling
+for the preview frame in the studio-preview-panel area.
+
+Crop operations that fit the provided image to the aspect ratio exactly
+will store a second version, the cropped version for the aspect ratio 
+for this job and submit that to the
+AI model instead of the provided image.  This way
+a user can use an image that isn't a perfect fit, adjust
+its translation and scaling, and then the image sent to
+the model is exactly what is seen inside the preview frame bounds.  
+Another benefit is that the same image can be positioned and scaled for different
+aspect ratios and as the user switches between them,
+any translation or scaling that was done will have been
+saved and loaded for that aspect ratio.  What this allows
+is the user can try out generating a shot in different
+aspect ratios with the same provided original backdrop image reference.
+
+
+The user should have an option to finalize the crop.  
+
+---------
+
+Theme Transformer should be a floating palette inside
+the studio-preview area because it is acting
+as a group of settings for a transformation operation
+on a an image rather than settings for the shot.
+It can be called Image Transformer instead to avoid
+confusion.  Then disconnect the "Stale" tracking
+for this and the user can generate multiple variations
+on the same image reference with the Image Transformer 
+floating palette.
+
+---------
+
 VIDEOGEN APP SHAPE
 
 App should be shaped in the following way: "Light your

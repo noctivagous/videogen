@@ -9,7 +9,10 @@ import {
 } from '@/lib/studio/provider-modalities';
 import { isCustomProvider, isProviderConnected } from '@/lib/storage/ai-settings';
 import { useFileSystemAccess } from '@/hooks/use-file-system-access';
-import { ALLOW_SERVER_PROJECT_STORAGE } from '@/lib/constants/app-flags';
+import {
+  ALLOW_SERVER_PROJECT_STORAGE,
+  SERVER_PROJECT_STORAGE_DEV_MODE,
+} from '@/lib/constants/app-flags';
 import type {
   FileSystemAccessStatus,
   ProjectLocationKind,
@@ -50,6 +53,22 @@ function folderStatusCopy(
       ...blocked,
       dotClass: 'bg-gray-500',
       urgent: fileAccess.reason !== 'ssr',
+    };
+  }
+  if (
+    SERVER_PROJECT_STORAGE_DEV_MODE &&
+    ALLOW_SERVER_PROJECT_STORAGE &&
+    kind !== 'directory' &&
+    kind !== 'file'
+  ) {
+    return {
+      headline: 'Dev: shared server session',
+      detail:
+        saveState === 'saved'
+          ? 'All browsers on localhost share this project'
+          : 'Saving shared dev project to server…',
+      dotClass: saveState === 'saved' ? 'bg-emerald-400' : 'bg-amber-500',
+      urgent: false,
     };
   }
   if (

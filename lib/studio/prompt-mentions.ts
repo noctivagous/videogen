@@ -1,7 +1,9 @@
 import { normalizeReferenceRole } from '@/lib/constants/camera';
+import { resolveReferenceDisplayUrl } from '@/lib/storage/reference-url';
+import { getBackdropSlotIndex } from '@/lib/studio/backdrop-framing';
 import { getReferenceSlotLabel, isCinematographyRefs } from '@/lib/studio/reference-slots';
 import { effectiveReferenceUrl } from '@/lib/studio/theme-transform';
-import type { LightingSettings, ReferenceRole, Shot } from '@/lib/types/studio';
+import type { AspectRatio, LightingSettings, ReferenceRole, Shot } from '@/lib/types/studio';
 
 export interface PromptMentionOption {
   id: string;
@@ -44,14 +46,25 @@ export function buildPromptMentionOptions(shot: Shot | undefined): PromptMention
 export function buildSlotReferenceRefs(
   shot: Shot | undefined,
   lighting?: LightingSettings,
+  aspectRatio?: AspectRatio,
 ): Array<{ role: ReferenceRole; url: string; slotIndex: number }> {
   if (!shot) return [];
 
   const resolvedLighting = lighting ?? shot.lighting;
   const cinematography = isCinematographyRefs(shot);
+  const backdropSlot = getBackdropSlotIndex(shot);
   const refs: Array<{ role: ReferenceRole; url: string; slotIndex: number }> = [];
   for (let i = 0; i < shot.references.length; i++) {
-    const url = effectiveReferenceUrl(shot, i, resolvedLighting);
+    let url = effectiveReferenceUrl(shot, i, resolvedLighting);
+    if (!url) continue;
+
+    if (aspectRatio && i === backdropSlot) {
+      const crop = shot.backdropCropsByAspect?.[aspectRatio];
+      if (crop) {
+        const cropUrl = resolveReferenceDisplayUrl(crop);
+        if (cropUrl) url = cropUrl;
+      }
+    }
     if (!url) continue;
 
     const role = normalizeReferenceRole(shot.referenceRoles[i] ?? 'None');
