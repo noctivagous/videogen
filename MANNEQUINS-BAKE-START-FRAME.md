@@ -136,11 +136,11 @@ Derive *leftmost / center / rightmost* by sorting mannequins on normalized `x`. 
 
 When `subjectCount` is `1s` with `dirty-single` coverage, two mannequins are seeded but only the **opaque** main figure should receive a character assignment. The faint shoulder mannequin (`opacity` ~0.3) stays generic.
 
-### What we don't have yet (implementation gaps)
+### Implementation status
 
-**Done (PR1–PR3):** `mannequin.subjectSlotIndex`, multiple Subject slots, drag-line assignment UI, workflow step *Assign Characters*, validation before bake.
+**Bake stack PR1–PR4:** shipped. See [`MANNEQUIN-PR-TRACKER.md`](MANNEQUIN-PR-TRACKER.md) for canonical PR status (both bake and composition stacks).
 
-**Remaining (PR4):** Multi-subject Pass 2 orchestration — `buildIdentityPassPlan()`, sequential identity passes in `bake-start-frame/route.ts`, store wiring.
+**Remaining (bake):** Phase 5 unit tests (Vitest not set up).
 
 ---
 
@@ -463,16 +463,9 @@ Sort assignments by mannequin `x` before building spatial labels.
 
 ---
 
-### PR stack (recommended order)
+### PR stack (bake & character assignment)
 
-```
-PR1  Data model + workflow helpers + store assignMannequinSubjectSlot + inspector dropdown
-PR2  drag-connector extract + CharacterAssignmentConnector + persistent lines + slot drag handles
-PR3  Workflow step "Assign Characters" + auto-assign single-subject + mobile dropdown
-PR4  Multi-subject Pass 2 bake (prompt builder + sequential API + store integration)
-```
-
-PR1–PR3 deliver usable assignment UX without changing bake output for multi-person yet (single-subject still works via auto-assign). PR4 completes the pipeline.
+Shipped — see [`MANNEQUIN-PR-TRACKER.md`](MANNEQUIN-PR-TRACKER.md) **Stack B** for the ordered list and file pointers. Composition work (mannequin-first preview, smart resync, Auto-place prompts) is **Stack A** in the same doc.
 
 ---
 

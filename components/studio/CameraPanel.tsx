@@ -95,10 +95,7 @@ export function CameraPanel() {
             label="Subject Count"
             labelClassName={CAMERA_PANEL_LABEL}
             value={camera.subjectCount}
-            onChange={(subjectCount) => {
-              setCamera({ subjectCount });
-              handleCameraCompositionChange('subjectCount');
-            }}
+            onChange={(subjectCount) => handleCameraCompositionChange('subjectCount', { subjectCount })}
             options={SUBJECT_COUNT_OPTIONS}
             triggerVariant="thumbnailRight"
             menuVariant="grid"
@@ -127,10 +124,7 @@ export function CameraPanel() {
                 label="Coverage"
                 labelClassName={CAMERA_PANEL_LABEL}
                 value={camera.coverage}
-                onChange={(coverage) => {
-                  setCamera({ coverage });
-                  handleCameraCompositionChange('coverage');
-                }}
+                onChange={(coverage) => handleCameraCompositionChange('coverage', { coverage })}
                 options={COVERAGE_OPTIONS}
                 triggerVariant="thumbnailRight"
                 menuVariant="grid"
@@ -161,8 +155,9 @@ export function CameraPanel() {
             value={frame.guide}
             onChange={(e) => {
               const guide = e.target.value as typeof frame.guide;
-              setShotFrameComposition({ guide });
-              if (guide === 'center') setShotFrameComposition({ placement: 'center' });
+              setShotFrameComposition(
+                guide === 'center' ? { guide, placement: 'center' } : { guide },
+              );
             }}
           >
             <option value="none">None</option>

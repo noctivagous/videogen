@@ -14,6 +14,9 @@
     "clean": "rm -rf .next",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "generate:mannequin-bounds-presets": "tsx scripts/generate-mannequin-bounds-presets.ts",
     "check:secrets": "git grep -nE 'r8_[A-Za-z0-9]{10,}|sk-[A-Za-z0-9]{20,}|hf_[A-Za-z0-9]{20,}' -- ':!package-lock.json' && exit 1 || exit 0",
     "stock:cutouts": "node scripts/generate-subject-cutouts.mjs",
     "stock:cutouts:import": "bash scripts/import-cutout.sh",
@@ -49,6 +52,7 @@
     "postcss": "^8.5.4",
     "sharp": "^0.34.2",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.9"
   }
 }

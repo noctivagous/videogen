@@ -72,7 +72,12 @@ import {
   clampMannequinScale,
   maxFeetAnchorY,
 } from '@/lib/studio/mannequin-layout';
-import { ensureMannequinsOnShot } from '@/lib/studio/mannequin-sync';
+import {
+  ensureMannequinsOnShot,
+  mannequinLayoutInvalidationPatch,
+  syncMannequinsFromShot,
+  type MannequinSyncReason,
+} from '@/lib/studio/mannequin-sync';
 import {
   canAddMannequin,
   createDefaultMannequin,
@@ -243,6 +248,22 @@ function getCurrentShotFromList(shots: Shot[], currentShot: number): Shot | unde
   return shots.find((s) => s.id === currentShot) || shots[0];
 }
 
+function mannequinResyncPatch(
+  prevShot: Shot,
+  nextShot: Shot,
+  reason: MannequinSyncReason,
+  aspectRatio: AspectRatio = '16:9',
+): Pick<Shot, 'mannequins' | 'bakedStartFrame' | 'bakeStatus' | 'previewFrameFingerprint'> {
+  return {
+    mannequins: syncMannequinsFromShot(nextShot, prevShot.mannequins, {
+      reason,
+      prevShot,
+      aspectRatio,
+    }),
+    ...mannequinLayoutInvalidationPatch(),
+  };
+}
+
 function ensureResolution(project: ProjectSettings): ProjectSettings {
   const ar = project.aspectRatio || '16:9';
   const presets = RESOLUTION_PRESETS[ar as AspectRatio] || RESOLUTION_PRESETS['16:9'];
@@ -313,7 +334,10 @@ interface StudioStore {
   setShotActivity: (shotActivity: string) => void;
   setShotFrameComposition: (patch: Partial<FrameComposition>) => void;
   toggleCompositionOverlay: () => void;
-  handleCameraCompositionChange: (changed: 'subjectCount' | 'coverage') => void;
+  handleCameraCompositionChange: (
+    changed: 'subjectCount' | 'coverage',
+    patch: Partial<Pick<CameraSettings, 'subjectCount' | 'coverage'>>,
+  ) => void;
 
   selectShot: (id: number) => void;
   deleteShot: (id: number) => void;
@@ -584,9 +608,27 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       if (patch.movement === 'drone') {
         camera.angle = 'drone';
       }
+
+      let shotPatch: Partial<Shot> = { camera };
+      if (
+        current &&
+        patch.fieldSize !== undefined &&
+        patch.fieldSize !== base.fieldSize
+      ) {
+        shotPatch = {
+          ...shotPatch,
+          ...mannequinResyncPatch(
+            current,
+            { ...current, camera },
+            'camera',
+            (s.project.aspectRatio || '16:9') as AspectRatio,
+          ),
+        };
+      }
+
       return {
         camera,
-        shots: patchCurrentShot(s.shots, s.currentShot, { camera }),
+        shots: patchCurrentShot(s.shots, s.currentShot, shotPatch),
       };
     });
   },
@@ -776,8 +818,26 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const shot = get().getCurrentShot();
     if (!shot) return;
     const frameComposition = { ...shot.frameComposition, ...patch };
+    const layoutChanged =
+      (patch.placement !== undefined && patch.placement !== shot.frameComposition.placement) ||
+      (patch.headroom !== undefined && patch.headroom !== shot.frameComposition.headroom) ||
+      (patch.guide !== undefined && patch.guide !== shot.frameComposition.guide);
+
+    let shotPatch: Partial<Shot> = { frameComposition };
+    if (layoutChanged) {
+      shotPatch = {
+        ...shotPatch,
+        ...mannequinResyncPatch(
+          shot,
+          { ...shot, frameComposition },
+          'placement',
+          (get().project.aspectRatio || '16:9') as AspectRatio,
+        ),
+      };
+    }
+
     set((s) => ({
-      shots: patchCurrentShot(s.shots, s.currentShot, { frameComposition }),
+      shots: patchCurrentShot(s.shots, s.currentShot, shotPatch),
     }));
   },
 
@@ -794,11 +854,14 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     }));
   },
 
-  handleCameraCompositionChange(changed) {
-    const { camera, shots, currentShot } = get();
-    const next = { ...camera };
+  handleCameraCompositionChange(changed, patch) {
+    const { shots, currentShot } = get();
+    const prevShot = getCurrentShotFromList(shots, currentShot);
+    if (!prevShot) return;
 
-    if (changed === 'coverage' && SINGLE_ONLY_COVERAGE.has(camera.coverage)) {
+    const next = { ...prevShot.camera, ...patch };
+
+    if (changed === 'coverage' && SINGLE_ONLY_COVERAGE.has(next.coverage)) {
       next.subjectCount = '1s';
     }
 
@@ -808,15 +871,25 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       }
     }
 
-    let updatedShots = patchCurrentShot(shots, currentShot, { camera: next });
-    const updatedShot = getCurrentShotFromList(updatedShots, currentShot);
-    if (updatedShot) {
-      const frameComposition = { ...updatedShot.frameComposition };
-      applyFrameCompositionSmartDefaults(next, frameComposition);
-      updatedShots = patchCurrentShot(updatedShots, currentShot, { frameComposition });
-    }
+    const frameComposition = { ...prevShot.frameComposition };
+    applyFrameCompositionSmartDefaults(next, frameComposition);
 
-    set({ camera: next, shots: updatedShots });
+    const nextShot: Shot = { ...prevShot, camera: next, frameComposition };
+    const resync = mannequinResyncPatch(
+      prevShot,
+      nextShot,
+      'camera',
+      (get().project.aspectRatio || '16:9') as AspectRatio,
+    );
+
+    set({
+      camera: next,
+      shots: patchCurrentShot(shots, currentShot, {
+        camera: next,
+        frameComposition,
+        ...resync,
+      }),
+    });
   },
 
   selectShot(id) {

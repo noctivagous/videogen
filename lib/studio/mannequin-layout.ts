@@ -11,8 +11,8 @@ import type { FieldSize, Headroom, Mannequin, MannequinAngle } from '@/lib/types
 export const MANNEQUIN_BASE_HEIGHT_RATIO = 0.55;
 
 export const MANNEQUIN_SCALE_MIN = 0.1;
-/** Upper bound for CU/ECU — figure can dwarf the frame when feet sit below the bottom edge. */
-export const MANNEQUIN_SCALE_MAX = 10;
+/** Upper bound for ECU — W÷H≈3 needs scale ~17; cap leaves headroom for manual framing. */
+export const MANNEQUIN_SCALE_MAX = 20;
 
 /** Normalized feet-anchor X (0 = left edge, 1 = right edge). */
 export const MANNEQUIN_ANCHOR_X_MIN = 0;
@@ -126,6 +126,21 @@ export function mannequinPreviewTransform(
 /** CSS bottom % for feet anchor (y=1 → bottom edge; y>1 → feet below frame). */
 export function mannequinFeetBottomPct(y: number): number {
   return (1 - y) * 100;
+}
+
+/** Interactive hit box inside the placement PNG — skips transparent padding. */
+export function mannequinHitTargetStyle(
+  mannequin: Pick<Mannequin, 'gender' | 'age' | 'pose' | 'angle'>,
+): { bottom: string; left: string; width: string; height: string } {
+  const trim = mannequinTrim(mannequinVariantFrom(mannequin));
+  const widthPct = 58;
+  const leftPct = trim.feetCenterX * 100 - widthPct / 2;
+  return {
+    bottom: `${trim.paddingBottom * 100}%`,
+    left: `${Math.max(0, Math.min(100 - widthPct, leftPct))}%`,
+    width: `${widthPct}%`,
+    height: `${trim.contentHeightRatio * 100}%`,
+  };
 }
 
 export interface MannequinDrawSize {

@@ -258,8 +258,41 @@ body.backdrop-widget-dragging * {
   pointer-events: none;
 }
 
-.composition-overlay--backdrop-pan .composition-placement-marker-draggable {
+.composition-overlay--backdrop-pan .composition-placement-marker-draggable,
+.composition-overlay--backdrop-pan .composition-placement-hit {
   pointer-events: auto;
+}
+
+.composition-placement-hits {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.composition-placement-hit {
+  position: absolute;
+  border: none;
+  padding: 0;
+  background: transparent;
+  cursor: crosshair;
+  transform: translate(-50%, -50%);
+}
+
+.composition-placement-hit-cell {
+  width: 33.33%;
+  height: 33.33%;
+  transform: none;
+}
+
+.composition-placement-hit-ix {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+
+.composition-placement-hit-ix-sm {
+  width: 14px;
+  height: 14px;
 }
 
 .studio-bottom-panel {

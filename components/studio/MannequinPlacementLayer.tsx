@@ -1,19 +1,21 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   MANNEQUIN_AGE_OPTIONS,
   MANNEQUIN_GENDER_OPTIONS,
   MANNEQUIN_POSE_OPTIONS,
 } from '@/lib/constants/workflows';
-import { mannequinAssetPath, mannequinVariantFrom } from '@/lib/constants/mannequin-assets';
 import {
-  MANNEQUIN_SCALE_MAX,
-  MANNEQUIN_SCALE_MIN,
+  mannequinAssetPath,
+  mannequinTrim,
+  mannequinVariantFrom,
+} from '@/lib/constants/mannequin-assets';
+import {
   MANNEQUIN_SCALE_MIN_ANCHOR_DIST,
-  clampMannequinScale,
   maxFeetAnchorY,
   mannequinFeetBottomPct,
+  mannequinHitTargetStyle,
   mannequinPreviewHeightPct,
   mannequinPreviewTransform,
   pointerAngleFromFeetAnchor,
@@ -22,6 +24,14 @@ import {
   rotationFromTiltDrag,
   scaleFromAnchorDrag,
 } from '@/lib/studio/mannequin-layout';
+import {
+  anchorToBoundsFrame,
+  boundsFrameToMannequinPatch,
+  maxWidthToFrameHeight,
+  patchBoundsFrame,
+  type MannequinBoundsFrame,
+} from '@/lib/studio/mannequin-bounds-framing';
+import { placementAnchorX } from '@/lib/studio/mannequin-sync';
 import {
   mannequinAngleLabel,
   rotateMannequinAngle,
@@ -35,8 +45,49 @@ import {
   isValidSubjectSlotAssignment,
 } from '@/lib/studio/mannequin-character-assignment';
 import { getReferenceSlotLabel } from '@/lib/studio/reference-slots';
-import type { Mannequin } from '@/lib/types/studio';
+import type { AspectRatio, Mannequin } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
+
+const BOUNDS_INPUT_MIN = -0.75;
+const BOUNDS_INPUT_MAX = 1.5;
+const WIDTH_TO_HEIGHT_MIN = 0.02;
+
+function clampBoundsValue(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function formatBoundsValue(value: number): string {
+  return value.toFixed(3);
+}
+
+interface BoundsFieldProps {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (value: number) => void;
+}
+
+function BoundsField({ label, value, min, max, onChange }: BoundsFieldProps) {
+  return (
+    <label className="flex flex-col gap-0.5 min-w-[3.25rem]">
+      <span className="text-gray-500 text-[9px] uppercase tracking-wide">{label}</span>
+      <input
+        type="number"
+        min={min}
+        max={max}
+        step={0.01}
+        value={formatBoundsValue(value)}
+        onChange={(e) => {
+          const next = Number(e.target.value);
+          if (!Number.isFinite(next)) return;
+          onChange(clampBoundsValue(next, min, max));
+        }}
+        className="w-full bg-surface-800 border border-surface-600 rounded px-1 py-0.5 text-gray-200 tabular-nums"
+      />
+    </label>
+  );
+}
 
 interface MannequinPlacementLayerProps {
   mannequins: Mannequin[];
@@ -82,6 +133,9 @@ export function MannequinPlacementLayer({
     const list = s.shots;
     return list.find((item) => item.id === s.currentShot) || list[0];
   });
+  const aspectRatio = useStudioStore(
+    (s) => (s.project.aspectRatio || '16:9') as AspectRatio,
+  );
   const assignMannequinSubjectSlot = useStudioStore((s) => s.assignMannequinSubjectSlot);
   const subjectSlotIndices = shot ? getSubjectSlotIndices(shot) : [];
   const characterConnector = useCharacterAssignmentConnectorContext();
@@ -89,6 +143,25 @@ export function MannequinPlacementLayer({
   const endDrag = useCallback(() => {
     dragRef.current = null;
   }, []);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    const onDocPointerDown = (e: PointerEvent) => {
+      const layer = layerRef.current;
+      if (!layer) return;
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+      if (
+        target.closest('.mannequin-hit-target, .mannequin-inspector-panel, .mannequin-handle')
+      ) {
+        return;
+      }
+      if (layer.contains(target)) return;
+      onSelect(null);
+    };
+    document.addEventListener('pointerdown', onDocPointerDown);
+    return () => document.removeEventListener('pointerdown', onDocPointerDown);
+  }, [selectedId, onSelect]);
 
   useEffect(() => {
     const onPointerMove = (e: PointerEvent) => {
@@ -192,14 +265,40 @@ export function MannequinPlacementLayer({
 
   const selected = mannequins.find((m) => m.id === selectedId);
 
+  const placementX = shot ? placementAnchorX(shot) : 0.5;
+
+  const selectedBounds = useMemo(() => {
+    if (!selected) return null;
+    return anchorToBoundsFrame(selected, aspectRatio, placementX);
+  }, [selected, aspectRatio, placementX]);
+
+  const widthToHeightMax = useMemo(() => {
+    if (!selected) return 2.5;
+    return maxWidthToFrameHeight(mannequinTrim(mannequinVariantFrom(selected)));
+  }, [selected]);
+
+  const applyBoundsPatch = useCallback(
+    (patch: Partial<MannequinBoundsFrame>) => {
+      if (!selected || !selectedBounds) return;
+      const nextBounds = patchBoundsFrame(
+        selectedBounds,
+        patch,
+        aspectRatio,
+        mannequinTrim(mannequinVariantFrom(selected)),
+      );
+      onUpdate(
+        selected.id,
+        boundsFrameToMannequinPatch(nextBounds, selected, aspectRatio, placementX),
+      );
+    },
+    [aspectRatio, onUpdate, placementX, selected, selectedBounds],
+  );
+
   return (
     <div
       ref={layerRef}
-      className="mannequin-placement-layer absolute inset-0 z-20 pointer-events-auto"
+      className="mannequin-placement-layer absolute inset-0 z-20 pointer-events-none"
       {...uiSectionProps(UI_SECTIONS.studioMannequinPlacement)}
-      onPointerDown={(e) => {
-        if (e.target === layerRef.current) onSelect(null);
-      }}
     >
       {mannequins.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -227,7 +326,7 @@ export function MannequinPlacementLayer({
         return (
           <div
             key={m.id}
-            className={`absolute select-none flex flex-col items-center justify-end ${
+            className={`absolute select-none flex flex-col items-center justify-end pointer-events-none ${
               isSelected ? 'z-10' : 'z-[5]'
             } ${isCharacterTarget ? 'mannequin--character-target' : ''}`}
             style={{
@@ -239,11 +338,16 @@ export function MannequinPlacementLayer({
               width: 'auto',
               transformOrigin: feet.transformOrigin,
             }}
-            onPointerDown={(e) => {
-              onSelect(m.id);
-              startDrag(e, m, 'move');
-            }}
           >
+            <div
+              role="presentation"
+              className="mannequin-hit-target absolute pointer-events-auto cursor-grab touch-none active:cursor-grabbing"
+              style={mannequinHitTargetStyle(m)}
+              onPointerDown={(e) => {
+                onSelect(m.id);
+                startDrag(e, m, 'move');
+              }}
+            />
             {isPrincipal && characterConnector?.characterAssignmentEnabled && (
               <div
                 ref={(el) => characterConnector.registerMannequinAnchor(m.id, el)}
@@ -261,7 +365,7 @@ export function MannequinPlacementLayer({
             {isSelected && (
               <button
                 type="button"
-                className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-red-600 text-white text-xs leading-none z-20"
+                className="mannequin-handle absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-red-600 text-white text-xs leading-none z-20 pointer-events-auto"
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={() => onRemove(m.id)}
                 aria-label="Remove mannequin"
@@ -272,7 +376,7 @@ export function MannequinPlacementLayer({
             {isSelected && (
               <div
                 role="presentation"
-                className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center z-20 touch-none cursor-grab active:cursor-grabbing"
+                className="mannequin-handle absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center z-20 touch-none cursor-grab active:cursor-grabbing pointer-events-auto"
                 title="Drag to tilt — pivots at feet"
                 aria-label="Tilt mannequin"
                 onPointerDown={(e) => {
@@ -287,7 +391,7 @@ export function MannequinPlacementLayer({
             {isSelected && (
               <div
                 role="presentation"
-                className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-sm bg-amber-400 border-2 border-amber-200 shadow-sm cursor-nwse-resize z-20 touch-none"
+                className="mannequin-handle absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-sm bg-amber-400 border-2 border-amber-200 shadow-sm cursor-nwse-resize z-20 touch-none pointer-events-auto"
                 title="Drag to resize — pull away from feet"
                 aria-label="Scale mannequin"
                 onPointerDown={(e) => {
@@ -301,7 +405,7 @@ export function MannequinPlacementLayer({
         );
       })}
 
-      <div className="absolute top-3 right-3 flex flex-col gap-2 bg-surface-900/90 border border-surface-700 rounded-lg p-2 text-[10px]">
+      <div className="mannequin-inspector-panel absolute top-3 right-3 z-50 flex flex-col gap-2 min-w-[11.5rem] max-w-[14rem] bg-surface-900/90 border border-surface-700 rounded-lg p-2 text-[10px] pointer-events-auto">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -428,34 +532,58 @@ export function MannequinPlacementLayer({
                 </p>
               </div>
             )}
+            {selectedBounds && (
+              <div className="flex flex-col gap-1.5 border-t border-surface-700 pt-2">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="text-gray-400 font-semibold">Frame bounds</span>
+                  <span className="text-[9px] text-gray-500 tabular-nums">
+                    scale {selected.scale.toFixed(2)}
+                  </span>
+                </div>
+                <p className="text-[9px] text-gray-500 leading-snug">
+                  Inset from each bounds edge to the matching frame edge. W÷H is bounds width
+                  relative to frame height.
+                </p>
+                <div className="grid grid-cols-3 gap-x-2 gap-y-1.5">
+                  <BoundsField
+                    label="Left"
+                    value={selectedBounds.insetLeft}
+                    min={BOUNDS_INPUT_MIN}
+                    max={BOUNDS_INPUT_MAX}
+                    onChange={(value) => applyBoundsPatch({ insetLeft: value })}
+                  />
+                  <BoundsField
+                    label="Right"
+                    value={selectedBounds.insetRight}
+                    min={BOUNDS_INPUT_MIN}
+                    max={BOUNDS_INPUT_MAX}
+                    onChange={(value) => applyBoundsPatch({ insetRight: value })}
+                  />
+                  <BoundsField
+                    label="W÷H"
+                    value={selectedBounds.widthToFrameHeight}
+                    min={WIDTH_TO_HEIGHT_MIN}
+                    max={widthToHeightMax}
+                    onChange={(value) => applyBoundsPatch({ widthToFrameHeight: value })}
+                  />
+                  <BoundsField
+                    label="Top"
+                    value={selectedBounds.insetTop}
+                    min={BOUNDS_INPUT_MIN}
+                    max={BOUNDS_INPUT_MAX}
+                    onChange={(value) => applyBoundsPatch({ insetTop: value })}
+                  />
+                  <BoundsField
+                    label="Bottom"
+                    value={selectedBounds.insetBottom}
+                    min={BOUNDS_INPUT_MIN}
+                    max={BOUNDS_INPUT_MAX}
+                    onChange={(value) => applyBoundsPatch({ insetBottom: value })}
+                  />
+                </div>
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-2">
-              <label className="text-gray-400">Scale</label>
-              <input
-                type="number"
-                min={MANNEQUIN_SCALE_MIN}
-                max={MANNEQUIN_SCALE_MAX}
-                step={0.05}
-                value={selected.scale}
-                onChange={(e) => {
-                  const next = Number(e.target.value);
-                  if (!Number.isFinite(next)) return;
-                  onUpdate(selected.id, { scale: clampMannequinScale(next) });
-                }}
-                className="w-14 bg-surface-800 border border-surface-600 rounded px-1 py-0.5 text-gray-200 tabular-nums"
-                aria-label="Mannequin scale"
-              />
-              <input
-                type="range"
-                min={MANNEQUIN_SCALE_MIN}
-                max={MANNEQUIN_SCALE_MAX}
-                step={0.05}
-                value={selected.scale}
-                onChange={(e) =>
-                  onUpdate(selected.id, { scale: clampMannequinScale(Number(e.target.value)) })
-                }
-                className="w-20 min-w-[5rem]"
-                aria-label="Mannequin scale slider"
-              />
               <label className="text-gray-400">Tilt°</label>
               <input
                 type="number"
