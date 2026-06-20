@@ -8,20 +8,35 @@ import {
 } from '@/lib/constants/workflows';
 import { mannequinAssetPath, mannequinVariantFrom } from '@/lib/constants/mannequin-assets';
 import {
+  MANNEQUIN_SCALE_MAX,
+  MANNEQUIN_SCALE_MIN,
   MANNEQUIN_SCALE_MIN_ANCHOR_DIST,
+  clampMannequinScale,
+  maxFeetAnchorY,
   mannequinFeetBottomPct,
   mannequinPreviewHeightPct,
   mannequinPreviewTransform,
+  pointerAngleFromFeetAnchor,
   pointerDistanceToFeetAnchor,
   positionFromMoveDrag,
+  rotationFromTiltDrag,
   scaleFromAnchorDrag,
 } from '@/lib/studio/mannequin-layout';
 import {
   mannequinAngleLabel,
   rotateMannequinAngle,
 } from '@/lib/studio/mannequin-rotation';
+import { normalizeReferenceRole } from '@/lib/constants/camera';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
+import { useCharacterAssignmentConnectorContext } from '@/components/studio/ThemeTransformConnectorProvider';
+import {
+  getSubjectSlotIndices,
+  isPrincipalMannequin,
+  isValidSubjectSlotAssignment,
+} from '@/lib/studio/mannequin-character-assignment';
+import { getReferenceSlotLabel } from '@/lib/studio/reference-slots';
 import type { Mannequin } from '@/lib/types/studio';
+import { useStudioStore } from '@/store/useStudioStore';
 
 interface MannequinPlacementLayerProps {
   mannequins: Mannequin[];
@@ -33,7 +48,7 @@ interface MannequinPlacementLayerProps {
   onRemove: (id: string) => void;
 }
 
-type DragMode = 'move' | 'scale';
+type DragMode = 'move' | 'scale' | 'tilt';
 
 interface DragSession {
   id: string;
@@ -43,7 +58,10 @@ interface DragSession {
   originX: number;
   originY: number;
   originScale: number;
+  originRotation: number;
+  maxAnchorY: number;
   startAnchorDist?: number;
+  startAngleDeg?: number;
 }
 
 export function MannequinPlacementLayer({
@@ -59,6 +77,14 @@ export function MannequinPlacementLayer({
   const dragRef = useRef<DragSession | null>(null);
   const onUpdateRef = useRef(onUpdate);
   onUpdateRef.current = onUpdate;
+
+  const shot = useStudioStore((s) => {
+    const list = s.shots;
+    return list.find((item) => item.id === s.currentShot) || list[0];
+  });
+  const assignMannequinSubjectSlot = useStudioStore((s) => s.assignMannequinSubjectSlot);
+  const subjectSlotIndices = shot ? getSubjectSlotIndices(shot) : [];
+  const characterConnector = useCharacterAssignmentConnectorContext();
 
   const endDrag = useCallback(() => {
     dragRef.current = null;
@@ -80,8 +106,23 @@ export function MannequinPlacementLayer({
           currentClientX: e.clientX,
           currentClientY: e.clientY,
           layerRect: rect,
+          maxAnchorY: drag.maxAnchorY,
         });
         onUpdateRef.current(drag.id, pos);
+        return;
+      }
+
+      if (drag.mode === 'tilt') {
+        const rotation = rotationFromTiltDrag({
+          originRotation: drag.originRotation,
+          anchorX: drag.originX,
+          anchorY: drag.originY,
+          startAngleDeg: drag.startAngleDeg ?? 0,
+          currentClientX: e.clientX,
+          currentClientY: e.clientY,
+          layerRect: rect,
+        });
+        onUpdateRef.current(drag.id, { rotation });
         return;
       }
 
@@ -124,9 +165,20 @@ export function MannequinPlacementLayer({
       originX: mannequin.x,
       originY: mannequin.y,
       originScale: mannequin.scale,
+      originRotation: mannequin.rotation,
+      maxAnchorY: maxFeetAnchorY(mannequin),
     };
     if (mode === 'scale' && layerRect) {
       session.startAnchorDist = pointerDistanceToFeetAnchor(
+        e.clientX,
+        e.clientY,
+        mannequin.x,
+        mannequin.y,
+        layerRect,
+      );
+    }
+    if (mode === 'tilt' && layerRect) {
+      session.startAngleDeg = pointerAngleFromFeetAnchor(
         e.clientX,
         e.clientY,
         mannequin.x,
@@ -161,12 +213,23 @@ export function MannequinPlacementLayer({
         const heightPct = mannequinPreviewHeightPct(m);
         const feet = mannequinPreviewTransform(m);
         const isSelected = m.id === selectedId;
+        const isPrincipal = isPrincipalMannequin(m);
+        const isLinked =
+          shot != null &&
+          m.subjectSlotIndex != null &&
+          isValidSubjectSlotAssignment(shot, m.subjectSlotIndex);
+        const linkRingClass = isLinked
+          ? characterConnector?.mannequinLinkRingClass(m.subjectSlotIndex) ?? ''
+          : isSelected
+            ? 'ring-2 ring-amber-400/80'
+            : '';
+        const isCharacterTarget = characterConnector?.hoverMannequinId === m.id;
         return (
           <div
             key={m.id}
             className={`absolute select-none flex flex-col items-center justify-end ${
               isSelected ? 'z-10' : 'z-[5]'
-            }`}
+            } ${isCharacterTarget ? 'mannequin--character-target' : ''}`}
             style={{
               left: `${m.x * 100}%`,
               bottom: `${mannequinFeetBottomPct(m.y)}%`,
@@ -181,14 +244,19 @@ export function MannequinPlacementLayer({
               startDrag(e, m, 'move');
             }}
           >
+            {isPrincipal && characterConnector?.characterAssignmentEnabled && (
+              <div
+                ref={(el) => characterConnector.registerMannequinAnchor(m.id, el)}
+                className="mannequin-character-anchor"
+                aria-hidden
+              />
+            )}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={mannequinAssetPath(mannequinVariantFrom(m))}
               alt=""
               draggable={false}
-              className={`block h-full w-auto max-w-none pointer-events-none ${
-                isSelected ? 'ring-2 ring-amber-400/80' : ''
-              }`}
+              className={`block h-full w-auto max-w-none pointer-events-none ${linkRingClass}`}
             />
             {isSelected && (
               <button
@@ -204,8 +272,24 @@ export function MannequinPlacementLayer({
             {isSelected && (
               <div
                 role="presentation"
+                className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center z-20 touch-none cursor-grab active:cursor-grabbing"
+                title="Drag to tilt — pivots at feet"
+                aria-label="Tilt mannequin"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  onSelect(m.id);
+                  startDrag(e, m, 'tilt', layerRef.current);
+                }}
+              >
+                <div className="w-3 h-3 rotate-45 bg-sky-400 border-2 border-sky-200 shadow-sm" />
+              </div>
+            )}
+            {isSelected && (
+              <div
+                role="presentation"
                 className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-sm bg-amber-400 border-2 border-amber-200 shadow-sm cursor-nwse-resize z-20 touch-none"
                 title="Drag to resize — pull away from feet"
+                aria-label="Scale mannequin"
                 onPointerDown={(e) => {
                   e.stopPropagation();
                   onSelect(m.id);
@@ -304,9 +388,74 @@ export function MannequinPlacementLayer({
                 ))}
               </select>
             </div>
+            {isPrincipalMannequin(selected) && (
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="text-gray-400">Character</label>
+                <select
+                  value={
+                    selected.subjectSlotIndex != null &&
+                    subjectSlotIndices.includes(selected.subjectSlotIndex)
+                      ? String(selected.subjectSlotIndex)
+                      : ''
+                  }
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    assignMannequinSubjectSlot(
+                      selected.id,
+                      raw === '' ? null : Number(raw),
+                    );
+                  }}
+                  className="min-w-[6.5rem] max-w-[9rem] bg-surface-800 border border-surface-600 rounded px-1 py-0.5 text-gray-200"
+                  aria-label="Assign character sheet"
+                >
+                  <option value="">Unassigned</option>
+                  {subjectSlotIndices.map((slotIndex) => {
+                    const role = normalizeReferenceRole(
+                      shot?.referenceRoles[slotIndex] ?? 'Subject',
+                    );
+                    const label = shot
+                      ? getReferenceSlotLabel(shot, slotIndex, role)
+                      : `Subject ${slotIndex + 1}`;
+                    return (
+                      <option key={slotIndex} value={slotIndex}>
+                        {label}
+                      </option>
+                    );
+                  })}
+                </select>
+                <p className="w-full text-[9px] text-gray-500 leading-snug lg:hidden">
+                  Drag link on desktop — assign here on mobile.
+                </p>
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-2">
               <label className="text-gray-400">Scale</label>
-              <span className="text-gray-200 tabular-nums">{selected.scale.toFixed(2)}</span>
+              <input
+                type="number"
+                min={MANNEQUIN_SCALE_MIN}
+                max={MANNEQUIN_SCALE_MAX}
+                step={0.05}
+                value={selected.scale}
+                onChange={(e) => {
+                  const next = Number(e.target.value);
+                  if (!Number.isFinite(next)) return;
+                  onUpdate(selected.id, { scale: clampMannequinScale(next) });
+                }}
+                className="w-14 bg-surface-800 border border-surface-600 rounded px-1 py-0.5 text-gray-200 tabular-nums"
+                aria-label="Mannequin scale"
+              />
+              <input
+                type="range"
+                min={MANNEQUIN_SCALE_MIN}
+                max={MANNEQUIN_SCALE_MAX}
+                step={0.05}
+                value={selected.scale}
+                onChange={(e) =>
+                  onUpdate(selected.id, { scale: clampMannequinScale(Number(e.target.value)) })
+                }
+                className="w-20 min-w-[5rem]"
+                aria-label="Mannequin scale slider"
+              />
               <label className="text-gray-400">Tilt°</label>
               <input
                 type="number"

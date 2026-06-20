@@ -1,10 +1,15 @@
+import type { GenerationRef } from '@/lib/studio/generation/types';
+
 export interface InpaintRequest {
   providerId: string;
   apiKey: string;
   modelId?: string;
+  /** Source frame — for xAI bake, backdrop with visible mannequin silhouettes. */
   imageUrl: string;
-  maskUrl: string;
+  /** Mask inpainting (Replicate FLUX Fill only). */
+  maskUrl?: string;
   prompt: string;
+  aspectRatio?: string;
 }
 
 export interface InpaintResult {
@@ -14,19 +19,23 @@ export interface InpaintResult {
   providerJobId?: string;
 }
 
+export type BakeIdentityPassPayload = {
+  providerId: string;
+  isCustom: boolean;
+  apiKey: string;
+  customBaseUrl?: string;
+  modelId?: string;
+  prompt: string;
+  aspectRatio: string;
+  refs: GenerationRef[];
+  cinematographyRefs?: boolean;
+};
+
 export interface BakeStartFrameRequest {
   inpaint: InpaintRequest;
-  identityPass?: {
-    providerId: string;
-    isCustom: boolean;
-    apiKey: string;
-    customBaseUrl?: string;
-    modelId?: string;
-    prompt: string;
-    aspectRatio: string;
-    refs: Array<{ role: string; url: string; slotIndex: number }>;
-    cinematographyRefs?: boolean;
-  };
+  /** @deprecated Prefer identityPasses — single pass kept for backward compatibility. */
+  identityPass?: BakeIdentityPassPayload;
+  identityPasses?: BakeIdentityPassPayload[];
 }
 
 export interface BakeStartFrameResult {

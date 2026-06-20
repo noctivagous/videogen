@@ -17,7 +17,9 @@ import {
 import { getThemeTransformStatus } from '@/lib/studio/theme-transform';
 import { restrictsReferenceSlotsToFirst } from '@/lib/studio/xai-video-models';
 import { getWorkflowReferenceSteps, isLockStartFrame } from '@/lib/studio/workflow';
+import { useCharacterAssignmentConnectorContext } from '@/components/studio/ThemeTransformConnectorProvider';
 import { ReferenceImageViewerModal } from '@/components/studio/ReferenceImageViewerModal';
+import { countMannequinsLinkedToSlot } from '@/lib/studio/mannequin-character-assignment';
 import type { AspectRatio, ReferenceMode, ThemeTransformSlotStatus } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
 
@@ -77,6 +79,7 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
   const localSlotRefs = useRef<(HTMLElement | null)[]>([]);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [viewerSlot, setViewerSlot] = useState<ViewerSlot | null>(null);
+  const characterConnector = useCharacterAssignmentConnectorContext();
 
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
   const slotCount = getReferenceSlotCount(shot);
@@ -161,7 +164,10 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
           </select>
         )}
         {lockStartFrame && workflowSteps.length > 0 && (
-          <ol className="workflow-steps flex flex-col gap-1 text-[10px] text-gray-400">
+          <ol
+            className="workflow-steps flex flex-col gap-1 text-[10px] text-gray-400"
+            aria-label="Lock start frame workflow"
+          >
             {workflowSteps.map((step, i) => (
               <li key={step.id} className="flex items-center gap-1.5">
                 <span
@@ -201,13 +207,26 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
           const transformedUrl = resolveReferenceDisplayUrl(shot.transformedReferences?.[index] ?? null);
           const showTransformed = linked && (transformedUrl || status === 'applying' || status === 'stale' || status === 'error');
           const themeTarget = hoverSlot === index && !slotDisabled && Boolean(imgData);
+          const isSubjectSlot = role === 'Subject' && Boolean(imgData) && !slotDisabled;
+          const characterLinkedCount = countMannequinsLinkedToSlot(shot.mannequins, index);
+          const characterLinked = characterLinkedCount > 0;
+          const characterDragSource =
+            characterConnector?.draggingCharacterSlotIndex === index;
+          const characterSlotClass =
+            characterLinked && characterConnector
+              ? characterConnector.subjectSlotLinkClass(index)
+              : '';
+          const showCharacterOutlet =
+            lockStartFrame &&
+            isSubjectSlot &&
+            characterConnector?.characterAssignmentEnabled;
 
           return (
             <div key={index} className="reference-slot-row">
               <div className="reference-slot-column">
               <div
                 ref={(el) => setSlotRef(index, imgData && !slotDisabled ? el : null)}
-                className={`reference-slot group ${imgData ? 'has-image' : ''} ${dragOverIndex === index ? 'drag-over' : ''} ${themeTarget ? 'reference-slot--theme-target' : ''} ${linked ? 'reference-slot--theme-linked' : ''} ${slotDisabled ? 'reference-slot--disabled' : ''}`}
+                className={`reference-slot group ${imgData ? 'has-image' : ''} ${dragOverIndex === index ? 'drag-over' : ''} ${themeTarget ? 'reference-slot--theme-target' : ''} ${linked ? 'reference-slot--theme-linked' : ''} ${characterSlotClass} ${characterDragSource ? 'reference-slot--character-drag-source' : ''} ${slotDisabled ? 'reference-slot--disabled' : ''}`}
                 title={
                   slotDisabled
                     ? 'Not sent to grok-imagine-video-1.5 — image-to-video uses Image 1 only'
@@ -312,6 +331,21 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
                     </button>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={imgData} alt="" className="reference-preview" />
+                    {showCharacterOutlet && (
+                      <button
+                        type="button"
+                        ref={(el) => characterConnector?.setSubjectOutletRef(index, el)}
+                        className={`character-link-outlet hidden lg:block ${characterConnector.subjectOutletClass(index)}`}
+                        title="Drag to a mannequin to assign this character"
+                        aria-label={`Link ${label} to mannequin`}
+                        onPointerDown={(e) => characterConnector?.startCharacterDrag(e, index)}
+                      />
+                    )}
+                    {characterLinked && (
+                      <span className="reference-character-link-badge" aria-hidden>
+                        → {characterLinkedCount}
+                      </span>
+                    )}
                   </>
                 ) : (
                   <div className="flex flex-col items-center text-gray-500 group-hover:text-gray-400 transition-colors">

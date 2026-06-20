@@ -12,15 +12,31 @@ export async function POST(request: Request) {
     }
 
     let finalUrl = inpaintResult.imageUrl;
-    if (body.identityPass && finalUrl) {
+    const identityPasses =
+      body.identityPasses ??
+      (body.identityPass ? [body.identityPass] : []);
+
+    for (const pass of identityPasses) {
+      if (!finalUrl) break;
+
+      const sceneRefIndex = pass.refs.findIndex((r) => r.role === 'Backdrop' || r.role === 'Scene');
+      const refs =
+        sceneRefIndex >= 0
+          ? pass.refs.map((r, i) => (i === sceneRefIndex ? { ...r, url: finalUrl! } : r))
+          : pass.refs;
+
       const identityResult = await runPreviewFrameGeneration({
-        ...body.identityPass,
-        refs: [
-          { role: 'Subject', url: body.identityPass.refs[0]?.url ?? '', slotIndex: 0 },
-          { role: 'Backdrop', url: finalUrl, slotIndex: 1 },
-        ],
+        ...pass,
+        refs,
+        cinematographyRefs: pass.cinematographyRefs ?? false,
       });
-      if (identityResult.status === 'complete' && identityResult.imageUrl) {
+      if (identityResult.status === 'error') {
+        return NextResponse.json(
+          { status: 'error', error: identityResult.error ?? 'Identity pass failed' } satisfies BakeStartFrameResult,
+          { status: 400 },
+        );
+      }
+      if (identityResult.imageUrl) {
         finalUrl = identityResult.imageUrl;
       }
     }

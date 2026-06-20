@@ -58,17 +58,19 @@ export interface Mannequin {
   gender: MannequinGender;
   age: MannequinAge;
   pose: MannequinPose;
-  /** Normalized center X in frame space (0–1). */
+  /** Normalized feet-anchor X (0 = left, 1 = right). */
   x: number;
-  /** Normalized center Y in frame space (0–1). */
+  /** Normalized feet-anchor Y (0 = top, 1 = frame bottom, >1 = below frame for CU/MCU). */
   y: number;
-  /** Display scale multiplier (0.1–2.0). */
+  /** Display scale multiplier (0.1–10). */
   scale: number;
   rotation: number;
   /** @deprecated Use age — kept for persisted project migration. */
   ageScale?: number;
   /** For dirty-single foreground shoulder (default 1). */
   opacity?: number;
+  /** Reference slot index for Pass 2 identity. Omit = unassigned (generic). */
+  subjectSlotIndex?: number;
 }
 
 export type ThemeTransformSlotStatus = 'idle' | 'applying' | 'ready' | 'stale' | 'error';

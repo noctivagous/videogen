@@ -6,12 +6,20 @@ export function migrateMannequin(raw: Mannequin): Mannequin {
     if (raw.ageScale <= 0.8) age = 'child';
     else if (raw.ageScale < 1) age = 'teen';
   }
-  return {
+  const migrated: Mannequin = {
     ...raw,
     gender: raw.gender ?? 'male',
     age,
     pose: raw.pose ?? 'standard',
   };
+  if (
+    raw.subjectSlotIndex != null &&
+    Number.isInteger(raw.subjectSlotIndex) &&
+    raw.subjectSlotIndex >= 0
+  ) {
+    migrated.subjectSlotIndex = raw.subjectSlotIndex;
+  }
+  return migrated;
 }
 
 export function migrateMannequins(mannequins: Mannequin[] | undefined): Mannequin[] {

@@ -7,8 +7,10 @@ import {
   requireModelId,
   sleep,
 } from '@/lib/studio/generation/adapters/shared';
-import { DEFAULT_INPAINT_MODEL } from '@/lib/constants/workflows';
+import { DEFAULT_INPAINT_MODEL, DEFAULT_XAI_BAKE_IMAGE_MODEL } from '@/lib/constants/workflows';
 import type { InpaintRequest, InpaintResult } from '@/lib/studio/generation/inpaint-types';
+
+const XAI_API = 'https://api.x.ai/v1';
 
 async function replicateFetch(path: string, apiKey: string, init?: RequestInit) {
   const res = await fetch(`https://api.replicate.com/v1${path}`, {
@@ -31,9 +33,60 @@ function resolveModelPath(modelId: string): string {
   throw new Error(`Replicate model id must be owner/name format (got "${modelId}")`);
 }
 
+function parseXAIImageResponse(
+  data: { data?: Array<{ url?: string; b64_json?: string }> },
+): InpaintResult {
+  const item = data.data?.[0];
+  if (!item) return { status: 'error', error: 'xAI returned no image' };
+  if (item.url) return { status: 'complete', imageUrl: item.url };
+  if (item.b64_json) {
+    return { status: 'complete', imageUrl: `data:image/png;base64,${item.b64_json}` };
+  }
+  return { status: 'error', error: 'xAI returned an unsupported image format' };
+}
+
+export async function generateWithXAIInpaint(req: InpaintRequest): Promise<InpaintResult> {
+  const modelId = requireModelId(req.modelId) ?? DEFAULT_XAI_BAKE_IMAGE_MODEL;
+  if (!modelId) return { status: 'error', error: NO_MODEL_SELECTED_ERROR };
+
+  const image = resolveRefUrl(req.imageUrl);
+  const body: Record<string, unknown> = {
+    model: modelId,
+    prompt: req.prompt,
+    image: { url: image, type: 'image_url' },
+    n: 1,
+  };
+  if (req.aspectRatio) {
+    body.aspect_ratio = req.aspectRatio;
+    body.resolution = '1k';
+  }
+
+  const res = await fetch(`${XAI_API}/images/edits`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${req.apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => res.statusText);
+    return { status: 'error', error: formatApiError(res.status, text, 'xAI image edit failed') };
+  }
+
+  const data = (await res.json()) as {
+    data?: Array<{ url?: string; b64_json?: string }>;
+  };
+  return parseXAIImageResponse(data);
+}
+
 export async function generateWithReplicateInpaint(req: InpaintRequest): Promise<InpaintResult> {
   const modelId = requireModelId(req.modelId) ?? DEFAULT_INPAINT_MODEL;
   if (!modelId) return { status: 'error', error: NO_MODEL_SELECTED_ERROR };
+  if (!req.maskUrl) {
+    return { status: 'error', error: 'Mask URL is required for Replicate inpainting.' };
+  }
 
   const image = resolveRefUrl(req.imageUrl);
   const mask = resolveRefUrl(req.maskUrl);
@@ -80,8 +133,14 @@ export async function generateWithReplicateInpaint(req: InpaintRequest): Promise
 }
 
 export async function runInpaintGeneration(req: InpaintRequest): Promise<InpaintResult> {
-  if (req.providerId !== 'replicate') {
-    return { status: 'error', error: `${req.providerId} does not support mask inpainting yet. Use Replicate.` };
+  if (req.providerId === 'xai') {
+    return generateWithXAIInpaint(req);
   }
-  return generateWithReplicateInpaint(req);
+  if (req.providerId === 'replicate') {
+    return generateWithReplicateInpaint(req);
+  }
+  return {
+    status: 'error',
+    error: `${req.providerId} does not support baking yet. Use xAI or Replicate.`,
+  };
 }

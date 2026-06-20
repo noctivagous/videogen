@@ -157,6 +157,26 @@ export function buildXAIReferencePrompt(
 }
 
 /** Reference instructions for xAI multi-image edit preview (<IMAGE_0> tags, 0-based). */
+export function buildMultiSubjectBakeIdentityPrompt(
+  assignments: Array<{ spatialLabel: string; imageTag: string }>,
+  sceneImageTag: string,
+): string {
+  const figureClauses = assignments.map(({ spatialLabel, imageTag }) => {
+    const figureNoun = spatialLabel === 'sole' ? 'figure' : `${spatialLabel} figure`;
+    return `The ${figureNoun} — face, body, and wardrobe only — comes from ${imageTag}.`;
+  });
+
+  const parts = [
+    ...figureClauses,
+    'Ignore all backgrounds in character reference images.',
+    `Scene composition, positions, scale, lighting, and backdrop come entirely from ${sceneImageTag}.`,
+  ];
+  if (assignments.length > 1) {
+    parts.push('Do not swap identities between figures.');
+  }
+  return parts.join(' ');
+}
+
 export function buildXAIImageEditReferencePrompt(
   refs: Array<{ role: string; url: string }>,
 ): string {

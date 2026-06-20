@@ -11,6 +11,8 @@ import { normalizeColorPalette } from '@/lib/constants/color-palette';
 import { DEFAULT_REFERENCE_MODE, normalizeReferenceMode } from '@/lib/constants/reference-modes';
 import { normalizeWorkflow } from '@/lib/constants/workflows';
 import { migrateMannequins } from '@/lib/studio/migrate-mannequin';
+import { ensureMannequinsOnShot } from '@/lib/studio/mannequin-sync';
+import { finalizeMannequinsForShot } from '@/lib/studio/workflow';
 import {
   STOCK_BACKDROP_REF,
   STOCK_CAMERA,
@@ -307,9 +309,18 @@ export function migrateShot(
     bakeStatus: shot.bakeStatus ?? 'idle',
   };
 
-  return {
+  const withAssignments: Shot = {
     ...migratedShot,
-    ...normalizeReferenceSlotArrays(migratedShot),
+    mannequins: finalizeMannequinsForShot(migratedShot, migratedShot.mannequins ?? []),
+  };
+  const withMannequins: Shot = {
+    ...withAssignments,
+    mannequins: ensureMannequinsOnShot(withAssignments),
+  };
+
+  return {
+    ...withMannequins,
+    ...normalizeReferenceSlotArrays(withMannequins),
   };
 }
 

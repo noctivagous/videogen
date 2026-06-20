@@ -1,22 +1,48 @@
-import { normalizeReferenceRole, PLACEMENT_POSITIONS } from '@/lib/constants/camera';
-import { FIELD_SIZE_HEIGHT_PCT } from '@/lib/constants/framing';
+import { normalizeReferenceRole } from '@/lib/constants/camera';
 import { normalizeWorkflow } from '@/lib/constants/workflows';
+import { syncMannequinsFromShot } from '@/lib/studio/mannequin-sync';
 import { getBackdropSlotIndex } from '@/lib/studio/backdrop-framing';
 import { getSubjectReference } from '@/lib/constants/stock-demo';
-import { getShotFrameComposition } from '@/lib/studio/composition';
 import type {
   AspectRatio,
   BakeStatus,
   LightingSettings,
   Mannequin,
-  MannequinAngle,
   ReferenceRole,
   Shot,
   Workflow,
 } from '@/lib/types/studio';
+import {
+  areCharacterSheetsComplete,
+  getPrincipalMannequins,
+  getRequiredSubjectSheetCount,
+  isCharacterAssignmentComplete,
+  sanitizeMannequinSubjectSlots,
+  tryAutoAssignSingleSubject,
+} from '@/lib/studio/mannequin-character-assignment';
 import { effectiveReferenceUrl } from '@/lib/studio/theme-transform';
 
-export type WorkflowStepId = 'character-sheet' | 'backdrop' | 'place-mannequins' | 'bake';
+export {
+  areCharacterSheetsComplete,
+  getAssignedMannequins,
+  getExpectedPrincipalCount,
+  getPrincipalMannequins,
+  getRequiredSubjectSheetCount,
+  getSubjectSlotIndices,
+  isCharacterAssignmentComplete,
+  isPrincipalMannequin,
+  isValidSubjectSlotAssignment,
+  mannequinSpatialLabel,
+  requiresCharacterAssignment,
+  type MannequinSpatialLabel,
+} from '@/lib/studio/mannequin-character-assignment';
+
+export type WorkflowStepId =
+  | 'character-sheet'
+  | 'backdrop'
+  | 'place-mannequins'
+  | 'assign-characters'
+  | 'bake';
 
 export interface WorkflowReferenceStep {
   id: WorkflowStepId;
@@ -54,15 +80,17 @@ export function getWorkflowReferenceSteps(
 ): WorkflowReferenceStep[] {
   if (!shot || !isLockStartFrame(shot)) return [];
 
-  const subjectIdx = subjectSlotIndex(shot);
   const backdropIdx = getBackdropSlotIndex(shot);
   const bakeStatus: BakeStatus = shot.bakeStatus ?? 'idle';
+  const requiredSheets = getRequiredSubjectSheetCount(shot);
+  const sheetsLabel =
+    requiredSheets > 1 ? `Character Sheets (${requiredSheets})` : 'Character Sheet';
 
   return [
     {
       id: 'character-sheet',
-      label: 'Character Sheet',
-      done: slotHasImage(shot, subjectIdx, lighting),
+      label: sheetsLabel,
+      done: areCharacterSheetsComplete(shot, lighting),
     },
     {
       id: 'backdrop',
@@ -72,7 +100,12 @@ export function getWorkflowReferenceSteps(
     {
       id: 'place-mannequins',
       label: 'Place Mannequins',
-      done: (shot.mannequins?.length ?? 0) > 0,
+      done: getPrincipalMannequins(shot.mannequins).length > 0,
+    },
+    {
+      id: 'assign-characters',
+      label: 'Assign Characters',
+      done: isCharacterAssignmentComplete(shot, lighting),
     },
     {
       id: 'bake',
@@ -86,102 +119,16 @@ export function shouldInjectFieldSizePrompt(shot: Shot | undefined): boolean {
   return !isLockStartFrame(shot);
 }
 
-export function getMannequinLimit(shot: Shot | undefined): number {
-  if (!shot) return 1;
-  if (shot.camera.subjectCount === '1s' && shot.camera.coverage === 'dirty-single') {
-    return 2;
-  }
-  switch (shot.camera.subjectCount) {
-    case '2s':
-      return 2;
-    case '3s':
-      return 3;
-    default:
-      return 1;
-  }
-}
-
-export function canAddMannequin(shot: Shot | undefined): boolean {
-  if (!isLockStartFrame(shot) || !shot) return false;
-  return (shot.mannequins?.length ?? 0) < getMannequinLimit(shot);
-}
-
-function newMannequinId(): string {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return `mannequin-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
-
-export function createDefaultMannequin(
-  partial: Partial<Mannequin> & { angle?: MannequinAngle } = {},
-): Mannequin {
-  return {
-    id: partial.id ?? newMannequinId(),
-    angle: partial.angle ?? 'front',
-    gender: partial.gender ?? 'male',
-    age: partial.age ?? 'adult',
-    pose: partial.pose ?? 'standard',
-    x: partial.x ?? 0.5,
-    y: partial.y ?? 0.85,
-    scale: partial.scale ?? 1,
-    rotation: partial.rotation ?? 0,
-    opacity: partial.opacity ?? 1,
-  };
-}
+export { canAddMannequin, createDefaultMannequin, getMannequinLimit } from '@/lib/studio/mannequin-factory';
 
 /** Default mannequin layout from camera subject count, field size, and placement grid. */
 export function seedMannequinsForShot(shot: Shot): Mannequin[] {
-  const frame = getShotFrameComposition(shot);
-  const placement = PLACEMENT_POSITIONS[frame.placement] ?? PLACEMENT_POSITIONS['cell-1-1'];
-  const anchorX = placement.x / 100;
-  const feetY = 0.85;
-  const fieldScale =
-    (FIELD_SIZE_HEIGHT_PCT[shot.camera.fieldSize] ?? FIELD_SIZE_HEIGHT_PCT.ms) /
-    FIELD_SIZE_HEIGHT_PCT.ms;
-  const count = getMannequinLimit(shot);
+  return syncMannequinsFromShot(shot, undefined, { reason: 'seed' });
+}
 
-  if (count === 1) {
-    if (shot.camera.coverage === 'dirty-single') {
-      return [
-        createDefaultMannequin({ x: anchorX, y: feetY, scale: fieldScale }),
-        createDefaultMannequin({
-          x: Math.min(0.92, anchorX + 0.2),
-          y: feetY,
-          scale: fieldScale * 1.1,
-          opacity: 0.3,
-          angle: 'threeQuarterLeft',
-          rotation: -15,
-        }),
-      ];
-    }
-    return [createDefaultMannequin({ x: anchorX, y: feetY, scale: fieldScale })];
-  }
-
-  if (count === 2) {
-    return [
-      createDefaultMannequin({
-        x: anchorX - 0.12,
-        y: feetY,
-        scale: fieldScale,
-        rotation: -12,
-        angle: 'threeQuarterRight',
-      }),
-      createDefaultMannequin({
-        x: anchorX + 0.12,
-        y: feetY,
-        scale: fieldScale,
-        rotation: 12,
-        angle: 'threeQuarterLeft',
-      }),
-    ];
-  }
-
-  return [
-    createDefaultMannequin({ x: anchorX - 0.14, y: feetY, scale: fieldScale, rotation: -12 }),
-    createDefaultMannequin({ x: anchorX, y: feetY, scale: fieldScale }),
-    createDefaultMannequin({ x: anchorX + 0.14, y: feetY, scale: fieldScale, rotation: 12 }),
-  ];
+export function finalizeMannequinsForShot(shot: Shot, mannequins: Mannequin[]): Mannequin[] {
+  const sanitized = sanitizeMannequinSubjectSlots(shot, mannequins);
+  return tryAutoAssignSingleSubject(shot, sanitized);
 }
 
 export function getSubjectSheetUrl(shot: Shot | undefined, lighting?: LightingSettings): string | null {

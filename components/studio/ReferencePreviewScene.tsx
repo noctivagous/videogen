@@ -3,19 +3,15 @@
 import { useMemo, type CSSProperties } from 'react';
 import { DEFAULT_FRAME_COMPOSITION } from '@/lib/constants/camera';
 import { CAMERA_FIELD_SIZE_SHORT } from '@/lib/constants/camera';
-import {
-  getBackdropReference,
-  getPreviewSubjectUrl,
-  usesFieldSizeCutout,
-} from '@/lib/constants/stock-demo';
+import { getBackdropReference } from '@/lib/constants/stock-demo';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { getFirstSlotReferenceUrl, isCinematographyRefs } from '@/lib/studio/reference-slots';
-import { getBackdropLayerStyle, getSubjectLayerStyle } from '@/lib/studio/subject-framing';
+import { getBackdropLayerStyle } from '@/lib/studio/subject-framing';
 import type { ScenePreviewPayload } from '@/lib/types/studio';
 
 interface ReferencePreviewSceneProps {
   payload: ScenePreviewPayload;
-  /** Framing mode: environment/backdrop only — subject placement comes from the composition overlay. */
+  /** Framing mode: environment/backdrop only — subjects are placed via mannequins. */
   backdropOnly?: boolean;
   /** Backdrop rendered by BackdropFramingLayer instead. */
   hideBackdrop?: boolean;
@@ -27,10 +23,8 @@ export function ReferencePreviewScene({
   hideBackdrop = false,
 }: ReferencePreviewSceneProps) {
   const frame = payload.shot?.frameComposition ?? DEFAULT_FRAME_COMPOSITION;
-  const aspectRatio = payload.project.aspectRatio || '16:9';
   const cinematographyRefs = isCinematographyRefs(payload.shot);
   const genericRefUrl = cinematographyRefs ? null : getFirstSlotReferenceUrl(payload.shot);
-  const subjectUrl = getPreviewSubjectUrl(payload.shot, payload.camera);
 
   const backdropUrl =
     hideBackdrop || !(cinematographyRefs || backdropOnly)
@@ -42,34 +36,16 @@ export function ReferencePreviewScene({
     [frame.placement, payload.camera.angle],
   );
 
-  const fieldSpecificAsset = usesFieldSizeCutout(payload.shot);
-
-  const subjectStyle = useMemo<CSSProperties>(
-    () =>
-      getSubjectLayerStyle({
-        aspectRatio,
-        fieldSize: payload.camera.fieldSize,
-        placement: frame.placement,
-        headroom: frame.headroom,
-        angle: payload.camera.angle,
-        guide: frame.guide,
-        coverage: payload.camera.coverage,
-        fieldSpecificAsset,
-      }),
-    [
-      aspectRatio,
-      payload.camera.fieldSize,
-      payload.camera.coverage,
-      payload.camera.angle,
-      frame.placement,
-      frame.headroom,
-      frame.guide,
-      fieldSpecificAsset,
-    ],
-  );
-
   const fieldLabel =
     CAMERA_FIELD_SIZE_SHORT[payload.camera.fieldSize] || payload.camera.fieldSize.toUpperCase();
+
+  const fieldBadge = (
+    <div className="absolute bottom-3 left-3 z-10 pointer-events-none">
+      <span className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-md bg-surface-900/75 border border-surface-600 text-gray-300">
+        {fieldLabel}
+      </span>
+    </div>
+  );
 
   if (backdropOnly) {
     return (
@@ -90,11 +66,7 @@ export function ReferencePreviewScene({
             draggable={false}
           />
         )}
-        <div className="absolute bottom-3 left-3 z-10 pointer-events-none">
-          <span className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-md bg-surface-900/75 border border-surface-600 text-gray-300">
-            {fieldLabel}
-          </span>
-        </div>
+        {fieldBadge}
       </div>
     );
   }
@@ -112,11 +84,7 @@ export function ReferencePreviewScene({
           className="absolute inset-0 w-full h-full object-cover pointer-events-none"
           draggable={false}
         />
-        <div className="absolute bottom-3 left-3 z-10 pointer-events-none">
-          <span className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-md bg-surface-900/75 border border-surface-600 text-gray-300">
-            {fieldLabel}
-          </span>
-        </div>
+        {fieldBadge}
       </div>
     );
   }
@@ -137,20 +105,7 @@ export function ReferencePreviewScene({
           draggable={false}
         />
       )}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        key={subjectUrl}
-        src={subjectUrl}
-        alt="Subject framing preview"
-        className="absolute inset-0 pointer-events-none"
-        style={subjectStyle}
-        draggable={false}
-      />
-      <div className="absolute bottom-3 left-3 z-10 pointer-events-none">
-        <span className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-md bg-surface-900/75 border border-surface-600 text-gray-300">
-          {fieldLabel}
-        </span>
-      </div>
+      {fieldBadge}
     </div>
   );
 }

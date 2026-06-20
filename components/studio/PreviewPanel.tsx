@@ -91,8 +91,6 @@ export function PreviewPanel() {
   const generatePreviewFrame = useStudioStore((s) => s.generatePreviewFrame);
   const resetBackdropFraming = useStudioStore((s) => s.resetBackdropFraming);
   const setWorkflow = useStudioStore((s) => s.setWorkflow);
-  const mannequinModeActive = useStudioStore((s) => s.mannequinModeActive);
-  const setMannequinMode = useStudioStore((s) => s.setMannequinMode);
   const addMannequin = useStudioStore((s) => s.addMannequin);
   const updateMannequin = useStudioStore((s) => s.updateMannequin);
   const removeMannequin = useStudioStore((s) => s.removeMannequin);
@@ -172,9 +170,7 @@ export function PreviewPanel() {
         ? lockStartFrame && bakedPreviewUrl
           ? 'Baked start frame'
           : 'AI model preview'
-        : lockStartFrame && mannequinModeActive
-          ? 'Mannequin mode'
-          : 'Framing guide';
+        : 'Blocking';
 
   const showFramingGuides =
     frameView === 'preview' && previewSubMode === 'framing';
@@ -191,7 +187,7 @@ export function PreviewPanel() {
         <ModelPreviewScene payload={payload} imageUrl={modelPreviewUrl} stale={modelStale} />
       );
     }
-    if (lockStartFrame && mannequinModeActive && previewSubMode === 'framing') {
+    if (frameView === 'preview' && previewSubMode === 'framing') {
       return (
         <>
           <ReferencePreviewScene
@@ -214,7 +210,7 @@ export function PreviewPanel() {
     return (
       <ReferencePreviewScene
         payload={payload}
-        backdropOnly={previewSubMode === 'framing'}
+        backdropOnly
         hideBackdrop={showFramingBackdrop}
       />
     );
@@ -444,25 +440,6 @@ export function PreviewPanel() {
               </button>
             )}
             <div className="h-6 w-px bg-surface-600" />
-            {frameView === 'preview' && lockStartFrame && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!mannequinModeActive) setPreviewSubMode('framing');
-                    setMannequinMode(!mannequinModeActive);
-                  }}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                    mannequinModeActive
-                      ? 'bg-amber-600/80 hover:bg-amber-500 text-white'
-                      : 'bg-surface-700 hover:bg-surface-600 text-gray-200'
-                  }`}
-                >
-                  Mannequin Mode
-                </button>
-                <div className="h-6 w-px bg-surface-600" />
-              </>
-            )}
             {frameView === 'preview' && !lockStartFrame && (
               <>
                 <button

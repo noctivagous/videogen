@@ -20,7 +20,10 @@ export const WORKFLOW_OPTIONS: ReadonlyArray<{
   { value: 'motion-transfer', label: 'Motion Transfer', enabled: false },
 ];
 
-/** Default Replicate inpainting model for bake pass 1. */
+/** Default xAI image model for bake pass 1 (image edit). */
+export const DEFAULT_XAI_BAKE_IMAGE_MODEL = 'grok-imagine-image-quality';
+
+/** Default Replicate inpainting model when Replicate is selected for bake. */
 export const DEFAULT_INPAINT_MODEL = 'black-forest-labs/flux-fill-pro';
 
 export const MANNEQUIN_ANGLE_OPTIONS: ReadonlyArray<{

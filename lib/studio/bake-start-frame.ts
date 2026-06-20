@@ -11,6 +11,8 @@ import type { AspectRatio, Mannequin, Shot } from '@/lib/types/studio';
 
 export interface BakeFrameOutput {
   backdropBlob: Blob;
+  /** Backdrop with gray mannequin figures composited — input for xAI image edit. */
+  compositeBlob: Blob;
   maskBlob: Blob;
   width: number;
   height: number;
@@ -27,13 +29,15 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 
 export async function bakeBlobsToDataUrls(output: BakeFrameOutput): Promise<{
   imageUrl: string;
+  compositeUrl: string;
   maskUrl: string;
 }> {
-  const [imageUrl, maskUrl] = await Promise.all([
+  const [imageUrl, compositeUrl, maskUrl] = await Promise.all([
     blobToDataUrl(output.backdropBlob),
+    blobToDataUrl(output.compositeBlob),
     blobToDataUrl(output.maskBlob),
   ]);
-  return { imageUrl, maskUrl };
+  return { imageUrl, compositeUrl, maskUrl };
 }
 
 async function loadImageElement(url: string): Promise<HTMLImageElement> {
@@ -137,10 +141,27 @@ export async function renderBakeFrames(input: {
     });
   }
 
-  const backdropImg = await loadImageElement(URL.createObjectURL(backdropBlob));
+  const backdropObjectUrl = URL.createObjectURL(backdropBlob);
+  const backdropImg = await loadImageElement(backdropObjectUrl);
   const mannequinImages = await Promise.all(
     mannequins.map((m) => loadMannequinImage(m)),
   );
+
+  const compositeCanvas = document.createElement('canvas');
+  compositeCanvas.width = width;
+  compositeCanvas.height = height;
+  const compositeCtx = compositeCanvas.getContext('2d');
+  if (!compositeCtx) throw new Error('Canvas context unavailable');
+  compositeCtx.drawImage(backdropImg, 0, 0, width, height);
+  for (let i = 0; i < mannequins.length; i++) {
+    drawMannequin(compositeCtx, mannequinImages[i], mannequins[i], width, height, 'silhouette');
+  }
+  const compositeBlob = await new Promise<Blob>((resolve, reject) => {
+    compositeCanvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error('Failed to export composite'))),
+      'image/png',
+    );
+  });
 
   const maskCanvas = document.createElement('canvas');
   maskCanvas.width = width;
@@ -161,10 +182,15 @@ export async function renderBakeFrames(input: {
     );
   });
 
-  URL.revokeObjectURL(backdropImg.src);
+  URL.revokeObjectURL(backdropObjectUrl);
 
-  return { backdropBlob, maskBlob, width, height };
+  return { backdropBlob, compositeBlob, maskBlob, width, height };
 }
 
+/** Replicate FLUX Fill — mask region only. */
 export const BAKE_INPAINT_PROMPT =
   'Photorealistic person standing in relaxed pose, seamless integration with backdrop lighting and shadows, natural skin tones, no text or watermarks';
+
+/** xAI image edit — replaces visible gray mannequin silhouettes (no mask API). */
+export const BAKE_XAI_EDIT_PROMPT =
+  'Replace every gray mannequin silhouette with a photorealistic person in the exact same pose, position, and scale. Seamless integration with the backdrop lighting and shadows. Natural skin tones. Remove all gray mannequin figures completely. No text or watermarks.';

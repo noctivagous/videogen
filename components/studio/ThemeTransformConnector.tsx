@@ -1,11 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
-
-interface Point {
-  x: number;
-  y: number;
-}
+import {
+  centerInContainer,
+  hitIndexedTargets,
+  type ConnectorPoint,
+} from '@/lib/studio/drag-connector';
 
 export interface ThemeTransformConnectorProps {
   containerRef: RefObject<HTMLElement | null>;
@@ -15,31 +15,6 @@ export interface ThemeTransformConnectorProps {
   enabled: boolean;
 }
 
-function centerInContainer(el: HTMLElement, container: HTMLElement): Point {
-  const cr = container.getBoundingClientRect();
-  const er = el.getBoundingClientRect();
-  return {
-    x: er.left + er.width / 2 - cr.left,
-    y: er.top + er.height / 2 - cr.top,
-  };
-}
-
-function hitSlotTarget(
-  slots: (HTMLElement | null)[],
-  clientX: number,
-  clientY: number,
-): number | null {
-  for (let i = 0; i < slots.length; i++) {
-    const el = slots[i];
-    if (!el || !el.classList.contains('has-image')) continue;
-    const r = el.getBoundingClientRect();
-    if (clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom) {
-      return i;
-    }
-  }
-  return null;
-}
-
 export function useThemeTransformConnector({
   containerRef,
   outletRef,
@@ -47,7 +22,7 @@ export function useThemeTransformConnector({
   onConnect,
   enabled,
 }: ThemeTransformConnectorProps) {
-  const [dragTo, setDragTo] = useState<Point | null>(null);
+  const [dragTo, setDragTo] = useState<ConnectorPoint | null>(null);
   const [hoverSlot, setHoverSlot] = useState<number | null>(null);
   const draggingRef = useRef(false);
 
@@ -56,7 +31,9 @@ export function useThemeTransformConnector({
       if (!draggingRef.current) return;
       draggingRef.current = false;
       setDragTo(null);
-      const slot = hitSlotTarget(slotRefs.current, clientX, clientY);
+      const slot = hitIndexedTargets(slotRefs.current, clientX, clientY, {
+        requiredClass: 'has-image',
+      });
       setHoverSlot(null);
       if (slot !== null) onConnect(slot);
     },
@@ -70,7 +47,11 @@ export function useThemeTransformConnector({
       if (!draggingRef.current || !containerRef.current) return;
       const cr = containerRef.current.getBoundingClientRect();
       setDragTo({ x: e.clientX - cr.left, y: e.clientY - cr.top });
-      setHoverSlot(hitSlotTarget(slotRefs.current, e.clientX, e.clientY));
+      setHoverSlot(
+        hitIndexedTargets(slotRefs.current, e.clientX, e.clientY, {
+          requiredClass: 'has-image',
+        }),
+      );
     };
 
     const onUp = (e: PointerEvent) => finishDrag(e.clientX, e.clientY);
