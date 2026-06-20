@@ -46,7 +46,7 @@ export const FIELD_SIZE_BOUNDS_PRESETS: Record<FieldSize, Record<MannequinDemogr
     'female-child': { insetLeft: 0.251563, insetTop: 0.05, widthToFrameHeight: 0.987 },
   },
   'close-shot': {
-    'male-adult': { insetLeft: 0.19375, insetTop: 0.051389, widthToFrameHeight: 1.148611 },
+    'male-adult': { insetLeft: 0.25, insetTop: 0.02, widthToFrameHeight: 1.148611 },
     'male-teen': { insetLeft: 0.19375, insetTop: 0.051389, widthToFrameHeight: 1.148611 },
     'male-child': { insetLeft: 0.19375, insetTop: 0.051389, widthToFrameHeight: 1.148611 },
     'female-adult': { insetLeft: 0.251563, insetTop: 0.05, widthToFrameHeight: 0.905556 },
@@ -54,7 +54,7 @@ export const FIELD_SIZE_BOUNDS_PRESETS: Record<FieldSize, Record<MannequinDemogr
     'female-child': { insetLeft: 0.251563, insetTop: 0.05, widthToFrameHeight: 0.905556 },
   },
   'ms': {
-    'male-adult': { insetLeft: 0.344375, insetTop: 0.0625, widthToFrameHeight: 0.695833 },
+    'male-adult': { insetLeft: 0.344375, insetTop: 0.01, widthToFrameHeight: 0.72 },
     'male-teen': { insetLeft: 0.334375, insetTop: 0.0625, widthToFrameHeight: 0.595833 },
     'male-child': { insetLeft: 0.334375, insetTop: 0.0625, widthToFrameHeight: 0.595833 },
     'female-adult': { insetLeft: 0.346094, insetTop: 0.048611, widthToFrameHeight: 0.556944 },
@@ -62,7 +62,7 @@ export const FIELD_SIZE_BOUNDS_PRESETS: Record<FieldSize, Record<MannequinDemogr
     'female-child': { insetLeft: 0.346094, insetTop: 0.048611, widthToFrameHeight: 0.556944 },
   },
   'fs': {
-    'male-adult': { insetLeft: 0.422656, insetTop: 0.059722, widthToFrameHeight: 0.315 },
+    'male-adult': { insetLeft: 0.422656, insetTop: 0.0, widthToFrameHeight: 0.315 },
     'male-teen': { insetLeft: 0.422656, insetTop: 0.059722, widthToFrameHeight: 0.275 },
     'male-child': { insetLeft: 0.422656, insetTop: 0.059722, widthToFrameHeight: 0.275 },
     'female-adult': { insetLeft: 0.430469, insetTop: 0.051389, widthToFrameHeight: 0.244444 },
@@ -110,7 +110,7 @@ export const FIELD_SIZE_BOUNDS_PRESETS: Record<FieldSize, Record<MannequinDemogr
     'female-child': { insetLeft: 0.385156, insetTop: 0.0625, widthToFrameHeight: 0.406944 },
   },
   'bcu': {
-    'male-adult': { insetLeft: 0.291406, insetTop: 0, widthToFrameHeight: 0.7875 },
+    'male-adult': { insetLeft: 0.23, insetTop: -0.29, widthToFrameHeight: 2.9 },
     'male-teen': { insetLeft: 0.291406, insetTop: 0, widthToFrameHeight: 0.7875 },
     'male-child': { insetLeft: 0.291406, insetTop: 0, widthToFrameHeight: 0.7875 },
     'female-adult': { insetLeft: 0.250781, insetTop: 0, widthToFrameHeight: 0.866667 },
@@ -126,7 +126,7 @@ export const FIELD_SIZE_BOUNDS_PRESETS: Record<FieldSize, Record<MannequinDemogr
     'female-child': { insetLeft: 0.463281, insetTop: 0.283333, widthToFrameHeight: 0.119444 },
   },
   'cowboy': {
-    'male-adult': { insetLeft: 0.373437, insetTop: 0.058333, widthToFrameHeight: 0.448611 },
+    'male-adult': { insetLeft: 0.373437, insetTop: 0.058333, widthToFrameHeight: 0.47 },
     'male-teen': { insetLeft: 0.373437, insetTop: 0.058333, widthToFrameHeight: 0.448611 },
     'male-child': { insetLeft: 0.373437, insetTop: 0.058333, widthToFrameHeight: 0.448611 },
     'female-adult': { insetLeft: 0.346094, insetTop: 0.048611, widthToFrameHeight: 0.556944 },
