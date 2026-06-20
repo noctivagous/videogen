@@ -528,7 +528,7 @@
       "angle": "rearThreeQuarterRight",
       "file": "mannequins/male/child/standard/rear-three-quarter-right.png",
       "generate": true,
-      "prompt": "Full-body Child matte gray male display mannequin with young child proportions (ages 8–10), shorter stature, slightly larger head-to-body ratio. Sculpted facial features, side-parted hair. Gray dress shirt, chino pants, belt, dress shoes — child-sized matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. REAR THREE-QUARTER RIGHT view only: body turned ~225° so camera sees back-right — mostly back of head and right ear, slight right cheek, back of shirt and right shoulder prominent. Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
+      "prompt": "Full-body child matte gray male display mannequin with young child proportions (ages 8–10), shorter stature, slightly larger head-to-body ratio. Sculpted facial features, side-parted hair. Gray dress shirt, chino pants, belt, dress shoes — child-sized matte gray hard-surface sculpt. On neutral gray seamless studio backdrop. REAR THREE-QUARTER RIGHT view only — NOT rear-left: back mostly toward camera but body rotated so the mannequin's RIGHT side is closer to camera. Right shoulder and right side of back prominent; left shoulder recedes. Back of head visible with RIGHT ear showing; head turned slightly right showing right cheek in profile. Do NOT show left ear or left cheek. Arms at sides. Full shot head to toe. Soft even studio lighting, cinematic 35mm look. No text or logos. Vertical 9:16 portrait."
     },
     {
       "id": "female-child-standard-front",

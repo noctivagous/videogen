@@ -111,7 +111,7 @@ const MANNEQUIN_TRIM: Record<string, MannequinTrim> = {
   'male-child-standard-front': { paddingBottom: 0.0049, paddingTop: 0.0049, contentHeightRatio: 0.9902, feetCenterX: 0.4985 },
   'male-child-standard-left': { paddingBottom: 0.0049, paddingTop: 0.0049, contentHeightRatio: 0.9902, feetCenterX: 0.4957 },
   'male-child-standard-rearThreeQuarterLeft': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.4983 },
-  'male-child-standard-rearThreeQuarterRight': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.4984 },
+  'male-child-standard-rearThreeQuarterRight': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.4983 },
   'male-child-standard-right': { paddingBottom: 0.0059, paddingTop: 0.0049, contentHeightRatio: 0.9893, feetCenterX: 0.4979 },
   'male-child-standard-threeQuarterLeft': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.4983 },
   'male-child-standard-threeQuarterRight': { paddingBottom: 0.0059, paddingTop: 0.0059, contentHeightRatio: 0.9883, feetCenterX: 0.4969 },
