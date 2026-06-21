@@ -37,7 +37,7 @@ export const UI_SECTIONS = {
   studioPreviewGeneratingOverlay: { id: 'studio-preview-generating-overlay', name: 'Preview Generating Overlay' },
   studioPreviewCompositionOverlay: { id: 'studio-preview-composition-overlay', name: 'Composition Overlay' },
   studioPreviewFrameViewSegment: { id: 'studio-preview-frame-view-segment', name: 'Frame View Segment' },
-  studioPreviewShotLabel: { id: 'studio-preview-shot-label', name: 'Preview Shot Label' },
+  studioPreviewShotLabel: { id: 'studio-preview-shot-label', name: 'Setup Selector' },
   studioPreviewMainChrome: { id: 'studio-preview-main-chrome', name: 'Preview Main Chrome' },
   studioShotWorkflow: { id: 'studio-shot-workflow', name: 'Shot Workflow' },
   studioWorkflowSection: { id: 'studio-workflow-section', name: 'Workflow Section' },
@@ -86,7 +86,7 @@ export const UI_SECTIONS = {
   studioBottomGenerate: { id: 'studio-bottom-generate', name: 'Generate Button' },
   studioBottomShotTimeline: { id: 'studio-bottom-shot-timeline', name: 'Setup Timeline' },
   studioBottomSetupTimeline: { id: 'studio-bottom-setup-timeline', name: 'Setup Timeline' },
-  studioCoverageShotTabs: { id: 'studio-coverage-shot-tabs', name: 'Coverage Shot Tabs' },
+  studioCoverageShotTabs: { id: 'studio-coverage-shot-tabs', name: 'Coverage Shot Selector' },
   studioSetupBackdropPanel: { id: 'studio-setup-backdrop-panel', name: 'Setup Backdrop Panel' },
 
   studioReferenceSlot: { id: 'studio-reference-slot', name: 'Reference Slot' },

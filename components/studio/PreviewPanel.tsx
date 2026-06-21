@@ -320,14 +320,6 @@ export function PreviewPanel() {
           />
         </div>
         )}
-        {workspaceView === 'shot' && shot && (
-          <div
-            className="pointer-events-auto shrink-0 bg-surface-800 border border-surface-700 px-3 py-1 rounded-lg text-xs font-semibold text-gray-300"
-            {...uiSectionProps(UI_SECTIONS.studioPreviewShotLabel)}
-          >
-            {shot.name}
-          </div>
-        )}
       </div>
 
       {frameView === 'prompt' && workspaceView === 'shot' && (
