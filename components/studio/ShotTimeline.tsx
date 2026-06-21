@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { getShotThumbnailOverlayLines, getShotThumbnailUrl } from '@/lib/studio/shot-display';
 import { getGeneratedVideoCount, getShotActiveVideoUrl } from '@/lib/studio/shot-videos';
+import { getWorkflowDefinition, workflowShortLabel } from '@/lib/constants/video-generation-workflows';
+import { normalizeWorkflow } from '@/lib/constants/workflows';
 import { useStudioStore } from '@/store/useStudioStore';
 
 type AddShotMode = 'duplicate' | 'blank';
@@ -137,6 +139,10 @@ export function ShotTimeline() {
           const [overlayLine1, overlayLine2] = getShotThumbnailOverlayLines(shot);
           const genCount = getGeneratedVideoCount(shot);
           const hasGeneratedVideo = Boolean(getShotActiveVideoUrl(shot));
+          const workflowDef = getWorkflowDefinition(normalizeWorkflow(shot));
+          const workflowBadge = workflowDef
+            ? workflowShortLabel(workflowDef.label)
+            : null;
           return (
             <div
               key={shot.id}
@@ -175,6 +181,12 @@ export function ShotTimeline() {
                     {genCount > 1 && (
                       <span className="text-orange-300">{genCount}</span>
                     )}
+                  </span>
+                )}
+
+                {workflowBadge && workflowDef?.id === 'bake-start-frame' && (
+                  <span className="absolute top-1 left-1 z-10 text-[8px] bg-surface-900/85 text-brand-300 px-1.5 py-0.5 rounded font-bold uppercase border border-brand-500/30">
+                    {workflowBadge}
                   </span>
                 )}
 

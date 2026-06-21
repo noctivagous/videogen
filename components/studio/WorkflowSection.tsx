@@ -34,9 +34,6 @@ export function WorkflowSection({ shot, onChange }: WorkflowSectionProps) {
       {definition && (
         <div className="space-y-1 px-0.5">
           <p className="text-[10px] text-[#242424] leading-snug">{definition.description}</p>
-          {definition.purpose && (
-            <p className="text-[10px] text-brand-400/90 leading-snug">{definition.purpose}</p>
-          )}
           {!availability.available && availability.message && (
             <p className="text-[10px] text-amber-400/90 leading-snug">{availability.message}</p>
           )}

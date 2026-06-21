@@ -1,3 +1,5 @@
+import type { MediaAsset, ShotLinkedAssetKey, ShotWorkflowSnapshot } from '@/lib/types/media-library';
+
 export type AspectRatio = '16:9' | '9:16' | '1:1' | '4:3' | '21:9';
 
 export type FieldSize =
@@ -350,6 +352,11 @@ export interface Shot {
   /** xAI pass 1 result before character identity refinement. */
   bakedIntermediateFrame?: string | null;
   bakeStatus?: BakeStatus;
+  /** Newest-first baked frame asset IDs in the project media library. */
+  savedBakedFrameAssetIds?: string[];
+  /** Active links from shot fields to library assets. */
+  linkedAssetIds?: Partial<Record<ShotLinkedAssetKey, string>>;
+  workflowSnapshotId?: string | null;
 }
 
 export interface StudioProject {
@@ -357,6 +364,8 @@ export interface StudioProject {
   project: ProjectSettings;
   shots: Shot[];
   currentShot: number;
+  mediaLibrary?: MediaAsset[];
+  shotWorkflowSnapshots?: ShotWorkflowSnapshot[];
   /** @deprecated v1 project-level settings — migrated into each shot on load */
   camera?: CameraSettings;
   lighting?: LightingSettings;

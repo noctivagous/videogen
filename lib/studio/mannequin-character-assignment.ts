@@ -132,7 +132,7 @@ export function isCharacterAssignmentComplete(shot: Shot, lighting?: LightingSet
   const principals = getPrincipalMannequins(shot.mannequins);
   if (principals.length === 0) return false;
   const subjectSlots = getSubjectSlotIndices(shot, lighting);
-  if (subjectSlots.length === 0) return true;
+  if (subjectSlots.length === 0) return false;
   return principals.every((m) => isValidSubjectSlotAssignment(shot, m.subjectSlotIndex, lighting));
 }
 

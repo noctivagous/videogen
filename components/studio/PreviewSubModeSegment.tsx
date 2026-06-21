@@ -8,6 +8,7 @@ interface PreviewSubModeSegmentProps {
   onChange: (mode: PreviewSubMode) => void;
   modelStale?: boolean;
   hasBakedImage?: boolean;
+  bakeWorkflow?: boolean;
 }
 
 export function PreviewSubModeSegment({
@@ -15,6 +16,7 @@ export function PreviewSubModeSegment({
   onChange,
   modelStale,
   hasBakedImage,
+  bakeWorkflow,
 }: PreviewSubModeSegmentProps) {
   return (
     <div
@@ -38,8 +40,13 @@ export function PreviewSubModeSegment({
         aria-selected={value === 'model'}
         className={`frame-view-segment-btn text-[10px] px-2 py-1 relative ${value === 'model' ? 'active' : ''}`}
         onClick={() => onChange('model')}
-        disabled={!hasBakedImage}
-        title={hasBakedImage ? 'Baked start frame' : 'Bake a start frame first'}
+        title={
+          bakeWorkflow && !hasBakedImage
+            ? 'View baked image or load from Assets'
+            : hasBakedImage
+              ? 'Baked start frame'
+              : 'Model preview'
+        }
       >
         Baked Image
         {modelStale && hasBakedImage && (

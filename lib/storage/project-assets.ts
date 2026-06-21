@@ -1,4 +1,6 @@
 import { normalizeReferenceRole } from '@/lib/constants/camera';
+import { hashBlobContent } from '@/lib/media/media-library';
+import type { MediaAsset } from '@/lib/types/media-library';
 import type { AspectRatio, ReferenceRole, Shot, StudioProject } from '@/lib/types/studio';
 
 export const ASSETS_DIR = 'assets';
@@ -63,6 +65,14 @@ export function assetPathForBackdropCrop(
 ): string {
   const slug = aspectRatio.replace(':', 'x');
   return `${ASSETS_DIR}/shot-${String(shotId).padStart(2, '0')}-backdrop-crop-${slug}.${ext}`;
+}
+
+export function assetPathForMediaAsset(contentHash: string, ext: string): string {
+  return `${ASSETS_DIR}/media/${contentHash}.${ext}`;
+}
+
+export function assetPathForMediaThumbnail(contentHash: string): string {
+  return `${ASSETS_DIR}/media/${contentHash}-thumb.webp`;
 }
 
 function extensionForMime(mime: string): string {
@@ -190,7 +200,80 @@ async function externalizeShotReferences(
     ? await externalizeBackdropCrops(assetsDir, shot)
     : shot.backdropCropsByAspect;
 
-  return { ...shot, references, transformedReferences, backdropCropsByAspect };
+  return externalizeShotBakedFrames(assetsDir, {
+    ...shot,
+    references,
+    transformedReferences,
+    backdropCropsByAspect,
+  });
+}
+
+async function externalizeShotBakedFrames(
+  assetsDir: FileSystemDirectoryHandle,
+  shot: Shot,
+): Promise<Shot> {
+  let bakedStartFrame = shot.bakedStartFrame;
+  let bakedIntermediateFrame = shot.bakedIntermediateFrame;
+
+  if (bakedStartFrame && shouldExternalizeReference(bakedStartFrame)) {
+    const blob = await blobFromInlineReference(bakedStartFrame);
+    if (blob) {
+      const id = await hashBlobContent(blob);
+      const path = assetPathForMediaAsset(id, extensionForMime(blob.type));
+      await writeBlobToAssetPath(assetsDir, path, blob);
+      registerAssetBlob(path, blob);
+      bakedStartFrame = path;
+    }
+  }
+
+  if (
+    bakedIntermediateFrame &&
+    shouldExternalizeReference(bakedIntermediateFrame) &&
+    bakedIntermediateFrame !== shot.bakedStartFrame
+  ) {
+    const blob = await blobFromInlineReference(bakedIntermediateFrame);
+    if (blob) {
+      const id = await hashBlobContent(blob);
+      const path = assetPathForMediaAsset(id, extensionForMime(blob.type));
+      await writeBlobToAssetPath(assetsDir, path, blob);
+      registerAssetBlob(path, blob);
+      bakedIntermediateFrame = path;
+    }
+  }
+
+  return { ...shot, bakedStartFrame, bakedIntermediateFrame };
+}
+
+async function externalizeMediaAssetUrl(
+  assetsDir: FileSystemDirectoryHandle,
+  asset: MediaAsset,
+  ref: string,
+  thumbnail = false,
+): Promise<string> {
+  if (!shouldExternalizeReference(ref)) return ref;
+  const blob = await blobFromInlineReference(ref);
+  if (!blob) return ref;
+  const path = thumbnail
+    ? assetPathForMediaThumbnail(asset.id)
+    : assetPathForMediaAsset(asset.id, extensionForMime(blob.type));
+  await writeBlobToAssetPath(assetsDir, path, blob);
+  registerAssetBlob(path, blob);
+  return path;
+}
+
+async function externalizeMediaLibrary(
+  assetsDir: FileSystemDirectoryHandle,
+  library: MediaAsset[],
+): Promise<MediaAsset[]> {
+  return Promise.all(
+    library.map(async (asset) => {
+      const url = await externalizeMediaAssetUrl(assetsDir, asset, asset.url);
+      const thumbnailUrl = asset.thumbnailUrl
+        ? await externalizeMediaAssetUrl(assetsDir, asset, asset.thumbnailUrl, true)
+        : undefined;
+      return { ...asset, url, thumbnailUrl };
+    }),
+  );
 }
 
 async function externalizeBackdropCrops(
@@ -224,7 +307,10 @@ export async function externalizeProjectReferences(
   const shots = await Promise.all(
     project.shots.map((shot) => externalizeShotReferences(assetsDir, shot)),
   );
-  return { ...project, shots };
+  const mediaLibrary = project.mediaLibrary?.length
+    ? await externalizeMediaLibrary(assetsDir, project.mediaLibrary)
+    : project.mediaLibrary;
+  return { ...project, shots, mediaLibrary };
 }
 
 async function hydrateReferenceList(
@@ -244,6 +330,18 @@ async function hydrateReferenceList(
   );
 }
 
+async function hydrateOptionalAssetUrl(
+  assetsDir: FileSystemDirectoryHandle,
+  ref: string | null | undefined,
+): Promise<string | null | undefined> {
+  if (!ref || !isProjectAssetPath(ref)) return ref;
+  const cached = getAssetBlobUrl(ref);
+  if (cached) return cached;
+  const blob = await readBlobFromAssetPath(assetsDir, ref);
+  if (!blob) return ref;
+  return registerAssetBlob(ref, blob);
+}
+
 async function hydrateShotReferences(
   assetsDir: FileSystemDirectoryHandle,
   shot: Shot,
@@ -257,7 +355,32 @@ async function hydrateShotReferences(
     ? await hydrateBackdropCrops(assetsDir, shot.backdropCropsByAspect)
     : shot.backdropCropsByAspect;
 
-  return { ...shot, references, transformedReferences, backdropCropsByAspect };
+  const bakedStartFrame = await hydrateOptionalAssetUrl(assetsDir, shot.bakedStartFrame);
+  const bakedIntermediateFrame = await hydrateOptionalAssetUrl(assetsDir, shot.bakedIntermediateFrame);
+
+  return {
+    ...shot,
+    references,
+    transformedReferences,
+    backdropCropsByAspect,
+    bakedStartFrame: bakedStartFrame ?? null,
+    bakedIntermediateFrame: bakedIntermediateFrame ?? null,
+  };
+}
+
+async function hydrateMediaLibrary(
+  assetsDir: FileSystemDirectoryHandle,
+  library: MediaAsset[],
+): Promise<MediaAsset[]> {
+  return Promise.all(
+    library.map(async (asset) => {
+      const url = (await hydrateOptionalAssetUrl(assetsDir, asset.url)) ?? asset.url;
+      const thumbnailUrl = asset.thumbnailUrl
+        ? (await hydrateOptionalAssetUrl(assetsDir, asset.thumbnailUrl)) ?? asset.thumbnailUrl
+        : undefined;
+      return { ...asset, url, thumbnailUrl };
+    }),
+  );
 }
 
 async function hydrateBackdropCrops(
@@ -289,7 +412,10 @@ export async function hydrateProjectReferences(
   const shots = await Promise.all(
     project.shots.map((shot) => hydrateShotReferences(assetsDir, shot)),
   );
-  return { ...project, shots };
+  const mediaLibrary = project.mediaLibrary?.length
+    ? await hydrateMediaLibrary(assetsDir, project.mediaLibrary)
+    : project.mediaLibrary;
+  return { ...project, shots, mediaLibrary };
 }
 
 export async function blobToDataUrl(blob: Blob): Promise<string> {

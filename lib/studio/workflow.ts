@@ -70,6 +70,13 @@ function subjectSlotIndex(shot: Shot): number {
   return 1;
 }
 
+/** Subject and backdrop slots tied to the bake checklist cannot change role. */
+export function isBakeChecklistReferenceSlot(shot: Shot | undefined, index: number): boolean {
+  if (!shot || !isBakeStartFrame(shot)) return false;
+  if (index === getBackdropSlotIndex(shot)) return true;
+  return index === subjectSlotIndex(shot);
+}
+
 function slotHasImage(
   shot: Shot,
   index: number,

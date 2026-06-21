@@ -72,6 +72,7 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
   const cycleReferenceRole = useStudioStore((s) => s.cycleReferenceRole);
   const setReferenceMode = useStudioStore((s) => s.setReferenceMode);
   const bakeStartFrame = useStudioStore((s) => s.bakeStartFrame);
+  const loadBakedFrameFromAsset = useStudioStore((s) => s.loadBakedFrameFromAsset);
   const invalidateBakedFrame = useStudioStore((s) => s.invalidateBakedFrame);
   const isBakingStartFrame = useStudioStore((s) => s.isBakingStartFrame);
   const toggleBackdropFramingLock = useStudioStore((s) => s.toggleBackdropFramingLock);
@@ -108,6 +109,12 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
   const autoRoles = isCinematographyRefs(shot);
   const hasAnyImage = shot.references.some(Boolean);
   const backdropSlotIndex = getBackdropSlotIndex(shot);
+  const subjectSlotIndex = (() => {
+    for (let i = 0; i < shot.referenceRoles.length; i++) {
+      if (normalizeReferenceRole(shot.referenceRoles[i] ?? 'None') === 'Subject') return i;
+    }
+    return 1;
+  })();
   const aspectRatio = (project.aspectRatio || '16:9') as AspectRatio;
   const backdropFramingLocked = Boolean(shot.backdropFramingByAspect?.[aspectRatio]?.locked);
   const backdropCropStatus = getBackdropCropStatus(shot, aspectRatio);
@@ -143,99 +150,48 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
   const isBakeStartFrameWorkflow = isBakeStartFrame(shot);
   const workflowSteps = getWorkflowReferenceSteps(shot, shot?.lighting);
   const bakeReady = shot.bakeStatus === 'ready' && Boolean(shot.bakedStartFrame);
+  const hasInterruptedBake =
+    isBakeStartFrameWorkflow && !bakeReady && (shot.savedBakedFrameAssetIds?.length ?? 0) > 0;
+  const lastSavedBakeId = shot.savedBakedFrameAssetIds?.[0];
+  const checklistSlotIndices = new Set(
+    [subjectSlotIndex, backdropSlotIndex].filter((index) => index >= 0),
+  );
+  const stackSlotIndices = isBakeStartFrameWorkflow
+    ? slotIndices.filter((index) => !checklistSlotIndices.has(index))
+    : slotIndices;
 
-  return (
-    <>
-    <div className="flex flex-col gap-1.5">
-      <div className="image-references-header flex flex-col gap-1.5">
-        <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-300">
-          Image References
-        </span>
-        {!isBakeStartFrameWorkflow && (
-          <select
-            value={referenceMode}
-            onChange={(e) => setReferenceMode(e.target.value as ReferenceMode)}
-            className="reference-mode-select w-full"
-            aria-label="Reference mode"
-          >
-            {REFERENCE_MODE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        )}
-        {isBakeStartFrameWorkflow && workflowSteps.length > 0 && (
-          <ol
-            className="workflow-steps flex flex-col gap-1 text-[10px] text-gray-400"
-            aria-label="Bake start frame workflow"
-          >
-            {workflowSteps.map((step, i) => (
-              <li key={step.id} className="flex items-center gap-1.5">
-                <span
-                  className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
-                    step.done ? 'bg-brand-500/30 text-brand-300' : 'bg-surface-700 text-gray-500'
-                  }`}
-                >
-                  {step.done ? '✓' : i + 1}
-                </span>
-                <span className={step.done ? 'text-gray-300' : ''}>{step.label}</span>
-              </li>
-            ))}
-          </ol>
-        )}
-        {isBakeStartFrameWorkflow && (
-          bakeReady ? (
-            <button
-              type="button"
-              onClick={() => invalidateBakedFrame()}
-              disabled={isBakingStartFrame}
-              className="w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-lg bg-surface-700 hover:bg-surface-600 disabled:opacity-40 text-gray-200 border border-surface-600"
-            >
-              Invalidate Baked Frame
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => bakeStartFrame()}
-              disabled={isBakingStartFrame || workflowSteps.some((s) => !s.done && s.id !== 'bake')}
-              className="w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-lg bg-brand-600 hover:bg-brand-500 disabled:opacity-40 text-white"
-            >
-              {isBakingStartFrame ? 'Baking…' : 'Bake Start Frame'}
-            </button>
-          )
-        )}
-      </div>
+  const renderReferenceSlotRow = (index: number) => {
+    const removable = index >= MIN_REFERENCE_SLOTS;
+    const imgData = resolveReferenceDisplayUrl(shot.references[index]);
+    const role = normalizeReferenceRole(shot.referenceRoles[index] ?? 'None');
+    const label = getReferenceSlotLabel(shot, index, role);
+    const slotDisabled = singleImageOnly && index > 0;
+    const linked = shot.themeTransformLinked?.[index] ?? false;
+    const status = getThemeTransformStatus(shot, index);
+    const statusLabel = transformStatusLabel(status, linked);
+    const transformedUrl = resolveReferenceDisplayUrl(shot.transformedReferences?.[index] ?? null);
+    const showTransformed = linked && (transformedUrl || status === 'applying' || status === 'stale' || status === 'error');
+    const themeTarget = hoverSlot === index && !slotDisabled && Boolean(imgData);
+    const isSubjectSlot = role === 'Subject' && Boolean(imgData) && !slotDisabled;
+    const characterLinkedCount = countMannequinsLinkedToSlot(shot.mannequins, index);
+    const characterLinked = characterLinkedCount > 0;
+    const characterDragSource = characterConnector?.draggingCharacterSlotIndex === index;
+    const characterSlotClass =
+      characterLinked && characterConnector ? characterConnector.subjectSlotLinkClass(index) : '';
+    const showCharacterOutlet =
+      isBakeStartFrameWorkflow && isSubjectSlot && characterConnector?.characterAssignmentEnabled;
+    const isChecklistLockedSlot =
+      isBakeStartFrameWorkflow && checklistSlotIndices.has(index);
+    const canCycleReferenceRole = autoRoles && !slotDisabled && !isChecklistLockedSlot;
+    const displayLabel =
+      isChecklistLockedSlot && index === subjectSlotIndex
+        ? getReferenceSlotLabel(shot, index, 'Subject')
+        : isChecklistLockedSlot && index === backdropSlotIndex
+          ? getReferenceSlotLabel(shot, index, 'Backdrop')
+          : label;
 
-      <div className="reference-slots-stack flex flex-col gap-2">
-        {slotIndices.map((index) => {
-          const removable = index >= MIN_REFERENCE_SLOTS;
-          const imgData = resolveReferenceDisplayUrl(shot.references[index]);
-          const role = normalizeReferenceRole(shot.referenceRoles[index] ?? 'None');
-          const label = getReferenceSlotLabel(shot, index, role);
-          const slotDisabled = singleImageOnly && index > 0;
-          const linked = shot.themeTransformLinked?.[index] ?? false;
-          const status = getThemeTransformStatus(shot, index);
-          const statusLabel = transformStatusLabel(status, linked);
-          const transformedUrl = resolveReferenceDisplayUrl(shot.transformedReferences?.[index] ?? null);
-          const showTransformed = linked && (transformedUrl || status === 'applying' || status === 'stale' || status === 'error');
-          const themeTarget = hoverSlot === index && !slotDisabled && Boolean(imgData);
-          const isSubjectSlot = role === 'Subject' && Boolean(imgData) && !slotDisabled;
-          const characterLinkedCount = countMannequinsLinkedToSlot(shot.mannequins, index);
-          const characterLinked = characterLinkedCount > 0;
-          const characterDragSource =
-            characterConnector?.draggingCharacterSlotIndex === index;
-          const characterSlotClass =
-            characterLinked && characterConnector
-              ? characterConnector.subjectSlotLinkClass(index)
-              : '';
-          const showCharacterOutlet =
-            isBakeStartFrameWorkflow &&
-            isSubjectSlot &&
-            characterConnector?.characterAssignmentEnabled;
-
-          return (
-            <div key={index} className="reference-slot-row">
+    return (
+      <div key={index} className="reference-slot-row">
               <div className="reference-slot-column">
               <div
                 ref={(el) => setSlotRef(index, imgData && !slotDisabled ? el : null)}
@@ -284,14 +240,14 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
                 }}
               >
                 <span
-                  className={`reference-label ${autoRoles && !slotDisabled ? '' : 'pointer-events-none cursor-default hover:text-gray-400 hover:border-surface-700'}`}
+                  className={`reference-label ${canCycleReferenceRole ? '' : 'pointer-events-none cursor-default hover:text-gray-400 hover:border-surface-700'}`}
                   onClick={(e) => {
-                    if (!autoRoles || slotDisabled) return;
+                    if (!canCycleReferenceRole) return;
                     e.stopPropagation();
                     cycleReferenceRole(index);
                   }}
                 >
-                  {label}
+                  {displayLabel}
                 </span>
 
                 {dragOverIndex === index && (
@@ -493,8 +449,98 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
                 </button>
               )}
             </div>
-          );
-        })}
+    );
+  };
+
+  const checklistSlotIndexForStep = (stepId: (typeof workflowSteps)[number]['id']) => {
+    if (stepId === 'character-sheet') return subjectSlotIndex;
+    if (stepId === 'backdrop') return backdropSlotIndex;
+    return null;
+  };
+
+  return (
+    <>
+    <div className="flex flex-col gap-1.5">
+      <div className="image-references-header flex flex-col gap-1.5">
+        <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-300">
+          Checklist
+        </span>
+        {!isBakeStartFrameWorkflow && (
+          <select
+            value={referenceMode}
+            onChange={(e) => setReferenceMode(e.target.value as ReferenceMode)}
+            className="reference-mode-select w-full"
+            aria-label="Reference mode"
+          >
+            {REFERENCE_MODE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        )}
+        {isBakeStartFrameWorkflow && workflowSteps.length > 0 && (
+          <ol
+            className="workflow-steps flex flex-col gap-2 text-[10px] text-gray-400"
+            aria-label="Bake start frame workflow"
+          >
+            {workflowSteps.map((step, i) => {
+              const slotIndex = checklistSlotIndexForStep(step.id);
+              return (
+                <li key={step.id} className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
+                        step.done ? 'bg-brand-500/30 text-brand-300' : 'bg-surface-700 text-gray-500'
+                      }`}
+                    >
+                      {step.done ? '✓' : i + 1}
+                    </span>
+                    <span className={step.done ? 'text-gray-300' : ''}>{step.label}</span>
+                  </div>
+                  {slotIndex != null && slotIndex >= 0 && renderReferenceSlotRow(slotIndex)}
+                </li>
+              );
+            })}
+          </ol>
+        )}
+        {hasInterruptedBake && lastSavedBakeId && (
+          <p className="text-[10px] text-[#242424]">
+            Previous bake saved to Assets.{' '}
+            <button
+              type="button"
+              className="text-brand-400 hover:text-brand-300 underline-offset-2 hover:underline"
+              onClick={() => loadBakedFrameFromAsset(lastSavedBakeId)}
+            >
+              Load saved bake
+            </button>
+          </p>
+        )}
+        {isBakeStartFrameWorkflow && (
+          bakeReady ? (
+            <button
+              type="button"
+              onClick={() => invalidateBakedFrame()}
+              disabled={isBakingStartFrame}
+              className="w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-lg bg-surface-700 hover:bg-surface-600 disabled:opacity-40 text-gray-200 border border-surface-600"
+            >
+              Invalidate Baked Frame
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => bakeStartFrame()}
+              disabled={isBakingStartFrame || workflowSteps.some((s) => !s.done && s.id !== 'bake')}
+              className="w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-lg bg-brand-600 hover:bg-brand-500 disabled:opacity-40 text-white"
+            >
+              {isBakingStartFrame ? 'Baking…' : 'Bake Start Frame'}
+            </button>
+          )
+        )}
+      </div>
+
+      <div className="reference-slots-stack flex flex-col gap-2">
+        {stackSlotIndices.map((index) => renderReferenceSlotRow(index))}
 
         <button
           type="button"

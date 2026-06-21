@@ -78,15 +78,27 @@ import {
 } from '@/lib/studio/mannequin-layout';
 import {
   ensureMannequinsOnShot,
-  mannequinLayoutInvalidationPatch,
   syncMannequinsFromShot,
   type MannequinSyncReason,
 } from '@/lib/studio/mannequin-sync';
+import {
+  resolveReferenceSlotInvalidation,
+  resolveWorkflowInvalidation,
+  splitInvalidationPatch,
+} from '@/lib/studio/workflow-invalidation';
+import {
+  createWorkflowSnapshot,
+  getMediaAsset,
+  ingestBakedFramesForShot,
+  linkAssetToShot,
+} from '@/lib/media/media-library';
+import type { MediaAsset, ShotWorkflowSnapshot } from '@/lib/types/media-library';
 import {
   canAddMannequin,
   createDefaultMannequin,
   finalizeMannequinsForShot,
   getWorkflowReferenceSteps,
+  isBakeChecklistReferenceSlot,
   isBakeStartFrame,
   shouldUseBakedStartFrameForVideo,
 } from '@/lib/studio/workflow';
@@ -213,6 +225,8 @@ function getStockDefaults() {
     project: { ...STOCK_PROJECT },
     shots,
     currentShot: active?.id ?? 1,
+    mediaLibrary: [],
+    shotWorkflowSnapshots: [],
     ...shotActiveView(active),
   };
 }
@@ -228,6 +242,8 @@ function getEmptyDefaults() {
     project: { ...EMPTY_PROJECT },
     shots,
     currentShot: active?.id ?? 1,
+    mediaLibrary: [] as MediaAsset[],
+    shotWorkflowSnapshots: [] as ShotWorkflowSnapshot[],
     ...shotActiveView(active),
   };
 }
@@ -245,6 +261,8 @@ function applyStudioProject(data: StudioProject) {
     project: ensureResolution(project),
     shots,
     currentShot,
+    mediaLibrary: data.mediaLibrary ?? [],
+    shotWorkflowSnapshots: data.shotWorkflowSnapshots ?? [],
     ...shotActiveView(active),
   };
 }
@@ -293,6 +311,8 @@ interface StudioStore {
   shotActivity: string;
   shots: Shot[];
   currentShot: number;
+  mediaLibrary: MediaAsset[];
+  shotWorkflowSnapshots: ShotWorkflowSnapshot[];
   ai: AIState;
   toast: { message: string; type: ToastType } | null;
   isGenerating: boolean;
@@ -370,6 +390,9 @@ interface StudioStore {
   removeMannequin: (id: string) => void;
   invalidateBakedFrame: () => void;
   bakeStartFrame: () => Promise<void>;
+  saveBakedFrameToAssets: () => Promise<void>;
+  loadBakedFrameFromAsset: (assetId: string) => void;
+  archiveBakeFromShot: (shot: Shot) => Promise<void>;
   applyThemeTransformSlot: (index: number) => Promise<void>;
 
   generate: () => Promise<void>;
@@ -441,6 +464,8 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   shotActivity: stockState.shotActivity,
   shots: stockState.shots,
   currentShot: stockState.currentShot,
+  mediaLibrary: stockState.mediaLibrary,
+  shotWorkflowSnapshots: stockState.shotWorkflowSnapshots,
   ai: { ...DEFAULT_AI_STATE },
   toast: null,
   isGenerating: false,
@@ -1034,7 +1059,13 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     transformedReferences[index] = null;
     const linked = [...(shot.themeTransformLinked ?? emptyThemeTransformArray(false))];
     if (!dataUrl) linked[index] = false;
-    const isBackdropSlot = index === getBackdropSlotIndex(shot);
+    const shouldArchiveBake =
+      isBakeStartFrame(shot) &&
+      !dataUrl &&
+      isBakeChecklistReferenceSlot(shot, index) &&
+      shot.bakeStatus === 'ready' &&
+      Boolean(shot.bakedStartFrame);
+    const archiveSource = shouldArchiveBake ? { ...shot } : null;
     let mannequins = shot.mannequins;
     if (isBakeStartFrame(shot)) {
       mannequins = clearMannequinAssignmentsForSlot(migrateMannequins(shot.mannequins), index);
@@ -1043,31 +1074,28 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         mannequins = tryAutoAssignSingleSubject(draft, mannequins);
       }
     }
+    const { shotPatch: referencePatch } = splitInvalidationPatch(
+      resolveReferenceSlotInvalidation(shot, index, {
+        clearing: !dataUrl,
+        hadImage: Boolean(shot.references[index]),
+      }),
+    );
     set((s) => ({
       shots: patchCurrentShot(s.shots, s.currentShot, {
         references,
         transformedReferences,
         themeTransformLinked: linked,
-        ...(isBakeStartFrame(shot)
-          ? {
-              mannequins,
-              bakeStatus: 'idle' as const,
-              bakedStartFrame: null,
-              bakedIntermediateFrame: null,
-            }
-          : {}),
-        ...(isBackdropSlot
-          ? {
-              backdropCropsByAspect: clearBackdropCrops(shot.backdropCropsByAspect),
-              backdropCropStatusByAspect: clearBackdropCropStatus(shot.backdropCropStatusByAspect),
-            }
-          : {}),
+        ...(isBakeStartFrame(shot) ? { mannequins } : {}),
+        ...referencePatch,
         ...patchThemeTransformInvalidation(shot, [index], 'source'),
       }),
     }));
     if (dataUrl) get().showToast('Reference image added');
-    if (isBackdropSlot) {
+    if (index === getBackdropSlotIndex(shot)) {
       set({ backdropSelected: false });
+    }
+    if (archiveSource) {
+      void get().archiveBakeFromShot(archiveSource);
     }
   },
 
@@ -1085,31 +1113,33 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const patch = removeReferenceSlotPatch(shot, index);
     if (!patch) return;
     const isBackdropSlot = index === getBackdropSlotIndex(shot);
+    const shouldArchiveBake =
+      isBakeStartFrame(shot) &&
+      isBakeChecklistReferenceSlot(shot, index) &&
+      shot.bakeStatus === 'ready' &&
+      Boolean(shot.bakedStartFrame);
+    const archiveSource = shouldArchiveBake ? { ...shot } : null;
     const mannequins = isBakeStartFrame(shot)
       ? reindexMannequinAssignmentsAfterSlotRemoval(migrateMannequins(shot.mannequins), index)
       : shot.mannequins;
+    const { shotPatch: referencePatch } = splitInvalidationPatch(
+      resolveReferenceSlotInvalidation(shot, index, {
+        clearing: true,
+        hadImage: Boolean(shot.references[index]),
+      }),
+    );
     set((s) => ({
       ...(isBackdropSlot ? { backdropSelected: false } : {}),
       shots: patchCurrentShot(s.shots, s.currentShot, {
         ...patch,
-        ...(isBakeStartFrame(shot)
-          ? {
-              mannequins,
-              bakeStatus: 'idle' as const,
-              bakedStartFrame: null,
-              bakedIntermediateFrame: null,
-            }
-          : {}),
-        ...(isBackdropSlot
-          ? {
-              backdropCropsByAspect: clearBackdropCrops(shot.backdropCropsByAspect),
-              backdropCropStatusByAspect: clearBackdropCropStatus(shot.backdropCropStatusByAspect),
-              backdropFramingByAspect: {},
-            }
-          : {}),
+        ...(isBakeStartFrame(shot) ? { mannequins } : {}),
+        ...referencePatch,
         ...patchThemeTransformInvalidation(shot, [index], 'source'),
       }),
     }));
+    if (archiveSource) {
+      void get().archiveBakeFromShot(archiveSource);
+    }
   },
 
   setBackdropFraming(patch) {
@@ -1262,7 +1292,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 
   cycleReferenceRole(index) {
     const shot = get().getCurrentShot();
-    if (!shot) return;
+    if (!shot || isBakeChecklistReferenceSlot(shot, index)) return;
     const roles = ['Subject', 'Backdrop', 'Style', 'Depth', 'Canny', 'None'] as const;
     const current = normalizeReferenceRole(shot.referenceRoles[index] ?? 'None');
     const nextIdx = (roles.indexOf(current) + 1) % roles.length;
@@ -1273,16 +1303,17 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     if (isBakeStartFrame(shot) && current === 'Subject' && nextRole !== 'Subject') {
       mannequins = clearMannequinAssignmentsForSlot(migrateMannequins(shot.mannequins), index);
     }
+    const layoutPatch =
+      isBakeStartFrame(shot) && mannequins !== shot.mannequins
+        ? splitInvalidationPatch(
+            resolveWorkflowInvalidation(shot, { kind: 'character_assignment_changed' }),
+          ).shotPatch
+        : {};
     set((s) => ({
       shots: patchCurrentShot(s.shots, s.currentShot, {
         referenceRoles,
         ...(isBakeStartFrame(shot) && mannequins !== shot.mannequins
-          ? {
-              mannequins,
-              bakeStatus: 'idle' as const,
-              bakedStartFrame: null,
-              bakedIntermediateFrame: null,
-            }
+          ? { mannequins, ...layoutPatch }
           : {}),
       }),
     }));
@@ -1332,9 +1363,15 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const mannequins = [...migrateMannequins(shot?.mannequins)];
     mannequins.push(createDefaultMannequin());
     const finalized = shot ? finalizeMannequinsForShot(shot, mannequins) : mannequins;
+    const layoutPatch = shot
+      ? splitInvalidationPatch(
+          resolveWorkflowInvalidation(shot, { kind: 'mannequin_layout_changed' }),
+        ).shotPatch
+      : {};
     set((s) => ({
       shots: patchCurrentShot(s.shots, s.currentShot, {
         mannequins: finalized,
+        ...layoutPatch,
       }),
     }));
   },
@@ -1364,9 +1401,14 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const mannequins = migrateMannequins(shot.mannequins).map((m) =>
       m.id === id ? migrateMannequin({ ...m, ...normalized }) : m,
     );
+    const finalized = finalizeMannequinsForShot(shot, mannequins);
+    const { shotPatch: layoutPatch } = splitInvalidationPatch(
+      resolveWorkflowInvalidation(shot, { kind: 'mannequin_layout_changed' }),
+    );
     set((s) => ({
       shots: patchCurrentShot(s.shots, s.currentShot, {
-        mannequins: finalizeMannequinsForShot(shot, mannequins),
+        mannequins: finalized,
+        ...layoutPatch,
       }),
     }));
   },
@@ -1383,9 +1425,13 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       mannequinId,
       slotIndex,
     );
+    const { shotPatch: layoutPatch } = splitInvalidationPatch(
+      resolveWorkflowInvalidation(shot, { kind: 'character_assignment_changed' }),
+    );
     set((s) => ({
       shots: patchCurrentShot(s.shots, s.currentShot, {
         mannequins,
+        ...layoutPatch,
       }),
     }));
   },
@@ -1397,9 +1443,13 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       shot,
       (shot.mannequins ?? []).filter((m) => m.id !== id),
     );
+    const { shotPatch: layoutPatch } = splitInvalidationPatch(
+      resolveWorkflowInvalidation(shot, { kind: 'mannequin_layout_changed' }),
+    );
     set((s) => ({
       shots: patchCurrentShot(s.shots, s.currentShot, {
         mannequins,
+        ...layoutPatch,
       }),
     }));
   },
@@ -1407,11 +1457,72 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   invalidateBakedFrame() {
     const shot = get().getCurrentShot();
     if (!shot || !isBakeStartFrame(shot)) return;
-    if (shot.bakeStatus !== 'ready' || !shot.bakedStartFrame) return;
+    const { shotPatch, toast } = splitInvalidationPatch(
+      resolveWorkflowInvalidation(shot, { kind: 'manual_invalidate_bake' }),
+    );
+    if (!Object.keys(shotPatch).length) return;
     set((s) => ({
-      shots: patchCurrentShot(s.shots, s.currentShot, mannequinLayoutInvalidationPatch()),
+      shots: patchCurrentShot(s.shots, s.currentShot, shotPatch),
     }));
-    get().showToast('Baked frame invalidated');
+    if (toast) get().showToast(toast);
+  },
+
+  async archiveBakeFromShot(shot: Shot) {
+    if (!shot.bakedStartFrame) return;
+    try {
+      const result = await ingestBakedFramesForShot(get().mediaLibrary, shot, {
+        workflowOrigin: 'bake-start-frame',
+      });
+      const snapshot = createWorkflowSnapshot(shot, {
+        bakedFrameId: result.bakedFrameId,
+        intermediateFrameId: result.intermediateFrameId,
+      });
+      set((s) => ({
+        mediaLibrary: result.library,
+        shotWorkflowSnapshots: [...s.shotWorkflowSnapshots, snapshot],
+        shots: patchCurrentShot(s.shots, s.currentShot, result.shotPatch),
+      }));
+    } catch {
+      get().showToast('Could not save bake to Assets', 'error');
+    }
+  },
+
+  async saveBakedFrameToAssets() {
+    const shot = get().getCurrentShot();
+    if (!shot?.bakedStartFrame || !isBakeStartFrame(shot)) {
+      get().showToast('No baked frame to save', 'error');
+      return;
+    }
+    await get().archiveBakeFromShot(shot);
+    get().showToast('Saved to Assets');
+  },
+
+  loadBakedFrameFromAsset(assetId: string) {
+    const shot = get().getCurrentShot();
+    if (!shot || !isBakeStartFrame(shot)) return;
+    const asset = getMediaAsset(get().mediaLibrary, assetId);
+    if (!asset || (asset.type !== 'baked-frame' && asset.type !== 'intermediate-frame')) {
+      get().showToast('Asset not found', 'error');
+      return;
+    }
+    const library = linkAssetToShot(get().mediaLibrary, assetId, shot.id);
+    const linkedKey = asset.type === 'intermediate-frame' ? 'intermediate' : 'bakedFrame';
+    set((s) => ({
+      mediaLibrary: library,
+      shots: patchCurrentShot(s.shots, s.currentShot, {
+        bakedStartFrame: asset.type === 'baked-frame' ? asset.url : shot.bakedStartFrame,
+        bakedIntermediateFrame:
+          asset.type === 'intermediate-frame' ? asset.url : shot.bakedIntermediateFrame,
+        bakeStatus: 'ready',
+        linkedAssetIds: {
+          ...(shot.linkedAssetIds ?? {}),
+          [linkedKey]: assetId,
+        },
+      }),
+      previewSubMode: 'model',
+      frameView: 'preview',
+    }));
+    get().showToast('Loaded from Assets');
   },
 
   async bakeStartFrame() {
@@ -1536,6 +1647,15 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         frameView: 'preview',
       }));
       get().showToast('Start frame baked');
+      const bakedShot = get().getCurrentShot();
+      if (bakedShot) {
+        void get().archiveBakeFromShot({
+          ...bakedShot,
+          bakedStartFrame,
+          bakedIntermediateFrame,
+          bakeStatus: 'ready',
+        });
+      }
     } catch (e) {
       set((s) => ({
         shots: patchCurrentShot(s.shots, s.currentShot, { bakeStatus: 'error' }),

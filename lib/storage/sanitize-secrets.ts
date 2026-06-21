@@ -34,5 +34,7 @@ export function sanitizeProjectForPersistence(project: StudioProject): StudioPro
     project: { ...clean.project },
     shots: clean.shots,
     currentShot: clean.currentShot,
+    ...(clean.mediaLibrary ? { mediaLibrary: clean.mediaLibrary } : {}),
+    ...(clean.shotWorkflowSnapshots ? { shotWorkflowSnapshots: clean.shotWorkflowSnapshots } : {}),
   };
 }

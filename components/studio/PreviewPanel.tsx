@@ -14,12 +14,14 @@ import { GenerationProgressOverlay } from '@/components/studio/GenerationProgres
 import { MannequinPlacementLayer } from '@/components/studio/MannequinPlacementLayer';
 import { ModelPreviewScene } from '@/components/studio/ModelPreviewScene';
 import { PreviewProjectSettingsBar } from '@/components/studio/PreviewProjectSettingsBar';
+import { LoadAssetModal } from '@/components/studio/LoadAssetModal';
 import { PreviewSubModeSegment } from '@/components/studio/PreviewSubModeSegment';
 import { PromptStackView } from '@/components/studio/PromptStackView';
 import { ReferencePreviewScene } from '@/components/studio/ReferencePreviewScene';
 import type { BakedImageVariant } from '@/lib/types/studio';
 import {
   canAddMannequin,
+  getWorkflowReferenceSteps,
   isBakeStartFrame,
 } from '@/lib/studio/workflow';
 import { migrateMannequins } from '@/lib/studio/migrate-mannequin';
@@ -97,9 +99,13 @@ export function PreviewPanel() {
   const isBakingStartFrame = useStudioStore((s) => s.isBakingStartFrame);
   const bakeProgress = useStudioStore((s) => s.bakeProgress);
   const bakeProgressDetail = useStudioStore((s) => s.bakeProgressDetail);
+  const bakeStartFrameAction = useStudioStore((s) => s.bakeStartFrame);
+  const saveBakedFrameToAssets = useStudioStore((s) => s.saveBakedFrameToAssets);
+  const loadBakedFrameFromAsset = useStudioStore((s) => s.loadBakedFrameFromAsset);
   const ai = useStudioStore((s) => s.ai);
   const [selectedMannequinId, setSelectedMannequinId] = useState<string | null>(null);
   const [bakedImageVariant, setBakedImageVariant] = useState<BakedImageVariant>('final');
+  const [loadAssetOpen, setLoadAssetOpen] = useState(false);
 
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
   const mannequins = useMemo(
@@ -128,6 +134,13 @@ export function PreviewPanel() {
   const hasBakedImage = bakeStartFrame
     ? Boolean(bakedPreviewUrl)
     : Boolean(shot?.previewFrameUrl);
+  const workflowSteps = useMemo(
+    () => (shot ? getWorkflowReferenceSteps(shot, shot.lighting) : []),
+    [shot],
+  );
+  const checklistIncomplete = workflowSteps.some((step) => !step.done && step.id !== 'bake');
+  const showBakedEmptyState =
+    frameView === 'preview' && previewSubMode === 'model' && bakeStartFrame && !modelPreviewUrl;
   const showModelPreview = Boolean(modelPreviewUrl) && previewSubMode === 'model';
   const shotDuration = shot?.duration ?? project.duration;
   const timecode = `00:00 / ${formatDuration(shotDuration)}`;
@@ -206,6 +219,33 @@ export function PreviewPanel() {
   const showBackdropEditStack = showFramingBackdrop && !backdropCropCommitted;
 
   const renderPreviewContent = () => {
+    if (showBakedEmptyState && shot) {
+      return (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center bg-surface-900/80">
+          <p className="text-sm font-semibold text-gray-200">No baked start frame yet</p>
+          <p className="text-xs text-gray-500 max-w-xs">
+            Complete the checklist and bake, or load a previously saved frame from Assets.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
+            <button
+              type="button"
+              onClick={() => setLoadAssetOpen(true)}
+              className="px-3 py-1.5 text-xs font-medium rounded-lg border border-surface-600 hover:bg-surface-700 text-gray-200 transition-colors"
+            >
+              Load from Assets
+            </button>
+            <button
+              type="button"
+              onClick={() => void bakeStartFrameAction()}
+              disabled={isBakingStartFrame || checklistIncomplete}
+              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-brand-600 hover:bg-brand-500 disabled:opacity-40 text-white transition-colors"
+            >
+              Bake Start Frame
+            </button>
+          </div>
+        </div>
+      );
+    }
     if (showModelPreview && modelPreviewUrl) {
       return (
         <ModelPreviewScene payload={payload} imageUrl={modelPreviewUrl} stale={modelStale} />
@@ -418,12 +458,24 @@ export function PreviewPanel() {
 
           {frameView === 'preview' && (
             <div className="absolute top-3 left-3 z-30 pointer-events-auto flex flex-col gap-1.5">
-              <PreviewSubModeSegment
-                value={previewSubMode}
-                onChange={setPreviewSubMode}
-                hasBakedImage={hasBakedImage}
-                modelStale={modelStale}
-              />
+              <div className="flex items-center gap-2">
+                <PreviewSubModeSegment
+                  value={previewSubMode}
+                  onChange={setPreviewSubMode}
+                  hasBakedImage={hasBakedImage}
+                  bakeWorkflow={bakeStartFrame}
+                  modelStale={modelStale}
+                />
+                {bakeStartFrame && previewSubMode === 'model' && hasBakedImage && (
+                  <button
+                    type="button"
+                    onClick={() => void saveBakedFrameToAssets()}
+                    className="text-[10px] font-semibold uppercase tracking-wider px-2 py-1 rounded-lg border border-surface-600 bg-surface-900/80 text-gray-300 hover:text-white hover:border-brand-500/50 transition-colors"
+                  >
+                    Save to Assets
+                  </button>
+                )}
+              </div>
               {previewSubMode === 'model' && hasBakeVariantChoice && (
                 <BakedImageVariantSegment
                   value={bakedImageVariant}
@@ -502,6 +554,14 @@ export function PreviewPanel() {
         </div>
       </div>
       )}
+      <LoadAssetModal
+        open={loadAssetOpen}
+        onClose={() => setLoadAssetOpen(false)}
+        onSelect={(assetId) => {
+          loadBakedFrameFromAsset(assetId);
+          setLoadAssetOpen(false);
+        }}
+      />
     </div>
   );
 }

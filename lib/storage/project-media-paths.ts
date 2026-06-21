@@ -72,6 +72,16 @@ export function collectProjectMediaUploads(project: StudioProject): ProjectMedia
     });
   });
 
+  project.mediaLibrary?.forEach((asset, assetIndex) => {
+    const base = `mediaLibrary.${assetIndex}`;
+    if (isInlineMediaUrl(asset.url)) {
+      uploads.push({ path: `${base}.url`, kind: 'inline', dataUrl: asset.url });
+    }
+    if (asset.thumbnailUrl && isInlineMediaUrl(asset.thumbnailUrl)) {
+      uploads.push({ path: `${base}.thumbnailUrl`, kind: 'inline', dataUrl: asset.thumbnailUrl });
+    }
+  });
+
   return uploads;
 }
 
