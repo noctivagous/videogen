@@ -833,6 +833,26 @@ input[type="range"]::-moz-range-thumb:hover {
   margin-left: 1.375rem;
 }
 
+.workflow-step-fieldset {
+  @apply rounded-lg border border-surface-600 px-3 py-2.5 min-w-0;
+}
+
+.workflow-step-fieldset__legend {
+  @apply px-1 text-[10px] uppercase tracking-wider font-semibold text-gray-400;
+}
+
+.workflow-step-fieldset__legend-order {
+  @apply inline-flex w-4 h-4 shrink-0 rounded-full items-center justify-center text-[9px] font-bold bg-surface-700 text-gray-500;
+}
+
+.workflow-step-fieldset--nested {
+  @apply mt-2 mb-0 py-2;
+}
+
+.reference-prompt-additions__input {
+  @apply placeholder:text-gray-600;
+}
+
 .workflow-steps .reference-slot {
   width: 6rem;
   height: 6rem;

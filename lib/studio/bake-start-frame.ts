@@ -215,3 +215,13 @@ export const BAKE_INPAINT_PROMPT =
 /** xAI image edit — replaces visible gray mannequin silhouettes (no mask API). */
 export const BAKE_XAI_EDIT_PROMPT =
   'Replace every gray mannequin silhouette with a photorealistic person in the exact same pose, position, and scale. Seamless integration with the backdrop lighting and shadows. Natural skin tones. Remove all gray mannequin figures completely. No text or watermarks.';
+
+/** Appends optional shot-level bake prompt additions when non-empty. */
+export function appendBakePromptAdditions(
+  basePrompt: string,
+  additions?: string | null,
+): string {
+  const extra = additions?.trim();
+  if (!extra) return basePrompt;
+  return `${basePrompt.trimEnd()} ${extra}`;
+}

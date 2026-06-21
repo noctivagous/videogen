@@ -328,6 +328,8 @@ export interface Shot {
   motion: MotionSettings;
   sceneSetup: string;
   shotActivity: string;
+  /** Extra prompt text appended during bake start frame generation. */
+  promptAdditions?: string;
   /** @deprecated migrated to sceneSetup on load */
   prompt?: string;
   references: (string | null)[];

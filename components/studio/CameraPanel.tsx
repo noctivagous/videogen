@@ -23,8 +23,10 @@ import { ApertureDiagram } from '@/components/ui/ApertureDiagram';
 import { APERTURE_STOPS, apertureStopIndex, formatApertureLabel } from '@/lib/constants/aperture';
 import { DOF_OPTIONS } from '@/lib/constants/dof-options';
 import { PromptIncludeToggle } from '@/components/studio/PromptIncludeToggle';
+import { MannequinPlacementControls } from '@/components/studio/MannequinPlacementControls';
 import { WorkflowSection } from '@/components/studio/WorkflowSection';
 import { resolveCameraPromptInclusion } from '@/lib/constants/camera-prompt-inclusion';
+import { isBakeStartFrame } from '@/lib/studio/workflow';
 import { RangeSlider } from '@/components/ui/RangeSlider';
 import { Select } from '@/components/ui/Select';
 import { VisualDropdown } from '@/components/ui/VisualDropdown';
@@ -51,6 +53,7 @@ export function CameraPanel() {
   const showCoverage = camera.subjectCount === '1s';
   const placementVisible = showPlacementGrid(frame.guide);
   const headroomVisible = showHeadroomControl(camera.fieldSize);
+  const blockingInWorkflowRefs = isBakeStartFrame(shot);
 
   const togglePromptInclusion = (patch: Partial<typeof inclusion>) => {
     setCamera({
@@ -109,6 +112,8 @@ export function CameraPanel() {
             />
           </div>
 
+        {!blockingInWorkflowRefs && (
+          <>
         <VisualDropdown
           label="Field Size"
           labelClassName={CAMERA_PANEL_LABEL}
@@ -171,6 +176,8 @@ export function CameraPanel() {
             </>
           )}
         </div>
+          </>
+        )}
 
         <p className="text-xs text-brand-400 font-medium px-1 -mt-1">{compositionLabel}</p>
         </div>

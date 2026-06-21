@@ -1,7 +1,10 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { SplitButton } from '@/components/ui/SplitButton';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
+import { STUDIO_APPS } from '@/lib/constants/studio-apps';
+import { launchStudioApp } from '@/lib/studio/launch-studio-app';
 import {
   getProviderStatus,
   getSelectedImageModelDisplay,
@@ -394,6 +397,8 @@ export function HeaderBar() {
   const resetToDemo = useStudioStore((s) => s.resetToDemo);
   const exportVideo = useStudioStore((s) => s.exportVideo);
   const openSettings = useStudioStore((s) => s.openSettings);
+  const openAppsLauncher = useStudioStore((s) => s.openAppsLauncher);
+  const showToast = useStudioStore((s) => s.showToast);
   const workspaceView = useStudioStore((s) => s.workspaceView);
   const setWorkspaceView = useStudioStore((s) => s.setWorkspaceView);
 
@@ -423,6 +428,21 @@ export function HeaderBar() {
           </div>
           <span className="font-semibold text-lg hidden sm:block">VideoGen</span>
         </div>
+
+        <div className="h-8 w-px bg-surface-600 hidden md:block flex-shrink-0" />
+
+        <SplitButton
+          label="Apps"
+          onPrimaryClick={openAppsLauncher}
+          items={STUDIO_APPS.map((app) => ({
+            id: app.id,
+            label: app.title,
+            onSelect: () => launchStudioApp(app.id, showToast),
+          }))}
+          className="hidden sm:inline-flex flex-shrink-0"
+          primaryUiSection={uiSectionProps(UI_SECTIONS.studioHeaderAppsSplit)}
+          menuUiSection={uiSectionProps(UI_SECTIONS.studioHeaderAppsMenu)}
+        />
 
         <div className="h-8 w-px bg-surface-600 hidden md:block flex-shrink-0" />
 

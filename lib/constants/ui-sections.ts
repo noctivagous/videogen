@@ -13,8 +13,11 @@ export const UI_SECTIONS = {
   studioToast: { id: 'studio-toast', name: 'Toast' },
   studioSettingsModal: { id: 'studio-settings-modal', name: 'Settings Modal' },
   studioProviderEditModal: { id: 'studio-provider-edit-modal', name: 'Provider Edit Modal' },
+  studioAppsLauncherModal: { id: 'studio-apps-launcher-modal', name: 'Apps Launcher Modal' },
 
   studioHeaderBrand: { id: 'studio-header-brand', name: 'Header Brand' },
+  studioHeaderAppsSplit: { id: 'studio-header-apps-split', name: 'Apps Split Button' },
+  studioHeaderAppsMenu: { id: 'studio-header-apps-menu', name: 'Apps Menu' },
   studioHeaderProjectName: { id: 'studio-header-project-name', name: 'Project Name' },
   studioHeaderMediaLibrary: { id: 'studio-header-media-library', name: 'Media Library Button' },
   studioHeaderProviderBadge: { id: 'studio-header-provider-badge', name: 'Provider Badges' },

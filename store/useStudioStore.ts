@@ -58,6 +58,7 @@ import { isWorkflowImplemented } from '@/lib/constants/video-generation-workflow
 import {
   bakeBlobsToDataUrls,
   BAKE_XAI_EDIT_PROMPT,
+  appendBakePromptAdditions,
   persistBakedImageUrl,
   renderBakeFrames,
 } from '@/lib/studio/bake-start-frame';
@@ -373,6 +374,7 @@ interface StudioStore {
   previewSuccessProvider: string;
   previewSuccessPrompt: string;
   settingsOpen: boolean;
+  appsLauncherOpen: boolean;
   providerEdit: { id: string; isCustom: boolean } | null;
   mobileDrawerOpen: boolean;
   initialized: boolean;
@@ -425,6 +427,7 @@ interface StudioStore {
   setMotion: (patch: Partial<MotionSettings>) => void;
   setSceneSetup: (sceneSetup: string) => void;
   setShotActivity: (shotActivity: string) => void;
+  setPromptAdditions: (promptAdditions: string) => void;
   setShotFrameComposition: (patch: Partial<FrameComposition>) => void;
   toggleCompositionOverlay: () => void;
   handleCameraCompositionChange: (
@@ -475,6 +478,8 @@ interface StudioStore {
 
   openSettings: () => void;
   closeSettings: () => void;
+  openAppsLauncher: () => void;
+  closeAppsLauncher: () => void;
   setDefaultVideoProvider: (id: string) => void;
   setDefaultVideoModel: (modelId: string) => void;
   setDefaultImageProvider: (id: string) => void;
@@ -542,6 +547,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   previewSuccessProvider: '',
   previewSuccessPrompt: '',
   settingsOpen: false,
+  appsLauncherOpen: false,
   providerEdit: null,
   mobileDrawerOpen: false,
   initialized: false,
@@ -1146,6 +1152,12 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     set((s) => ({
       shotActivity,
       shots: patchCurrentShot(s.shots, s.currentShot, { shotActivity }),
+    }));
+  },
+
+  setPromptAdditions(promptAdditions) {
+    set((s) => ({
+      shots: patchCurrentShot(s.shots, s.currentShot, { promptAdditions }),
     }));
   },
 
@@ -1861,13 +1873,16 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       const identityPlan = buildIdentityPassPlan(shot, imageUrl, shot.lighting);
       let identityPasses: BakeStartFrameRequest['identityPasses'];
 
+      const promptAdditions = shot.promptAdditions;
+      const pass1Prompt = appendBakePromptAdditions(BAKE_XAI_EDIT_PROMPT, promptAdditions);
+
       if (identityPlan && xaiModelId) {
         identityPasses = identityPlan.passes.map((spec) => ({
           providerId: 'xai',
           isCustom: false,
           apiKey: xaiKey,
           modelId: xaiModelId,
-          prompt: spec.prompt,
+          prompt: appendBakePromptAdditions(spec.prompt, promptAdditions),
           aspectRatio: project.aspectRatio,
           refs: spec.refs,
           cinematographyRefs: false,
@@ -1896,7 +1911,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
             apiKey: xaiKey,
             modelId: xaiModelId,
             imageUrl: compositeUrl,
-            prompt: BAKE_XAI_EDIT_PROMPT,
+            prompt: pass1Prompt,
             aspectRatio: project.aspectRatio,
           },
           identityPasses,
@@ -2504,6 +2519,14 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 
   closeSettings() {
     set({ settingsOpen: false });
+  },
+
+  openAppsLauncher() {
+    set({ appsLauncherOpen: true });
+  },
+
+  closeAppsLauncher() {
+    set({ appsLauncherOpen: false });
   },
 
   setDefaultVideoProvider(id) {

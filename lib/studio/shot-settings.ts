@@ -279,6 +279,7 @@ export function migrateShot(
     motion: { ...defaults.motion, ...shot.motion },
     sceneSetup: stripLegacySceneBoilerplate(shot.sceneSetup ?? shot.prompt ?? defaults.sceneSetup),
     shotActivity: shot.shotActivity ?? '',
+    promptAdditions: shot.promptAdditions ?? '',
     referenceRoles: slotOrderMigrated.referenceRoles,
     references: healStockDemoReferences(
       slotOrderMigrated.references.map((ref, i) => {

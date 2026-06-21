@@ -18,6 +18,7 @@ import { getThemeTransformStatus } from '@/lib/studio/theme-transform';
 import { restrictsReferenceSlotsToFirst } from '@/lib/studio/xai-video-models';
 import { getWorkflowReferenceSteps, isBakeStartFrame } from '@/lib/studio/workflow';
 import { useCharacterAssignmentConnectorContext } from '@/components/studio/ThemeTransformConnectorProvider';
+import { MannequinPlacementControls } from '@/components/studio/MannequinPlacementControls';
 import { ReferenceImageViewerModal } from '@/components/studio/ReferenceImageViewerModal';
 import { countMannequinsLinkedToSlot } from '@/lib/studio/mannequin-character-assignment';
 import type { AspectRatio, ReferenceMode, ThemeTransformSlotStatus } from '@/lib/types/studio';
@@ -72,6 +73,7 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
   const cycleReferenceRole = useStudioStore((s) => s.cycleReferenceRole);
   const setReferenceMode = useStudioStore((s) => s.setReferenceMode);
   const bakeStartFrame = useStudioStore((s) => s.bakeStartFrame);
+  const setPromptAdditions = useStudioStore((s) => s.setPromptAdditions);
   const loadBakedFrameFromAsset = useStudioStore((s) => s.loadBakedFrameFromAsset);
   const invalidateBakedFrame = useStudioStore((s) => s.invalidateBakedFrame);
   const isBakingStartFrame = useStudioStore((s) => s.isBakingStartFrame);
@@ -183,12 +185,7 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
     const isChecklistLockedSlot =
       isBakeStartFrameWorkflow && checklistSlotIndices.has(index);
     const canCycleReferenceRole = autoRoles && !slotDisabled && !isChecklistLockedSlot;
-    const displayLabel =
-      isChecklistLockedSlot && index === subjectSlotIndex
-        ? getReferenceSlotLabel(shot, index, 'Subject')
-        : isChecklistLockedSlot && index === backdropSlotIndex
-          ? getReferenceSlotLabel(shot, index, 'Backdrop')
-          : label;
+    const displayLabel = label;
 
     return (
       <div key={index} className="reference-slot-row">
@@ -239,16 +236,18 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
                   handleFile(index, e.dataTransfer.files[0]);
                 }}
               >
-                <span
-                  className={`reference-label ${canCycleReferenceRole ? '' : 'pointer-events-none cursor-default hover:text-gray-400 hover:border-surface-700'}`}
-                  onClick={(e) => {
-                    if (!canCycleReferenceRole) return;
-                    e.stopPropagation();
-                    cycleReferenceRole(index);
-                  }}
-                >
-                  {displayLabel}
-                </span>
+                {!isChecklistLockedSlot && (
+                  <span
+                    className={`reference-label ${canCycleReferenceRole ? '' : 'pointer-events-none cursor-default hover:text-gray-400 hover:border-surface-700'}`}
+                    onClick={(e) => {
+                      if (!canCycleReferenceRole) return;
+                      e.stopPropagation();
+                      cycleReferenceRole(index);
+                    }}
+                  >
+                    {displayLabel}
+                  </span>
+                )}
 
                 {dragOverIndex === index && (
                   <div className="reference-slot-drop-hint" aria-hidden>
@@ -458,6 +457,114 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
     return null;
   };
 
+  const assetWorkflowSteps = ['backdrop', 'character-sheet']
+    .map((id) => workflowSteps.find((step) => step.id === id))
+    .filter((step): step is (typeof workflowSteps)[number] => step != null);
+  const stagingWorkflowSteps = workflowSteps.filter(
+    (step) => step.id === 'place-mannequins' || step.id === 'assign-characters',
+  );
+  const placeMannequinsStep = stagingWorkflowSteps.find((step) => step.id === 'place-mannequins');
+  const assignCharactersStep = stagingWorkflowSteps.find((step) => step.id === 'assign-characters');
+  const bakeWorkflowStep = workflowSteps.find((step) => step.id === 'bake');
+  const bakeStepNumber = assetWorkflowSteps.length + stagingWorkflowSteps.length + 1;
+
+  const showAssetsFieldset =
+    isBakeStartFrameWorkflow && workflowSteps.length > 0 && assetWorkflowSteps.length > 0;
+  const showStagingFieldset =
+    isBakeStartFrameWorkflow && workflowSteps.length > 0 && stagingWorkflowSteps.length > 0;
+
+  let topLevelFieldsetOrder = 0;
+  const nextTopLevelFieldsetOrder = () => {
+    topLevelFieldsetOrder += 1;
+    return topLevelFieldsetOrder;
+  };
+
+  const assetsFieldsetOrder = showAssetsFieldset ? nextTopLevelFieldsetOrder() : null;
+  const stagingFieldsetOrder = showStagingFieldset ? nextTopLevelFieldsetOrder() : null;
+  const additionalResourcesFieldsetOrder = nextTopLevelFieldsetOrder();
+  const bakeFieldsetOrder = isBakeStartFrameWorkflow ? nextTopLevelFieldsetOrder() : null;
+
+  const renderTopLevelFieldsetLegend = (order: number, label: string) => (
+    <legend className="workflow-step-fieldset__legend flex items-center gap-1.5">
+      <span className="workflow-step-fieldset__legend-order" aria-hidden="true">
+        {order}
+      </span>
+      {label}
+    </legend>
+  );
+
+  const renderWorkflowStep = (
+    step: (typeof workflowSteps)[number],
+    stepNumber: number,
+  ) => {
+    const slotIndex = checklistSlotIndexForStep(step.id);
+    return (
+      <li key={step.id} className="flex flex-col gap-1.5">
+        <div className="flex items-center gap-1.5">
+          <span
+            className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
+              step.done ? 'bg-brand-500/30 text-brand-300' : 'bg-surface-700 text-gray-500'
+            }`}
+          >
+            {step.done ? '✓' : stepNumber}
+          </span>
+          <span className={step.done ? 'text-gray-300' : ''}>{step.label}</span>
+        </div>
+        {slotIndex != null && slotIndex >= 0 && renderReferenceSlotRow(slotIndex)}
+      </li>
+    );
+  };
+
+  const renderStagingFieldset = (startNumber: number, fieldsetOrder: number) => {
+    if (stagingWorkflowSteps.length === 0) return null;
+
+    return (
+      <fieldset className="workflow-step-fieldset">
+        {renderTopLevelFieldsetLegend(fieldsetOrder, 'Staging, Blocking, and Framing')}
+        {placeMannequinsStep && (
+          <fieldset className="workflow-step-fieldset workflow-step-fieldset--nested">
+            <legend className="workflow-step-fieldset__legend flex items-center gap-1.5">
+              <span
+                className={`inline-flex w-4 h-4 rounded-full items-center justify-center text-[9px] font-bold ${
+                  placeMannequinsStep.done ? 'bg-brand-500/30 text-brand-300' : 'bg-surface-700 text-gray-500'
+                }`}
+              >
+                {placeMannequinsStep.done ? '✓' : startNumber}
+              </span>
+              Place Mannequins
+            </legend>
+            <MannequinPlacementControls />
+          </fieldset>
+        )}
+        {assignCharactersStep && (
+          <ol className="workflow-steps flex flex-col gap-2 text-[10px] text-gray-400 mt-2">
+            {renderWorkflowStep(
+              assignCharactersStep,
+              startNumber + (placeMannequinsStep ? 1 : 0),
+            )}
+          </ol>
+        )}
+      </fieldset>
+    );
+  };
+
+  const renderWorkflowStepFieldset = (
+    legend: string,
+    steps: typeof workflowSteps,
+    startNumber = 1,
+    fieldsetOrder: number,
+  ) => {
+    if (steps.length === 0) return null;
+    return (
+      <fieldset className="workflow-step-fieldset">
+        {renderTopLevelFieldsetLegend(fieldsetOrder, legend)}
+        <ol className="workflow-steps flex flex-col gap-2 text-[10px] text-gray-400">
+          {steps.map((step, index) => renderWorkflowStep(step, startNumber + index))}
+        </ol>
+      </fieldset>
+    );
+  };
+
   return (
     <>
     <div className="flex flex-col gap-1.5">
@@ -480,66 +587,21 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
           </select>
         )}
         {isBakeStartFrameWorkflow && workflowSteps.length > 0 && (
-          <ol
-            className="workflow-steps flex flex-col gap-2 text-[10px] text-gray-400"
+          <div
+            className="workflow-checklist flex flex-col gap-3"
             aria-label="Bake start frame workflow"
           >
-            {workflowSteps.map((step, i) => {
-              const slotIndex = checklistSlotIndexForStep(step.id);
-              return (
-                <li key={step.id} className="flex flex-col gap-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
-                        step.done ? 'bg-brand-500/30 text-brand-300' : 'bg-surface-700 text-gray-500'
-                      }`}
-                    >
-                      {step.done ? '✓' : i + 1}
-                    </span>
-                    <span className={step.done ? 'text-gray-300' : ''}>{step.label}</span>
-                  </div>
-                  {slotIndex != null && slotIndex >= 0 && renderReferenceSlotRow(slotIndex)}
-                </li>
-              );
-            })}
-          </ol>
-        )}
-        {hasInterruptedBake && lastSavedBakeId && (
-          <p className="text-[10px] text-[#242424]">
-            Previous bake saved to Assets.{' '}
-            <button
-              type="button"
-              className="text-brand-400 hover:text-brand-300 underline-offset-2 hover:underline"
-              onClick={() => loadBakedFrameFromAsset(lastSavedBakeId)}
-            >
-              Load saved bake
-            </button>
-          </p>
-        )}
-        {isBakeStartFrameWorkflow && (
-          bakeReady ? (
-            <button
-              type="button"
-              onClick={() => invalidateBakedFrame()}
-              disabled={isBakingStartFrame}
-              className="w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-lg bg-surface-700 hover:bg-surface-600 disabled:opacity-40 text-gray-200 border border-surface-600"
-            >
-              Invalidate Baked Frame
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => bakeStartFrame()}
-              disabled={isBakingStartFrame || workflowSteps.some((s) => !s.done && s.id !== 'bake')}
-              className="w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-lg bg-brand-600 hover:bg-brand-500 disabled:opacity-40 text-white"
-            >
-              {isBakingStartFrame ? 'Baking…' : 'Bake Start Frame'}
-            </button>
-          )
+            {assetsFieldsetOrder != null &&
+              renderWorkflowStepFieldset('Assets', assetWorkflowSteps, 1, assetsFieldsetOrder)}
+            {stagingFieldsetOrder != null &&
+              renderStagingFieldset(assetWorkflowSteps.length + 1, stagingFieldsetOrder)}
+          </div>
         )}
       </div>
 
-      <div className="reference-slots-stack flex flex-col gap-2">
+      <fieldset className="workflow-step-fieldset">
+        {renderTopLevelFieldsetLegend(additionalResourcesFieldsetOrder, 'Additional Resources')}
+        <div className="reference-slots-stack flex flex-col gap-2">
         {stackSlotIndices.map((index) => renderReferenceSlotRow(index))}
 
         <button
@@ -558,7 +620,67 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
         {hasAnyImage && (
           <span className="sr-only">Reference images attached</span>
         )}
-      </div>
+        </div>
+
+        {isBakeStartFrameWorkflow && (
+          <label className="reference-prompt-additions flex flex-col gap-1 mt-2">
+            <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-400">
+              Prompt additions:
+            </span>
+            <textarea
+              value={shot.promptAdditions ?? ''}
+              onChange={(e) => setPromptAdditions(e.target.value)}
+              rows={3}
+              className="reference-prompt-additions__input w-full rounded-lg border border-surface-600 bg-surface-800 px-2.5 py-2 text-[11px] text-gray-200 outline-none focus:ring-2 focus:ring-brand-500 resize-none min-h-[4.5rem]"
+              placeholder="Optional text appended to the bake prompt…"
+            />
+          </label>
+        )}
+      </fieldset>
+
+      {isBakeStartFrameWorkflow && bakeFieldsetOrder != null && (
+        <fieldset className="workflow-step-fieldset">
+          {renderTopLevelFieldsetLegend(bakeFieldsetOrder, 'Bake')}
+          {bakeWorkflowStep && (
+            <ol className="workflow-steps flex flex-col gap-2 text-[10px] text-gray-400 mb-2">
+              {renderWorkflowStep(bakeWorkflowStep, bakeStepNumber)}
+            </ol>
+          )}
+          <div className="reference-bake-actions flex flex-col gap-1.5">
+            {hasInterruptedBake && lastSavedBakeId && (
+              <p className="text-[10px] text-[#242424]">
+                Previous bake saved to Assets.{' '}
+                <button
+                  type="button"
+                  className="text-brand-400 hover:text-brand-300 underline-offset-2 hover:underline"
+                  onClick={() => loadBakedFrameFromAsset(lastSavedBakeId)}
+                >
+                  Load saved bake
+                </button>
+              </p>
+            )}
+            {bakeReady ? (
+              <button
+                type="button"
+                onClick={() => invalidateBakedFrame()}
+                disabled={isBakingStartFrame}
+                className="w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-lg bg-surface-700 hover:bg-surface-600 disabled:opacity-40 text-gray-200 border border-surface-600"
+              >
+                Invalidate Baked Frame
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => bakeStartFrame()}
+                disabled={isBakingStartFrame || workflowSteps.some((s) => !s.done && s.id !== 'bake')}
+                className="w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-lg bg-brand-600 hover:bg-brand-500 disabled:opacity-40 text-white"
+              >
+                {isBakingStartFrame ? 'Baking…' : 'Bake Start Frame'}
+              </button>
+            )}
+          </div>
+        </fieldset>
+      )}
     </div>
 
     <ReferenceImageViewerModal
