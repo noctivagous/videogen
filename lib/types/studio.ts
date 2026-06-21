@@ -10,6 +10,27 @@ export type SubjectCount = '1s' | '2s' | '3s' | 'group' | 'crowd';
 
 export type Coverage = 'clean' | 'dirty-single' | 'ots' | 'one-half' | 'pov';
 
+/** Multi-subject blocking layout — replaces Coverage for 2S/3S/Group. */
+export type TwoShotArrangement =
+  | 'two-shot-clean'
+  | 'two-shot-dirty'
+  | 'ots-left'
+  | 'ots-right'
+  | 'profile'
+  | 'staggered';
+
+export type ThreeShotArrangement =
+  | 'three-shot-clean'
+  | 'three-shot-staggered'
+  | 'three-shot-ots'
+  | 'three-shot-triangle';
+
+export type GroupArrangement = 'lineup' | 'conversation-circle' | 'walk-and-talk';
+
+export type SubjectArrangement = TwoShotArrangement | ThreeShotArrangement | GroupArrangement;
+
+export type CrowdDensity = 'sparse' | 'medium' | 'packed';
+
 export type LensType = 'wide' | 'standard' | 'telephoto' | 'macro' | 'fisheye' | 'anamorphic';
 
 export type CameraAngle =
@@ -124,6 +145,14 @@ export interface CameraSettings {
   fieldSize: FieldSize;
   subjectCount: SubjectCount;
   coverage: Coverage;
+  /** Blocking layout for 2S/3S/Group — ignored for 1S (uses coverage) and crowd. */
+  arrangement: SubjectArrangement;
+  /** Crowd shot density — only applies when subjectCount is crowd. */
+  crowdDensity: CrowdDensity;
+  /** Group extras beyond 4 identity sheets use generic figures in bake. */
+  fillRestWithGenerics: boolean;
+  /** Crowd: optional recognizable heroes baked from character sheets. */
+  heroSubjectsEnabled: boolean;
   lensType: LensType;
   focalLength: number;
   angle: CameraAngle;
@@ -334,6 +363,8 @@ export interface Shot {
   lightingAtmospherePrompt?: string;
   /** User-edited bake start frame prompt (pass 1 inpaint). */
   bakeStartFramePrompt?: string;
+  /** Crowd type description for bake/video prompts (e.g. "concert audience"). */
+  crowdTypePrompt?: string;
   /** @deprecated migrated to sceneSetup on load */
   prompt?: string;
   references: (string | null)[];

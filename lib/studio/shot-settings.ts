@@ -1,3 +1,5 @@
+import { normalizeArrangement as normalizeSubjectArrangement } from '@/lib/constants/arrangement-options';
+import { normalizeCrowdDensity } from '@/lib/constants/crowd-density-options';
 import {
   DEFAULT_FRAME_COMPOSITION,
   LEGACY_FIELD_SIZE_MIGRATION,
@@ -64,8 +66,13 @@ export function migrateCamera(camera: CameraSettings): CameraSettings {
   const migrated = legacy ? { ...camera, ...legacy } : { ...camera };
   if (!migrated.subjectCount) migrated.subjectCount = '1s';
   if (!migrated.coverage) migrated.coverage = 'clean';
+  const subjectCount = migrated.subjectCount;
   return {
     ...migrated,
+    arrangement: normalizeSubjectArrangement(subjectCount, migrated.arrangement),
+    crowdDensity: normalizeCrowdDensity(migrated.crowdDensity),
+    fillRestWithGenerics: migrated.fillRestWithGenerics ?? true,
+    heroSubjectsEnabled: migrated.heroSubjectsEnabled ?? false,
     promptInclusion: normalizeCameraPromptInclusion(migrated.promptInclusion),
   };
 }

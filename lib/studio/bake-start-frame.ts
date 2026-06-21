@@ -8,6 +8,8 @@ import {
 } from '@/lib/studio/backdrop-framing';
 import { parseResolution } from '@/lib/studio/generation/adapters/shared';
 import { buildIdentityPassPlan } from '@/lib/studio/bake-identity-pass';
+import { CROWD_DENSITY_PROMPT_LABELS } from '@/lib/constants/crowd-density-options';
+import { ARRANGEMENT_PROMPT_LABELS } from '@/lib/constants/arrangement-options';
 import type { AspectRatio, LightingSettings, Mannequin, Shot } from '@/lib/types/studio';
 
 export interface BakeFrameOutput {
@@ -227,17 +229,47 @@ export function appendBakePromptAdditions(
   return `${basePrompt.trimEnd()} ${extra}`;
 }
 
+export function augmentBakePass1Prompt(basePrompt: string, shot: Shot): string {
+  const parts = [basePrompt.trimEnd()];
+  const { camera } = shot;
+
+  if (['2s', '3s', 'group'].includes(camera.subjectCount)) {
+    const arrangement = ARRANGEMENT_PROMPT_LABELS[camera.arrangement];
+    if (arrangement) parts.push(arrangement);
+  }
+
+  if (camera.subjectCount === 'group' && camera.fillRestWithGenerics) {
+    parts.push('Fill remaining figures with generic background people, varied outfits');
+  }
+
+  if (camera.subjectCount === 'crowd') {
+    parts.push(CROWD_DENSITY_PROMPT_LABELS[camera.crowdDensity]);
+    const crowdType = shot.crowdTypePrompt?.trim();
+    if (crowdType) parts.push(crowdType);
+  }
+
+  return parts.filter(Boolean).join(' ');
+}
+
 export function resolveBakeStartFramePass1Prompt(shot: {
   promptAdditions?: string | null;
   bakeStartFramePrompt?: string | null;
+  camera?: Shot['camera'];
+  crowdTypePrompt?: string | null;
 }): string {
   const override = shot.bakeStartFramePrompt?.trim();
+  let base: string;
   if (override) {
     const pass1Match = override.match(/^Pass 1[^\n]*\n([\s\S]*?)(?:\n\nPass \d|$)/);
-    if (pass1Match) return pass1Match[1].trim();
-    return override;
+    base = pass1Match ? pass1Match[1].trim() : override;
+  } else {
+    base = appendBakePromptAdditions(BAKE_XAI_EDIT_PROMPT, shot.promptAdditions);
   }
-  return appendBakePromptAdditions(BAKE_XAI_EDIT_PROMPT, shot.promptAdditions);
+
+  if (shot.camera) {
+    return augmentBakePass1Prompt(base, shot as Shot);
+  }
+  return base;
 }
 
 export function buildBakeStartFramePromptPreview(

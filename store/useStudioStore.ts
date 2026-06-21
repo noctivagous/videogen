@@ -1,7 +1,15 @@
 'use client';
 
 import { create } from 'zustand';
-import { DEFAULT_FRAME_COMPOSITION, normalizeReferenceRole, SINGLE_ONLY_COVERAGE } from '@/lib/constants/camera';
+import {
+  defaultArrangementForSubjectCount,
+  normalizeArrangement,
+} from '@/lib/constants/arrangement-options';
+import {
+  DEFAULT_FRAME_COMPOSITION,
+  normalizeReferenceRole,
+  SINGLE_ONLY_COVERAGE,
+} from '@/lib/constants/camera';
 import { getDefaultEnabledProviderId, isBuiltInProviderEnabled } from '@/lib/constants/providers';
 import { apertureForDof, dofFromAperture, snapToApertureStop } from '@/lib/constants/aperture';
 import { kelvinToWarmth, warmthToKelvin } from '@/lib/constants/color-palette';
@@ -82,6 +90,10 @@ import {
   syncMannequinsFromShot,
   type MannequinSyncReason,
 } from '@/lib/studio/mannequin-sync';
+import {
+  ensureSubjectChecklistSlots,
+  getRemovedSubjectChecklistSlots,
+} from '@/lib/studio/subject-sheet-slots';
 import {
   resolveReferenceSlotInvalidation,
   resolveWorkflowInvalidation,
@@ -430,11 +442,28 @@ interface StudioStore {
   setPromptAdditions: (promptAdditions: string) => void;
   setLightingAtmospherePrompt: (lightingAtmospherePrompt: string) => void;
   setBakeStartFramePrompt: (bakeStartFramePrompt: string) => void;
+  setCrowdTypePrompt: (crowdTypePrompt: string) => void;
   setShotFrameComposition: (patch: Partial<FrameComposition>) => void;
   toggleCompositionOverlay: () => void;
   handleCameraCompositionChange: (
-    changed: 'subjectCount' | 'coverage',
-    patch: Partial<Pick<CameraSettings, 'subjectCount' | 'coverage'>>,
+    changed:
+      | 'subjectCount'
+      | 'coverage'
+      | 'arrangement'
+      | 'crowdDensity'
+      | 'fillRestWithGenerics'
+      | 'heroSubjectsEnabled',
+    patch: Partial<
+      Pick<
+        CameraSettings,
+        | 'subjectCount'
+        | 'coverage'
+        | 'arrangement'
+        | 'crowdDensity'
+        | 'fillRestWithGenerics'
+        | 'heroSubjectsEnabled'
+      >
+    >,
   ) => void;
 
   selectShot: (id: number) => void;
@@ -1175,6 +1204,12 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     }));
   },
 
+  setCrowdTypePrompt(crowdTypePrompt) {
+    set((s) => ({
+      shots: patchCurrentShot(s.shots, s.currentShot, { crowdTypePrompt }),
+    }));
+  },
+
   setShotFrameComposition(patch) {
     const shot = get().getCurrentShot();
     if (!shot) return;
@@ -1226,11 +1261,17 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       next.subjectCount = '1s';
     }
 
-    if (changed === 'subjectCount' && next.subjectCount !== '1s') {
-      if (SINGLE_ONLY_COVERAGE.has(next.coverage)) {
+    if (changed === 'subjectCount') {
+      if (next.subjectCount !== '1s' && SINGLE_ONLY_COVERAGE.has(next.coverage)) {
         next.coverage = 'clean';
       }
+      next.arrangement = defaultArrangementForSubjectCount(next.subjectCount);
+      if (next.subjectCount === 'crowd') {
+        next.heroSubjectsEnabled = false;
+      }
     }
+
+    next.arrangement = normalizeArrangement(next.subjectCount, next.arrangement);
 
     const frameComposition = { ...prevShot.frameComposition };
     applyFrameCompositionSmartDefaults(next, frameComposition);
@@ -1243,12 +1284,38 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       (get().project.aspectRatio || '16:9') as AspectRatio,
     );
 
+    let mergedShot: Shot = {
+      ...nextShot,
+      ...resync,
+      mannequins: resync.mannequins ?? nextShot.mannequins,
+    };
+
+    const slotPatch = ensureSubjectChecklistSlots(mergedShot);
+    if (slotPatch) {
+      mergedShot = { ...mergedShot, ...slotPatch };
+    }
+
+    const removedSubjectSlots = getRemovedSubjectChecklistSlots(prevShot, mergedShot);
+    if (removedSubjectSlots.length > 0 && mergedShot.mannequins?.length) {
+      let mannequins = migrateMannequins(mergedShot.mannequins);
+      for (const slotIndex of removedSubjectSlots) {
+        mannequins = clearMannequinAssignmentsForSlot(mannequins, slotIndex);
+      }
+      mergedShot = { ...mergedShot, mannequins };
+    }
+
+    const invalidation = splitInvalidationPatch(
+      resolveWorkflowInvalidation(prevShot, { kind: 'mannequin_layout_changed' }),
+    );
+
     set({
       camera: next,
       shots: patchCurrentShot(shots, currentShot, {
         camera: next,
         frameComposition,
-        ...resync,
+        mannequins: mergedShot.mannequins,
+        ...slotPatch,
+        ...invalidation.shotPatch,
       }),
     });
   },
@@ -1655,11 +1722,13 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       (switchPatch.mannequins?.length ?? 0) > 0
         ? switchPatch.mannequins
         : ensureMannequinsOnShot(nextShot);
+    const slotPatch = enableBakeStart ? ensureSubjectChecklistSlots({ ...nextShot, mannequins }) : null;
     set((s) => ({
       shots: patchCurrentShot(s.shots, s.currentShot, {
         ...switchPatch,
         workflow,
         mannequins,
+        ...(slotPatch ?? {}),
       }),
       previewSubMode: enableBakeStart ? 'framing' : s.previewSubMode,
     }));

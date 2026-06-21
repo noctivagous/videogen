@@ -45,7 +45,12 @@ import {
   isPrincipalMannequin,
   isValidSubjectSlotAssignment,
 } from '@/lib/studio/mannequin-character-assignment';
+import {
+  getSubjectSlotDisplayLabel,
+  getSubjectSlotOrdinal,
+} from '@/lib/studio/subject-sheet-slots';
 import { getReferenceSlotLabel } from '@/lib/studio/reference-slots';
+import { isBakeStartFrame } from '@/lib/studio/workflow';
 import { openContextMenu } from '@/components/ui/ContextMenuManager';
 import type { AspectRatio, Mannequin } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
@@ -610,9 +615,16 @@ export function MannequinPlacementLayer({
                     const role = normalizeReferenceRole(
                       shot?.referenceRoles[slotIndex] ?? 'Subject',
                     );
-                    const label = shot
-                      ? getReferenceSlotLabel(shot, slotIndex, role)
-                      : `Subject ${slotIndex + 1}`;
+                    const ordinal =
+                      shot && isBakeStartFrame(shot)
+                        ? getSubjectSlotOrdinal(shot, slotIndex)
+                        : null;
+                    const label =
+                      shot && ordinal != null
+                        ? getSubjectSlotDisplayLabel(shot, slotIndex, ordinal)
+                        : shot
+                          ? getReferenceSlotLabel(shot, slotIndex, role)
+                          : `Subject ${slotIndex + 1}`;
                     return (
                       <option key={slotIndex} value={slotIndex}>
                         {label}

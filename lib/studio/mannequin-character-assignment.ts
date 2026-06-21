@@ -1,5 +1,9 @@
 import { normalizeReferenceRole } from '@/lib/constants/camera';
 import { getReferenceSlotCount } from '@/lib/studio/reference-slots';
+import {
+  areSubjectSheetsComplete,
+  getSubjectSheetSlotCount,
+} from '@/lib/studio/subject-sheet-slots';
 import { migrateMannequin, migrateMannequins } from '@/lib/studio/migrate-mannequin';
 import type { LightingSettings, Mannequin, Shot } from '@/lib/types/studio';
 import { effectiveReferenceUrl } from '@/lib/studio/theme-transform';
@@ -103,12 +107,17 @@ export function getAssignedMannequins(shot: Shot, lighting?: LightingSettings): 
 
 /** Principal cast size from placed mannequins, or expected count from camera before seed. */
 export function getExpectedPrincipalCount(shot: Shot): number {
-  if (shot.camera.subjectCount === '1s') return 1;
   switch (shot.camera.subjectCount) {
+    case '1s':
+      return 1;
     case '2s':
       return 2;
     case '3s':
       return 3;
+    case 'group':
+      return 4;
+    case 'crowd':
+      return shot.camera.heroSubjectsEnabled ? 2 : 0;
     default:
       return 1;
   }
@@ -116,11 +125,19 @@ export function getExpectedPrincipalCount(shot: Shot): number {
 
 export function getRequiredSubjectSheetCount(shot: Shot): number {
   const principals = getPrincipalMannequins(shot.mannequins);
-  return principals.length > 0 ? principals.length : getExpectedPrincipalCount(shot);
+  if (principals.length > 0) return principals.length;
+  if (shot.workflow === 'bake-start-frame') {
+    return getSubjectSheetSlotCount(shot);
+  }
+  return getExpectedPrincipalCount(shot);
 }
 
 export function areCharacterSheetsComplete(shot: Shot, lighting?: LightingSettings): boolean {
+  if (shot.workflow === 'bake-start-frame') {
+    return areSubjectSheetsComplete(shot, lighting);
+  }
   const required = getRequiredSubjectSheetCount(shot);
+  if (required === 0) return true;
   return getSubjectSlotIndices(shot, lighting).length >= required;
 }
 
@@ -129,10 +146,14 @@ export function requiresCharacterAssignment(shot: Shot, lighting?: LightingSetti
 }
 
 export function isCharacterAssignmentComplete(shot: Shot, lighting?: LightingSettings): boolean {
+  if (shot.camera.subjectCount === 'crowd' && !shot.camera.heroSubjectsEnabled) {
+    return true;
+  }
+
   const principals = getPrincipalMannequins(shot.mannequins);
   if (principals.length === 0) return false;
   const subjectSlots = getSubjectSlotIndices(shot, lighting);
-  if (subjectSlots.length === 0) return false;
+  if (subjectSlots.length === 0) return shot.camera.subjectCount === 'crowd';
   return principals.every((m) => isValidSubjectSlotAssignment(shot, m.subjectSlotIndex, lighting));
 }
 

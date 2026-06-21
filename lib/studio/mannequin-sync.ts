@@ -5,11 +5,12 @@ import { getFigureCount } from '@/lib/studio/blocking-layout';
 import { getShotFrameComposition } from '@/lib/studio/composition';
 import { migrateMannequins } from '@/lib/studio/migrate-mannequin';
 import { createDefaultMannequin, getMannequinLimit } from '@/lib/studio/mannequin-factory';
+import { layoutFromCamera } from '@/lib/studio/mannequin-layouts';
 import {
   sanitizeMannequinSubjectSlots,
   tryAutoAssignSingleSubject,
 } from '@/lib/studio/mannequin-character-assignment';
-import type { AspectRatio, Mannequin, MannequinAngle, Shot } from '@/lib/types/studio';
+import type { AspectRatio, Mannequin, Shot } from '@/lib/types/studio';
 
 export type MannequinSyncReason = 'seed' | 'camera' | 'placement';
 
@@ -66,14 +67,6 @@ export function getLayoutAnchor(
   };
 }
 
-function pctX(value: number): number {
-  return value / 100;
-}
-
-function pctY(value: number): number {
-  return value / 100;
-}
-
 export function buildDefaultMannequins(
   shot: Shot,
   aspectRatio: AspectRatio = '16:9',
@@ -86,107 +79,7 @@ export function buildDefaultMannequins(
   const groupScale = isCrowd ? 0.85 : 1;
   const scale = fieldScale * groupScale;
 
-  if (camera.coverage === 'pov' && count <= 1) {
-    return [];
-  }
-
-  if (count === 1 && camera.coverage !== 'dirty-single') {
-    return [createDefaultMannequin({ x: anchorX, y: feetY, scale })];
-  }
-
-  if (count === 2 && camera.subjectCount === '1s' && camera.coverage === 'dirty-single') {
-    return [
-      createDefaultMannequin({ x: anchorX, y: feetY, scale }),
-      createDefaultMannequin({
-        x: Math.min(0.92, anchorX + 0.18),
-        y: feetY,
-        scale: scale * 1.1,
-        opacity: 0.3,
-        angle: 'threeQuarterLeft',
-        rotation: -15,
-      }),
-    ];
-  }
-
-  if (count === 2) {
-    if (camera.coverage === 'ots') {
-      return [
-        createDefaultMannequin({
-          x: pctX(18),
-          y: feetY,
-          scale: scale * 1.35,
-          rotation: -25,
-          angle: 'threeQuarterRight',
-        }),
-        createDefaultMannequin({
-          x: anchorX,
-          y: feetY,
-          scale: scale * 0.9,
-          rotation: 15,
-          angle: 'threeQuarterLeft',
-        }),
-      ];
-    }
-
-    if (camera.coverage === 'one-half') {
-      return [
-        createDefaultMannequin({ x: anchorX, y: pctY(feetY * 100 - 2), scale }),
-        createDefaultMannequin({
-          x: anchorX,
-          y: pctY(feetY * 100 + 14),
-          scale: scale * 0.92,
-        }),
-      ];
-    }
-
-    return [
-      createDefaultMannequin({
-        x: anchorX - 0.12,
-        y: feetY,
-        scale,
-        rotation: -12,
-        angle: 'threeQuarterRight',
-      }),
-      createDefaultMannequin({
-        x: anchorX + 0.12,
-        y: feetY,
-        scale,
-        rotation: 12,
-        angle: 'threeQuarterLeft',
-      }),
-    ];
-  }
-
-  if (count === 3) {
-    return [
-      createDefaultMannequin({ x: anchorX - 0.14, y: feetY, scale, rotation: -12 }),
-      createDefaultMannequin({ x: anchorX, y: feetY, scale }),
-      createDefaultMannequin({ x: anchorX + 0.14, y: feetY, scale, rotation: 12 }),
-    ];
-  }
-
-  const cols = isCrowd ? 5 : count;
-  const spacing = isCrowd ? 9 : 11;
-  const anchorPctX = anchorX * 100;
-  const feetPctY = feetY * 100;
-  const startX = anchorPctX - ((cols - 1) * spacing) / 2;
-  const mannequins: Mannequin[] = [];
-
-  for (let i = 0; i < count; i++) {
-    const row = Math.floor(i / cols);
-    const col = i % cols;
-    mannequins.push(
-      createDefaultMannequin({
-        x: pctX(startX + col * spacing),
-        y: pctY(feetPctY + row * 8),
-        scale,
-        rotation: 0,
-        angle: (isCrowd ? 'threeQuarterLeft' : 'front') as MannequinAngle,
-      }),
-    );
-  }
-
-  return mannequins;
+  return layoutFromCamera(camera, { anchorX, feetY, scale }, count);
 }
 
 export function isNearLayoutDefault(mannequin: Mannequin, layoutDefault: Mannequin): boolean {
@@ -198,6 +91,18 @@ export function isNearLayoutDefault(mannequin: Mannequin, layoutDefault: Mannequ
 
 function sortByX(mannequins: Mannequin[]): Mannequin[] {
   return [...mannequins].sort((a, b) => a.x - b.x);
+}
+
+function layoutDrivingFieldsChanged(prevShot: Shot, shot: Shot): boolean {
+  const prev = prevShot.camera;
+  const next = shot.camera;
+  return (
+    prev.subjectCount !== next.subjectCount ||
+    prev.coverage !== next.coverage ||
+    prev.arrangement !== next.arrangement ||
+    prev.crowdDensity !== next.crowdDensity ||
+    prev.fillRestWithGenerics !== next.fillRestWithGenerics
+  );
 }
 
 function smartResyncMannequins(
@@ -212,8 +117,7 @@ function smartResyncMannequins(
   const sortedExisting = sortByX(migrateMannequins(existing));
 
   const countChanged = getMannequinLimit(prevShot) !== getMannequinLimit(shot);
-  const coverageChanged = prevShot.camera.coverage !== shot.camera.coverage;
-  const subjectCountChanged = prevShot.camera.subjectCount !== shot.camera.subjectCount;
+  const layoutChanged = layoutDrivingFieldsChanged(prevShot, shot);
   const fieldSizeChanged = prevShot.camera.fieldSize !== shot.camera.fieldSize;
   const placementChanged =
     reason === 'placement' ||
@@ -221,8 +125,7 @@ function smartResyncMannequins(
     prevShot.frameComposition.headroom !== shot.frameComposition.headroom ||
     prevShot.frameComposition.guide !== shot.frameComposition.guide;
 
-  const forceLayoutCount =
-    countChanged || coverageChanged || subjectCountChanged;
+  const forceLayoutCount = countChanged || layoutChanged;
   const layoutCount = forceLayoutCount ? targetDefaults.length : sortedExisting.length;
 
   const merged: Mannequin[] = [];
@@ -254,7 +157,7 @@ function smartResyncMannequins(
       angle: prev.angle,
     };
 
-    if (countChanged || coverageChanged || subjectCountChanged) {
+    if (countChanged || layoutChanged) {
       if (nearDefault) {
         next = {
           ...def,

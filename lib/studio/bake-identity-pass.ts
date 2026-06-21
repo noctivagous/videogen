@@ -67,6 +67,49 @@ function buildPassForAssignments(
   };
 }
 
+function buildSequentialPlan(
+  shot: Shot,
+  assigned: Mannequin[],
+  bakedSceneUrl: string,
+): BakeIdentityPassPlan | null {
+  if (assigned.length <= 2) {
+    const spec = buildPassForAssignments(shot, assigned, bakedSceneUrl, assigned);
+    return spec ? { passes: [spec] } : null;
+  }
+
+  if (assigned.length === 3) {
+    const firstTwo = assigned.slice(0, 2);
+    const third = assigned[2];
+    const pass1 = buildPassForAssignments(shot, firstTwo, bakedSceneUrl, assigned);
+    if (!pass1 || third.subjectSlotIndex == null) return null;
+
+    const thirdUrl = subjectSheetUrl(shot, third.subjectSlotIndex);
+    if (!thirdUrl) return null;
+
+    const pass2Refs: GenerationRef[] = [
+      { role: 'Backdrop', url: bakedSceneUrl, slotIndex: -1 },
+      { role: 'Subject', url: thirdUrl, slotIndex: third.subjectSlotIndex },
+    ];
+    const pass2: BakeIdentityPassSpec = {
+      prompt: buildMultiSubjectBakeIdentityPrompt(
+        buildIdentityAssignments([third], assigned),
+        '<IMAGE_0>',
+      ),
+      refs: pass2Refs,
+    };
+
+    return { passes: [pass1, pass2] };
+  }
+
+  const firstTwo = assigned.slice(0, 2);
+  const nextTwo = assigned.slice(2, 4);
+  const pass1 = buildPassForAssignments(shot, firstTwo, bakedSceneUrl, assigned);
+  const pass2 = buildPassForAssignments(shot, nextTwo, bakedSceneUrl, assigned);
+  if (!pass1 || !pass2) return null;
+
+  return { passes: [pass1, pass2] };
+}
+
 /** Builds sequential Pass 2 specs from mannequin → sheet assignments. Returns null when no principals are assigned. */
 export function buildIdentityPassPlan(
   shot: Shot,
@@ -75,31 +118,5 @@ export function buildIdentityPassPlan(
 ): BakeIdentityPassPlan | null {
   const assigned = getAssignedMannequins(shot, _lighting).sort((a, b) => a.x - b.x);
   if (assigned.length === 0) return null;
-
-  if (assigned.length <= 2) {
-    const spec = buildPassForAssignments(shot, assigned, bakedSceneUrl, assigned);
-    return spec ? { passes: [spec] } : null;
-  }
-
-  const firstTwo = assigned.slice(0, 2);
-  const third = assigned[2];
-  const pass1 = buildPassForAssignments(shot, firstTwo, bakedSceneUrl, assigned);
-  if (!pass1 || third.subjectSlotIndex == null) return null;
-
-  const thirdUrl = subjectSheetUrl(shot, third.subjectSlotIndex);
-  if (!thirdUrl) return null;
-
-  const pass2Refs: GenerationRef[] = [
-    { role: 'Backdrop', url: bakedSceneUrl, slotIndex: -1 },
-    { role: 'Subject', url: thirdUrl, slotIndex: third.subjectSlotIndex },
-  ];
-  const pass2: BakeIdentityPassSpec = {
-    prompt: buildMultiSubjectBakeIdentityPrompt(
-      buildIdentityAssignments([third], assigned),
-      '<IMAGE_0>',
-    ),
-    refs: pass2Refs,
-  };
-
-  return { passes: [pass1, pass2] };
+  return buildSequentialPlan(shot, assigned, bakedSceneUrl);
 }

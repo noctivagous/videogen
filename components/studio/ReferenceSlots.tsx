@@ -20,7 +20,12 @@ import { restrictsReferenceSlotsToFirst } from '@/lib/studio/xai-video-models';
 import { getWorkflowReferenceSteps, isBakeStartFrame } from '@/lib/studio/workflow';
 import { useCharacterAssignmentConnectorContext } from '@/components/studio/ThemeTransformConnectorProvider';
 import { BackdropFramingLockButton } from '@/components/studio/BackdropFramingLockButton';
-import { CharacterSheetCompositionControls } from '@/components/studio/CharacterSheetCompositionControls';
+import { SubjectsFieldset } from '@/components/studio/SubjectsFieldset';
+import {
+  getSubjectChecklistSlotIndices,
+  getSubjectSlotDisplayLabel,
+  getSubjectSlotOrdinal,
+} from '@/lib/studio/subject-sheet-slots';
 import { LightingAtmosphereSfxFieldset } from '@/components/studio/LightingAtmosphereSfxFieldset';
 import { MannequinAssignmentTable } from '@/components/studio/MannequinAssignmentTable';
 import { MannequinPlacementControls } from '@/components/studio/MannequinPlacementControls';
@@ -157,7 +162,9 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
     isBakeStartFrameWorkflow && !bakeReady && (shot.savedBakedFrameAssetIds?.length ?? 0) > 0;
   const lastSavedBakeId = shot.savedBakedFrameAssetIds?.[0];
   const checklistSlotIndices = new Set(
-    [subjectSlotIndex, backdropSlotIndex].filter((index) => index >= 0),
+    isBakeStartFrameWorkflow
+      ? [backdropSlotIndex, ...getSubjectChecklistSlotIndices(shot)].filter((index) => index >= 0)
+      : [subjectSlotIndex, backdropSlotIndex].filter((index) => index >= 0),
   );
   const stackSlotIndices = isBakeStartFrameWorkflow
     ? slotIndices.filter((index) => !checklistSlotIndices.has(index))
@@ -167,7 +174,12 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
     const removable = index >= MIN_REFERENCE_SLOTS;
     const imgData = resolveReferenceDisplayUrl(shot.references[index]);
     const role = normalizeReferenceRole(shot.referenceRoles[index] ?? 'None');
-    const label = getReferenceSlotLabel(shot, index, role);
+    const label =
+      isBakeStartFrameWorkflow &&
+      role === 'Subject' &&
+      getSubjectSlotOrdinal(shot, index) != null
+        ? getSubjectSlotDisplayLabel(shot, index, getSubjectSlotOrdinal(shot, index)!)
+        : getReferenceSlotLabel(shot, index, role);
     const slotDisabled = singleImageOnly && index > 0;
     const linked = shot.themeTransformLinked?.[index] ?? false;
     const status = getThemeTransformStatus(shot, index);
@@ -500,9 +512,10 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
     return (
       <fieldset className="workflow-step-fieldset">
         {renderTopLevelFieldsetLegend(fieldsetOrder, 'Assets')}
-        <ol className="workflow-steps flex flex-col gap-2 text-[10px] text-gray-400">
-          {backdropStep && (
-            <li key={backdropStep.id} className="flex flex-col gap-1.5">
+        {backdropStep && (
+          <fieldset className="workflow-step-fieldset workflow-step-fieldset--nested">
+            <legend className="workflow-step-fieldset__legend">Backdrop</legend>
+            <div className="flex flex-col gap-1.5 text-[10px] text-gray-400">
               {renderWorkflowStepHeader(backdropStep, stepNumber++)}
               {backdropSlotIndex >= 0 && renderReferenceSlotRow(backdropSlotIndex)}
               {lockBackdropStep && (
@@ -513,16 +526,16 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
                   )}
                 </div>
               )}
-            </li>
-          )}
-          {characterSheetStep && (
-            <li key={characterSheetStep.id} className="flex flex-col gap-1.5">
-              <CharacterSheetCompositionControls />
-              {renderWorkflowStepHeader(characterSheetStep, stepNumber++)}
-              {subjectSlotIndex >= 0 && renderReferenceSlotRow(subjectSlotIndex)}
-            </li>
-          )}
-        </ol>
+            </div>
+          </fieldset>
+        )}
+        {characterSheetStep && (
+          <SubjectsFieldset
+            characterSheetStep={characterSheetStep}
+            stepNumber={stepNumber++}
+            renderReferenceSlotRow={renderReferenceSlotRow}
+          />
+        )}
       </fieldset>
     );
   };

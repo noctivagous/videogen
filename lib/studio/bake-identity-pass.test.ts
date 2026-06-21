@@ -1,3 +1,4 @@
+import { STOCK_CAMERA } from '@/lib/constants/stock-project';
 import { describe, expect, it } from 'vitest';
 import { buildIdentityPassPlan } from '@/lib/studio/bake-identity-pass';
 import { createDefaultMannequin } from '@/lib/studio/mannequin-factory';
@@ -8,17 +9,7 @@ function baseShot(overrides: Partial<Shot> = {}): Shot {
     id: 1,
     name: 'Test',
     active: true,
-    camera: {
-      fieldSize: 'ms',
-      subjectCount: '1s',
-      coverage: 'clean',
-      lensType: 'standard',
-      focalLength: 35,
-      angle: 'eye-level',
-      movement: 'static',
-      aperture: 2.8,
-      dof: 'medium',
-    },
+    camera: { ...STOCK_CAMERA, ...(overrides.camera ?? {}) },
     frameComposition: {
       guide: 'grid-3x3',
       placement: 'cell-1-1',
@@ -55,5 +46,21 @@ describe('buildIdentityPassPlan', () => {
     expect(prompt).not.toContain('environment from');
     expect(pass.refs[0]?.role).toBe('Backdrop');
     expect(pass.refs[1]?.role).toBe('Subject');
+  });
+
+  it('splits four assigned principals into two identity passes', () => {
+    const mannequins = [0, 1, 2, 3].map((slotIndex) => ({
+      ...createDefaultMannequin({ x: 0.2 + slotIndex * 0.15 }),
+      subjectSlotIndex: slotIndex,
+    }));
+    const shot = baseShot({
+      references: ['a', 'b', 'c', 'd'],
+      referenceRoles: ['Subject', 'Subject', 'Subject', 'Subject'],
+      mannequins,
+    });
+    const plan = buildIdentityPassPlan(shot, 'data:image/png;base64,scene');
+    expect(plan?.passes).toHaveLength(2);
+    expect(plan?.passes[0]?.refs).toHaveLength(3);
+    expect(plan?.passes[1]?.refs).toHaveLength(3);
   });
 });

@@ -13,13 +13,16 @@ import type {
   Workflow,
 } from '@/lib/types/studio';
 import {
-  areCharacterSheetsComplete,
   getPrincipalMannequins,
-  getRequiredSubjectSheetCount,
   isCharacterAssignmentComplete,
   sanitizeMannequinSubjectSlots,
   tryAutoAssignSingleSubject,
 } from '@/lib/studio/mannequin-character-assignment';
+import {
+  areSubjectSheetsComplete,
+  getCharacterSheetsStepLabel,
+  getSubjectChecklistSlotIndices,
+} from '@/lib/studio/subject-sheet-slots';
 import { effectiveReferenceUrl } from '@/lib/studio/theme-transform';
 
 export {
@@ -75,7 +78,7 @@ function subjectSlotIndex(shot: Shot): number {
 export function isBakeChecklistReferenceSlot(shot: Shot | undefined, index: number): boolean {
   if (!shot || !isBakeStartFrame(shot)) return false;
   if (index === getBackdropSlotIndex(shot)) return true;
-  return index === subjectSlotIndex(shot);
+  return getSubjectChecklistSlotIndices(shot).includes(index);
 }
 
 function slotHasImage(
@@ -97,15 +100,12 @@ export function getWorkflowReferenceSteps(
   const backdropIdx = getBackdropSlotIndex(shot);
   const backdropReady = backdropIdx >= 0 && slotHasImage(shot, backdropIdx, lighting);
   const bakeStatus: BakeStatus = shot.bakeStatus ?? 'idle';
-  const requiredSheets = getRequiredSubjectSheetCount(shot);
-  const sheetsLabel =
-    requiredSheets > 1 ? `Character Sheets (${requiredSheets})` : 'Character Sheet';
 
   return [
     {
       id: 'character-sheet',
-      label: sheetsLabel,
-      done: areCharacterSheetsComplete(shot, lighting),
+      label: getCharacterSheetsStepLabel(shot),
+      done: areSubjectSheetsComplete(shot, lighting),
     },
     {
       id: 'backdrop',

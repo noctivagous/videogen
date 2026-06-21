@@ -1,3 +1,5 @@
+import { ARRANGEMENT_PROMPT_LABELS } from '@/lib/constants/arrangement-options';
+import { CROWD_DENSITY_PROMPT_LABELS } from '@/lib/constants/crowd-density-options';
 import {
   CAMERA_COVERAGE_LABELS,
   CAMERA_FIELD_SIZE_SHORT,
@@ -44,6 +46,11 @@ export function getCameraCompositionLabel(
 
   if (camera.subjectCount === '1s') {
     parts.push(CAMERA_COVERAGE_LABELS[camera.coverage] || camera.coverage);
+  } else if (['2s', '3s', 'group'].includes(camera.subjectCount)) {
+    const arrangementLabel = ARRANGEMENT_PROMPT_LABELS[camera.arrangement];
+    if (arrangementLabel) parts.push(arrangementLabel);
+  } else if (camera.subjectCount === 'crowd') {
+    parts.push(CROWD_DENSITY_PROMPT_LABELS[camera.crowdDensity]);
   }
 
   if (frame.guide !== 'none') {
@@ -60,7 +67,14 @@ export function applyFrameCompositionSmartDefaults(
   camera: CameraSettings,
   frame: FrameComposition,
 ): void {
-  if (camera.coverage === 'ots' && frame.guide !== 'fill-frame') {
+  const otsArrangement =
+    camera.arrangement === 'ots-left' ||
+    camera.arrangement === 'ots-right' ||
+    camera.arrangement === 'three-shot-ots';
+  if (
+    (camera.coverage === 'ots' || otsArrangement) &&
+    frame.guide !== 'fill-frame'
+  ) {
     frame.placement = 'ix-mid-l';
   } else if (
     (camera.subjectCount === '2s' || camera.subjectCount === '3s') &&
@@ -133,6 +147,11 @@ export function getFullCameraPrompt(camera: CameraSettings, frame: FrameComposit
   if (camera.subjectCount === '1s') {
     const coverage = coveragePrompts[camera.coverage];
     if (coverage) parts.push(coverage);
+  } else if (['2s', '3s', 'group'].includes(camera.subjectCount)) {
+    const arrangementLabel = ARRANGEMENT_PROMPT_LABELS[camera.arrangement];
+    if (arrangementLabel) parts.push(arrangementLabel);
+  } else if (camera.subjectCount === 'crowd') {
+    parts.push(CROWD_DENSITY_PROMPT_LABELS[camera.crowdDensity]);
   }
 
   const framePrompt = getFrameCompositionPrompt(camera.fieldSize, frame);
