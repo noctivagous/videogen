@@ -76,7 +76,7 @@ function AssetRow({ asset, onSelect }: { asset: MediaAsset; onSelect: () => void
         <div className="text-xs font-semibold text-gray-200">{label}</div>
         <div className="text-[10px] text-gray-500 truncate">
           {new Date(asset.createdAt).toLocaleString()}
-          {usedIn > 0 ? ` · used in ${usedIn} shot${usedIn === 1 ? '' : 's'}` : ''}
+          {usedIn > 0 ? ` · used in ${usedIn} setup${usedIn === 1 ? '' : 's'}` : ''}
         </div>
       </div>
     </button>

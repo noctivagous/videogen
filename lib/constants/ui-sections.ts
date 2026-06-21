@@ -84,7 +84,10 @@ export const UI_SECTIONS = {
   studioBottomReferences: { id: 'studio-bottom-references', name: 'Reference Slots' },
   studioBottomPrompt: { id: 'studio-bottom-prompt', name: 'Prompt Input' },
   studioBottomGenerate: { id: 'studio-bottom-generate', name: 'Generate Button' },
-  studioBottomShotTimeline: { id: 'studio-bottom-shot-timeline', name: 'Shot Timeline' },
+  studioBottomShotTimeline: { id: 'studio-bottom-shot-timeline', name: 'Setup Timeline' },
+  studioBottomSetupTimeline: { id: 'studio-bottom-setup-timeline', name: 'Setup Timeline' },
+  studioCoverageShotTabs: { id: 'studio-coverage-shot-tabs', name: 'Coverage Shot Tabs' },
+  studioSetupBackdropPanel: { id: 'studio-setup-backdrop-panel', name: 'Setup Backdrop Panel' },
 
   studioReferenceSlot: { id: 'studio-reference-slot', name: 'Reference Slot' },
   studioReferenceSlotAdd: { id: 'studio-reference-slot-add', name: 'Add Reference Slot' },
@@ -97,7 +100,9 @@ export const UI_SECTIONS = {
   studioMediaLibraryInspector: { id: 'studio-media-library-inspector', name: 'Media Library Inspector' },
   studioReferenceSlotViewer: { id: 'studio-reference-slot-viewer', name: 'Reference Slot Viewer' },
   studioShotTimeline: { id: 'studio-shot-timeline', name: 'Shot List' },
+  studioSetupTimeline: { id: 'studio-setup-timeline', name: 'Setup List' },
   studioShotItem: { id: 'studio-shot-item', name: 'Shot Item' },
+  studioSetupItem: { id: 'studio-setup-item', name: 'Setup Item' },
 
   studioSettingsDefaultProvider: { id: 'studio-settings-default-provider', name: 'Default Provider Settings' },
   studioSettingsBuiltInProviders: { id: 'studio-settings-built-in-providers', name: 'Built-in Providers' },

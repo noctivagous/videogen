@@ -284,13 +284,13 @@ export function MediaLibraryInspector({
           </InspectorField>
         )}
 
-        <InspectorField label="Used in shots">
+        <InspectorField label="Used in setups">
           {asset.metadata.usedInShots.length === 0 ? (
             <span className="text-gray-500">—</span>
           ) : (
             <div className="flex flex-wrap gap-1">
               {asset.metadata.usedInShots.map((shotId) => {
-                const name = shots.find((s) => s.id === shotId)?.name ?? `Shot ${shotId}`;
+                const name = shots.find((s) => s.id === shotId)?.name ?? `Setup ${shotId}`;
                 return (
                   <button
                     key={shotId}

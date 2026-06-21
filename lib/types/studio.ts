@@ -342,6 +342,76 @@ export interface GeneratedVideo {
   providerJobId?: string;
 }
 
+/** Script-level container — hidden in UI until multi-scene support. */
+export interface Scene {
+  id: number;
+  name: string;
+}
+
+/** Backdrop plate within a setup (LS, MS, CU from same location). */
+export interface SetupBackdrop {
+  id: string;
+  label: string;
+  url: string | null;
+  backdropFramingByAspect?: Partial<Record<AspectRatio, BackdropFraming>>;
+  backdropCropsByAspect?: Partial<Record<AspectRatio, string>>;
+  backdropCropStatusByAspect?: Partial<Record<AspectRatio, BackdropCropStatus>>;
+  linkedAssetId?: string;
+}
+
+/** Coverage / framing within a setup — user-facing "Shot". */
+export interface CoverageShot {
+  id: number;
+  name: string;
+  backdropId: string;
+  duration: number;
+  thumbnail: string | null;
+  videoUrl: string | null;
+  generatedVideos?: GeneratedVideo[];
+  activeVideoIndex?: number;
+  active?: boolean;
+  camera: CameraSettings;
+  motion: MotionSettings;
+  shotActivity: string;
+  promptAdditions?: string;
+  lightingAtmospherePrompt?: string;
+  bakeStartFramePrompt?: string;
+  frameComposition: FrameComposition;
+  previewFrameUrl?: string | null;
+  previewFrameFingerprint?: string | null;
+  workflow?: Workflow;
+  workflowStates?: Partial<Record<Workflow, ShotWorkflowState>>;
+  mannequins?: Mannequin[];
+  bakedStartFrame?: string | null;
+  bakedIntermediateFrame?: string | null;
+  bakeStatus?: BakeStatus;
+  savedBakedFrameAssetIds?: string[];
+  linkedAssetIds?: Partial<Record<ShotLinkedAssetKey, string>>;
+  workflowSnapshotId?: string | null;
+}
+
+/** Shared location/time/character context — timeline card. */
+export interface Setup {
+  id: number;
+  sceneId: number;
+  name: string;
+  active?: boolean;
+  sceneSetup: string;
+  lighting: LightingSettings;
+  crowdTypePrompt?: string;
+  references: (string | null)[];
+  referenceRoles: ReferenceRole[];
+  referenceMode?: ReferenceMode;
+  transformedReferences?: (string | null)[];
+  themeTransformFingerprint?: (string | null)[];
+  themeTransformStatus?: ThemeTransformSlotStatus[];
+  themeTransformError?: (string | null)[];
+  themeTransformLinked?: boolean[];
+  backdrops: SetupBackdrop[];
+  shots: CoverageShot[];
+}
+
+/** @deprecated Legacy monolithic shot — use Setup + CoverageShot. Kept as resolved runtime view. */
 export interface Shot {
   id: number;
   name: string;
@@ -412,11 +482,18 @@ export interface Shot {
 export interface StudioProject {
   schemaVersion?: number;
   project: ProjectSettings;
-  shots: Shot[];
-  currentShot: number;
+  scenes: Scene[];
+  currentSceneId: number;
+  setups: Setup[];
+  currentSetupId: number;
+  currentCoverageShotId: number;
   mediaLibrary?: MediaAsset[];
   shotWorkflowSnapshots?: ShotWorkflowSnapshot[];
-  /** @deprecated v1 project-level settings — migrated into each shot on load */
+  /** @deprecated v17 — migrated to setups on load */
+  shots?: Shot[];
+  /** @deprecated v17 — migrated to currentSetupId on load */
+  currentShot?: number;
+  /** @deprecated v1 project-level settings — migrated into each setup on load */
   camera?: CameraSettings;
   lighting?: LightingSettings;
   motion?: MotionSettings;
@@ -486,6 +563,8 @@ export interface ScenePreviewPayload {
   lighting: LightingSettings;
   motion: MotionSettings;
   shot: Shot | undefined;
+  setup?: Setup;
+  coverageShot?: CoverageShot;
 }
 
 export type ToastType = 'success' | 'error';

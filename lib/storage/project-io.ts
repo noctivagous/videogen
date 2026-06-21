@@ -1,3 +1,5 @@
+import { migrateStudioProject } from '@/lib/studio/project-migration';
+import { DEFAULT_SHOT_DEFAULTS } from '@/lib/studio/shot-settings';
 import { sanitizeProjectForPersistence } from '@/lib/storage/sanitize-secrets';
 import { PROJECT_SCHEMA_VERSION } from '@/lib/storage/studio-state';
 import type { StudioProject } from '@/lib/types/studio';
@@ -7,15 +9,29 @@ export type LoadProjectResult =
   | { status: 'cancelled' }
   | { status: 'error'; message: string };
 
+function hasValidProjectContent(data: StudioProject): boolean {
+  if (!data.project?.name) return false;
+  if (data.setups?.length) return true;
+  if (data.shots?.length) return true;
+  return false;
+}
+
 export function validateStudioProject(data: unknown): StudioProject | null {
   if (!data || typeof data !== 'object') return null;
-  const p = data as StudioProject;
-  if (!p.project?.name || !Array.isArray(p.shots) || p.shots.length === 0) return null;
+  const raw = data as StudioProject;
+  if (!hasValidProjectContent(raw)) return null;
+
+  const migrated = migrateStudioProject(raw, DEFAULT_SHOT_DEFAULTS);
   return sanitizeProjectForPersistence({
-    schemaVersion: p.schemaVersion,
-    project: p.project,
-    shots: p.shots,
-    currentShot: p.currentShot ?? p.shots[0]?.id ?? 1,
+    schemaVersion: migrated.schemaVersion ?? PROJECT_SCHEMA_VERSION,
+    project: migrated.project,
+    scenes: migrated.scenes,
+    currentSceneId: migrated.currentSceneId,
+    setups: migrated.setups,
+    currentSetupId: migrated.currentSetupId,
+    currentCoverageShotId: migrated.currentCoverageShotId,
+    ...(migrated.mediaLibrary ? { mediaLibrary: migrated.mediaLibrary } : {}),
+    ...(migrated.shotWorkflowSnapshots ? { shotWorkflowSnapshots: migrated.shotWorkflowSnapshots } : {}),
   });
 }
 
@@ -48,7 +64,7 @@ export function pickAndLoadProject(): Promise<LoadProjectResult> {
           const parsed = JSON.parse(event.target?.result as string);
           const data = validateStudioProject(parsed);
           if (!data) {
-            resolve({ status: 'error', message: 'Invalid project file — missing project name or shots' });
+            resolve({ status: 'error', message: 'Invalid project file — missing project name or setups' });
             return;
           }
           resolve({ status: 'success', data: { ...data, schemaVersion: data.schemaVersion ?? PROJECT_SCHEMA_VERSION } });

@@ -1,5 +1,5 @@
 import type { MediaAsset } from '@/lib/types/media-library';
-import type { StudioProject } from '@/lib/types/studio';
+import type { CoverageShot, Setup, StudioProject } from '@/lib/types/studio';
 
 export type ProjectMediaUpload =
   | { path: string; kind: 'inline'; dataUrl: string }
@@ -26,28 +26,45 @@ export function isRemoteProviderUrl(url: string): boolean {
   return true;
 }
 
-function walkShotUrls(
-  shot: StudioProject['shots'][number],
-  shotIndex: number,
+function walkCoverageUrls(
+  coverage: CoverageShot,
+  base: string,
   visit: (path: string, url: string) => void,
 ): void {
-  const base = `shots.${shotIndex}`;
-  if (shot.thumbnail) visit(`${base}.thumbnail`, shot.thumbnail);
-  if (shot.videoUrl) visit(`${base}.videoUrl`, shot.videoUrl);
-  if (shot.previewFrameUrl) visit(`${base}.previewFrameUrl`, shot.previewFrameUrl);
-  if (shot.bakedStartFrame) visit(`${base}.bakedStartFrame`, shot.bakedStartFrame);
-  if (shot.bakedIntermediateFrame) visit(`${base}.bakedIntermediateFrame`, shot.bakedIntermediateFrame);
+  if (coverage.thumbnail) visit(`${base}.thumbnail`, coverage.thumbnail);
+  if (coverage.videoUrl) visit(`${base}.videoUrl`, coverage.videoUrl);
+  if (coverage.previewFrameUrl) visit(`${base}.previewFrameUrl`, coverage.previewFrameUrl);
+  if (coverage.bakedStartFrame) visit(`${base}.bakedStartFrame`, coverage.bakedStartFrame);
+  if (coverage.bakedIntermediateFrame) {
+    visit(`${base}.bakedIntermediateFrame`, coverage.bakedIntermediateFrame);
+  }
 
-  shot.references.forEach((ref, refIndex) => {
-    if (ref) visit(`${base}.references.${refIndex}`, ref);
-  });
-  shot.transformedReferences?.forEach((ref, refIndex) => {
-    if (ref) visit(`${base}.transformedReferences.${refIndex}`, ref);
-  });
-
-  shot.generatedVideos?.forEach((video, videoIndex) => {
+  coverage.generatedVideos?.forEach((video, videoIndex) => {
     visit(`${base}.generatedVideos.${videoIndex}.url`, video.url);
     if (video.posterUrl) visit(`${base}.generatedVideos.${videoIndex}.posterUrl`, video.posterUrl);
+  });
+}
+
+function walkSetupUrls(
+  setup: Setup,
+  setupIndex: number,
+  visit: (path: string, url: string) => void,
+): void {
+  const base = `setups.${setupIndex}`;
+  setup.references.forEach((ref, refIndex) => {
+    if (ref) visit(`${base}.references.${refIndex}`, ref);
+  });
+  setup.transformedReferences?.forEach((ref, refIndex) => {
+    if (ref) visit(`${base}.transformedReferences.${refIndex}`, ref);
+  });
+  setup.backdrops.forEach((backdrop, backdropIndex) => {
+    if (backdrop.url) visit(`${base}.backdrops.${backdropIndex}.url`, backdrop.url);
+    Object.entries(backdrop.backdropCropsByAspect ?? {}).forEach(([aspect, url]) => {
+      if (url) visit(`${base}.backdrops.${backdropIndex}.backdropCropsByAspect.${aspect}`, url);
+    });
+  });
+  setup.shots.forEach((coverage, shotIndex) => {
+    walkCoverageUrls(coverage, `${base}.shots.${shotIndex}`, visit);
   });
 }
 
@@ -65,8 +82,8 @@ export function collectProjectMediaUploads(
 ): ProjectMediaUpload[] {
   const uploads: ProjectMediaUpload[] = [];
 
-  project.shots.forEach((shot, shotIndex) => {
-    walkShotUrls(shot, shotIndex, (path, url) => {
+  project.setups?.forEach((setup, setupIndex) => {
+    walkSetupUrls(setup, setupIndex, (path, url) => {
       if (isStockAssetUrl(url) || isServerStoredMediaUrl(url)) return;
       if (isInlineMediaUrl(url)) {
         uploads.push({ path, kind: 'inline', dataUrl: url });

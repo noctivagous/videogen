@@ -27,6 +27,7 @@ import {
   getSubjectSlotOrdinal,
 } from '@/lib/studio/subject-sheet-slots';
 import { LightingAtmosphereSfxFieldset } from '@/components/studio/LightingAtmosphereSfxFieldset';
+import { SetupBackdropPanel } from '@/components/studio/SetupBackdropPanel';
 import { MannequinAssignmentTable } from '@/components/studio/MannequinAssignmentTable';
 import { MannequinPlacementControls } from '@/components/studio/MannequinPlacementControls';
 import { CollapsiblePromptEditor } from '@/components/ui/CollapsiblePromptEditor';
@@ -512,7 +513,7 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
     return (
       <fieldset className="workflow-step-fieldset">
         {renderTopLevelFieldsetLegend(fieldsetOrder, 'Assets')}
-        {backdropStep && (
+            {backdropStep && (
           <fieldset className="workflow-step-fieldset workflow-step-fieldset--nested">
             <legend className="workflow-step-fieldset__legend">Backdrop</legend>
             <div className="flex flex-col gap-1.5 text-[10px] text-gray-400">
@@ -526,6 +527,7 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
                   )}
                 </div>
               )}
+              <SetupBackdropPanel />
             </div>
           </fieldset>
         )}

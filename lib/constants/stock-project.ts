@@ -9,13 +9,20 @@ import { DEFAULT_VIDEO_LIGHTING } from '@/lib/constants/video-lighting';
 import { STOCK_ASSETS, STOCK_MS_PROMPT, STOCK_SURFER_SHOT_ACTIVITY } from '@/lib/constants/stock-demo';
 import type {
   CameraSettings,
+  CoverageShot,
   FrameComposition,
   LightingSettings,
   MotionSettings,
   ProjectSettings,
   ReferenceRole,
+  Setup,
   Shot,
 } from '@/lib/types/studio';
+import {
+  createCoverageShot,
+  createDefaultBackdrop,
+  createSetup,
+} from '@/lib/studio/coverage-shot-settings';
 
 export { STOCK_ASSETS, getBackdropReference, getSubjectReference } from '@/lib/constants/stock-demo';
 
@@ -144,6 +151,63 @@ export const STOCK_DEMO_MOTION: MotionSettings = {
   subjectAction: 'none',
   motionBlur: 'off',
 };
+
+export function createStockSetup(
+  id: number,
+  name: string,
+  active: boolean,
+  options: CreateStockShotOptions = {},
+): Setup {
+  const shot = createStockShot(id, `Shot ${String(id).padStart(2, '0')}`, active, options);
+  const backdropUrl = options.withReferences !== false ? STOCK_BACKDROP_REF : null;
+  const coverage = createCoverageShot(id, shot.name, active, createDefaultBackdrop().id, {
+    duration: shot.duration,
+    thumbnail: shot.thumbnail,
+    videoUrl: shot.videoUrl,
+    generatedVideos: shot.generatedVideos,
+    activeVideoIndex: shot.activeVideoIndex,
+    camera: shot.camera,
+    motion: shot.motion,
+    shotActivity: shot.shotActivity,
+    frameComposition: shot.frameComposition,
+  });
+
+  return createSetup(id, name.replace(/^Shot\s+/i, 'Setup '), 1, active, coverage, {
+    backdropUrl,
+    setupSettings: {
+      sceneSetup: shot.sceneSetup,
+      lighting: shot.lighting,
+      references: options.withReferences !== false
+        ? [STOCK_CHARACTER_REF, null]
+        : [null, null],
+      referenceRoles: ['Subject', 'Style'],
+      referenceMode: shot.referenceMode,
+    },
+  });
+}
+
+export const STOCK_SETUPS: Setup[] = [
+  createStockSetup(1, 'Setup 01', true, {
+    duration: 5,
+    placement: 'ix-mid-r',
+    withReferences: true,
+    thumbnail: STOCK_ASSETS.demoSurferCharacterSheet,
+    camera: STOCK_CAMERA,
+    motion: STOCK_DEMO_MOTION,
+    sceneSetup: STOCK_MS_PROMPT,
+    shotActivity: STOCK_SURFER_SHOT_ACTIVITY,
+  }),
+];
+
+export const EMPTY_SETUPS: Setup[] = [
+  createStockSetup(1, 'Setup 01', true, {
+    duration: 5,
+    placement: 'cell-1-1',
+    withReferences: true,
+    sceneSetup: '',
+    shotActivity: '',
+  }),
+];
 
 export const STOCK_SHOTS: Shot[] = [
   createStockShot(1, 'Shot 01', true, {

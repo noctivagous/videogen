@@ -19,7 +19,7 @@ import { applyLensCameraPatch } from '@/lib/constants/lens';
 import { getDefaultResolution, RESOLUTION_PRESETS } from '@/lib/constants/resolutions';
 import {
   EMPTY_PROJECT,
-  EMPTY_SHOTS,
+  EMPTY_SETUPS,
   STOCK_BACKDROP_REF,
   STOCK_CAMERA,
   STOCK_CHARACTER_REF,
@@ -28,7 +28,7 @@ import {
   STOCK_PROJECT,
   STOCK_PROMPT,
   STOCK_REFERENCE_ROLES,
-  STOCK_SHOTS,
+  STOCK_SETUPS,
 } from '@/lib/constants/stock-project';
 import { isPreviewFrameSupported } from '@/lib/studio/generation/preview-frame-supported';
 import { isGenerationSupported } from '@/lib/studio/generation/supported';
@@ -108,8 +108,10 @@ import {
 import { updateMediaAssetInLibrary } from '@/lib/media/media-library-query';
 import { indexClipEmbeddingsInLibrary } from '@/lib/media/clip-search';
 import {
+  applyAssetIdRemapToSetups,
   applyAssetIdRemapToShots,
   applyAssetIdRemapToSnapshots,
+  cleanSetupsAfterAssetDelete,
   cleanShotsAfterAssetDelete,
   cleanSnapshotsAfterAssetDelete,
   importMediaFilesToLibrary,
@@ -150,15 +152,32 @@ import {
 import { restrictsReferenceSlotsToFirst } from '@/lib/studio/xai-video-models';
 import { applyFrameCompositionSmartDefaults } from '@/lib/studio/composition';
 import {
-  cloneInheritedShotSettings,
-  createBlankShotSettings,
+  cloneInheritedCoverageSettings,
+  cloneInheritedSetupSettings,
+  createBlankCoverageSettings,
+  createBlankSetupSettings,
+  createCoverageShot,
+  createDefaultBackdrop,
+  createSetup,
+  nextCoverageShotId,
+  nextSetupId,
+} from '@/lib/studio/coverage-shot-settings';
+import {
+  applyProjectHierarchy,
+  buildHierarchyPersistence,
+  getCurrentCoverageFromSetup,
+  getCurrentSetupFromList,
+  getResolvedCurrentShot,
+  getTimelineShots,
+  patchResolvedShotInSetups,
+  projectDefaultsFromStudioData,
+} from '@/lib/studio/store-hierarchy';
+import { invalidateSetupCoverageBakes } from '@/lib/studio/setup-invalidation';
+import {
   DEFAULT_SHOT_DEFAULTS,
-  migrateAllShots,
   migrateCamera,
-  patchCurrentShot,
-  shotActiveView,
-  type ShotProjectDefaults,
 } from '@/lib/studio/shot-settings';
+import { DEFAULT_BACKDROP_ID, getSetupBackdrop, resolveShot, setupActiveView } from '@/lib/studio/resolved-shot';
 import {
   appendGeneratedVideo,
   deleteGeneratedVideoById,
@@ -219,6 +238,8 @@ import type {
   MotionSettings,
   ProjectSettings,
   ReferenceMode,
+  Scene,
+  Setup,
   Shot,
   StudioProject,
   PreviewMode,
@@ -237,45 +258,69 @@ function projectFileUiState() {
   };
 }
 
-function projectDefaultsFromData(data: StudioProject): ShotProjectDefaults {
-  return {
-    camera: migrateCamera(data.camera ?? STOCK_CAMERA),
-    lighting: data.lighting ?? STOCK_LIGHTING,
-    motion: data.motion ?? STOCK_MOTION,
-    sceneSetup: data.prompt ?? '',
-    shotActivity: '',
-  };
-}
-
 function getStockDefaults() {
-  const shots = migrateAllShots(STOCK_SHOTS, DEFAULT_SHOT_DEFAULTS);
-  const active = shots.find((s) => s.active) || shots[0];
+  const hierarchy = applyProjectHierarchy(
+    {
+      schemaVersion: 18,
+      project: STOCK_PROJECT,
+      scenes: [{ id: 1, name: 'Scene 1' }],
+      currentSceneId: 1,
+      setups: STOCK_SETUPS,
+      currentSetupId: 1,
+      currentCoverageShotId: 1,
+    },
+    { lighting: STOCK_LIGHTING, sceneSetup: STOCK_PROMPT },
+  );
   return {
     project: { ...STOCK_PROJECT },
-    shots,
-    currentShot: active?.id ?? 1,
+    scenes: hierarchy.scenes,
+    currentSceneId: hierarchy.currentSceneId,
+    setups: hierarchy.setups,
+    currentSetupId: hierarchy.currentSetupId,
+    currentCoverageShotId: hierarchy.currentCoverageShotId,
+    shots: getTimelineShots(hierarchy.setups),
+    currentShot: hierarchy.currentSetupId,
     mediaLibrary: [],
     globalMediaLibrary: [] as MediaAsset[],
     shotWorkflowSnapshots: [],
-    ...shotActiveView(active),
+    camera: hierarchy.camera,
+    lighting: hierarchy.lighting,
+    motion: hierarchy.motion,
+    sceneSetup: hierarchy.sceneSetup,
+    shotActivity: hierarchy.shotActivity,
   };
 }
 
 function getEmptyDefaults() {
-  const shots = migrateAllShots(EMPTY_SHOTS, {
-    ...DEFAULT_SHOT_DEFAULTS,
-    sceneSetup: '',
-    shotActivity: '',
-  });
-  const active = shots[0];
+  const hierarchy = applyProjectHierarchy(
+    {
+      schemaVersion: 18,
+      project: EMPTY_PROJECT,
+      scenes: [{ id: 1, name: 'Scene 1' }],
+      currentSceneId: 1,
+      setups: EMPTY_SETUPS,
+      currentSetupId: 1,
+      currentCoverageShotId: 1,
+    },
+    { lighting: STOCK_LIGHTING, sceneSetup: '' },
+  );
   return {
     project: { ...EMPTY_PROJECT },
-    shots,
-    currentShot: active?.id ?? 1,
+    scenes: hierarchy.scenes,
+    currentSceneId: hierarchy.currentSceneId,
+    setups: hierarchy.setups,
+    currentSetupId: hierarchy.currentSetupId,
+    currentCoverageShotId: hierarchy.currentCoverageShotId,
+    shots: getTimelineShots(hierarchy.setups),
+    currentShot: hierarchy.currentSetupId,
     mediaLibrary: [] as MediaAsset[],
     globalMediaLibrary: [] as MediaAsset[],
     shotWorkflowSnapshots: [] as ShotWorkflowSnapshot[],
-    ...shotActiveView(active),
+    camera: hierarchy.camera,
+    lighting: hierarchy.lighting,
+    motion: hierarchy.motion,
+    sceneSetup: hierarchy.sceneSetup,
+    shotActivity: hierarchy.shotActivity,
   };
 }
 
@@ -284,18 +329,52 @@ function applyStudioProject(data: StudioProject, globalMediaLibrary: MediaAsset[
     ...data.project,
     aspectRatio: data.project.aspectRatio || '16:9',
   };
-  const defaults = projectDefaultsFromData(data);
-  const shots = migrateAllShots(data.shots, defaults);
-  const currentShot = data.currentShot || shots[0]?.id || 1;
-  const active = shots.find((s) => s.id === currentShot) || shots[0];
+  const hierarchy = applyProjectHierarchy(data, projectDefaultsFromStudioData(data));
   return {
     project: ensureResolution(project),
-    shots,
-    currentShot,
+    scenes: hierarchy.scenes,
+    currentSceneId: hierarchy.currentSceneId,
+    setups: hierarchy.setups,
+    currentSetupId: hierarchy.currentSetupId,
+    currentCoverageShotId: hierarchy.currentCoverageShotId,
+    shots: getTimelineShots(hierarchy.setups),
+    currentShot: hierarchy.currentSetupId,
     mediaLibrary: data.mediaLibrary ?? [],
     globalMediaLibrary,
     shotWorkflowSnapshots: data.shotWorkflowSnapshots ?? [],
-    ...shotActiveView(active),
+    camera: hierarchy.camera,
+    lighting: hierarchy.lighting,
+    motion: hierarchy.motion,
+    sceneSetup: hierarchy.sceneSetup,
+    shotActivity: hierarchy.shotActivity,
+  };
+}
+
+const SETUP_LEVEL_PATCH_KEYS: ReadonlySet<string> = new Set([
+  'lighting', 'sceneSetup', 'references', 'transformedReferences', 'crowdTypePrompt',
+]);
+
+function applyShotPatch(
+  state: Pick<StudioStore, 'setups' | 'currentSetupId' | 'currentCoverageShotId'>,
+  patch: Partial<Shot>,
+) {
+  let setups = patchResolvedShotInSetups(
+    state.setups,
+    state.currentSetupId,
+    state.currentCoverageShotId,
+    patch,
+  );
+  // When shared setup-level fields change, mark other coverage shots' bakes stale.
+  const touchesSetup = Object.keys(patch).some((k) => SETUP_LEVEL_PATCH_KEYS.has(k));
+  if (touchesSetup) {
+    setups = invalidateSetupCoverageBakes(setups, state.currentSetupId);
+  }
+  const setup = getCurrentSetupFromList(setups, state.currentSetupId);
+  const coverage = getCurrentCoverageFromSetup(setup, state.currentCoverageShotId);
+  return {
+    setups,
+    shots: getTimelineShots(setups),
+    ...(setup && coverage ? setupActiveView(setup, coverage) : {}),
   };
 }
 
@@ -328,8 +407,12 @@ function patchClearsClipEmbedding(
   );
 }
 
-function getCurrentShotFromList(shots: Shot[], currentShot: number): Shot | undefined {
-  return shots.find((s) => s.id === currentShot) || shots[0];
+function getCurrentShotFromList(
+  setups: Setup[],
+  setupId: number,
+  coverageShotId: number,
+): Shot | undefined {
+  return getResolvedCurrentShot(setups, setupId, coverageShotId);
 }
 
 function mannequinResyncPatch(
@@ -372,7 +455,14 @@ interface StudioStore {
   motion: MotionSettings;
   sceneSetup: string;
   shotActivity: string;
+  scenes: Scene[];
+  currentSceneId: number;
+  setups: Setup[];
+  currentSetupId: number;
+  currentCoverageShotId: number;
+  /** Timeline cards — one resolved shot per setup. */
   shots: Shot[];
+  /** @deprecated Alias for currentSetupId — timeline selection. */
   currentShot: number;
   mediaLibrary: MediaAsset[];
   globalMediaLibrary: MediaAsset[];
@@ -428,7 +518,22 @@ interface StudioStore {
   showToast: (message: string, type?: ToastType) => void;
   clearToast: () => void;
   getCurrentShot: () => Shot | undefined;
-  getScenePayload: () => StudioProject & { shot: Shot | undefined };
+  getScenePayload: () => {
+    project: ProjectSettings;
+    scenes: Scene[];
+    currentSceneId: number;
+    setups: Setup[];
+    currentSetupId: number;
+    currentCoverageShotId: number;
+    shots: Shot[];
+    currentShot: number;
+    shot: Shot | undefined;
+    camera: CameraSettings;
+    lighting: LightingSettings;
+    motion: MotionSettings;
+    sceneSetup: string;
+    shotActivity: string;
+  };
 
   setProject: (patch: Partial<ProjectSettings>) => void;
   setCamera: (patch: Partial<CameraSettings>) => void;
@@ -466,9 +571,15 @@ interface StudioStore {
     >,
   ) => void;
 
+  selectSetup: (id: number) => void;
   selectShot: (id: number) => void;
+  selectCoverageShot: (id: number) => void;
   deleteShot: (id: number) => void;
+  deleteSetup: (id: number) => void;
   addShot: (mode?: 'duplicate' | 'blank') => void;
+  addSetup: (mode?: 'duplicate' | 'blank') => void;
+  addCoverageShot: (mode?: 'duplicate' | 'blank') => void;
+  deleteCoverageShot: (id: number) => void;
   selectGeneratedVideo: (index: number) => void;
   deleteGeneratedVideo: (id: string) => void;
   setReference: (index: number, dataUrl: string | null) => void;
@@ -539,8 +650,8 @@ let toastTimer: ReturnType<typeof setTimeout> | null = null;
 async function renderShotBackdropCrop(
   get: () => StudioStore,
 ): Promise<string> {
-  const { project, shots, currentShot } = get();
-  const shot = getCurrentShotFromList(shots, currentShot);
+  const { project, setups, currentSetupId, currentCoverageShotId } = get();
+  const shot = getCurrentShotFromList(setups, currentSetupId, currentCoverageShotId);
   if (!shot) throw new Error('No active shot');
 
   const aspect = (project.aspectRatio || '16:9') as AspectRatio;
@@ -564,6 +675,11 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   motion: stockState.motion,
   sceneSetup: stockState.sceneSetup,
   shotActivity: stockState.shotActivity,
+  scenes: stockState.scenes,
+  currentSceneId: stockState.currentSceneId,
+  setups: stockState.setups,
+  currentSetupId: stockState.currentSetupId,
+  currentCoverageShotId: stockState.currentCoverageShotId,
   shots: stockState.shots,
   currentShot: stockState.currentShot,
   mediaLibrary: stockState.mediaLibrary,
@@ -680,10 +796,12 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
           ? null
           : s.selectedMediaLibraryItemId;
 
+      const cleanedSetups = cleanSetupsAfterAssetDelete(s.setups, idSet);
       return {
         mediaLibrary: removeAssetsFromLibrary(s.mediaLibrary, idSet),
         globalMediaLibrary: removeAssetsFromLibrary(s.globalMediaLibrary, idSet),
-        shots: cleanShotsAfterAssetDelete(s.shots, idSet),
+        setups: cleanedSetups,
+        shots: getTimelineShots(cleanedSetups),
         shotWorkflowSnapshots: cleanSnapshotsAfterAssetDelete(s.shotWorkflowSnapshots, idSet),
         selectedMediaLibraryItemId: nextSelected,
       };
@@ -718,7 +836,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       const library =
         collection === 'global' ? state.globalMediaLibrary : state.mediaLibrary;
       const result = await replaceMediaAssetContent(library, assetId, dataUrl);
-      const nextShots = applyAssetIdRemapToShots(state.shots, result.idMap);
+      const nextSetups = applyAssetIdRemapToSetups(state.setups, result.idMap);
       const nextSnapshots = applyAssetIdRemapToSnapshots(
         state.shotWorkflowSnapshots,
         result.idMap,
@@ -742,7 +860,8 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         set({
           globalMediaLibrary: result.library,
           mediaLibrary: remapOtherLibrary(state.mediaLibrary),
-          shots: nextShots,
+          setups: nextSetups,
+          shots: getTimelineShots(nextSetups),
           shotWorkflowSnapshots: nextSnapshots,
           selectedMediaLibraryItemId: selectedId,
         });
@@ -750,7 +869,8 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         set({
           mediaLibrary: result.library,
           globalMediaLibrary: remapOtherLibrary(state.globalMediaLibrary),
-          shots: nextShots,
+          setups: nextSetups,
+          shots: getTimelineShots(nextSetups),
           shotWorkflowSnapshots: nextSnapshots,
           selectedMediaLibraryItemId: selectedId,
         });
@@ -779,7 +899,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       const library =
         collection === 'global' ? state.globalMediaLibrary : state.mediaLibrary;
       const result = await replaceMediaAssetUrl(library, assetId, trimmed);
-      const nextShots = applyAssetIdRemapToShots(state.shots, result.idMap);
+      const nextSetups = applyAssetIdRemapToSetups(state.setups, result.idMap);
       const nextSnapshots = applyAssetIdRemapToSnapshots(
         state.shotWorkflowSnapshots,
         result.idMap,
@@ -789,14 +909,16 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       if (collection === 'global') {
         set({
           globalMediaLibrary: result.library,
-          shots: nextShots,
+          setups: nextSetups,
+          shots: getTimelineShots(nextSetups),
           shotWorkflowSnapshots: nextSnapshots,
           selectedMediaLibraryItemId: selectedId,
         });
       } else {
         set({
           mediaLibrary: result.library,
-          shots: nextShots,
+          setups: nextSetups,
+          shots: getTimelineShots(nextSetups),
           shotWorkflowSnapshots: nextSnapshots,
           selectedMediaLibraryItemId: selectedId,
         });
@@ -924,14 +1046,19 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   },
 
   getCurrentShot() {
-    return getCurrentShotFromList(get().shots, get().currentShot);
+    return getCurrentShotFromList(get().setups, get().currentSetupId, get().currentCoverageShotId);
   },
 
   getScenePayload() {
     const state = get();
-    const shot = getCurrentShotFromList(state.shots, state.currentShot);
+    const shot = getResolvedCurrentShot(state.setups, state.currentSetupId, state.currentCoverageShotId);
     return {
       project: state.project,
+      scenes: state.scenes,
+      currentSceneId: state.currentSceneId,
+      setups: state.setups,
+      currentSetupId: state.currentSetupId,
+      currentCoverageShotId: state.currentCoverageShotId,
       shots: state.shots,
       currentShot: state.currentShot,
       shot,
@@ -955,7 +1082,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 
   setCamera(patch) {
     set((s) => {
-      const current = getCurrentShotFromList(s.shots, s.currentShot);
+      const current = getCurrentShotFromList(s.setups, s.currentSetupId, s.currentCoverageShotId);
       const base = current?.camera ?? s.camera;
       const lensPatch = applyLensCameraPatch(base, patch);
       const camera = {
@@ -1000,7 +1127,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 
       return {
         camera,
-        shots: patchCurrentShot(s.shots, s.currentShot, shotPatch),
+        ...applyShotPatch(s, shotPatch),
       };
     });
   },
@@ -1058,7 +1185,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       } else if (!s.lighting.videoLighting) {
         base.videoLighting = normalizeVideoLighting();
       }
-      const current = getCurrentShotFromList(s.shots, s.currentShot);
+      const current = getCurrentShotFromList(s.setups, s.currentSetupId, s.currentCoverageShotId);
       const shotLighting = { ...current?.lighting ?? base, ...patch };
       if (patch.themeTransformLighting) {
         shotLighting.themeTransformLighting = base.themeTransformLighting;
@@ -1104,11 +1231,13 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         };
       }
       const invalidationShot = { ...current, lighting: shotLighting } as Shot;
-      const shots = patchCurrentShot(s.shots, s.currentShot, {
-        lighting: shotLighting,
-        ...themeLightingInvalidationPatch(invalidationShot),
-      });
-      return { lighting: base, shots };
+      return {
+        lighting: base,
+        ...applyShotPatch(s, {
+          lighting: shotLighting,
+          ...themeLightingInvalidationPatch(invalidationShot),
+        }),
+      };
     });
   },
 
@@ -1126,7 +1255,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         lightingPatch.colorTemp = warmthToKelvin(patch.keyLightWarmth);
       }
       const base = { ...s.lighting, ...lightingPatch };
-      const current = getCurrentShotFromList(s.shots, s.currentShot);
+      const current = getCurrentShotFromList(s.setups, s.currentSetupId, s.currentCoverageShotId);
       const shotLighting = {
         ...current?.lighting ?? base,
         colorPalette,
@@ -1134,11 +1263,13 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
           ? { colorTemp: warmthToKelvin(patch.keyLightWarmth) }
           : {}),
       };
-      const shots = patchCurrentShot(s.shots, s.currentShot, {
-        lighting: shotLighting,
-        ...themeLightingInvalidationPatch(current),
-      });
-      return { lighting: base, shots };
+      return {
+        lighting: base,
+        ...applyShotPatch(s, {
+          lighting: shotLighting,
+          ...themeLightingInvalidationPatch(current),
+        }),
+      };
     });
   },
 
@@ -1146,14 +1277,16 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const recipe = getLookRecipe(id);
     if (!recipe) return;
     set((s) => {
-      const current = getCurrentShotFromList(s.shots, s.currentShot);
+      const current = getCurrentShotFromList(s.setups, s.currentSetupId, s.currentCoverageShotId);
       const source = current?.lighting ?? s.lighting;
       const lighting = applyLookRecipeToLighting(source, recipe);
-      const shots = patchCurrentShot(s.shots, s.currentShot, {
+      return {
         lighting,
-        ...themeLightingInvalidationPatch(current),
-      });
-      return { lighting, shots };
+        ...applyShotPatch(s, {
+          lighting,
+          ...themeLightingInvalidationPatch(current),
+        }),
+      };
     });
   },
 
@@ -1164,49 +1297,51 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   setMotion(patch) {
     set((s) => {
       const motion = { ...s.motion, ...patch };
-      const current = getCurrentShotFromList(s.shots, s.currentShot);
-      const shots = patchCurrentShot(s.shots, s.currentShot, {
-        motion: { ...current?.motion ?? motion, ...patch },
-      });
-      return { motion, shots };
+      const current = getCurrentShotFromList(s.setups, s.currentSetupId, s.currentCoverageShotId);
+      return {
+        motion,
+        ...applyShotPatch(s, {
+          motion: { ...current?.motion ?? motion, ...patch },
+        }),
+      };
     });
   },
 
   setSceneSetup(sceneSetup) {
     set((s) => ({
       sceneSetup,
-      shots: patchCurrentShot(s.shots, s.currentShot, { sceneSetup }),
+      ...applyShotPatch(s, { sceneSetup }),
     }));
   },
 
   setShotActivity(shotActivity) {
     set((s) => ({
       shotActivity,
-      shots: patchCurrentShot(s.shots, s.currentShot, { shotActivity }),
+      ...applyShotPatch(s, { shotActivity }),
     }));
   },
 
   setPromptAdditions(promptAdditions) {
     set((s) => ({
-      shots: patchCurrentShot(s.shots, s.currentShot, { promptAdditions }),
+      ...applyShotPatch(s, { promptAdditions }),
     }));
   },
 
   setLightingAtmospherePrompt(lightingAtmospherePrompt) {
     set((s) => ({
-      shots: patchCurrentShot(s.shots, s.currentShot, { lightingAtmospherePrompt }),
+      ...applyShotPatch(s, { lightingAtmospherePrompt }),
     }));
   },
 
   setBakeStartFramePrompt(bakeStartFramePrompt) {
     set((s) => ({
-      shots: patchCurrentShot(s.shots, s.currentShot, { bakeStartFramePrompt }),
+      ...applyShotPatch(s, { bakeStartFramePrompt }),
     }));
   },
 
   setCrowdTypePrompt(crowdTypePrompt) {
     set((s) => ({
-      shots: patchCurrentShot(s.shots, s.currentShot, { crowdTypePrompt }),
+      ...applyShotPatch(s, { crowdTypePrompt }),
     }));
   },
 
@@ -1233,7 +1368,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     }
 
     set((s) => ({
-      shots: patchCurrentShot(s.shots, s.currentShot, shotPatch),
+      ...applyShotPatch(s, shotPatch),
     }));
   },
 
@@ -1241,7 +1376,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const shot = get().getCurrentShot();
     if (!shot) return;
     set((s) => ({
-      shots: patchCurrentShot(s.shots, s.currentShot, {
+      ...applyShotPatch(s, {
         frameComposition: {
           ...shot.frameComposition,
           showOverlay: !shot.frameComposition.showOverlay,
@@ -1251,8 +1386,8 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   },
 
   handleCameraCompositionChange(changed, patch) {
-    const { shots, currentShot } = get();
-    const prevShot = getCurrentShotFromList(shots, currentShot);
+    const { setups, currentSetupId, currentCoverageShotId } = get();
+    const prevShot = getCurrentShotFromList(setups, currentSetupId, currentCoverageShotId);
     if (!prevShot) return;
 
     const next = { ...prevShot.camera, ...patch };
@@ -1310,89 +1445,277 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 
     set({
       camera: next,
-      shots: patchCurrentShot(shots, currentShot, {
-        camera: next,
-        frameComposition,
-        mannequins: mergedShot.mannequins,
-        ...slotPatch,
-        ...invalidation.shotPatch,
-      }),
+      ...applyShotPatch(
+        { setups, currentSetupId, currentCoverageShotId },
+        {
+          camera: next,
+          frameComposition,
+          mannequins: mergedShot.mannequins,
+          ...slotPatch,
+          ...invalidation.shotPatch,
+        },
+      ),
     });
   },
 
-  selectShot(id) {
-    if (get().currentShot === id) return;
-    const shot = get().shots.find((s) => s.id === id);
-    let shots = get().shots.map((sh) => ({ ...sh, active: sh.id === id }));
-    if (shot && (shot.mannequins?.length ?? 0) === 0) {
-      shots = patchCurrentShot(shots, id, { mannequins: ensureMannequinsOnShot(shot) });
+  selectSetup(id) {
+    if (get().currentSetupId === id) return;
+    const setup = get().setups.find((s) => s.id === id);
+    if (!setup) return;
+
+    let setups: Setup[] = get().setups.map((s) => ({
+      ...s,
+      active: s.id === id,
+      shots: s.shots.map((sh, index) => ({
+        ...sh,
+        active:
+          s.id === id &&
+          (Boolean(sh.active) ||
+            (index === 0 && !setup.shots.some((x) => x.active))),
+      })),
+    }));
+
+    const activeSetup = setups.find((s) => s.id === id) ?? setup;
+    let coverage =
+      activeSetup.shots.find((s) => s.active) ??
+      activeSetup.shots[0];
+    if (!coverage) return;
+
+    let resolved = getResolvedCurrentShot(setups, id, coverage.id);
+    if (resolved && (resolved.mannequins?.length ?? 0) === 0) {
+      setups = patchResolvedShotInSetups(setups, id, coverage.id, {
+        mannequins: ensureMannequinsOnShot(resolved),
+      });
+      resolved = getResolvedCurrentShot(setups, id, coverage.id);
     }
-    const activeShot = shots.find((s) => s.id === id) ?? shot;
-    set((s) => ({
+
+    const setupAfter = getCurrentSetupFromList(setups, id);
+    const coverageAfter = getCurrentCoverageFromSetup(setupAfter, coverage.id);
+
+    set({
+      currentSetupId: id,
+      currentCoverageShotId: coverage.id,
       currentShot: id,
       previewSubMode: 'framing',
       backdropSelected: false,
-      shots,
-      ...(activeShot ? shotActiveView(activeShot) : {}),
-    }));
-    get().showToast(`Switched to ${activeShot?.name ?? shot?.name ?? `Shot ${id}`}`);
+      setups,
+      shots: getTimelineShots(setups),
+      ...(setupAfter && coverageAfter ? setupActiveView(setupAfter, coverageAfter) : {}),
+    });
+    get().showToast(`Switched to ${setupAfter?.name ?? `Setup ${id}`}`);
+  },
+
+  selectShot(id) {
+    get().selectSetup(id);
+  },
+
+  selectCoverageShot(id) {
+    const { currentSetupId, setups } = get();
+    const setup = getCurrentSetupFromList(setups, currentSetupId);
+    const coverage = setup?.shots.find((s) => s.id === id);
+    if (!coverage) return;
+    if (get().currentCoverageShotId === id) return;
+
+    const nextSetups = setups.map((s) =>
+      s.id === currentSetupId
+        ? {
+            ...s,
+            shots: s.shots.map((sh) => ({ ...sh, active: sh.id === id })),
+          }
+        : s,
+    );
+
+    const setupAfter = getCurrentSetupFromList(nextSetups, currentSetupId);
+    const coverageAfter = getCurrentCoverageFromSetup(setupAfter, id);
+    let resolved = getResolvedCurrentShot(nextSetups, currentSetupId, id);
+    if (resolved && (resolved.mannequins?.length ?? 0) === 0) {
+      const withMannequins = patchResolvedShotInSetups(nextSetups, currentSetupId, id, {
+        mannequins: ensureMannequinsOnShot(resolved),
+      });
+      resolved = getResolvedCurrentShot(withMannequins, currentSetupId, id);
+      set({
+        setups: withMannequins,
+        shots: getTimelineShots(withMannequins),
+        currentCoverageShotId: id,
+        ...(setupAfter && coverageAfter
+          ? setupActiveView(getCurrentSetupFromList(withMannequins, currentSetupId)!, coverageAfter)
+          : {}),
+      });
+    } else {
+      set({
+        setups: nextSetups,
+        shots: getTimelineShots(nextSetups),
+        currentCoverageShotId: id,
+        ...(setupAfter && coverageAfter ? setupActiveView(setupAfter, coverageAfter) : {}),
+      });
+    }
+    get().showToast(`Switched to ${coverageAfter?.name ?? `Shot ${id}`}`);
+  },
+
+  deleteSetup(id) {
+    const { setups, currentSetupId } = get();
+    if (setups.length === 1) {
+      get().showToast('Cannot delete the last setup', 'error');
+      return;
+    }
+    const nextSetups = setups.filter((s) => s.id !== id);
+    let nextSetupId = currentSetupId;
+    if (currentSetupId === id) {
+      nextSetupId = nextSetups[0].id;
+      nextSetups[0] = { ...nextSetups[0], active: true };
+    }
+    const setup = getCurrentSetupFromList(nextSetups, nextSetupId);
+    const coverage = getCurrentCoverageFromSetup(setup, setup?.shots.find((s) => s.active)?.id ?? setup?.shots[0]?.id ?? 1);
+    set({
+      setups: nextSetups,
+      shots: getTimelineShots(nextSetups),
+      currentSetupId: nextSetupId,
+      currentCoverageShotId: coverage?.id ?? nextSetupId,
+      currentShot: nextSetupId,
+      ...(setup && coverage ? setupActiveView(setup, coverage) : {}),
+    });
+    get().showToast('Setup deleted');
   },
 
   deleteShot(id) {
-    const { shots, currentShot } = get();
-    if (shots.length === 1) {
-      get().showToast('Cannot delete the last shot', 'error');
+    get().deleteSetup(id);
+  },
+
+  deleteCoverageShot(id) {
+    const { setups, currentSetupId, currentCoverageShotId } = get();
+    const setup = getCurrentSetupFromList(setups, currentSetupId);
+    if (!setup || setup.shots.length <= 1) {
+      get().showToast('Cannot delete the last shot in this setup', 'error');
       return;
     }
-    const nextShots = shots.filter((s) => s.id !== id);
-    let nextCurrent = currentShot;
-    if (currentShot === id) {
-      nextCurrent = nextShots[0].id;
-      nextShots[0] = { ...nextShots[0], active: true };
-      const active = nextShots[0];
-      set({ shots: nextShots, currentShot: nextCurrent, ...shotActiveView(active) });
-    } else {
-      set({ shots: nextShots, currentShot: nextCurrent });
-    }
+    const nextSetups = setups.map((s) => {
+      if (s.id !== currentSetupId) return s;
+      const nextShots = s.shots.filter((sh) => sh.id !== id);
+      if (currentCoverageShotId === id) {
+        nextShots[0] = { ...nextShots[0], active: true };
+      }
+      return { ...s, shots: nextShots };
+    });
+    const setupAfter = getCurrentSetupFromList(nextSetups, currentSetupId);
+    const nextCoverageId =
+      currentCoverageShotId === id
+        ? setupAfter?.shots[0]?.id ?? currentCoverageShotId
+        : currentCoverageShotId;
+    const coverageAfter = getCurrentCoverageFromSetup(setupAfter, nextCoverageId);
+    set({
+      setups: nextSetups,
+      shots: getTimelineShots(nextSetups),
+      currentCoverageShotId: nextCoverageId,
+      ...(setupAfter && coverageAfter ? setupActiveView(setupAfter, coverageAfter) : {}),
+    });
     get().showToast('Shot deleted');
   },
 
-  addShot(mode = 'duplicate') {
-    const { shots } = get();
-    const current = get().getCurrentShot();
-    const newId = Math.max(...shots.map((s) => s.id)) + 1;
+  addSetup(mode = 'duplicate') {
+    const { setups, currentSetupId, currentCoverageShotId } = get();
+    const currentSetup = getCurrentSetupFromList(setups, currentSetupId);
+    const currentCoverage = getCurrentCoverageFromSetup(currentSetup, currentCoverageShotId);
+    const newSetupId = nextSetupId(setups);
+    const newCoverageId = nextCoverageShotId(setups);
 
-    const inherited =
-      mode === 'blank'
-        ? createBlankShotSettings()
-        : current
-          ? cloneInheritedShotSettings(current)
-          : {
-              duration: 5,
-              camera: migrateCamera({ ...STOCK_CAMERA }),
-              lighting: { ...STOCK_LIGHTING },
-              motion: { ...STOCK_MOTION },
-              sceneSetup: STOCK_PROMPT,
-              shotActivity: '',
-              frameComposition: { ...DEFAULT_FRAME_COMPOSITION },
-              references: [STOCK_BACKDROP_REF, STOCK_CHARACTER_REF, null] as (string | null)[],
-              referenceRoles: [...STOCK_REFERENCE_ROLES],
-              referenceMode: DEFAULT_REFERENCE_MODE,
-            };
-
-    const newShot: Shot = {
-      id: newId,
-      name: `Shot ${String(newId).padStart(2, '0')}`,
-      active: false,
+    let newSetup: Setup;
+    if (mode === 'blank' || !currentSetup || !currentCoverage) {
+  const coverage = createCoverageShot(
+    newCoverageId,
+    `Shot ${String(newCoverageId).padStart(2, '0')}`,
+    false,
+    createDefaultBackdrop().id,
+    {
+      ...createBlankCoverageSettings(),
       thumbnail: null,
-      videoUrl: null,
-      generatedVideos: [],
-      activeVideoIndex: 0,
-      ...inherited,
-    };
-    const withMannequins = { ...newShot, mannequins: ensureMannequinsOnShot(newShot) };
+    },
+  );
+      coverage.mannequins = ensureMannequinsOnShot(
+        resolveShot(
+          createSetup(newSetupId, `Setup ${String(newSetupId).padStart(2, '0')}`, 1, false, coverage),
+          coverage,
+        )!,
+      );
+      newSetup = createSetup(
+        newSetupId,
+        `Setup ${String(newSetupId).padStart(2, '0')}`,
+        1,
+        false,
+        coverage,
+        { setupSettings: createBlankSetupSettings() },
+      );
+    } else {
+      const inheritedSetup = cloneInheritedSetupSettings(currentSetup);
+      const inheritedCoverage = cloneInheritedCoverageSettings(currentCoverage);
+      const coverage = createCoverageShot(
+        newCoverageId,
+        `Shot ${String(newCoverageId).padStart(2, '0')}`,
+        false,
+        currentCoverage.backdropId,
+        inheritedCoverage,
+      );
+      const resolved = resolveShot(
+        { ...currentSetup, ...inheritedSetup, id: newSetupId },
+        coverage,
+        getSetupBackdrop(currentSetup, currentCoverage.backdropId),
+      );
+      if (resolved) {
+        coverage.mannequins = ensureMannequinsOnShot(resolved);
+      }
+      newSetup = {
+        id: newSetupId,
+        sceneId: currentSetup.sceneId,
+        name: `Setup ${String(newSetupId).padStart(2, '0')}`,
+        active: false,
+        ...inheritedSetup,
+        backdrops: currentSetup.backdrops.map((b) => ({ ...b })),
+        shots: [coverage],
+      };
+    }
 
-    set({ shots: [...shots, withMannequins] });
+    const nextSetups = [...setups, newSetup];
+    set({ setups: nextSetups, shots: getTimelineShots(nextSetups) });
+    get().showToast(
+      mode === 'blank'
+        ? 'New blank setup added'
+        : 'New setup added — inherited settings from current setup',
+    );
+  },
+
+  addShot(mode = 'duplicate') {
+    get().addSetup(mode);
+  },
+
+  addCoverageShot(mode = 'duplicate') {
+    const { setups, currentSetupId, currentCoverageShotId } = get();
+    const setup = getCurrentSetupFromList(setups, currentSetupId);
+    const currentCoverage = getCurrentCoverageFromSetup(setup, currentCoverageShotId);
+    if (!setup) return;
+
+    const newCoverageId = nextCoverageShotId(setups);
+    const inherited =
+      mode === 'blank' || !currentCoverage
+        ? createBlankCoverageSettings()
+        : cloneInheritedCoverageSettings(currentCoverage);
+
+    const coverage = createCoverageShot(
+      newCoverageId,
+      `Shot ${String(newCoverageId).padStart(2, '0')}`,
+      false,
+      currentCoverage?.backdropId ?? DEFAULT_BACKDROP_ID,
+      inherited,
+    );
+    const resolved = resolveShot(setup, coverage, getSetupBackdrop(setup, coverage.backdropId));
+    if (resolved) {
+      coverage.mannequins = ensureMannequinsOnShot(resolved);
+    }
+
+    const nextSetups = setups.map((s) =>
+      s.id === currentSetupId
+        ? { ...s, shots: [...s.shots, coverage] }
+        : s,
+    );
+    set({ setups: nextSetups, shots: getTimelineShots(nextSetups) });
     get().showToast(
       mode === 'blank'
         ? 'New blank shot added'
@@ -1406,7 +1729,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const patch = selectGeneratedVideoIndex(shot, index);
     if (!Object.keys(patch).length) return;
     set((s) => ({
-      shots: patchCurrentShot(s.shots, s.currentShot, patch),
+      ...applyShotPatch(s, patch),
     }));
   },
 
@@ -1416,7 +1739,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const patch = deleteGeneratedVideoById(shot, id);
     if (!Object.keys(patch).length) return;
     set((s) => ({
-      shots: patchCurrentShot(s.shots, s.currentShot, patch),
+      ...applyShotPatch(s, patch),
     }));
     get().showToast(patch.videoUrl ? 'Video removed' : 'All generated videos removed');
   },
@@ -1461,7 +1784,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       }),
     );
     set((s) => ({
-      shots: patchCurrentShot(s.shots, s.currentShot, {
+      ...applyShotPatch(s, {
         references,
         transformedReferences,
         themeTransformLinked: linked,
@@ -1483,7 +1806,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const shot = get().getCurrentShot();
     if (!shot) return;
     set((s) => ({
-      shots: patchCurrentShot(s.shots, s.currentShot, appendReferenceSlotPatch(shot)),
+      ...applyShotPatch(s, appendReferenceSlotPatch(shot)),
     }));
   },
 
@@ -1510,7 +1833,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     );
     set((s) => ({
       ...(isBackdropSlot ? { backdropSelected: false } : {}),
-      shots: patchCurrentShot(s.shots, s.currentShot, {
+      ...applyShotPatch(s, {
         ...patch,
         ...(isBakeStartFrame(shot) ? { mannequins } : {}),
         ...referencePatch,
@@ -1533,7 +1856,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const next = { ...current, ...patch };
     const clearsCrop = isBackdropTransformPatch(patch);
     set((s) => ({
-      shots: patchCurrentShot(s.shots, s.currentShot, {
+      ...applyShotPatch(s, {
         backdropFramingByAspect: {
           ...(shot.backdropFramingByAspect ?? {}),
           [aspect]: next,
@@ -1561,7 +1884,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       const latest = get().getCurrentShot();
       if (!latest) return;
       set((s) => ({
-        shots: patchCurrentShot(s.shots, s.currentShot, {
+        ...applyShotPatch(s, {
           backdropCropsByAspect: {
             ...(latest.backdropCropsByAspect ?? {}),
             [aspect]: dataUrl,
@@ -1576,7 +1899,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       const latest = get().getCurrentShot();
       if (!latest) return;
       set((s) => ({
-        shots: patchCurrentShot(s.shots, s.currentShot, {
+        ...applyShotPatch(s, {
           backdropFramingByAspect: {
             ...(latest.backdropFramingByAspect ?? {}),
             [aspect]: { ...getBackdropFraming(latest, aspect), locked: false },
@@ -1603,7 +1926,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     if (current.locked) {
       set((s) => ({
         backdropSelected: false,
-        shots: patchCurrentShot(s.shots, s.currentShot, {
+        ...applyShotPatch(s, {
           backdropFramingByAspect: {
             ...(shot.backdropFramingByAspect ?? {}),
             [aspect]: { ...current, locked: false },
@@ -1617,7 +1940,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 
     set((s) => ({
       backdropSelected: false,
-      shots: patchCurrentShot(s.shots, s.currentShot, {
+      ...applyShotPatch(s, {
         backdropFramingByAspect: {
           ...(shot.backdropFramingByAspect ?? {}),
           [aspect]: { ...current, locked: true },
@@ -1637,7 +1960,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const aspect = (get().project.aspectRatio || '16:9') as AspectRatio;
     set((s) => ({
       backdropSelected: false,
-      shots: patchCurrentShot(s.shots, s.currentShot, {
+      ...applyShotPatch(s, {
         backdropFramingByAspect: {
           ...(shot.backdropFramingByAspect ?? {}),
           [aspect]: { ...DEFAULT_BACKDROP_FRAMING },
@@ -1658,7 +1981,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       const latest = get().getCurrentShot();
       if (!latest) return;
       set((s) => ({
-        shots: patchCurrentShot(s.shots, s.currentShot, {
+        ...applyShotPatch(s, {
           backdropCropsByAspect: {
             ...(latest.backdropCropsByAspect ?? {}),
             [aspect]: dataUrl,
@@ -1690,7 +2013,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
           ).shotPatch
         : {};
     set((s) => ({
-      shots: patchCurrentShot(s.shots, s.currentShot, {
+      ...applyShotPatch(s, {
         referenceRoles,
         ...(isBakeStartFrame(shot) && mannequins !== shot.mannequins
           ? { mannequins, ...layoutPatch }
@@ -1703,7 +2026,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const shot = get().getCurrentShot();
     if (!shot || normalizeReferenceMode(shot) === mode) return;
     set((s) => ({
-      shots: patchCurrentShot(s.shots, s.currentShot, { referenceMode: mode }),
+      ...applyShotPatch(s, { referenceMode: mode }),
     }));
     get().showToast(mode === 'auto-roles' ? 'Auto-roles reference mode' : 'Manual reference mode');
   },
@@ -1724,7 +2047,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         : ensureMannequinsOnShot(nextShot);
     const slotPatch = enableBakeStart ? ensureSubjectChecklistSlots({ ...nextShot, mannequins }) : null;
     set((s) => ({
-      shots: patchCurrentShot(s.shots, s.currentShot, {
+      ...applyShotPatch(s, {
         ...switchPatch,
         workflow,
         mannequins,
@@ -1750,7 +2073,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         ).shotPatch
       : {};
     set((s) => ({
-      shots: patchCurrentShot(s.shots, s.currentShot, {
+      ...applyShotPatch(s, {
         mannequins: finalized,
         ...layoutPatch,
       }),
@@ -1787,7 +2110,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       resolveWorkflowInvalidation(shot, { kind: 'mannequin_layout_changed' }),
     );
     set((s) => ({
-      shots: patchCurrentShot(s.shots, s.currentShot, {
+      ...applyShotPatch(s, {
         mannequins: finalized,
         ...layoutPatch,
       }),
@@ -1810,7 +2133,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       resolveWorkflowInvalidation(shot, { kind: 'character_assignment_changed' }),
     );
     set((s) => ({
-      shots: patchCurrentShot(s.shots, s.currentShot, {
+      ...applyShotPatch(s, {
         mannequins,
         ...layoutPatch,
       }),
@@ -1828,7 +2151,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       resolveWorkflowInvalidation(shot, { kind: 'mannequin_layout_changed' }),
     );
     set((s) => ({
-      shots: patchCurrentShot(s.shots, s.currentShot, {
+      ...applyShotPatch(s, {
         mannequins,
         ...layoutPatch,
       }),
@@ -1843,7 +2166,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     );
     if (!Object.keys(shotPatch).length) return;
     set((s) => ({
-      shots: patchCurrentShot(s.shots, s.currentShot, shotPatch),
+      ...applyShotPatch(s, shotPatch),
     }));
     if (toast) get().showToast(toast);
   },
@@ -1861,7 +2184,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       set((s) => ({
         mediaLibrary: result.library,
         shotWorkflowSnapshots: [...s.shotWorkflowSnapshots, snapshot],
-        shots: patchCurrentShot(s.shots, s.currentShot, result.shotPatch),
+        ...applyShotPatch(s, result.shotPatch),
       }));
     } catch {
       get().showToast('Could not save bake to Assets', 'error');
@@ -1890,7 +2213,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const linkedKey = asset.type === 'intermediate-frame' ? 'intermediate' : 'bakedFrame';
     set((s) => ({
       mediaLibrary: library,
-      shots: patchCurrentShot(s.shots, s.currentShot, {
+      ...applyShotPatch(s, {
         bakedStartFrame: asset.type === 'baked-frame' ? asset.url : shot.bakedStartFrame,
         bakedIntermediateFrame:
           asset.type === 'intermediate-frame' ? asset.url : shot.bakedIntermediateFrame,
@@ -1908,8 +2231,8 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 
   async bakeStartFrame() {
     const state = get();
-    const { project, ai, shots, currentShot } = state;
-    const shot = getCurrentShotFromList(shots, currentShot);
+    const { project, ai, currentSetupId, currentCoverageShotId } = state;
+    const shot = getResolvedCurrentShot(state.setups, currentSetupId, currentCoverageShotId);
     if (!shot || !isBakeStartFrame(shot)) return;
 
     const steps = getWorkflowReferenceSteps(shot, shot.lighting, project.aspectRatio as AspectRatio);
@@ -1936,7 +2259,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       isBakingStartFrame: true,
       bakeProgress: 'Rendering bake composite locally',
       bakeProgressDetail: `Backdrop + ${principalCount} mannequin silhouette(s) at ${project.resolution}`,
-      shots: patchCurrentShot(shots, currentShot, { bakeStatus: 'baking' }),
+      ...applyShotPatch(state, { bakeStatus: 'baking' }),
     });
 
     try {
@@ -2019,7 +2342,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       ]);
 
       set((s) => ({
-        shots: patchCurrentShot(s.shots, s.currentShot, {
+        ...applyShotPatch(s, {
           bakedStartFrame,
           bakedIntermediateFrame,
           bakeStatus: 'ready',
@@ -2042,7 +2365,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       }
     } catch (e) {
       set((s) => ({
-        shots: patchCurrentShot(s.shots, s.currentShot, { bakeStatus: 'error' }),
+        ...applyShotPatch(s, { bakeStatus: 'error' }),
         isBakingStartFrame: false,
         bakeProgress: '',
         bakeProgressDetail: '',
@@ -2055,8 +2378,8 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     await get().ensureBackdropCrop();
 
     const state = get();
-    const { project, ai, shots, currentShot } = state;
-    const shot = getCurrentShotFromList(shots, currentShot);
+    const { project, ai, currentSetupId, currentCoverageShotId } = state;
+    const shot = getResolvedCurrentShot(state.setups, currentSetupId, currentCoverageShotId);
     if (!shot) return;
 
     const imageProviderId = ai.defaultImageProvider;
@@ -2120,7 +2443,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       );
 
       set((s) => ({
-        shots: patchCurrentShot(s.shots, s.currentShot, {
+        ...applyShotPatch(s, {
           previewFrameUrl: result.imageUrl ?? null,
           previewFrameFingerprint: fingerprint,
         }),
@@ -2144,8 +2467,8 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     if (index < 0 || index >= THEME_TRANSFORM_SLOT_COUNT) return;
 
     const state = get();
-    const { project, ai, shots, currentShot } = state;
-    const shot = getCurrentShotFromList(shots, currentShot);
+    const { project, ai, currentSetupId, currentCoverageShotId } = state;
+    const shot = getResolvedCurrentShot(state.setups, currentSetupId, currentCoverageShotId);
     if (!shot) return;
 
     const lighting = shot.lighting;
@@ -2186,7 +2509,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     themeTransformError[index] = null;
 
     set((s) => ({
-      shots: patchCurrentShot(s.shots, s.currentShot, {
+      ...applyShotPatch(s, {
         themeTransformLinked: linked,
         themeTransformStatus,
         themeTransformError,
@@ -2198,7 +2521,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const resolvedSource = refs[0]?.url;
     if (!resolvedSource) {
       set((s) => ({
-        shots: patchCurrentShot(s.shots, s.currentShot, {
+        ...applyShotPatch(s, {
           themeTransformStatus: (() => {
             const next = [...(shot.themeTransformStatus ?? defaultThemeTransformStatus())];
             next[index] = 'error';
@@ -2226,7 +2549,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       const nextErrors = [...themeTransformError];
       nextErrors[index] = 'No image model available';
       set((s) => ({
-        shots: patchCurrentShot(s.shots, s.currentShot, {
+        ...applyShotPatch(s, {
           themeTransformStatus: nextStatus,
           themeTransformError: nextErrors,
         }),
@@ -2270,7 +2593,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 
       const isBackdropSlot = index === getBackdropSlotIndex(shot);
       set((s) => ({
-        shots: patchCurrentShot(s.shots, s.currentShot, {
+        ...applyShotPatch(s, {
           transformedReferences,
           themeTransformStatus: nextStatus,
           themeTransformFingerprint: fingerprints,
@@ -2292,7 +2615,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         const latest = get().getCurrentShot();
         if (latest && getBackdropFraming(latest, aspect).locked) {
           set((s) => ({
-            shots: patchCurrentShot(s.shots, s.currentShot, {
+            ...applyShotPatch(s, {
               backdropCropStatusByAspect: {
                 ...(latest.backdropCropStatusByAspect ?? {}),
                 [aspect]: 'pending',
@@ -2309,7 +2632,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       const nextErrors = [...(shot.themeTransformError ?? emptyThemeTransformArray(null))];
       nextErrors[index] = e instanceof Error ? e.message : 'Theme transform failed';
       set((s) => ({
-        shots: patchCurrentShot(s.shots, s.currentShot, {
+        ...applyShotPatch(s, {
           themeTransformStatus: nextStatus,
           themeTransformError: nextErrors,
         }),
@@ -2322,8 +2645,8 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     await get().ensureBackdropCrop();
 
     const state = get();
-    const { project, ai, shots, currentShot } = state;
-    const shot = getCurrentShotFromList(shots, currentShot);
+    const { project, ai, currentSetupId, currentCoverageShotId } = state;
+    const shot = getResolvedCurrentShot(state.setups, currentSetupId, currentCoverageShotId);
     if (!shot) return;
 
     const combinedPrompt = buildShotPrompt(shot.sceneSetup, shot.shotActivity);
@@ -2429,7 +2752,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       }
 
       set((s) => ({
-        shots: patchCurrentShot(s.shots, s.currentShot, appendGeneratedVideo(shot, {
+        ...applyShotPatch(s, appendGeneratedVideo(shot, {
           url: videoUrl,
           posterUrl: result.posterUrl ?? shot.thumbnail,
           providerJobId: result.providerJobId,
@@ -2735,6 +3058,9 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 function isPersistedProjectDirty(state: StudioStore, prevState: StudioStore): boolean {
   return (
     state.project !== prevState.project ||
+    state.setups !== prevState.setups ||
+    state.currentSetupId !== prevState.currentSetupId ||
+    state.currentCoverageShotId !== prevState.currentCoverageShotId ||
     state.shots !== prevState.shots ||
     state.currentShot !== prevState.currentShot ||
     state.mediaLibrary !== prevState.mediaLibrary ||

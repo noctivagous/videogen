@@ -1,7 +1,7 @@
 import { normalizeReferenceRole } from '@/lib/constants/camera';
 import { hashBlobContent } from '@/lib/media/media-library';
 import type { MediaAsset } from '@/lib/types/media-library';
-import type { AspectRatio, ReferenceRole, Shot, StudioProject } from '@/lib/types/studio';
+import type { AspectRatio, CoverageShot, ReferenceRole, Setup, Shot, StudioProject } from '@/lib/types/studio';
 
 export const ASSETS_DIR = 'assets';
 
@@ -156,7 +156,7 @@ async function readBlobFromAssetPath(
 
 async function externalizeReferenceList(
   assetsDir: FileSystemDirectoryHandle,
-  shot: Shot,
+  owner: { id: number; referenceRoles: ReferenceRole[] },
   refs: (string | null)[],
   pathFor: (shotId: number, index: number, role: ReferenceRole, ext: string) => string,
 ): Promise<(string | null)[]> {
@@ -167,9 +167,9 @@ async function externalizeReferenceList(
       const blob = await blobFromInlineReference(ref);
       if (!blob) return ref;
 
-      const role = normalizeReferenceRole(shot.referenceRoles[index] ?? 'None');
+      const role = normalizeReferenceRole(owner.referenceRoles[index] ?? 'None');
       const ext = extensionForMime(blob.type);
-      const assetPath = pathFor(shot.id, index, role, ext);
+      const assetPath = pathFor(owner.id, index, role, ext);
       await writeBlobToAssetPath(assetsDir, assetPath, blob);
       registerAssetBlob(assetPath, blob);
       return assetPath;
@@ -197,7 +197,7 @@ async function externalizeShotReferences(
     : shot.transformedReferences;
 
   const backdropCropsByAspect = shot.backdropCropsByAspect
-    ? await externalizeBackdropCrops(assetsDir, shot)
+    ? await externalizeBackdropCrops(assetsDir, shot.id, shot.backdropCropsByAspect)
     : shot.backdropCropsByAspect;
 
   return externalizeShotBakedFrames(assetsDir, {
@@ -278,10 +278,12 @@ async function externalizeMediaLibrary(
 
 async function externalizeBackdropCrops(
   assetsDir: FileSystemDirectoryHandle,
-  shot: Shot,
-): Promise<Partial<Record<AspectRatio, string>>> {
-  const entries = Object.entries(shot.backdropCropsByAspect ?? {}) as [AspectRatio, string][];
-  const out: Partial<Record<AspectRatio, string>> = { ...shot.backdropCropsByAspect };
+  ownerId: number,
+  crops: Partial<Record<AspectRatio, string>> | undefined,
+): Promise<Partial<Record<AspectRatio, string>> | undefined> {
+  if (!crops) return crops;
+  const entries = Object.entries(crops) as [AspectRatio, string][];
+  const out: Partial<Record<AspectRatio, string>> = { ...crops };
 
   await Promise.all(
     entries.map(async ([aspect, ref]) => {
@@ -289,7 +291,7 @@ async function externalizeBackdropCrops(
       const blob = await blobFromInlineReference(ref);
       if (!blob) return;
       const ext = extensionForMime(blob.type);
-      const assetPath = assetPathForBackdropCrop(shot.id, aspect, ext);
+      const assetPath = assetPathForBackdropCrop(ownerId, aspect, ext);
       await writeBlobToAssetPath(assetsDir, assetPath, blob);
       registerAssetBlob(assetPath, blob);
       out[aspect] = assetPath;
@@ -299,18 +301,108 @@ async function externalizeBackdropCrops(
   return out;
 }
 
+async function externalizeCoverageShot(
+  assetsDir: FileSystemDirectoryHandle,
+  coverage: CoverageShot,
+): Promise<CoverageShot> {
+  let bakedStartFrame = coverage.bakedStartFrame;
+  let bakedIntermediateFrame = coverage.bakedIntermediateFrame;
+
+  if (bakedStartFrame && shouldExternalizeReference(bakedStartFrame)) {
+    const blob = await blobFromInlineReference(bakedStartFrame);
+    if (blob) {
+      const id = await hashBlobContent(blob);
+      const path = assetPathForMediaAsset(id, extensionForMime(blob.type));
+      await writeBlobToAssetPath(assetsDir, path, blob);
+      registerAssetBlob(path, blob);
+      bakedStartFrame = path;
+    }
+  }
+
+  if (
+    bakedIntermediateFrame &&
+    shouldExternalizeReference(bakedIntermediateFrame) &&
+    bakedIntermediateFrame !== coverage.bakedStartFrame
+  ) {
+    const blob = await blobFromInlineReference(bakedIntermediateFrame);
+    if (blob) {
+      const id = await hashBlobContent(blob);
+      const path = assetPathForMediaAsset(id, extensionForMime(blob.type));
+      await writeBlobToAssetPath(assetsDir, path, blob);
+      registerAssetBlob(path, blob);
+      bakedIntermediateFrame = path;
+    }
+  }
+
+  return { ...coverage, bakedStartFrame, bakedIntermediateFrame };
+}
+
+async function externalizeSetupReferences(
+  assetsDir: FileSystemDirectoryHandle,
+  setup: Setup,
+): Promise<Setup> {
+  const references = await externalizeReferenceList(
+    assetsDir,
+    setup,
+    setup.references,
+    assetPathForReference,
+  );
+  const transformedReferences = setup.transformedReferences
+    ? await externalizeReferenceList(
+        assetsDir,
+        setup,
+        setup.transformedReferences,
+        assetPathForTransformedReference,
+      )
+    : setup.transformedReferences;
+
+  const backdrops = await Promise.all(
+    setup.backdrops.map(async (backdrop) => {
+      let url = backdrop.url;
+      if (url && shouldExternalizeReference(url)) {
+        const blob = await blobFromInlineReference(url);
+        if (blob) {
+          const id = await hashBlobContent(blob);
+          const path = assetPathForMediaAsset(id, extensionForMime(blob.type));
+          await writeBlobToAssetPath(assetsDir, path, blob);
+          registerAssetBlob(path, blob);
+          url = path;
+        }
+      }
+      const backdropCropsByAspect = await externalizeBackdropCrops(
+        assetsDir,
+        setup.id,
+        backdrop.backdropCropsByAspect,
+      );
+      return { ...backdrop, url, backdropCropsByAspect };
+    }),
+  );
+
+  const shots = await Promise.all(
+    setup.shots.map((coverage) => externalizeCoverageShot(assetsDir, coverage)),
+  );
+
+  return {
+    ...setup,
+    references,
+    transformedReferences,
+    backdrops,
+    shots,
+  };
+}
+
 export async function externalizeProjectReferences(
   dir: FileSystemDirectoryHandle,
   project: StudioProject,
 ): Promise<StudioProject> {
   const assetsDir = await getAssetsDirectory(dir);
-  const shots = await Promise.all(
-    project.shots.map((shot) => externalizeShotReferences(assetsDir, shot)),
+  const setups = await Promise.all(
+    (project.setups ?? []).map((setup) => externalizeSetupReferences(assetsDir, setup)),
   );
   const mediaLibrary = project.mediaLibrary?.length
     ? await externalizeMediaLibrary(assetsDir, project.mediaLibrary)
     : project.mediaLibrary;
-  return { ...project, shots, mediaLibrary };
+  return { ...project, setups, mediaLibrary };
 }
 
 async function hydrateReferenceList(
@@ -342,29 +434,51 @@ async function hydrateOptionalAssetUrl(
   return registerAssetBlob(ref, blob);
 }
 
-async function hydrateShotReferences(
+async function hydrateCoverageShot(
   assetsDir: FileSystemDirectoryHandle,
-  shot: Shot,
-): Promise<Shot> {
-  const references = await hydrateReferenceList(assetsDir, shot.references);
-  const transformedReferences = shot.transformedReferences
-    ? await hydrateReferenceList(assetsDir, shot.transformedReferences)
-    : shot.transformedReferences;
-
-  const backdropCropsByAspect = shot.backdropCropsByAspect
-    ? await hydrateBackdropCrops(assetsDir, shot.backdropCropsByAspect)
-    : shot.backdropCropsByAspect;
-
-  const bakedStartFrame = await hydrateOptionalAssetUrl(assetsDir, shot.bakedStartFrame);
-  const bakedIntermediateFrame = await hydrateOptionalAssetUrl(assetsDir, shot.bakedIntermediateFrame);
-
+  coverage: CoverageShot,
+): Promise<CoverageShot> {
+  const bakedStartFrame = await hydrateOptionalAssetUrl(assetsDir, coverage.bakedStartFrame);
+  const bakedIntermediateFrame = await hydrateOptionalAssetUrl(
+    assetsDir,
+    coverage.bakedIntermediateFrame,
+  );
   return {
-    ...shot,
-    references,
-    transformedReferences,
-    backdropCropsByAspect,
+    ...coverage,
     bakedStartFrame: bakedStartFrame ?? null,
     bakedIntermediateFrame: bakedIntermediateFrame ?? null,
+  };
+}
+
+async function hydrateSetupReferences(
+  assetsDir: FileSystemDirectoryHandle,
+  setup: Setup,
+): Promise<Setup> {
+  const references = await hydrateReferenceList(assetsDir, setup.references);
+  const transformedReferences = setup.transformedReferences
+    ? await hydrateReferenceList(assetsDir, setup.transformedReferences)
+    : setup.transformedReferences;
+
+  const backdrops = await Promise.all(
+    setup.backdrops.map(async (backdrop) => {
+      const url = (await hydrateOptionalAssetUrl(assetsDir, backdrop.url)) ?? backdrop.url;
+      const backdropCropsByAspect = backdrop.backdropCropsByAspect
+        ? await hydrateBackdropCrops(assetsDir, backdrop.backdropCropsByAspect)
+        : backdrop.backdropCropsByAspect;
+      return { ...backdrop, url, backdropCropsByAspect };
+    }),
+  );
+
+  const shots = await Promise.all(
+    setup.shots.map((coverage) => hydrateCoverageShot(assetsDir, coverage)),
+  );
+
+  return {
+    ...setup,
+    references,
+    transformedReferences,
+    backdrops,
+    shots,
   };
 }
 
@@ -409,13 +523,13 @@ export async function hydrateProjectReferences(
   project: StudioProject,
 ): Promise<StudioProject> {
   const assetsDir = await getAssetsDirectory(dir);
-  const shots = await Promise.all(
-    project.shots.map((shot) => hydrateShotReferences(assetsDir, shot)),
+  const setups = await Promise.all(
+    (project.setups ?? []).map((setup) => hydrateSetupReferences(assetsDir, setup)),
   );
   const mediaLibrary = project.mediaLibrary?.length
     ? await hydrateMediaLibrary(assetsDir, project.mediaLibrary)
     : project.mediaLibrary;
-  return { ...project, shots, mediaLibrary };
+  return { ...project, setups, mediaLibrary };
 }
 
 export async function blobToDataUrl(blob: Blob): Promise<string> {

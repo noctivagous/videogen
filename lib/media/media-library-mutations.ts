@@ -1,5 +1,5 @@
 import type { MediaAsset, MediaAssetType, ShotWorkflowSnapshot } from '@/lib/types/media-library';
-import type { Shot } from '@/lib/types/studio';
+import type { CoverageShot, Setup, Shot } from '@/lib/types/studio';
 import {
   createMediaAssetFromDataUrl,
   generateThumbnailDataUrl,
@@ -332,6 +332,37 @@ export function applyAssetIdRemapToShots(
     }
     return next;
   });
+}
+
+export function applyAssetIdRemapToSetups(
+  setups: Setup[],
+  idMap: Map<string, string>,
+): Setup[] {
+  if (idMap.size === 0) return setups;
+  return setups.map((setup) => ({
+    ...setup,
+    backdrops: setup.backdrops.map((backdrop) =>
+      backdrop.linkedAssetId && idMap.has(backdrop.linkedAssetId)
+        ? { ...backdrop, linkedAssetId: idMap.get(backdrop.linkedAssetId)! }
+        : backdrop,
+    ),
+    shots: applyAssetIdRemapToShots(setup.shots as unknown as Shot[], idMap) as unknown as CoverageShot[],
+  }));
+}
+
+export function cleanSetupsAfterAssetDelete(
+  setups: Setup[],
+  deletedIds: Set<string>,
+): Setup[] {
+  return setups.map((setup) => ({
+    ...setup,
+    backdrops: setup.backdrops.map((backdrop) =>
+      backdrop.linkedAssetId && deletedIds.has(backdrop.linkedAssetId)
+        ? { ...backdrop, linkedAssetId: undefined }
+        : backdrop,
+    ),
+    shots: cleanShotsAfterAssetDelete(setup.shots as unknown as Shot[], deletedIds) as unknown as CoverageShot[],
+  }));
 }
 
 export function applyAssetIdRemapToSnapshots(

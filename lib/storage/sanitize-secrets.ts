@@ -32,8 +32,11 @@ export function sanitizeProjectForPersistence(project: StudioProject): StudioPro
   return {
     schemaVersion: clean.schemaVersion,
     project: { ...clean.project },
-    shots: clean.shots,
-    currentShot: clean.currentShot,
+    scenes: clean.scenes,
+    currentSceneId: clean.currentSceneId,
+    setups: clean.setups,
+    currentSetupId: clean.currentSetupId,
+    currentCoverageShotId: clean.currentCoverageShotId,
     ...(clean.mediaLibrary ? { mediaLibrary: clean.mediaLibrary } : {}),
     ...(clean.shotWorkflowSnapshots ? { shotWorkflowSnapshots: clean.shotWorkflowSnapshots } : {}),
   };

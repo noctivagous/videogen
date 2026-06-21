@@ -4,7 +4,8 @@ import { useMemo } from 'react';
 import { MentionTextarea } from '@/components/ui/MentionTextarea';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { buildPromptMentionOptions } from '@/lib/studio/prompt-mentions';
-import { ShotTimeline } from '@/components/studio/ShotTimeline';
+import { CoverageShotTabs } from '@/components/studio/CoverageShotTabs';
+import { SetupTimeline } from '@/components/studio/SetupTimeline';
 import { useStudioStore } from '@/store/useStudioStore';
 
 export function BottomBar() {
@@ -91,7 +92,8 @@ export function BottomBar() {
           </div>
         </div>
 
-        <ShotTimeline />
+        <CoverageShotTabs />
+        <SetupTimeline />
       </div>
     </div>
   );
