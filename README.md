@@ -3,15 +3,34 @@ VideoGen
 VideoGen is a workflow-based video generation app,
 BYOK (Bring Your Own Keys) multi-provider,
 centered around shot design.  It is under development.
-It provides multiple workflows for making shots.
+The plan is for it to provide multiple gated workflows 
+for making shots.
 
-The user interface centers on the user making
-a shot.  Within that shot, the user can utilize
-one or more workflows to generate media.
-The media are available in a media library
+**1. Bake Start Frame** - Baking characters into
+a pre-lit backdrop is considered the most reliable
+method to produce desired results.  In VideoGen, use mannequins
+to block the video frame. VideoGen will then bake composites of your
+character(s) from your character sheet(s) into the backdrop,
+replacing the mannequins' orientation and location.  
+In this workflow, the video model's role is only to add motion to the 
+baked image based on your character sheet and prompt.
+
+**2. Auto-place Character** - Send the model your
+character sheet(s) + backdrop separately (not fused
+as a single baked image), explain where you
+want the character to be and the model 
+infers scale/position and places your character
+into the backdrop.  Optional mannequin blocking,
+but no bake step before submitting to video model.  
+This provides fast iteration. 
 
 
-## Workflows and mannequin frame blocking
+For a given shot, the user can utilize one or more 
+workflows to generate media.  The media are available 
+in a media library
+
+
+## Workflows and Mannequin-Based Frame Blocking
 
 Each shot has multiple available **Workflows** in the left panel. 
 Workflows define how reference images, mannequins, and camera settings feed into generation.
