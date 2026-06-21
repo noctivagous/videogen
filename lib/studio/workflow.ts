@@ -54,8 +54,13 @@ export function getWorkflow(shot: Shot | undefined): Workflow {
   return normalizeWorkflow(shot);
 }
 
+export function isBakeStartFrame(shot: Shot | undefined): boolean {
+  return getWorkflow(shot) === 'bake-start-frame';
+}
+
+/** @deprecated Use isBakeStartFrame */
 export function isLockStartFrame(shot: Shot | undefined): boolean {
-  return getWorkflow(shot) === 'lock-start-frame';
+  return isBakeStartFrame(shot);
 }
 
 function subjectSlotIndex(shot: Shot): number {
@@ -78,7 +83,7 @@ export function getWorkflowReferenceSteps(
   shot: Shot | undefined,
   lighting?: LightingSettings,
 ): WorkflowReferenceStep[] {
-  if (!shot || !isLockStartFrame(shot)) return [];
+  if (!shot || !isBakeStartFrame(shot)) return [];
 
   const backdropIdx = getBackdropSlotIndex(shot);
   const bakeStatus: BakeStatus = shot.bakeStatus ?? 'idle';
@@ -116,7 +121,7 @@ export function getWorkflowReferenceSteps(
 }
 
 export function shouldInjectFieldSizePrompt(shot: Shot | undefined): boolean {
-  return !isLockStartFrame(shot);
+  return !isBakeStartFrame(shot);
 }
 
 export function hasBakedStartFrame(shot: Shot | undefined): boolean {
@@ -125,7 +130,7 @@ export function hasBakedStartFrame(shot: Shot | undefined): boolean {
 
 /** Lock-start video should use the baked pixels only — not auto-place refs or scene-rebuild prompts. */
 export function shouldUseBakedStartFrameForVideo(shot: Shot | undefined): boolean {
-  return isLockStartFrame(shot) && hasBakedStartFrame(shot);
+  return isBakeStartFrame(shot) && hasBakedStartFrame(shot);
 }
 
 export { canAddMannequin, createDefaultMannequin, getMannequinLimit } from '@/lib/studio/mannequin-factory';

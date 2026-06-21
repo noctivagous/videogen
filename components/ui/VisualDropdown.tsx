@@ -4,12 +4,17 @@ import {
   useCallback,
   useEffect,
   useId,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
   type KeyboardEvent,
+  type ReactNode,
 } from 'react';
-import type { VisualDropdownOption } from '@/lib/constants/field-size-options';
+import type {
+  VisualDropdownGroup,
+  VisualDropdownOption,
+} from '@/lib/constants/field-size-options';
 
 export type VisualDropdownTriggerVariant = 'thumbnailRight' | 'backgroundFill' | 'textOnly';
 export type VisualDropdownMenuVariant = 'grid' | 'list' | 'columns';
@@ -21,6 +26,7 @@ export interface VisualDropdownProps<T extends string = string> {
   value: T;
   onChange: (value: T) => void;
   options: VisualDropdownOption<T>[];
+  groups?: VisualDropdownGroup<T>[];
   triggerVariant?: VisualDropdownTriggerVariant;
   menuVariant?: VisualDropdownMenuVariant;
   size?: VisualDropdownSize;
@@ -47,12 +53,17 @@ function optionBackgroundStyle(option: VisualDropdownOption): CSSProperties | un
   return { backgroundImage: `url(${bg})` };
 }
 
+function isSelectable<T extends string>(option: VisualDropdownOption<T>): boolean {
+  return !option.disabled;
+}
+
 export function VisualDropdown<T extends string>({
   label,
   labelClassName = '',
   value,
   onChange,
   options,
+  groups,
   triggerVariant = 'thumbnailRight',
   menuVariant = 'grid',
   size = 'md',
@@ -69,8 +80,10 @@ export function VisualDropdown<T extends string>({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const listboxId = useId();
 
-  const selectedIndex = Math.max(0, options.findIndex((o) => o.value === value));
-  const selected = options[selectedIndex] ?? options[0];
+  const flatOptions = useMemo(() => options, [options]);
+
+  const selectedIndex = Math.max(0, flatOptions.findIndex((o) => o.value === value));
+  const selected = flatOptions[selectedIndex] ?? flatOptions[0];
 
   const close = useCallback(() => {
     setOpen(false);
@@ -79,12 +92,12 @@ export function VisualDropdown<T extends string>({
 
   const selectIndex = useCallback(
     (index: number) => {
-      const option = options[index];
-      if (!option) return;
+      const option = flatOptions[index];
+      if (!option || option.disabled) return;
       onChange(option.value);
       close();
     },
-    [close, onChange, options],
+    [close, flatOptions, onChange],
   );
 
   useEffect(() => {
@@ -103,9 +116,13 @@ export function VisualDropdown<T extends string>({
 
   const moveActive = (delta: number) => {
     setActiveIndex((prev) => {
-      const next = prev + delta;
-      if (next < 0) return options.length - 1;
-      if (next >= options.length) return 0;
+      const len = flatOptions.length;
+      if (len === 0) return 0;
+      let next = prev;
+      for (let i = 0; i < len; i++) {
+        next = (next + delta + len) % len;
+        if (isSelectable(flatOptions[next])) break;
+      }
       return next;
     });
   };
@@ -114,14 +131,14 @@ export function VisualDropdown<T extends string>({
     setActiveIndex((prev) => {
       const row = Math.floor(prev / menuColumns);
       const col = prev % menuColumns;
-      const totalRows = Math.ceil(options.length / menuColumns);
+      const totalRows = Math.ceil(flatOptions.length / menuColumns);
       const nextRow = Math.min(Math.max(row + rowDelta, 0), totalRows - 1);
       let nextCol = col + colDelta;
       if (nextCol < 0) nextCol = menuColumns - 1;
       if (nextCol >= menuColumns) nextCol = 0;
       let nextIndex = nextRow * menuColumns + nextCol;
-      if (nextIndex >= options.length) {
-        nextIndex = Math.min(nextRow * menuColumns + col, options.length - 1);
+      if (nextIndex >= flatOptions.length) {
+        nextIndex = Math.min(nextRow * menuColumns + col, flatOptions.length - 1);
       }
       return nextIndex;
     });
@@ -171,7 +188,6 @@ export function VisualDropdown<T extends string>({
     }
   };
 
-  const triggerImage = optionImage(selected);
   const menuStyle = {
     '--vd-cell-w': `${cellWidth}px`,
     '--vd-cell-h': `${cellHeight}px`,
@@ -183,6 +199,74 @@ export function VisualDropdown<T extends string>({
       : menuVariant === 'columns'
         ? 'visual-dropdown__grid visual-dropdown__grid--columns'
         : 'visual-dropdown__grid';
+
+  const renderOption = (option: VisualDropdownOption<T>, index: number) => {
+    const image = optionImage(option);
+    const isSelected = option.value === value;
+    const isActive = index === activeIndex;
+    const optionDisabled = Boolean(option.disabled);
+    const displayLabel = optionDisabled ? `${option.label} (soon)` : option.label;
+
+    return (
+      <button
+        key={option.value}
+        type="button"
+        role="option"
+        aria-selected={isSelected}
+        aria-disabled={optionDisabled || undefined}
+        disabled={optionDisabled}
+        className={[
+          'visual-dropdown__cell',
+          isSelected ? 'visual-dropdown__cell--selected' : '',
+          isActive ? 'visual-dropdown__cell--active' : '',
+          optionDisabled ? 'visual-dropdown__cell--disabled' : '',
+        ].filter(Boolean).join(' ')}
+        onMouseEnter={() => !optionDisabled && setActiveIndex(index)}
+        onClick={() => selectIndex(index)}
+      >
+        {menuVariant !== 'list' && (
+          image ? (
+            <span className="visual-dropdown__cell-thumb-wrap">
+              {isCssGradient(image) ? (
+                <span
+                  className="visual-dropdown__cell-thumb visual-dropdown__cell-thumb--css"
+                  style={optionBackgroundStyle(option)}
+                  aria-hidden
+                />
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={image} alt="" className="visual-dropdown__cell-thumb" />
+              )}
+            </span>
+          ) : (
+            <span className="visual-dropdown__cell-thumb-wrap visual-dropdown__cell-thumb-wrap--empty" />
+          )
+        )}
+        {menuVariant !== 'list' && (
+          <span className="visual-dropdown__cell-short">{option.shortLabel ?? option.value}</span>
+        )}
+        <span className="visual-dropdown__cell-label">{displayLabel}</span>
+      </button>
+    );
+  };
+
+  const menuContent: ReactNode = groups?.length ? (
+    groups.map((group) => (
+      <div key={group.label} className="visual-dropdown__group">
+        <div className="visual-dropdown__group-label" aria-hidden>
+          {group.label}
+        </div>
+        {group.options.map((option) => {
+          const index = flatOptions.findIndex((o) => o.value === option.value);
+          return renderOption(option, index);
+        })}
+      </div>
+    ))
+  ) : (
+    flatOptions.map((option, index) => renderOption(option, index))
+  );
+
+  const triggerLabel = selected?.shortLabel ?? selected?.label ?? value;
 
   return (
     <div
@@ -236,7 +320,7 @@ export function VisualDropdown<T extends string>({
           </>
         ) : null}
 
-        <span className="visual-dropdown__trigger-label">{selected?.label ?? value}</span>
+        <span className="visual-dropdown__trigger-label">{triggerLabel}</span>
         <span className="visual-dropdown__chevron" aria-hidden>▾</span>
       </button>
 
@@ -252,48 +336,13 @@ export function VisualDropdown<T extends string>({
         >
           <div
             className={menuClass}
-            style={{ gridTemplateColumns: `repeat(${menuColumns}, minmax(0, 1fr))` }}
+            style={
+              menuVariant === 'grid' || menuVariant === 'columns'
+                ? { gridTemplateColumns: `repeat(${menuColumns}, minmax(0, 1fr))` }
+                : undefined
+            }
           >
-            {options.map((option, index) => {
-              const image = optionImage(option);
-              const isSelected = option.value === value;
-              const isActive = index === activeIndex;
-
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  role="option"
-                  aria-selected={isSelected}
-                  className={[
-                    'visual-dropdown__cell',
-                    isSelected ? 'visual-dropdown__cell--selected' : '',
-                    isActive ? 'visual-dropdown__cell--active' : '',
-                  ].filter(Boolean).join(' ')}
-                  onMouseEnter={() => setActiveIndex(index)}
-                  onClick={() => selectIndex(index)}
-                >
-                  {image ? (
-                    <span className="visual-dropdown__cell-thumb-wrap">
-                      {isCssGradient(image) ? (
-                        <span
-                          className="visual-dropdown__cell-thumb visual-dropdown__cell-thumb--css"
-                          style={optionBackgroundStyle(option)}
-                          aria-hidden
-                        />
-                      ) : (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img src={image} alt="" className="visual-dropdown__cell-thumb" />
-                      )}
-                    </span>
-                  ) : (
-                    <span className="visual-dropdown__cell-thumb-wrap visual-dropdown__cell-thumb-wrap--empty" />
-                  )}
-                  <span className="visual-dropdown__cell-short">{option.shortLabel ?? option.value}</span>
-                  <span className="visual-dropdown__cell-label">{option.label}</span>
-                </button>
-              );
-            })}
+            {menuContent}
           </div>
         </div>
       )}

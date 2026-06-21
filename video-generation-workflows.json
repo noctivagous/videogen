@@ -1,0 +1,126 @@
+[
+  {
+    "group": "Character Workflows",
+    "items": [
+      {
+        "id": "bake-start-frame",
+        "label": "Bake Start Frame",
+        "description": "Use mannequins for frame blocking to composite your character(s) into your backdrop. This produces the baked start frame. Then video model only adds motion based on prompt.",
+        "purpose": "Use this when eyeline, exact framing, or lighting match matters.",
+        "default": true,
+        "modelRequirements": {
+          "capabilities": ["image-edit"],
+          "anyOf": ["inpaint", "image-edit"],
+          "preferred": "inpaint",
+          "fallback": "xai-image-edit",
+          "unavailableMessage": "Bake Start Frame works with any image editing model. xAI's image editing API will be used if you don't have a dedicated inpaint model; inpaint gives cleaner masks."
+        }
+      },
+      {
+        "id": "auto-place",
+        "label": "Auto-place Character",
+        "description": "Provide character sheet + backdrop separately to the model and prompt drives these to make video. Model infers scale and position of character. Optionally use mannequins for frame blocking. No baking of first frame.",
+        "purpose": "Fast, great for iteration.",
+        "modelRequirements": {
+          "capabilities": ["i2v"],
+          "unavailableMessage": "Requires an image-to-video model (Kling, Runway, Veo, Luma, etc.)."
+        }
+      }
+    ]
+  },
+  {
+    "group": "Environment Workflows",
+    "items": [
+      {
+        "id": "pure-broll",
+        "label": "Pure B-roll (no character)",
+        "description": "backdrop only, or text-to-video. Field Size, Lens, Angle drive the image generation. Prompt is just atmosphere and camera move: 'establishing wide shot, slow crane up through foggy forest'. No character sheet needed.",
+        "modelRequirements": {
+          "capabilities": ["t2v", "i2v"],
+          "anyOf": ["t2v", "i2v"],
+          "unavailableMessage": "Requires text-to-video or image-to-video."
+        }
+      },
+      {
+        "id": "start-end",
+        "label": "Start & End Frame",
+        "description": "Produce two baked frames, model interpolates.",
+        "purpose": "For product reveals or logo landings. Allows for a reliable opening and closing look.",
+        "modelRequirements": {
+          "capabilities": ["first-last-frame"],
+          "unavailableMessage": "Requires first/last frame control (Kling 3.0+, Runway Gen-4, Veo 3.1)."
+        }
+      }
+    ]
+  },
+  {
+    "group": "Motion Workflows",
+    "items": [
+      {
+        "id": "motion-transfer",
+        "label": "Motion Transfer / Performance",
+        "description": "Upload reference video, apply to character. This is Kling Motion Control or Viggle-style. Your Field Size and Lens controls are ignored here — the motion defines the framing.",
+        "purpose": "Application of motion or setting from one media asset to another",
+        "modelRequirements": {
+          "capabilities": ["motion-transfer"],
+          "unavailableMessage": "Requires motion transfer / pose control (Kling, Viggle, Runway Act-One)."
+        }
+      },
+      {
+        "id": "multi-shot",
+        "label": "Multi-shot Sequence",
+        "description": "One prompt generates 3–6 connected shots. Kling 3.0 does this. Your Subject Count and Coverage controls become shot-list items, not single-frame settings.",
+        "modelRequirements": {
+          "capabilities": ["multi-shot"],
+          "providers": [{ "name": "kling", "minVersion": "3.0" }],
+          "unavailableMessage": "Requires Kling 3.0 or later for native multi-shot."
+        }
+      }
+    ]
+  },
+  {
+    "group": "Camera Workflows",
+    "items": [
+      {
+        "id": "camera-control",
+        "label": "Camera Control",
+        "description": "Drive camera moves on a static scene or first frame. No character animation — just crane, dolly, pan, tilt, orbit, or 3D orbit.",
+        "purpose": "For establishing shots and product turntables where camera movement is the story.",
+        "modelRequirements": {
+          "capabilities": ["camera-control"],
+          "unavailableMessage": "Requires camera-control support (Runway Gen-4, Kling 3.0, Veo 3.1, Luma)."
+        }
+      }
+    ]
+  },
+  {
+    "group": "Edit Workflows",
+    "items": [
+      {
+        "id": "video-inpaint",
+        "label": "Video Inpaint / Object Removal",
+        "description": "Remove objects, people, or blemishes from existing video. Paint a mask and the model fills the background with temporally consistent content.",
+        "purpose": "Clean up footage without reshooting.",
+        "modelRequirements": {
+          "capabilities": ["video-inpaint"],
+          "unavailableMessage": "Requires video inpainting (Runway Aleph, Kling, Pika)."
+        }
+      }
+    ]
+  },
+  {
+    "group": "Utility Workflows",
+    "items": [
+      {
+        "id": "restyle-lipsync",
+        "label": "Re-style / Lip-sync",
+        "description": "Take existing footage, change style or add speech. Character sheet is optional, backdrop is the video itself.",
+        "modelRequirements": {
+          "capabilities": ["video-edit", "lipsync"],
+          "anyOf": ["video-edit", "lipsync"],
+          "unavailableMessage": "Requires video-to-video editing and/or lip-sync (Runway, Wan 2.7, Kling, HeyGen)."
+        }
+      }
+    ]
+  }
+]

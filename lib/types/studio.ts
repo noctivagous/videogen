@@ -32,7 +32,16 @@ export type ReferenceRole = 'Subject' | 'Backdrop' | 'Style' | 'Depth' | 'Canny'
 /** How shot image reference slots are labeled and described in prompts. */
 export type ReferenceMode = 'auto-roles' | 'manual';
 
-export type Workflow = 'auto-place' | 'lock-start-frame' | 'broll' | 'motion-transfer';
+export type Workflow =
+  | 'auto-place'
+  | 'bake-start-frame'
+  | 'pure-broll'
+  | 'start-end'
+  | 'motion-transfer'
+  | 'multi-shot'
+  | 'camera-control'
+  | 'video-inpaint'
+  | 'restyle-lipsync';
 
 export type MannequinAngle =
   | 'front'

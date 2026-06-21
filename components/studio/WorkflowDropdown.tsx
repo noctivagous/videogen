@@ -1,6 +1,14 @@
 'use client';
 
-import { normalizeWorkflow, WORKFLOW_OPTIONS } from '@/lib/constants/workflows';
+import { useMemo } from 'react';
+import { VisualDropdown } from '@/components/ui/VisualDropdown';
+import type { VisualDropdownGroup, VisualDropdownOption } from '@/lib/constants/field-size-options';
+import { normalizeWorkflow } from '@/lib/constants/workflows';
+import {
+  getWorkflowGroups,
+  isWorkflowImplemented,
+  workflowShortLabel,
+} from '@/lib/constants/video-generation-workflows';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import type { Shot, Workflow } from '@/lib/types/studio';
 
@@ -9,23 +17,39 @@ interface WorkflowDropdownProps {
   onChange: (workflow: Workflow) => void;
 }
 
+function buildWorkflowGroups(): VisualDropdownGroup<Workflow>[] {
+  return getWorkflowGroups().map((group) => ({
+    label: group.group,
+    options: group.items.map(
+      (item): VisualDropdownOption<Workflow> => ({
+        value: item.id,
+        label: item.label,
+        shortLabel: workflowShortLabel(item.label),
+        disabled: !isWorkflowImplemented(item.id),
+      }),
+    ),
+  }));
+}
+
+function flattenGroups(groups: VisualDropdownGroup<Workflow>[]): VisualDropdownOption<Workflow>[] {
+  return groups.flatMap((g) => g.options);
+}
+
 export function WorkflowDropdown({ shot, onChange }: WorkflowDropdownProps) {
   const workflow = normalizeWorkflow(shot);
+  const groups = useMemo(() => buildWorkflowGroups(), []);
+  const options = useMemo(() => flattenGroups(groups), [groups]);
 
   return (
-    <select
+    <VisualDropdown
       value={workflow}
-      onChange={(e) => onChange(e.target.value as Workflow)}
-      className="workflow-dropdown w-full text-[11px] font-semibold bg-surface-800 border border-surface-700 rounded-lg px-2 py-1.5 text-gray-200"
-      aria-label="Shot workflow"
-      {...uiSectionProps(UI_SECTIONS.studioShotWorkflow)}
-    >
-      {WORKFLOW_OPTIONS.map((option) => (
-        <option key={option.value} value={option.value} disabled={!option.enabled}>
-          {option.label}
-          {!option.enabled ? ' (soon)' : ''}
-        </option>
-      ))}
-    </select>
+      onChange={onChange}
+      options={options}
+      groups={groups}
+      triggerVariant="thumbnailRight"
+      menuVariant="list"
+      size="md"
+      uiSection={uiSectionProps(UI_SECTIONS.studioShotWorkflow)}
+    />
   );
 }

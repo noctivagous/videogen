@@ -8,22 +8,19 @@ import {
   BackdropFramingControlsOverflow,
 } from '@/components/studio/BackdropFramingControls';
 import { CompositionOverlay } from '@/components/studio/CompositionOverlay';
-import { ReferenceSlots } from '@/components/studio/ReferenceSlots';
-import { useThemeTransformConnectorContext } from '@/components/studio/ThemeTransformConnectorProvider';
 import { GeneratedVideoStrip } from '@/components/studio/GeneratedVideoStrip';
 import { FrameViewSegment } from '@/components/studio/FrameViewSegment';
 import { GenerationProgressOverlay } from '@/components/studio/GenerationProgressOverlay';
+import { MannequinPlacementLayer } from '@/components/studio/MannequinPlacementLayer';
 import { ModelPreviewScene } from '@/components/studio/ModelPreviewScene';
+import { PreviewProjectSettingsBar } from '@/components/studio/PreviewProjectSettingsBar';
 import { PreviewSubModeSegment } from '@/components/studio/PreviewSubModeSegment';
 import { PromptStackView } from '@/components/studio/PromptStackView';
 import { ReferencePreviewScene } from '@/components/studio/ReferencePreviewScene';
-import { PreviewProjectSettingsBar } from '@/components/studio/PreviewProjectSettingsBar';
-import { WorkflowDropdown } from '@/components/studio/WorkflowDropdown';
-import { MannequinPlacementLayer } from '@/components/studio/MannequinPlacementLayer';
 import type { BakedImageVariant } from '@/lib/types/studio';
 import {
   canAddMannequin,
-  isLockStartFrame,
+  isBakeStartFrame,
 } from '@/lib/studio/workflow';
 import { migrateMannequins } from '@/lib/studio/migrate-mannequin';
 import { previewFramingFingerprint } from '@/lib/constants/subject-cutouts';
@@ -72,7 +69,6 @@ function fitPreviewFrame(
 export function PreviewPanel() {
   const previewStageRef = useRef<HTMLDivElement>(null);
   const previewFrameRef = useRef<HTMLDivElement>(null);
-  const { slotRefs, hoverSlot } = useThemeTransformConnectorContext();
   const frameView = useStudioStore((s) => s.frameView);
   const setFrameView = useStudioStore((s) => s.setFrameView);
   const project = useStudioStore((s) => s.project);
@@ -95,7 +91,6 @@ export function PreviewPanel() {
   const setPreviewSubMode = useStudioStore((s) => s.setPreviewSubMode);
   const generatePreviewFrame = useStudioStore((s) => s.generatePreviewFrame);
   const resetBackdropFraming = useStudioStore((s) => s.resetBackdropFraming);
-  const setWorkflow = useStudioStore((s) => s.setWorkflow);
   const addMannequin = useStudioStore((s) => s.addMannequin);
   const updateMannequin = useStudioStore((s) => s.updateMannequin);
   const removeMannequin = useStudioStore((s) => s.removeMannequin);
@@ -114,11 +109,11 @@ export function PreviewPanel() {
   const showOverlay = shot?.frameComposition?.showOverlay ?? true;
   const generatedVideo = getShotActiveVideoUrl(shot);
   const generatedVideoCount = getGeneratedVideoCount(shot);
-  const lockStartFrame = isLockStartFrame(shot);
+  const bakeStartFrame = isBakeStartFrame(shot);
   const bakedPreviewUrl = shot?.bakedStartFrame ?? null;
   const bakedIntermediateUrl = shot?.bakedIntermediateFrame ?? null;
   const hasBakeVariantChoice =
-    lockStartFrame &&
+    bakeStartFrame &&
     Boolean(bakedIntermediateUrl) &&
     Boolean(bakedPreviewUrl) &&
     bakedIntermediateUrl !== bakedPreviewUrl;
@@ -127,10 +122,10 @@ export function PreviewPanel() {
       ? bakedIntermediateUrl
       : bakedPreviewUrl;
   const modelPreviewUrl =
-    lockStartFrame && activeBakedUrl
+    bakeStartFrame && activeBakedUrl
       ? activeBakedUrl
       : shot?.previewFrameUrl ?? null;
-  const hasBakedImage = lockStartFrame
+  const hasBakedImage = bakeStartFrame
     ? Boolean(bakedPreviewUrl)
     : Boolean(shot?.previewFrameUrl);
   const showModelPreview = Boolean(modelPreviewUrl) && previewSubMode === 'model';
@@ -194,7 +189,7 @@ export function PreviewPanel() {
     frameView === 'generated' && generatedVideo
       ? 'Generated video'
       : showModelPreview
-        ? lockStartFrame && bakedPreviewUrl
+        ? bakeStartFrame && bakedPreviewUrl
           ? bakedImageVariant === 'intermediate' && hasBakeVariantChoice
             ? 'Intermediate bake'
             : 'Baked image'
@@ -271,7 +266,6 @@ export function PreviewPanel() {
         {...uiSectionProps(UI_SECTIONS.studioPreviewMainChrome)}
       >
         <div className="preview-panel-controls pointer-events-auto shrink-0 flex flex-col gap-1.5">
-          <WorkflowDropdown shot={shot} onChange={setWorkflow} />
           <FrameViewSegment
             value={frameView}
             onChange={setFrameView}
@@ -320,17 +314,7 @@ export function PreviewPanel() {
               />
             </>
           )}
-          <div
-            className={`preview-frame-stage shrink-0 relative z-10 ${frameView === 'preview' ? 'preview-frame-stage--with-refs' : ''}`}
-          >
-            {frameView === 'preview' && (
-              <div
-                className="preview-frame-stage__refs preview-panel-shot-image-references"
-                {...uiSectionProps(UI_SECTIONS.studioBottomReferences)}
-              >
-                <ReferenceSlots slotRefs={slotRefs} hoverSlot={hoverSlot} />
-              </div>
-            )}
+          <div className="preview-frame-stage shrink-0 relative z-10">
             <div className="preview-frame-stage__settings">
               <PreviewProjectSettingsBar />
             </div>
@@ -477,7 +461,7 @@ export function PreviewPanel() {
               </button>
             )}
             <div className="h-6 w-px bg-surface-600" />
-            {frameView === 'preview' && !lockStartFrame && (
+            {frameView === 'preview' && !bakeStartFrame && (
               <>
                 <button
                   type="button"

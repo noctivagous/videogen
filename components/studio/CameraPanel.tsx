@@ -23,6 +23,7 @@ import { ApertureDiagram } from '@/components/ui/ApertureDiagram';
 import { APERTURE_STOPS, apertureStopIndex, formatApertureLabel } from '@/lib/constants/aperture';
 import { DOF_OPTIONS } from '@/lib/constants/dof-options';
 import { PromptIncludeToggle } from '@/components/studio/PromptIncludeToggle';
+import { WorkflowSection } from '@/components/studio/WorkflowSection';
 import { resolveCameraPromptInclusion } from '@/lib/constants/camera-prompt-inclusion';
 import { RangeSlider } from '@/components/ui/RangeSlider';
 import { Select } from '@/components/ui/Select';
@@ -40,6 +41,7 @@ export function CameraPanel() {
   const toggleCompositionOverlay = useStudioStore((s) => s.toggleCompositionOverlay);
   const handleCameraCompositionChange = useStudioStore((s) => s.handleCameraCompositionChange);
   const setMotion = useStudioStore((s) => s.setMotion);
+  const setWorkflow = useStudioStore((s) => s.setWorkflow);
   const motion = useStudioStore((s) => s.motion);
 
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
@@ -61,6 +63,10 @@ export function CameraPanel() {
 
   return (
     <div className="p-4" {...uiSectionProps(UI_SECTIONS.studioCameraControls, { id: false })}>
+      <WorkflowSection shot={shot} onChange={setWorkflow} />
+
+      <div className="border-t border-surface-700 mb-4" aria-hidden />
+
       <div className="flex items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2 min-w-0">
           <svg className="w-5 h-5 text-brand-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -32,7 +32,7 @@ function baseShot(overrides: Partial<Shot> = {}): Shot {
     mannequins: [],
     references: ['data:image/png;base64,sheet', 'data:image/png;base64,backdrop'],
     referenceRoles: ['Subject', 'Backdrop'],
-    workflow: 'lock-start-frame',
+    workflow: 'bake-start-frame',
     bakedStartFrame: 'data:image/png;base64,baked',
     bakeStatus: 'ready',
     sceneSetup: 'A surfer on a beach at golden hour.',
@@ -47,7 +47,7 @@ function baseShot(overrides: Partial<Shot> = {}): Shot {
   } as Shot;
 }
 
-describe('lock-start-frame video generation', () => {
+describe('bake-start-frame video generation', () => {
   it('uses only the baked frame as the video ref at slot 0', () => {
     const shot = baseShot();
     expect(shouldUseBakedStartFrameForVideo(shot)).toBe(true);
@@ -86,7 +86,7 @@ describe('lock-start-frame video generation', () => {
     expect(prompt).not.toContain('camera angle');
   });
 
-  it('uses lock-start xAI binding without auto-place subject/backdrop split', () => {
+  it('uses bake-start xAI binding without auto-place subject/backdrop split', () => {
     const refs = buildWorkflowGenerationRefs(baseShot())!;
     const xaiRef = buildXAIReferencePrompt(refs, baseShot());
 

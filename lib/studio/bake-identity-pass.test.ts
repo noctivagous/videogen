@@ -28,7 +28,7 @@ function baseShot(overrides: Partial<Shot> = {}): Shot {
     mannequins: [],
     references: ['data:image/png;base64,sheet'],
     referenceRoles: ['Subject'],
-    workflow: 'lock-start-frame',
+    workflow: 'bake-start-frame',
     ...overrides,
   } as Shot;
 }

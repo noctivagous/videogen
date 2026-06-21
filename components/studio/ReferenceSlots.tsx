@@ -16,7 +16,7 @@ import {
 } from '@/lib/studio/reference-slots';
 import { getThemeTransformStatus } from '@/lib/studio/theme-transform';
 import { restrictsReferenceSlotsToFirst } from '@/lib/studio/xai-video-models';
-import { getWorkflowReferenceSteps, isLockStartFrame } from '@/lib/studio/workflow';
+import { getWorkflowReferenceSteps, isBakeStartFrame } from '@/lib/studio/workflow';
 import { useCharacterAssignmentConnectorContext } from '@/components/studio/ThemeTransformConnectorProvider';
 import { ReferenceImageViewerModal } from '@/components/studio/ReferenceImageViewerModal';
 import { countMannequinsLinkedToSlot } from '@/lib/studio/mannequin-character-assignment';
@@ -140,7 +140,7 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
   };
 
   const slotIndices = getReferenceSlotIndices(shot);
-  const lockStartFrame = isLockStartFrame(shot);
+  const isBakeStartFrameWorkflow = isBakeStartFrame(shot);
   const workflowSteps = getWorkflowReferenceSteps(shot, shot?.lighting);
   const bakeReady = shot.bakeStatus === 'ready' && Boolean(shot.bakedStartFrame);
 
@@ -151,7 +151,7 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
         <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-300">
           Image References
         </span>
-        {!lockStartFrame && (
+        {!isBakeStartFrameWorkflow && (
           <select
             value={referenceMode}
             onChange={(e) => setReferenceMode(e.target.value as ReferenceMode)}
@@ -165,10 +165,10 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
             ))}
           </select>
         )}
-        {lockStartFrame && workflowSteps.length > 0 && (
+        {isBakeStartFrameWorkflow && workflowSteps.length > 0 && (
           <ol
             className="workflow-steps flex flex-col gap-1 text-[10px] text-gray-400"
-            aria-label="Lock start frame workflow"
+            aria-label="Bake start frame workflow"
           >
             {workflowSteps.map((step, i) => (
               <li key={step.id} className="flex items-center gap-1.5">
@@ -184,7 +184,7 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
             ))}
           </ol>
         )}
-        {lockStartFrame && (
+        {isBakeStartFrameWorkflow && (
           bakeReady ? (
             <button
               type="button"
@@ -230,7 +230,7 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
               ? characterConnector.subjectSlotLinkClass(index)
               : '';
           const showCharacterOutlet =
-            lockStartFrame &&
+            isBakeStartFrameWorkflow &&
             isSubjectSlot &&
             characterConnector?.characterAssignmentEnabled;
 

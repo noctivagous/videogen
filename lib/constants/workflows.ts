@@ -1,3 +1,10 @@
+import {
+  getAllWorkflowDefinitions,
+  getDefaultWorkflowId,
+  getWorkflowDefinition,
+  isWorkflowImplemented,
+  resolveWorkflowId,
+} from '@/lib/constants/video-generation-workflows';
 import type {
   BakeStatus,
   MannequinAge,
@@ -7,18 +14,17 @@ import type {
   Workflow,
 } from '@/lib/types/studio';
 
-export const DEFAULT_WORKFLOW: Workflow = 'auto-place';
+export const DEFAULT_WORKFLOW: Workflow = getDefaultWorkflowId();
 
 export const WORKFLOW_OPTIONS: ReadonlyArray<{
   value: Workflow;
   label: string;
   enabled: boolean;
-}> = [
-  { value: 'auto-place', label: 'Auto-place Character', enabled: true },
-  { value: 'lock-start-frame', label: 'Lock Start Frame', enabled: true },
-  { value: 'broll', label: 'B-roll', enabled: false },
-  { value: 'motion-transfer', label: 'Motion Transfer', enabled: false },
-];
+}> = getAllWorkflowDefinitions().map((def) => ({
+  value: def.id,
+  label: def.label,
+  enabled: isWorkflowImplemented(def.id),
+}));
 
 /** Default xAI image model for bake pass 1 (image edit). */
 export const DEFAULT_XAI_BAKE_IMAGE_MODEL = 'grok-imagine-image-quality';
@@ -62,15 +68,29 @@ export const MANNEQUIN_POSE_OPTIONS: ReadonlyArray<{
 ];
 
 export function normalizeWorkflow(
-  shot: { workflow?: Workflow } | undefined,
+  shot: { workflow?: Workflow | string } | undefined,
 ): Workflow {
-  return shot?.workflow ?? DEFAULT_WORKFLOW;
+  const raw = shot?.workflow;
+  if (!raw) return DEFAULT_WORKFLOW;
+  return resolveWorkflowId(raw) ?? DEFAULT_WORKFLOW;
 }
 
-export function isLockStartFrameWorkflow(
-  shot: { workflow?: Workflow } | undefined,
+export function isBakeStartFrameWorkflow(
+  shot: { workflow?: Workflow | string } | undefined,
 ): boolean {
-  return normalizeWorkflow(shot) === 'lock-start-frame';
+  return normalizeWorkflow(shot) === 'bake-start-frame';
+}
+
+/** @deprecated Use isBakeStartFrameWorkflow */
+export function isLockStartFrameWorkflow(
+  shot: { workflow?: Workflow | string } | undefined,
+): boolean {
+  return isBakeStartFrameWorkflow(shot);
+}
+
+export function getWorkflowLabel(workflow: Workflow | string | undefined): string {
+  const def = getWorkflowDefinition(workflow);
+  return def?.label ?? String(workflow ?? DEFAULT_WORKFLOW);
 }
 
 export function defaultBakeStatus(): BakeStatus {

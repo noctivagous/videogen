@@ -20,7 +20,7 @@ import {
   subjectLinkColorIndex,
 } from '@/lib/studio/mannequin-character-assignment';
 import { migrateMannequins } from '@/lib/studio/migrate-mannequin';
-import { isLockStartFrame } from '@/lib/studio/workflow';
+import { isBakeStartFrame } from '@/lib/studio/workflow';
 import { needsThemeTransformer } from '@/lib/studio/theme-transform';
 import { useStudioStore } from '@/store/useStudioStore';
 
@@ -85,7 +85,7 @@ export function ThemeTransformConnectorProvider({ children }: { children: ReactN
 
   const themeEnabled = needsThemeTransformer(lighting);
   const characterAssignmentEnabled =
-    isLockStartFrame(shot) && previewSubMode === 'framing' && frameView === 'preview';
+    isBakeStartFrame(shot) && previewSubMode === 'framing' && frameView === 'preview';
 
   const onThemeConnect = useCallback(
     (slotIndex: number) => {

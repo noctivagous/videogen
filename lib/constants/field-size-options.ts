@@ -8,6 +8,12 @@ export interface VisualDropdownOption<T extends string = string> {
   shortLabel?: string;
   imageUrl?: string;
   backgroundUrl?: string;
+  disabled?: boolean;
+}
+
+export interface VisualDropdownGroup<T extends string = string> {
+  label: string;
+  options: VisualDropdownOption<T>[];
 }
 
 const FIELD_SIZE_LABELS: Record<FieldSize, string> = {

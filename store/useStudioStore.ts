@@ -53,7 +53,8 @@ import { DEFAULT_REFERENCE_MODE, normalizeReferenceMode } from '@/lib/constants/
 import type { Workflow } from '@/lib/types/studio';
 import type { Mannequin } from '@/lib/types/studio';
 import { migrateMannequin, migrateMannequins } from '@/lib/studio/migrate-mannequin';
-import { DEFAULT_XAI_BAKE_IMAGE_MODEL, WORKFLOW_OPTIONS } from '@/lib/constants/workflows';
+import { DEFAULT_XAI_BAKE_IMAGE_MODEL, getWorkflowLabel, normalizeWorkflow } from '@/lib/constants/workflows';
+import { isWorkflowImplemented } from '@/lib/constants/video-generation-workflows';
 import {
   bakeBlobsToDataUrls,
   BAKE_XAI_EDIT_PROMPT,
@@ -86,7 +87,7 @@ import {
   createDefaultMannequin,
   finalizeMannequinsForShot,
   getWorkflowReferenceSteps,
-  isLockStartFrame,
+  isBakeStartFrame,
   shouldUseBakedStartFrameForVideo,
 } from '@/lib/studio/workflow';
 import {
@@ -1035,7 +1036,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     if (!dataUrl) linked[index] = false;
     const isBackdropSlot = index === getBackdropSlotIndex(shot);
     let mannequins = shot.mannequins;
-    if (isLockStartFrame(shot)) {
+    if (isBakeStartFrame(shot)) {
       mannequins = clearMannequinAssignmentsForSlot(migrateMannequins(shot.mannequins), index);
       if (dataUrl) {
         const draft = { ...shot, references };
@@ -1047,7 +1048,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         references,
         transformedReferences,
         themeTransformLinked: linked,
-        ...(isLockStartFrame(shot)
+        ...(isBakeStartFrame(shot)
           ? {
               mannequins,
               bakeStatus: 'idle' as const,
@@ -1084,14 +1085,14 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const patch = removeReferenceSlotPatch(shot, index);
     if (!patch) return;
     const isBackdropSlot = index === getBackdropSlotIndex(shot);
-    const mannequins = isLockStartFrame(shot)
+    const mannequins = isBakeStartFrame(shot)
       ? reindexMannequinAssignmentsAfterSlotRemoval(migrateMannequins(shot.mannequins), index)
       : shot.mannequins;
     set((s) => ({
       ...(isBackdropSlot ? { backdropSelected: false } : {}),
       shots: patchCurrentShot(s.shots, s.currentShot, {
         ...patch,
-        ...(isLockStartFrame(shot)
+        ...(isBakeStartFrame(shot)
           ? {
               mannequins,
               bakeStatus: 'idle' as const,
@@ -1269,13 +1270,13 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const referenceRoles = [...shot.referenceRoles];
     referenceRoles[index] = nextRole;
     let mannequins = shot.mannequins;
-    if (isLockStartFrame(shot) && current === 'Subject' && nextRole !== 'Subject') {
+    if (isBakeStartFrame(shot) && current === 'Subject' && nextRole !== 'Subject') {
       mannequins = clearMannequinAssignmentsForSlot(migrateMannequins(shot.mannequins), index);
     }
     set((s) => ({
       shots: patchCurrentShot(s.shots, s.currentShot, {
         referenceRoles,
-        ...(isLockStartFrame(shot) && mannequins !== shot.mannequins
+        ...(isBakeStartFrame(shot) && mannequins !== shot.mannequins
           ? {
               mannequins,
               bakeStatus: 'idle' as const,
@@ -1298,13 +1299,12 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 
   setWorkflow(workflow) {
     const shot = get().getCurrentShot();
-    if (!shot || shot.workflow === workflow) return;
-    const option = WORKFLOW_OPTIONS.find((o) => o.value === workflow);
-    if (option && !option.enabled) {
-      get().showToast(`${option.label} is not available yet`, 'error');
+    if (!shot || normalizeWorkflow(shot) === workflow) return;
+    if (!isWorkflowImplemented(workflow)) {
+      get().showToast(`${getWorkflowLabel(workflow)} is not available yet`, 'error');
       return;
     }
-    const enableLockStart = workflow === 'lock-start-frame';
+    const enableBakeStart = workflow === 'bake-start-frame';
     const nextShot = { ...shot, workflow };
     const mannequins =
       (shot.mannequins?.length ?? 0) > 0
@@ -1318,9 +1318,9 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         bakedIntermediateFrame: null,
         bakeStatus: 'idle',
       }),
-      previewSubMode: enableLockStart ? 'framing' : s.previewSubMode,
+      previewSubMode: enableBakeStart ? 'framing' : s.previewSubMode,
     }));
-    get().showToast(option?.label ?? workflow);
+    get().showToast(getWorkflowLabel(workflow));
   },
 
   addMannequin() {
@@ -1373,7 +1373,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 
   assignMannequinSubjectSlot(mannequinId, slotIndex) {
     const shot = get().getCurrentShot();
-    if (!shot || !isLockStartFrame(shot)) return;
+    if (!shot || !isBakeStartFrame(shot)) return;
     if (slotIndex !== null && !isValidSubjectSlotAssignment(shot, slotIndex)) {
       get().showToast('Choose a filled Subject reference slot', 'error');
       return;
@@ -1406,7 +1406,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 
   invalidateBakedFrame() {
     const shot = get().getCurrentShot();
-    if (!shot || !isLockStartFrame(shot)) return;
+    if (!shot || !isBakeStartFrame(shot)) return;
     if (shot.bakeStatus !== 'ready' || !shot.bakedStartFrame) return;
     set((s) => ({
       shots: patchCurrentShot(s.shots, s.currentShot, mannequinLayoutInvalidationPatch()),
@@ -1418,7 +1418,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const state = get();
     const { project, ai, shots, currentShot } = state;
     const shot = getCurrentShotFromList(shots, currentShot);
-    if (!shot || !isLockStartFrame(shot)) return;
+    if (!shot || !isBakeStartFrame(shot)) return;
 
     const steps = getWorkflowReferenceSteps(shot, shot.lighting);
     const incomplete = steps.find((s) => !s.done && s.id !== 'bake');
