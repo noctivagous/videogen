@@ -1,13 +1,21 @@
 VideoGen
 
-VideoGen is a BYOK (Bring Your Own Keys) multi-provider 
-video generation app (under development) that provides
-multiple workflows for making shots.
+VideoGen is a workflow-based video generation app,
+BYOK (Bring Your Own Keys) multi-provider,
+centered around shot design.  It is under development.
+It provides multiple workflows for making shots.
+
+The user interface centers on the user making
+a shot.  Within that shot, the user can utilize
+one or more workflows to generate media.
+The media are available in a media library
 
 
 ## Workflows and mannequin frame blocking
 
-Each shot has a **Workflow** in the camera panel. Workflows define how reference images, mannequins, and camera settings feed into generation. Definitions live in `video-generation-workflows.json` and drive the workflow dropdown, capability checks, and (for bake workflows) the shot checklist.
+Each shot has multiple available **Workflows** in the left panel. 
+Workflows define how reference images, mannequins, and camera settings feed into generation.
+Definitions live in `video-generation-workflows.json` and drive the workflow dropdown, capability checks, and (for bake workflows) the shot checklist.
 
 **Implemented today:** Bake Start Frame, Auto-place Character. Other workflows appear in the picker but are not fully wired yet.
 
@@ -32,7 +40,7 @@ Reference slots for Character Sheet and Backdrop sit directly under their checkl
 | Workflow | Summary | When to use | Model needs |
 |----------|---------|-------------|-------------|
 | **Bake Start Frame** *(default)* | Mannequins block framing; bake composites character(s) into backdrop; video model adds motion only. | Eyeline, exact framing, or lighting match matters. | Image edit (`inpaint` preferred; falls back to xAI image edit). |
-| **Auto-place Character** | Character sheet + backdrop sent separately; model infers scale/position. Optional mannequin blocking. No bake. | Fast iteration. | Image-to-video (Kling, Runway, Veo, Luma, etc.). |
+| **Auto-place Character** | Character sheet + backdrop sent separately; model infers scale/position. Optional mannequin blocking. No bake step before submitting to video model. | Fast iteration. | Image-to-video (Kling, Runway, Veo, Luma, etc.). |
 
 ### Environment workflows
 
