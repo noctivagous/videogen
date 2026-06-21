@@ -394,6 +394,8 @@ export function HeaderBar() {
   const resetToDemo = useStudioStore((s) => s.resetToDemo);
   const exportVideo = useStudioStore((s) => s.exportVideo);
   const openSettings = useStudioStore((s) => s.openSettings);
+  const workspaceView = useStudioStore((s) => s.workspaceView);
+  const setWorkspaceView = useStudioStore((s) => s.setWorkspaceView);
 
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -471,6 +473,22 @@ export function HeaderBar() {
               </div>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={() =>
+              setWorkspaceView(workspaceView === 'media-library' ? 'shot' : 'media-library')
+            }
+            className={`px-2.5 py-1.5 text-xs font-medium border rounded-lg transition-all ${
+              workspaceView === 'media-library'
+                ? 'bg-brand-600/20 border-brand-500/50 text-brand-300'
+                : 'bg-surface-800 hover:bg-surface-700 border-surface-600 text-gray-300'
+            }`}
+            title="Browse project media assets"
+            {...uiSectionProps(UI_SECTIONS.studioHeaderMediaLibrary)}
+          >
+            Media Library
+          </button>
 
           <ProjectFolderBadge
             label={projectLocationLabel}

@@ -5,9 +5,11 @@ import {
   deleteServerProject,
   isServerProjectStorageAllowed,
   isServerProjectSessionAllowed,
+  loadServerGlobalMedia,
   loadServerProject,
   saveServerProject,
 } from '@/lib/storage/server-project-store.server';
+import type { MediaAsset } from '@/lib/types/media-library';
 import type { StudioProject } from '@/lib/types/studio';
 
 export const maxDuration = 300;
@@ -34,7 +36,8 @@ export async function GET(request: Request) {
   }
 
   const project = await loadServerProject(sessionId);
-  return NextResponse.json({ project });
+  const globalMediaLibrary = await loadServerGlobalMedia(sessionId);
+  return NextResponse.json({ project, globalMediaLibrary });
 }
 
 export async function POST(request: Request) {
@@ -52,6 +55,7 @@ export async function POST(request: Request) {
     const body = (await request.json()) as {
       project?: StudioProject;
       uploads?: ProjectMediaUpload[];
+      globalMediaLibrary?: MediaAsset[];
     };
 
     const project = validateStudioProject(body.project);
@@ -60,8 +64,10 @@ export async function POST(request: Request) {
     }
 
     const uploads = Array.isArray(body.uploads) ? body.uploads : [];
-    const saved = await saveServerProject(sessionId, project, uploads);
-    return NextResponse.json({ ok: true, project: saved });
+    const globalMediaLibrary = Array.isArray(body.globalMediaLibrary) ? body.globalMediaLibrary : [];
+    const saved = await saveServerProject(sessionId, project, uploads, globalMediaLibrary);
+    const savedGlobal = await loadServerGlobalMedia(sessionId);
+    return NextResponse.json({ ok: true, project: saved, globalMediaLibrary: savedGlobal });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : 'Save failed' },

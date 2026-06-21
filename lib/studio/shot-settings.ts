@@ -13,6 +13,7 @@ import { normalizeWorkflow } from '@/lib/constants/workflows';
 import { migrateMannequins } from '@/lib/studio/migrate-mannequin';
 import { ensureMannequinsOnShot } from '@/lib/studio/mannequin-sync';
 import { finalizeMannequinsForShot } from '@/lib/studio/workflow';
+import { migrateShotWorkflowStates } from '@/lib/studio/shot-workflow-state';
 import {
   STOCK_BACKDROP_REF,
   STOCK_CAMERA,
@@ -323,10 +324,10 @@ export function migrateShot(
     mannequins: ensureMannequinsOnShot(withAssignments),
   };
 
-  return {
+  return migrateShotWorkflowStates({
     ...withMannequins,
     ...normalizeReferenceSlotArrays(withMannequins),
-  };
+  });
 }
 
 export function migrateAllShots(

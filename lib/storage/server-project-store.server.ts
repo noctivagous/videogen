@@ -8,10 +8,12 @@ import {
   setValueAtPath,
   type ProjectMediaUpload,
 } from '@/lib/storage/project-media-paths';
+import type { MediaAsset } from '@/lib/types/media-library';
 import type { StudioProject } from '@/lib/types/studio';
 
 const DATA_ROOT = path.join(process.cwd(), '.data', 'server-projects');
 const PROJECT_FILE = 'project.json';
+const GLOBAL_MEDIA_FILE = 'global-media.json';
 const MEDIA_DIR = 'media';
 
 const MAX_INLINE_BYTES = 25 * 1024 * 1024;
@@ -202,6 +204,7 @@ export async function saveServerProject(
   sessionId: string,
   project: StudioProject,
   uploads: ProjectMediaUpload[],
+  globalMediaLibrary: MediaAsset[] = [],
 ): Promise<StudioProject> {
   const { root, media } = await ensureSessionDirs(sessionId);
   let nextProject = structuredClone(project);
@@ -230,6 +233,8 @@ export async function saveServerProject(
     'utf8',
   );
 
+  await saveServerGlobalMedia(sessionId, globalMediaLibrary);
+
   return validated;
 }
 
@@ -241,6 +246,28 @@ export async function loadServerProject(sessionId: string): Promise<StudioProjec
   } catch {
     return null;
   }
+}
+
+export async function loadServerGlobalMedia(sessionId: string): Promise<MediaAsset[]> {
+  try {
+    const raw = await fs.readFile(path.join(sessionDir(sessionId), GLOBAL_MEDIA_FILE), 'utf8');
+    const parsed = JSON.parse(raw) as { assets?: MediaAsset[] };
+    return Array.isArray(parsed.assets) ? parsed.assets : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function saveServerGlobalMedia(
+  sessionId: string,
+  assets: MediaAsset[],
+): Promise<void> {
+  const { root } = await ensureSessionDirs(sessionId);
+  await fs.writeFile(
+    path.join(root, GLOBAL_MEDIA_FILE),
+    `${JSON.stringify({ schemaVersion: 1, assets }, null, 2)}\n`,
+    'utf8',
+  );
 }
 
 export async function deleteServerProject(sessionId: string): Promise<void> {

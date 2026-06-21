@@ -12,6 +12,7 @@ import {
   type ProjectMediaUpload,
 } from '@/lib/storage/project-media-paths';
 import { blobToDataUrl } from '@/lib/storage/project-assets';
+import type { MediaAsset } from '@/lib/types/media-library';
 import type { StudioProject } from '@/lib/types/studio';
 
 const SESSION_KEY = 'videogen_server_project_session';
@@ -48,10 +49,16 @@ async function inlineDataUrl(url: string): Promise<string> {
   return url;
 }
 
-async function prepareUploads(project: StudioProject): Promise<ProjectMediaUpload[]> {
-  const raw = filterProjectMediaUploads(collectProjectMediaUploads(project), {
-    ingestRemoteUrls: shouldIngestRemoteMediaUrls(),
-  });
+async function prepareUploads(
+  project: StudioProject,
+  globalMediaLibrary: MediaAsset[] = [],
+): Promise<ProjectMediaUpload[]> {
+  const raw = filterProjectMediaUploads(
+    collectProjectMediaUploads(project, globalMediaLibrary),
+    {
+      ingestRemoteUrls: shouldIngestRemoteMediaUrls(),
+    },
+  );
   const uploads: ProjectMediaUpload[] = [];
 
   for (const item of raw) {
@@ -69,11 +76,14 @@ async function prepareUploads(project: StudioProject): Promise<ProjectMediaUploa
   return uploads;
 }
 
-export async function saveProjectToServer(project: StudioProject): Promise<StudioProject | null> {
+export async function saveProjectToServer(
+  project: StudioProject,
+  globalMediaLibrary: MediaAsset[] = [],
+): Promise<{ project: StudioProject; globalMediaLibrary: MediaAsset[] } | null> {
   if (!isServerProjectStorageEnabled()) return null;
 
   const sessionId = getServerProjectSessionId();
-  const uploads = await prepareUploads(project);
+  const uploads = await prepareUploads(project, globalMediaLibrary);
 
   const res = await fetch('/api/project-storage', {
     method: 'POST',
@@ -81,15 +91,25 @@ export async function saveProjectToServer(project: StudioProject): Promise<Studi
       'Content-Type': 'application/json',
       'X-VideoGen-Session': sessionId,
     },
-    body: JSON.stringify({ project, uploads }),
+    body: JSON.stringify({ project, uploads, globalMediaLibrary }),
   });
 
   if (!res.ok) return null;
-  const data = (await res.json()) as { project?: StudioProject };
-  return data.project ?? null;
+  const data = (await res.json()) as {
+    project?: StudioProject;
+    globalMediaLibrary?: MediaAsset[];
+  };
+  if (!data.project) return null;
+  return {
+    project: data.project,
+    globalMediaLibrary: data.globalMediaLibrary ?? globalMediaLibrary,
+  };
 }
 
-export async function loadProjectFromServer(): Promise<StudioProject | null> {
+export async function loadProjectFromServer(): Promise<{
+  project: StudioProject;
+  globalMediaLibrary: MediaAsset[];
+} | null> {
   if (!isServerProjectStorageEnabled()) return null;
 
   const sessionId = getServerProjectSessionId();
@@ -98,8 +118,15 @@ export async function loadProjectFromServer(): Promise<StudioProject | null> {
   });
 
   if (!res.ok) return null;
-  const data = (await res.json()) as { project?: StudioProject | null };
-  return data.project ?? null;
+  const data = (await res.json()) as {
+    project?: StudioProject | null;
+    globalMediaLibrary?: MediaAsset[];
+  };
+  if (!data.project) return null;
+  return {
+    project: data.project,
+    globalMediaLibrary: data.globalMediaLibrary ?? [],
+  };
 }
 
 export async function clearServerProjectStorage(): Promise<void> {

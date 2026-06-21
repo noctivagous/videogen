@@ -92,7 +92,23 @@ import {
   ingestBakedFramesForShot,
   linkAssetToShot,
 } from '@/lib/media/media-library';
-import type { MediaAsset, ShotWorkflowSnapshot } from '@/lib/types/media-library';
+import { updateMediaAssetInLibrary } from '@/lib/media/media-library-query';
+import { indexClipEmbeddingsInLibrary } from '@/lib/media/clip-search';
+import {
+  applyAssetIdRemapToShots,
+  applyAssetIdRemapToSnapshots,
+  cleanShotsAfterAssetDelete,
+  cleanSnapshotsAfterAssetDelete,
+  importMediaFilesToLibrary,
+  moveAssetsToScope,
+  removeAssetsFromLibrary,
+  reorderAssetsInType,
+  replaceMediaAssetContent,
+  replaceMediaAssetUrl,
+  type MediaLibraryCollection,
+} from '@/lib/media/media-library-mutations';
+import type { MediaAsset, MediaAssetType, ShotWorkflowSnapshot } from '@/lib/types/media-library';
+import { switchShotWorkflow } from '@/lib/studio/shot-workflow-state';
 import {
   canAddMannequin,
   createDefaultMannequin,
@@ -226,6 +242,7 @@ function getStockDefaults() {
     shots,
     currentShot: active?.id ?? 1,
     mediaLibrary: [],
+    globalMediaLibrary: [] as MediaAsset[],
     shotWorkflowSnapshots: [],
     ...shotActiveView(active),
   };
@@ -243,12 +260,13 @@ function getEmptyDefaults() {
     shots,
     currentShot: active?.id ?? 1,
     mediaLibrary: [] as MediaAsset[],
+    globalMediaLibrary: [] as MediaAsset[],
     shotWorkflowSnapshots: [] as ShotWorkflowSnapshot[],
     ...shotActiveView(active),
   };
 }
 
-function applyStudioProject(data: StudioProject) {
+function applyStudioProject(data: StudioProject, globalMediaLibrary: MediaAsset[] = []) {
   const project = {
     ...data.project,
     aspectRatio: data.project.aspectRatio || '16:9',
@@ -262,9 +280,39 @@ function applyStudioProject(data: StudioProject) {
     shots,
     currentShot,
     mediaLibrary: data.mediaLibrary ?? [],
+    globalMediaLibrary,
     shotWorkflowSnapshots: data.shotWorkflowSnapshots ?? [],
     ...shotActiveView(active),
   };
+}
+
+function projectPersistencePayload(state: StudioStore) {
+  return {
+    project: buildStudioProject(state),
+    globalMediaLibrary: state.globalMediaLibrary,
+  };
+}
+
+function locateMediaAssetCollection(
+  state: Pick<StudioStore, 'mediaLibrary' | 'globalMediaLibrary'>,
+  assetId: string,
+): MediaLibraryCollection | null {
+  if (state.mediaLibrary.some((a) => a.id === assetId)) return 'project';
+  if (state.globalMediaLibrary.some((a) => a.id === assetId)) return 'global';
+  return null;
+}
+
+function patchClearsClipEmbedding(
+  patch: Partial<Omit<MediaAsset, 'metadata'>> & { metadata?: Partial<MediaAsset['metadata']> },
+): boolean {
+  if (patch.type !== undefined) return true;
+  if (patch.workflowOrigin !== undefined) return true;
+  if (!patch.metadata) return false;
+  return (
+    'prompt' in patch.metadata ||
+    'characterId' in patch.metadata ||
+    'provider' in patch.metadata
+  );
 }
 
 function getCurrentShotFromList(shots: Shot[], currentShot: number): Shot | undefined {
@@ -302,6 +350,8 @@ function themeLightingInvalidationPatch(shot: Shot | undefined): Partial<Shot> {
 
 const stockState = getStockDefaults();
 
+export type WorkspaceView = 'shot' | 'media-library';
+
 interface StudioStore {
   project: ProjectSettings;
   camera: CameraSettings;
@@ -312,6 +362,7 @@ interface StudioStore {
   shots: Shot[];
   currentShot: number;
   mediaLibrary: MediaAsset[];
+  globalMediaLibrary: MediaAsset[];
   shotWorkflowSnapshots: ShotWorkflowSnapshot[];
   ai: AIState;
   toast: { message: string; type: ToastType } | null;
@@ -338,8 +389,23 @@ interface StudioStore {
   projectLocationKind: ProjectLocationKind;
   projectSaveState: ProjectSaveState;
   fileApiSupported: boolean;
+  workspaceView: WorkspaceView;
+  selectedMediaLibraryItemId: string | null;
 
   init: () => void;
+  setWorkspaceView: (view: WorkspaceView) => void;
+  selectMediaLibraryItem: (id: string | null) => void;
+  updateMediaAsset: (
+    assetId: string,
+    patch: Partial<Omit<MediaAsset, 'metadata'>> & { metadata?: Partial<MediaAsset['metadata']> },
+  ) => void;
+  importMediaAssets: (files: File[], scope?: MediaLibraryCollection) => Promise<void>;
+  deleteMediaAssets: (assetIds: string[]) => void;
+  moveMediaAssetsToScope: (assetIds: string[], target: MediaLibraryCollection) => void;
+  replaceMediaAssetContentFromDataUrl: (assetId: string, dataUrl: string) => Promise<void>;
+  replaceMediaAssetUrlValue: (assetId: string, url: string) => Promise<void>;
+  reorderMediaAssets: (type: MediaAssetType, orderedIds: string[]) => void;
+  indexClipEmbeddings: (assetIds?: string[]) => void;
   setFrameView: (view: FrameView) => void;
   setPreviewSubMode: (mode: PreviewSubMode) => void;
   generatePreviewFrame: () => Promise<void>;
@@ -465,6 +531,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   shots: stockState.shots,
   currentShot: stockState.currentShot,
   mediaLibrary: stockState.mediaLibrary,
+  globalMediaLibrary: stockState.globalMediaLibrary,
   shotWorkflowSnapshots: stockState.shotWorkflowSnapshots,
   ai: { ...DEFAULT_AI_STATE },
   toast: null,
@@ -492,6 +559,8 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   projectSaveState: 'none',
   fileApiSupported: false,
   backdropSelected: false,
+  workspaceView: 'shot',
+  selectedMediaLibraryItemId: null,
 
   setBackdropSelected(selected) {
     set({ backdropSelected: selected });
@@ -503,6 +572,224 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 
   setFrameView(view) {
     set({ frameView: view });
+  },
+
+  setWorkspaceView(view) {
+    set({
+      workspaceView: view,
+      ...(view === 'shot' ? { selectedMediaLibraryItemId: null } : {}),
+    });
+  },
+
+  selectMediaLibraryItem(id) {
+    set({ selectedMediaLibraryItemId: id });
+  },
+
+  updateMediaAsset(assetId, patch) {
+    set((s) => {
+      const collection = locateMediaAssetCollection(s, assetId);
+      if (!collection) return {};
+      const fullPatch = patchClearsClipEmbedding(patch)
+        ? {
+            ...patch,
+            metadata: {
+              ...(patch.metadata ?? {}),
+              clipEmbedding: undefined,
+            },
+          }
+        : patch;
+      if (collection === 'project') {
+        return {
+          mediaLibrary: updateMediaAssetInLibrary(s.mediaLibrary, assetId, fullPatch),
+        };
+      }
+      return {
+        globalMediaLibrary: updateMediaAssetInLibrary(s.globalMediaLibrary, assetId, fullPatch),
+      };
+    });
+  },
+
+  async importMediaAssets(files, scope = 'project') {
+    if (files.length === 0) return;
+    const state = get();
+    const library = scope === 'global' ? state.globalMediaLibrary : state.mediaLibrary;
+    const { library: nextLibrary, imported } = await importMediaFilesToLibrary(library, files, {
+      scope,
+      workflowOrigin: 'upload',
+    });
+    if (imported.length === 0) {
+      get().showToast('No supported image or video files to import', 'error');
+      return;
+    }
+    if (scope === 'global') {
+      set({ globalMediaLibrary: nextLibrary });
+    } else {
+      set({ mediaLibrary: nextLibrary });
+    }
+    get().showToast(`Imported ${imported.length} asset${imported.length === 1 ? '' : 's'}`);
+  },
+
+  deleteMediaAssets(assetIds) {
+    if (assetIds.length === 0) return;
+    const idSet = new Set(assetIds);
+    set((s) => {
+      const projectDeleted = s.mediaLibrary.filter((a) => idSet.has(a.id));
+      const globalDeleted = s.globalMediaLibrary.filter((a) => idSet.has(a.id));
+      const deletedCount = projectDeleted.length + globalDeleted.length;
+      if (deletedCount === 0) return {};
+
+      const nextSelected =
+        s.selectedMediaLibraryItemId && idSet.has(s.selectedMediaLibraryItemId)
+          ? null
+          : s.selectedMediaLibraryItemId;
+
+      return {
+        mediaLibrary: removeAssetsFromLibrary(s.mediaLibrary, idSet),
+        globalMediaLibrary: removeAssetsFromLibrary(s.globalMediaLibrary, idSet),
+        shots: cleanShotsAfterAssetDelete(s.shots, idSet),
+        shotWorkflowSnapshots: cleanSnapshotsAfterAssetDelete(s.shotWorkflowSnapshots, idSet),
+        selectedMediaLibraryItemId: nextSelected,
+      };
+    });
+    get().showToast(`Removed ${assetIds.length} asset${assetIds.length === 1 ? '' : 's'} from library`);
+  },
+
+  moveMediaAssetsToScope(assetIds, target) {
+    if (assetIds.length === 0) return;
+    set((s) => {
+      const moved = moveAssetsToScope(s.mediaLibrary, s.globalMediaLibrary, assetIds, target);
+      return {
+        mediaLibrary: moved.projectLibrary,
+        globalMediaLibrary: moved.globalLibrary,
+      };
+    });
+    get().showToast(
+      target === 'global'
+        ? 'Moved to global library'
+        : 'Moved to project library',
+    );
+  },
+
+  async replaceMediaAssetContentFromDataUrl(assetId, dataUrl) {
+    const state = get();
+    const collection = locateMediaAssetCollection(state, assetId);
+    if (!collection) {
+      get().showToast('Asset not found', 'error');
+      return;
+    }
+    try {
+      const library =
+        collection === 'global' ? state.globalMediaLibrary : state.mediaLibrary;
+      const result = await replaceMediaAssetContent(library, assetId, dataUrl);
+      const nextShots = applyAssetIdRemapToShots(state.shots, result.idMap);
+      const nextSnapshots = applyAssetIdRemapToSnapshots(
+        state.shotWorkflowSnapshots,
+        result.idMap,
+      );
+      const remapOtherLibrary = (lib: MediaAsset[]) => {
+        if (result.idMap.size === 0) return lib;
+        return lib.map((asset) => {
+          const parent = asset.metadata.parentAssetId;
+          if (parent && result.idMap.has(parent)) {
+            return {
+              ...asset,
+              metadata: { ...asset.metadata, parentAssetId: result.idMap.get(parent) },
+            };
+          }
+          return asset;
+        });
+      };
+      const selectedId =
+        state.selectedMediaLibraryItemId === assetId ? result.asset.id : state.selectedMediaLibraryItemId;
+      if (collection === 'global') {
+        set({
+          globalMediaLibrary: result.library,
+          mediaLibrary: remapOtherLibrary(state.mediaLibrary),
+          shots: nextShots,
+          shotWorkflowSnapshots: nextSnapshots,
+          selectedMediaLibraryItemId: selectedId,
+        });
+      } else {
+        set({
+          mediaLibrary: result.library,
+          globalMediaLibrary: remapOtherLibrary(state.globalMediaLibrary),
+          shots: nextShots,
+          shotWorkflowSnapshots: nextSnapshots,
+          selectedMediaLibraryItemId: selectedId,
+        });
+      }
+      get().showToast(
+        result.idMap.size > 0 ? 'Asset content replaced — ID updated from hash' : 'Asset content replaced',
+      );
+    } catch (e) {
+      get().showToast(e instanceof Error ? e.message : 'Could not replace asset', 'error');
+    }
+  },
+
+  async replaceMediaAssetUrlValue(assetId, url) {
+    const trimmed = url.trim();
+    if (!trimmed) {
+      get().showToast('URL cannot be empty', 'error');
+      return;
+    }
+    const state = get();
+    const collection = locateMediaAssetCollection(state, assetId);
+    if (!collection) {
+      get().showToast('Asset not found', 'error');
+      return;
+    }
+    try {
+      const library =
+        collection === 'global' ? state.globalMediaLibrary : state.mediaLibrary;
+      const result = await replaceMediaAssetUrl(library, assetId, trimmed);
+      const nextShots = applyAssetIdRemapToShots(state.shots, result.idMap);
+      const nextSnapshots = applyAssetIdRemapToSnapshots(
+        state.shotWorkflowSnapshots,
+        result.idMap,
+      );
+      const selectedId =
+        state.selectedMediaLibraryItemId === assetId ? result.asset.id : state.selectedMediaLibraryItemId;
+      if (collection === 'global') {
+        set({
+          globalMediaLibrary: result.library,
+          shots: nextShots,
+          shotWorkflowSnapshots: nextSnapshots,
+          selectedMediaLibraryItemId: selectedId,
+        });
+      } else {
+        set({
+          mediaLibrary: result.library,
+          shots: nextShots,
+          shotWorkflowSnapshots: nextSnapshots,
+          selectedMediaLibraryItemId: selectedId,
+        });
+      }
+      get().showToast(
+        result.idMap.size > 0 ? 'URL updated — asset ID re-hashed' : 'Asset URL updated',
+      );
+    } catch (e) {
+      get().showToast(e instanceof Error ? e.message : 'Could not update URL', 'error');
+    }
+  },
+
+  reorderMediaAssets(type, orderedIds) {
+    set((s) => ({
+      mediaLibrary: reorderAssetsInType(s.mediaLibrary, type, orderedIds),
+      globalMediaLibrary: reorderAssetsInType(s.globalMediaLibrary, type, orderedIds),
+    }));
+  },
+
+  indexClipEmbeddings(assetIds) {
+    const idSet = assetIds?.length ? new Set(assetIds) : undefined;
+    set((s) => ({
+      mediaLibrary: indexClipEmbeddingsInLibrary(s.mediaLibrary, idSet),
+      globalMediaLibrary: indexClipEmbeddingsInLibrary(s.globalMediaLibrary, idSet),
+    }));
+    get().showToast(
+      assetIds?.length
+        ? `Indexed CLIP embeddings for ${assetIds.length} asset${assetIds.length === 1 ? '' : 's'}`
+        : 'Indexed CLIP embeddings for all assets',
+    );
   },
 
   setPreviewSubMode(mode) {
@@ -523,9 +810,9 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       const devServerStorage = isServerProjectStorageDevMode();
 
       if (devServerStorage && isServerProjectStorageEnabled()) {
-        const serverProject = await loadProjectFromServer();
-        if (serverProject) {
-          applied = applyStudioProject(serverProject);
+        const serverBundle = await loadProjectFromServer();
+        if (serverBundle) {
+          applied = applyStudioProject(serverBundle.project, serverBundle.globalMediaLibrary);
           toastMessage = 'Restored shared dev project';
         }
       }
@@ -533,7 +820,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       if (!applied && !devServerStorage && isNativeFilePickerSupported()) {
         const restored = await restoreProjectSession();
         if (restored) {
-          applied = applyStudioProject(restored);
+          applied = applyStudioProject(restored.project, restored.globalMediaLibrary);
           toastMessage = `Opened ${getProjectLocationLabel() ?? 'project'}`;
         }
       }
@@ -550,9 +837,9 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       }
 
       if (!applied && !devServerStorage && isServerProjectStorageEnabled()) {
-        const serverProject = await loadProjectFromServer();
-        if (serverProject) {
-          applied = applyStudioProject(serverProject);
+        const serverBundle = await loadProjectFromServer();
+        if (serverBundle) {
+          applied = applyStudioProject(serverBundle.project, serverBundle.globalMediaLibrary);
           toastMessage = 'Restored from server backup — choose a project folder to save locally';
         }
       }
@@ -1336,18 +1623,17 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       return;
     }
     const enableBakeStart = workflow === 'bake-start-frame';
-    const nextShot = { ...shot, workflow };
+    const switchPatch = switchShotWorkflow(shot, workflow);
+    const nextShot = { ...shot, ...switchPatch, workflow };
     const mannequins =
-      (shot.mannequins?.length ?? 0) > 0
-        ? shot.mannequins
+      (switchPatch.mannequins?.length ?? 0) > 0
+        ? switchPatch.mannequins
         : ensureMannequinsOnShot(nextShot);
     set((s) => ({
       shots: patchCurrentShot(s.shots, s.currentShot, {
+        ...switchPatch,
         workflow,
         mannequins,
-        bakedStartFrame: null,
-        bakedIntermediateFrame: null,
-        bakeStatus: 'idle',
       }),
       previewSubMode: enableBakeStart ? 'framing' : s.previewSubMode,
     }));
@@ -1471,7 +1757,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     if (!shot.bakedStartFrame) return;
     try {
       const result = await ingestBakedFramesForShot(get().mediaLibrary, shot, {
-        workflowOrigin: 'bake-start-frame',
+        workflowOrigin: normalizeWorkflow(shot),
       });
       const snapshot = createWorkflowSnapshot(shot, {
         bakedFrameId: result.bakedFrameId,
@@ -2083,7 +2369,8 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 
   async saveProjectQuick() {
     if (isNativeFilePickerSupported() && hasOpenProjectLocation()) {
-      const ok = await saveProjectNow(buildStudioProject(get()));
+      const payload = projectPersistencePayload(get());
+      const ok = await saveProjectNow(payload.project, payload.globalMediaLibrary);
       get().syncProjectFileUi();
       get().showToast(
         ok ? 'Project saved' : 'Could not save — check folder permission',
@@ -2151,7 +2438,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         get().showToast('No project.json found in that folder', 'error');
         return;
       }
-      const applied = applyStudioProject(data);
+      const applied = applyStudioProject(data.project, data.globalMediaLibrary);
       set({
         ...applied,
         ...projectFileUiState(),
@@ -2168,7 +2455,8 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       return;
     }
     try {
-      const saved = await saveProjectFolderToDisk(buildStudioProject(get()));
+      const { project, globalMediaLibrary } = projectPersistencePayload(get());
+      const saved = await saveProjectFolderToDisk(project, globalMediaLibrary);
       if (!saved) return;
       get().syncProjectFileUi();
       get().showToast(`Saved to ${getProjectLocationLabel() ?? 'folder'}`);
@@ -2342,7 +2630,10 @@ function isPersistedProjectDirty(state: StudioStore, prevState: StudioStore): bo
   return (
     state.project !== prevState.project ||
     state.shots !== prevState.shots ||
-    state.currentShot !== prevState.currentShot
+    state.currentShot !== prevState.currentShot ||
+    state.mediaLibrary !== prevState.mediaLibrary ||
+    state.globalMediaLibrary !== prevState.globalMediaLibrary ||
+    state.shotWorkflowSnapshots !== prevState.shotWorkflowSnapshots
   );
 }
 
@@ -2350,7 +2641,8 @@ useStudioStore.subscribe((state, prevState) => {
   if (!state.initialized) return;
   if (!isPersistedProjectDirty(state, prevState)) return;
 
-  scheduleProjectAutosave(buildStudioProject(state), (saveState) => {
+  const { project, globalMediaLibrary } = projectPersistencePayload(state);
+  scheduleProjectAutosave(project, (saveState) => {
     const current = useStudioStore.getState();
     const ui = projectFileUiState();
     if (
@@ -2364,5 +2656,5 @@ useStudioStore.subscribe((state, prevState) => {
       ...ui,
       projectSaveState: saveState,
     });
-  });
+  }, globalMediaLibrary);
 });

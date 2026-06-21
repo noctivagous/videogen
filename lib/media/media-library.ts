@@ -1,3 +1,4 @@
+import { normalizeWorkflow } from '@/lib/constants/workflows';
 import { getWorkflowReferenceSteps } from '@/lib/studio/workflow';
 import type {
   MediaAsset,
@@ -194,7 +195,7 @@ export async function ingestBakedFramesForShot(
   if (shot.bakedStartFrame) {
     const baked = await createMediaAssetFromDataUrl(nextLibrary, shot.bakedStartFrame, {
       type: 'baked-frame',
-      workflowOrigin: opts.workflowOrigin ?? 'bake-start-frame',
+      workflowOrigin: opts.workflowOrigin ?? normalizeWorkflow(shot),
     });
     nextLibrary = baked.library;
     bakedFrameId = baked.asset.id;
@@ -210,7 +211,7 @@ export async function ingestBakedFramesForShot(
   ) {
     const intermediate = await createMediaAssetFromDataUrl(nextLibrary, shot.bakedIntermediateFrame, {
       type: 'intermediate-frame',
-      workflowOrigin: opts.workflowOrigin ?? 'bake-start-frame',
+      workflowOrigin: opts.workflowOrigin ?? normalizeWorkflow(shot),
       metadata: bakedFrameId ? { parentAssetId: bakedFrameId } : undefined,
     });
     nextLibrary = intermediate.library;

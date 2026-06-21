@@ -1,3 +1,4 @@
+import type { MediaAsset } from '@/lib/types/media-library';
 import type { StudioProject } from '@/lib/types/studio';
 
 export type ProjectMediaUpload =
@@ -58,7 +59,10 @@ export function filterProjectMediaUploads(
   return uploads.filter((upload) => upload.kind !== 'remote');
 }
 
-export function collectProjectMediaUploads(project: StudioProject): ProjectMediaUpload[] {
+export function collectProjectMediaUploads(
+  project: StudioProject,
+  globalMediaLibrary: MediaAsset[] = [],
+): ProjectMediaUpload[] {
   const uploads: ProjectMediaUpload[] = [];
 
   project.shots.forEach((shot, shotIndex) => {
@@ -73,16 +77,27 @@ export function collectProjectMediaUploads(project: StudioProject): ProjectMedia
   });
 
   project.mediaLibrary?.forEach((asset, assetIndex) => {
-    const base = `mediaLibrary.${assetIndex}`;
-    if (isInlineMediaUrl(asset.url)) {
-      uploads.push({ path: `${base}.url`, kind: 'inline', dataUrl: asset.url });
-    }
-    if (asset.thumbnailUrl && isInlineMediaUrl(asset.thumbnailUrl)) {
-      uploads.push({ path: `${base}.thumbnailUrl`, kind: 'inline', dataUrl: asset.thumbnailUrl });
-    }
+    collectAssetUploads(uploads, `mediaLibrary.${assetIndex}`, asset);
+  });
+
+  globalMediaLibrary.forEach((asset, assetIndex) => {
+    collectAssetUploads(uploads, `globalMediaLibrary.${assetIndex}`, asset);
   });
 
   return uploads;
+}
+
+function collectAssetUploads(
+  uploads: ProjectMediaUpload[],
+  base: string,
+  asset: { url: string; thumbnailUrl?: string },
+): void {
+  if (isInlineMediaUrl(asset.url)) {
+    uploads.push({ path: `${base}.url`, kind: 'inline', dataUrl: asset.url });
+  }
+  if (asset.thumbnailUrl && isInlineMediaUrl(asset.thumbnailUrl)) {
+    uploads.push({ path: `${base}.thumbnailUrl`, kind: 'inline', dataUrl: asset.thumbnailUrl });
+  }
 }
 
 export function setValueAtPath(root: StudioProject, path: string, value: string): StudioProject {

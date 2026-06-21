@@ -16,6 +16,7 @@ export const UI_SECTIONS = {
 
   studioHeaderBrand: { id: 'studio-header-brand', name: 'Header Brand' },
   studioHeaderProjectName: { id: 'studio-header-project-name', name: 'Project Name' },
+  studioHeaderMediaLibrary: { id: 'studio-header-media-library', name: 'Media Library Button' },
   studioHeaderProviderBadge: { id: 'studio-header-provider-badge', name: 'Provider Badges' },
   studioHeaderVideoProviderBadge: { id: 'studio-header-video-provider-badge', name: 'Video Provider Badge' },
   studioHeaderImageProviderBadge: { id: 'studio-header-image-provider-badge', name: 'Image Provider Badge' },
@@ -87,6 +88,10 @@ export const UI_SECTIONS = {
   studioReferenceSlotRemove: { id: 'studio-reference-slot-remove', name: 'Remove Reference Slot' },
   studioReferenceImageViewer: { id: 'studio-reference-image-viewer', name: 'Reference Image Viewer' },
   studioLoadAssetModal: { id: 'studio-load-asset-modal', name: 'Load Asset Modal' },
+  studioMediaLibraryViewer: { id: 'studio-media-library-viewer', name: 'Media Library Viewer' },
+  studioMediaLibraryToolbar: { id: 'studio-media-library-toolbar', name: 'Media Library Toolbar' },
+  studioMediaLibraryBrowser: { id: 'studio-media-library-browser', name: 'Media Library Browser' },
+  studioMediaLibraryInspector: { id: 'studio-media-library-inspector', name: 'Media Library Inspector' },
   studioReferenceSlotViewer: { id: 'studio-reference-slot-viewer', name: 'Reference Slot Viewer' },
   studioShotTimeline: { id: 'studio-shot-timeline', name: 'Shot List' },
   studioShotItem: { id: 'studio-shot-item', name: 'Shot Item' },

@@ -13,12 +13,16 @@ export type MediaAssetType =
 
 export type MediaWorkflowOrigin = Workflow | 'upload' | 'generated';
 
+export type MediaLibraryScope = 'project' | 'global';
+
 export interface MediaAssetMetadata {
   characterId?: string;
   prompt?: string;
   provider?: string;
   usedInShots: number[];
   parentAssetId?: string;
+  /** L2-normalized embedding for CLIP-style similarity search. */
+  clipEmbedding?: number[];
 }
 
 export interface MediaAsset {
@@ -28,6 +32,8 @@ export interface MediaAsset {
   thumbnailUrl?: string;
   createdAt: number;
   workflowOrigin?: MediaWorkflowOrigin;
+  scope?: MediaLibraryScope;
+  sortOrder?: number;
   metadata: MediaAssetMetadata;
 }
 

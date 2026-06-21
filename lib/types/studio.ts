@@ -63,6 +63,17 @@ export type MannequinPose = 'standard' | 'walking' | 'seated';
 
 export type BakeStatus = 'idle' | 'baking' | 'ready' | 'error';
 
+/** Workflow-specific generation state persisted per shot. */
+export interface ShotWorkflowState {
+  bakedStartFrame?: string | null;
+  bakedIntermediateFrame?: string | null;
+  bakeStatus?: BakeStatus;
+  savedBakedFrameAssetIds?: string[];
+  linkedAssetIds?: Partial<Record<ShotLinkedAssetKey, string>>;
+  mannequins?: Mannequin[];
+  workflowSnapshotId?: string | null;
+}
+
 export interface Mannequin {
   id: string;
   angle: MannequinAngle;
@@ -345,6 +356,8 @@ export interface Shot {
   backdropCropStatusByAspect?: Partial<Record<AspectRatio, BackdropCropStatus>>;
   /** Shot workflow — drives UI panels and API methods. */
   workflow?: Workflow;
+  /** Per-workflow bake/link state so multiple workflows can coexist on one shot. */
+  workflowStates?: Partial<Record<Workflow, ShotWorkflowState>>;
   /** User-placed mannequin placeholders (lock-start-frame). */
   mannequins?: Mannequin[];
   /** Inpainted composite used as video start frame. */

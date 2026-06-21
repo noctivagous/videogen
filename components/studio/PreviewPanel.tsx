@@ -15,6 +15,7 @@ import { MannequinPlacementLayer } from '@/components/studio/MannequinPlacementL
 import { ModelPreviewScene } from '@/components/studio/ModelPreviewScene';
 import { PreviewProjectSettingsBar } from '@/components/studio/PreviewProjectSettingsBar';
 import { LoadAssetModal } from '@/components/studio/LoadAssetModal';
+import { MediaLibraryViewer } from '@/components/studio/media-library/MediaLibraryViewer';
 import { PreviewSubModeSegment } from '@/components/studio/PreviewSubModeSegment';
 import { PromptStackView } from '@/components/studio/PromptStackView';
 import { ReferencePreviewScene } from '@/components/studio/ReferencePreviewScene';
@@ -73,6 +74,8 @@ export function PreviewPanel() {
   const previewFrameRef = useRef<HTMLDivElement>(null);
   const frameView = useStudioStore((s) => s.frameView);
   const setFrameView = useStudioStore((s) => s.setFrameView);
+  const workspaceView = useStudioStore((s) => s.workspaceView);
+  const setWorkspaceView = useStudioStore((s) => s.setWorkspaceView);
   const project = useStudioStore((s) => s.project);
   const camera = useStudioStore((s) => s.camera);
   const lighting = useStudioStore((s) => s.lighting);
@@ -305,6 +308,7 @@ export function PreviewPanel() {
         className="absolute inset-x-0 top-0 z-30 pointer-events-none flex items-start justify-between gap-3"
         {...uiSectionProps(UI_SECTIONS.studioPreviewMainChrome)}
       >
+        {workspaceView === 'shot' && (
         <div className="preview-panel-controls pointer-events-auto shrink-0 flex flex-col gap-1.5">
           <FrameViewSegment
             value={frameView}
@@ -312,7 +316,8 @@ export function PreviewPanel() {
             generatedVideoCount={generatedVideoCount}
           />
         </div>
-        {shot && (
+        )}
+        {workspaceView === 'shot' && shot && (
           <div
             className="pointer-events-auto shrink-0 bg-surface-800 border border-surface-700 px-3 py-1 rounded-lg text-xs font-semibold text-gray-300"
             {...uiSectionProps(UI_SECTIONS.studioPreviewShotLabel)}
@@ -322,13 +327,19 @@ export function PreviewPanel() {
         )}
       </div>
 
-      {frameView === 'prompt' && (
+      {frameView === 'prompt' && workspaceView === 'shot' && (
         <div className="absolute inset-0 z-10 min-h-0">
           <PromptStackView />
         </div>
       )}
 
-      {frameView !== 'prompt' && (
+      {workspaceView === 'media-library' && (
+        <div className="absolute inset-0 z-10 min-h-0">
+          <MediaLibraryViewer onBack={() => setWorkspaceView('shot')} />
+        </div>
+      )}
+
+      {frameView !== 'prompt' && workspaceView === 'shot' && (
       <div className="absolute inset-0 z-0 p-4 md:p-8">
         <div
           ref={previewStageRef}

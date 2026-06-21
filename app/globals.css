@@ -2416,3 +2416,35 @@ input[type="range"]::-moz-range-thumb:hover {
   height: 1.125rem;
   opacity: 0.9;
 }
+
+/* Media Library viewer */
+.media-library-viewer {
+  border-radius: 0;
+}
+
+.media-library-field {
+  background: var(--surface-800, #27272a);
+  border: 1px solid var(--surface-600, #52525b);
+  border-radius: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  font-size: 0.6875rem;
+  color: #e4e4e7;
+  outline: none;
+}
+
+.media-library-field:focus {
+  ring: 2px;
+  border-color: rgb(59 130 246 / 0.5);
+  box-shadow: 0 0 0 2px rgb(59 130 246 / 0.25);
+}
+
+.media-library-inspector--empty {
+  background: rgb(24 24 27 / 0.5);
+}
+
+.media-library-grid-card:focus-visible,
+.media-library-tree-leaf:focus-visible,
+.media-library-list-row:focus-visible {
+  outline: 2px solid rgb(59 130 246 / 0.6);
+  outline-offset: 1px;
+}

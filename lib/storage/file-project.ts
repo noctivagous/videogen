@@ -8,7 +8,11 @@ import {
   isServerProjectStorageEnabled,
   saveProjectToServer,
 } from '@/lib/storage/server-project-storage';
-import { validateStudioProject } from '@/lib/storage/project-io';
+import {
+  readGlobalMediaFromDirectory,
+  writeGlobalMediaToDirectory,
+} from '@/lib/storage/global-media-storage';
+import type { MediaAsset } from '@/lib/types/media-library';
 import {
   clearProjectLocation,
   loadProjectLocation,
@@ -16,6 +20,7 @@ import {
   type StoredProjectLocationKind,
 } from '@/lib/storage/project-handle-store';
 import type { StudioProject } from '@/lib/types/studio';
+import { validateStudioProject } from '@/lib/storage/project-io';
 
 export const PROJECT_JSON_NAME = 'project.json';
 
@@ -261,7 +266,10 @@ async function activateFile(fileHandle: FileSystemFileHandle): Promise<StudioPro
   return readProjectFromFileHandle(fileHandle);
 }
 
-export async function saveProjectFolderAs(project: StudioProject): Promise<boolean> {
+export async function saveProjectFolderAs(
+  project: StudioProject,
+  globalMediaLibrary: MediaAsset[] = [],
+): Promise<boolean> {
   const win = window as FilePickerWindow;
   if (!win.showDirectoryPicker) return false;
 
@@ -272,10 +280,16 @@ export async function saveProjectFolderAs(project: StudioProject): Promise<boole
 
   revokeProjectAssetUrls();
   await writeProjectToDirectory(dir, project);
+  await writeGlobalMediaToDirectory(dir, globalMediaLibrary);
   return activateDirectory(dir);
 }
 
-export async function openProjectFolder(): Promise<StudioProject | null> {
+export type OpenProjectBundle = {
+  project: StudioProject;
+  globalMediaLibrary: MediaAsset[];
+};
+
+export async function openProjectFolder(): Promise<OpenProjectBundle | null> {
   const win = window as FilePickerWindow;
   if (!win.showDirectoryPicker) return null;
 
@@ -289,7 +303,8 @@ export async function openProjectFolder(): Promise<StudioProject | null> {
   if (!project) return null;
 
   if (!(await activateDirectory(dir))) return null;
-  return project;
+  const globalMediaLibrary = await readGlobalMediaFromDirectory(dir);
+  return { project, globalMediaLibrary };
 }
 
 export async function openProjectFile(): Promise<StudioProject | null> {
@@ -322,7 +337,7 @@ export async function saveProjectFileAs(project: StudioProject): Promise<boolean
   return true;
 }
 
-export async function restoreProjectSession(): Promise<StudioProject | null> {
+export async function restoreProjectSession(): Promise<OpenProjectBundle | null> {
   const stored = await loadProjectLocation();
   if (!stored) return null;
 
@@ -337,17 +352,24 @@ export async function restoreProjectSession(): Promise<StudioProject | null> {
     activeFile = null;
     locationLabel = stored.name;
     saveState = 'saved';
-    return readProjectFromDirectory(activeDirectory);
+    const project = await readProjectFromDirectory(activeDirectory);
+    if (!project) return null;
+    const globalMediaLibrary = await readGlobalMediaFromDirectory(activeDirectory);
+    return { project, globalMediaLibrary };
   }
 
   activeFile = stored.handle as FileSystemFileHandle;
   activeDirectory = null;
   locationLabel = stored.name;
   saveState = 'saved';
-  return readProjectFromFileHandle(activeFile);
+  const project = await readProjectFromFileHandle(activeFile);
+  return project ? { project, globalMediaLibrary: [] } : null;
 }
 
-export async function flushProjectAutosave(project: StudioProject): Promise<boolean> {
+export async function flushProjectAutosave(
+  project: StudioProject,
+  globalMediaLibrary: MediaAsset[] = [],
+): Promise<boolean> {
   const generation = autosaveGeneration;
 
   if (activeDirectory) {
@@ -356,6 +378,7 @@ export async function flushProjectAutosave(project: StudioProject): Promise<bool
       return false;
     }
     await writeProjectToDirectory(activeDirectory, project);
+    await writeGlobalMediaToDirectory(activeDirectory, globalMediaLibrary);
     if (generation !== autosaveGeneration) return false;
     saveState = 'saved';
     return true;
@@ -374,7 +397,7 @@ export async function flushProjectAutosave(project: StudioProject): Promise<bool
 
   if (isServerProjectStorageEnabled()) {
     try {
-      const saved = await saveProjectToServer(project);
+      const saved = await saveProjectToServer(project, globalMediaLibrary);
       if (saved && generation === autosaveGeneration) {
         saveState = 'saved';
         return true;
@@ -391,6 +414,7 @@ export async function flushProjectAutosave(project: StudioProject): Promise<bool
 export function scheduleProjectAutosave(
   project: StudioProject,
   onUpdate?: (state: ProjectSaveState) => void,
+  globalMediaLibrary: MediaAsset[] = [],
 ): void {
   if (typeof window === 'undefined') return;
 
@@ -404,7 +428,7 @@ export function scheduleProjectAutosave(
       autosaveTimer = setTimeout(() => {
         void (async () => {
           try {
-            await flushProjectAutosave(project);
+            await flushProjectAutosave(project, globalMediaLibrary);
             if (generation === autosaveGeneration) {
               onUpdate?.(saveState);
             }
@@ -433,7 +457,7 @@ export function scheduleProjectAutosave(
   autosaveTimer = setTimeout(() => {
     void (async () => {
       try {
-        await flushProjectAutosave(project);
+        await flushProjectAutosave(project, globalMediaLibrary);
         if (generation === autosaveGeneration) {
           onUpdate?.(saveState);
         }
@@ -447,11 +471,14 @@ export function scheduleProjectAutosave(
   }, 800);
 }
 
-export async function saveProjectNow(project: StudioProject): Promise<boolean> {
+export async function saveProjectNow(
+  project: StudioProject,
+  globalMediaLibrary: MediaAsset[] = [],
+): Promise<boolean> {
   autosaveGeneration += 1;
   if (autosaveTimer) {
     clearTimeout(autosaveTimer);
     autosaveTimer = null;
   }
-  return flushProjectAutosave(project);
+  return flushProjectAutosave(project, globalMediaLibrary);
 }
