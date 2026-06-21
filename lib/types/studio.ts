@@ -330,6 +330,10 @@ export interface Shot {
   shotActivity: string;
   /** Extra prompt text appended during bake start frame generation. */
   promptAdditions?: string;
+  /** User-edited lighting + atmosphere prompt for video generation. */
+  lightingAtmospherePrompt?: string;
+  /** User-edited bake start frame prompt (pass 1 inpaint). */
+  bakeStartFramePrompt?: string;
   /** @deprecated migrated to sceneSetup on load */
   prompt?: string;
   references: (string | null)[];

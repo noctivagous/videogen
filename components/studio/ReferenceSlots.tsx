@@ -5,7 +5,7 @@ import { normalizeReferenceRole } from '@/lib/constants/camera';
 import { normalizeReferenceMode, REFERENCE_MODE_OPTIONS } from '@/lib/constants/reference-modes';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { resolveReferenceDisplayUrl } from '@/lib/storage/reference-url';
-import { getBackdropCropStatus, getBackdropSlotIndex } from '@/lib/studio/backdrop-framing';
+import { getBackdropSlotIndex } from '@/lib/studio/backdrop-framing';
 import { getEffectiveModelId } from '@/lib/studio/provider-modalities';
 import {
   getReferenceSlotCount,
@@ -14,11 +14,17 @@ import {
   isCinematographyRefs,
   MIN_REFERENCE_SLOTS,
 } from '@/lib/studio/reference-slots';
+import { buildBakeStartFramePromptPreview } from '@/lib/studio/bake-start-frame';
 import { getThemeTransformStatus } from '@/lib/studio/theme-transform';
 import { restrictsReferenceSlotsToFirst } from '@/lib/studio/xai-video-models';
 import { getWorkflowReferenceSteps, isBakeStartFrame } from '@/lib/studio/workflow';
 import { useCharacterAssignmentConnectorContext } from '@/components/studio/ThemeTransformConnectorProvider';
+import { BackdropFramingLockButton } from '@/components/studio/BackdropFramingLockButton';
+import { CharacterSheetCompositionControls } from '@/components/studio/CharacterSheetCompositionControls';
+import { LightingAtmosphereSfxFieldset } from '@/components/studio/LightingAtmosphereSfxFieldset';
+import { MannequinAssignmentTable } from '@/components/studio/MannequinAssignmentTable';
 import { MannequinPlacementControls } from '@/components/studio/MannequinPlacementControls';
+import { CollapsiblePromptEditor } from '@/components/ui/CollapsiblePromptEditor';
 import { ReferenceImageViewerModal } from '@/components/studio/ReferenceImageViewerModal';
 import { countMannequinsLinkedToSlot } from '@/lib/studio/mannequin-character-assignment';
 import type { AspectRatio, ReferenceMode, ThemeTransformSlotStatus } from '@/lib/types/studio';
@@ -74,10 +80,10 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
   const setReferenceMode = useStudioStore((s) => s.setReferenceMode);
   const bakeStartFrame = useStudioStore((s) => s.bakeStartFrame);
   const setPromptAdditions = useStudioStore((s) => s.setPromptAdditions);
+  const setBakeStartFramePrompt = useStudioStore((s) => s.setBakeStartFramePrompt);
   const loadBakedFrameFromAsset = useStudioStore((s) => s.loadBakedFrameFromAsset);
   const invalidateBakedFrame = useStudioStore((s) => s.invalidateBakedFrame);
   const isBakingStartFrame = useStudioStore((s) => s.isBakingStartFrame);
-  const toggleBackdropFramingLock = useStudioStore((s) => s.toggleBackdropFramingLock);
   const project = useStudioStore((s) => s.project);
   const fileInputs = useRef<(HTMLInputElement | null)[]>([]);
   const localSlotRefs = useRef<(HTMLElement | null)[]>([]);
@@ -118,11 +124,6 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
     return 1;
   })();
   const aspectRatio = (project.aspectRatio || '16:9') as AspectRatio;
-  const backdropFramingLocked = Boolean(shot.backdropFramingByAspect?.[aspectRatio]?.locked);
-  const backdropCropStatus = getBackdropCropStatus(shot, aspectRatio);
-  const backdropLockPending = backdropCropStatus === 'pending';
-  const backdropLockReady = backdropCropStatus === 'ready' && backdropFramingLocked;
-  const backdropLockError = backdropCropStatus === 'error';
 
   const handleFile = (index: number, file: File | undefined) => {
     if (!file || !file.type.startsWith('image/')) return;
@@ -150,7 +151,7 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
 
   const slotIndices = getReferenceSlotIndices(shot);
   const isBakeStartFrameWorkflow = isBakeStartFrame(shot);
-  const workflowSteps = getWorkflowReferenceSteps(shot, shot?.lighting);
+  const workflowSteps = getWorkflowReferenceSteps(shot, shot?.lighting, aspectRatio);
   const bakeReady = shot.bakeStatus === 'ready' && Boolean(shot.bakedStartFrame);
   const hasInterruptedBake =
     isBakeStartFrameWorkflow && !bakeReady && (shot.savedBakedFrameAssetIds?.length ?? 0) > 0;
@@ -388,47 +389,8 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
                     </button>
                   )}
 
-                  {index === backdropSlotIndex && (
-                    <button
-                      type="button"
-                      onClick={() => toggleBackdropFramingLock()}
-                      disabled={backdropLockPending}
-                      className={`backdrop-framing-lock-btn ${
-                        backdropLockError
-                          ? 'backdrop-framing-lock-btn--error'
-                          : backdropLockReady
-                            ? 'backdrop-framing-lock-btn--ready'
-                            : backdropFramingLocked
-                              ? 'backdrop-framing-lock-btn--locked'
-                              : ''
-                      }`}
-                      title={
-                        backdropLockPending
-                          ? 'Cropping backdrop…'
-                          : backdropLockError
-                            ? 'Backdrop crop failed — click to retry lock'
-                            : backdropFramingLocked
-                              ? 'Unlock backdrop framing'
-                              : 'Lock backdrop framing'
-                      }
-                      {...uiSectionProps(UI_SECTIONS.studioPreviewBackdropFramingLock)}
-                    >
-                      {backdropLockPending ? (
-                        <span className="backdrop-framing-lock-btn__spinner" aria-hidden />
-                      ) : backdropLockReady ? (
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                        </svg>
-                      ) : backdropFramingLocked ? (
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                      ) : (
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                        </svg>
-                      )}
-                    </button>
+                  {index === backdropSlotIndex && !isBakeStartFrameWorkflow && (
+                    <BackdropFramingLockButton aspectRatio={aspectRatio} />
                   )}
                 </div>
               )}
@@ -457,9 +419,12 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
     return null;
   };
 
-  const assetWorkflowSteps = ['backdrop', 'character-sheet']
+  const assetWorkflowSteps = ['backdrop', 'lock-backdrop', 'character-sheet']
     .map((id) => workflowSteps.find((step) => step.id === id))
     .filter((step): step is (typeof workflowSteps)[number] => step != null);
+  const backdropStep = assetWorkflowSteps.find((step) => step.id === 'backdrop');
+  const lockBackdropStep = assetWorkflowSteps.find((step) => step.id === 'lock-backdrop');
+  const characterSheetStep = assetWorkflowSteps.find((step) => step.id === 'character-sheet');
   const stagingWorkflowSteps = workflowSteps.filter(
     (step) => step.id === 'place-mannequins' || step.id === 'assign-characters',
   );
@@ -472,6 +437,7 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
     isBakeStartFrameWorkflow && workflowSteps.length > 0 && assetWorkflowSteps.length > 0;
   const showStagingFieldset =
     isBakeStartFrameWorkflow && workflowSteps.length > 0 && stagingWorkflowSteps.length > 0;
+  const showLightingFieldset = isBakeStartFrameWorkflow && workflowSteps.length > 0;
 
   let topLevelFieldsetOrder = 0;
   const nextTopLevelFieldsetOrder = () => {
@@ -481,8 +447,12 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
 
   const assetsFieldsetOrder = showAssetsFieldset ? nextTopLevelFieldsetOrder() : null;
   const stagingFieldsetOrder = showStagingFieldset ? nextTopLevelFieldsetOrder() : null;
+  const lightingFieldsetOrder = showLightingFieldset ? nextTopLevelFieldsetOrder() : null;
   const additionalResourcesFieldsetOrder = nextTopLevelFieldsetOrder();
   const bakeFieldsetOrder = isBakeStartFrameWorkflow ? nextTopLevelFieldsetOrder() : null;
+
+  const bakePromptPreview = buildBakeStartFramePromptPreview(shot, shot.lighting);
+  const bakePromptValue = shot.bakeStartFramePrompt ?? bakePromptPreview;
 
   const renderTopLevelFieldsetLegend = (order: number, label: string) => (
     <legend className="workflow-step-fieldset__legend flex items-center gap-1.5">
@@ -493,6 +463,22 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
     </legend>
   );
 
+  const renderWorkflowStepHeader = (
+    step: (typeof workflowSteps)[number],
+    stepNumber: number,
+  ) => (
+    <div className="flex items-center gap-1.5">
+      <span
+        className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
+          step.done ? 'bg-brand-500/30 text-brand-300' : 'bg-surface-700 text-gray-500'
+        }`}
+      >
+        {step.done ? '✓' : stepNumber}
+      </span>
+      <span className={step.done ? 'text-gray-300' : ''}>{step.label}</span>
+    </div>
+  );
+
   const renderWorkflowStep = (
     step: (typeof workflowSteps)[number],
     stepNumber: number,
@@ -500,18 +486,44 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
     const slotIndex = checklistSlotIndexForStep(step.id);
     return (
       <li key={step.id} className="flex flex-col gap-1.5">
-        <div className="flex items-center gap-1.5">
-          <span
-            className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
-              step.done ? 'bg-brand-500/30 text-brand-300' : 'bg-surface-700 text-gray-500'
-            }`}
-          >
-            {step.done ? '✓' : stepNumber}
-          </span>
-          <span className={step.done ? 'text-gray-300' : ''}>{step.label}</span>
-        </div>
+        {renderWorkflowStepHeader(step, stepNumber)}
         {slotIndex != null && slotIndex >= 0 && renderReferenceSlotRow(slotIndex)}
       </li>
+    );
+  };
+
+  const renderAssetsFieldset = (fieldsetOrder: number) => {
+    if (assetWorkflowSteps.length === 0) return null;
+
+    let stepNumber = 1;
+
+    return (
+      <fieldset className="workflow-step-fieldset">
+        {renderTopLevelFieldsetLegend(fieldsetOrder, 'Assets')}
+        <ol className="workflow-steps flex flex-col gap-2 text-[10px] text-gray-400">
+          {backdropStep && (
+            <li key={backdropStep.id} className="flex flex-col gap-1.5">
+              {renderWorkflowStepHeader(backdropStep, stepNumber++)}
+              {backdropSlotIndex >= 0 && renderReferenceSlotRow(backdropSlotIndex)}
+              {lockBackdropStep && (
+                <div className="workflow-step-substep flex flex-col gap-1.5">
+                  {renderWorkflowStepHeader(lockBackdropStep, stepNumber++)}
+                  {backdropSlotIndex >= 0 && shot.references[backdropSlotIndex] && (
+                    <BackdropFramingLockButton aspectRatio={aspectRatio} />
+                  )}
+                </div>
+              )}
+            </li>
+          )}
+          {characterSheetStep && (
+            <li key={characterSheetStep.id} className="flex flex-col gap-1.5">
+              <CharacterSheetCompositionControls />
+              {renderWorkflowStepHeader(characterSheetStep, stepNumber++)}
+              {subjectSlotIndex >= 0 && renderReferenceSlotRow(subjectSlotIndex)}
+            </li>
+          )}
+        </ol>
+      </fieldset>
     );
   };
 
@@ -537,30 +549,20 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
           </fieldset>
         )}
         {assignCharactersStep && (
-          <ol className="workflow-steps flex flex-col gap-2 text-[10px] text-gray-400 mt-2">
-            {renderWorkflowStep(
-              assignCharactersStep,
-              startNumber + (placeMannequinsStep ? 1 : 0),
-            )}
-          </ol>
+          <fieldset className="workflow-step-fieldset workflow-step-fieldset--nested mt-2">
+            <legend className="workflow-step-fieldset__legend flex items-center gap-1.5">
+              <span
+                className={`inline-flex w-4 h-4 rounded-full items-center justify-center text-[9px] font-bold ${
+                  assignCharactersStep.done ? 'bg-brand-500/30 text-brand-300' : 'bg-surface-700 text-gray-500'
+                }`}
+              >
+                {assignCharactersStep.done ? '✓' : startNumber + (placeMannequinsStep ? 1 : 0)}
+              </span>
+              Assign Characters
+            </legend>
+            <MannequinAssignmentTable />
+          </fieldset>
         )}
-      </fieldset>
-    );
-  };
-
-  const renderWorkflowStepFieldset = (
-    legend: string,
-    steps: typeof workflowSteps,
-    startNumber = 1,
-    fieldsetOrder: number,
-  ) => {
-    if (steps.length === 0) return null;
-    return (
-      <fieldset className="workflow-step-fieldset">
-        {renderTopLevelFieldsetLegend(fieldsetOrder, legend)}
-        <ol className="workflow-steps flex flex-col gap-2 text-[10px] text-gray-400">
-          {steps.map((step, index) => renderWorkflowStep(step, startNumber + index))}
-        </ol>
       </fieldset>
     );
   };
@@ -591,10 +593,12 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
             className="workflow-checklist flex flex-col gap-3"
             aria-label="Bake start frame workflow"
           >
-            {assetsFieldsetOrder != null &&
-              renderWorkflowStepFieldset('Assets', assetWorkflowSteps, 1, assetsFieldsetOrder)}
+            {assetsFieldsetOrder != null && renderAssetsFieldset(assetsFieldsetOrder)}
             {stagingFieldsetOrder != null &&
               renderStagingFieldset(assetWorkflowSteps.length + 1, stagingFieldsetOrder)}
+            {lightingFieldsetOrder != null && (
+              <LightingAtmosphereSfxFieldset fieldsetOrder={lightingFieldsetOrder} />
+            )}
           </div>
         )}
       </div>
@@ -669,14 +673,23 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
                 Invalidate Baked Frame
               </button>
             ) : (
-              <button
-                type="button"
-                onClick={() => bakeStartFrame()}
-                disabled={isBakingStartFrame || workflowSteps.some((s) => !s.done && s.id !== 'bake')}
-                className="w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-lg bg-brand-600 hover:bg-brand-500 disabled:opacity-40 text-white"
-              >
-                {isBakingStartFrame ? 'Baking…' : 'Bake Start Frame'}
-              </button>
+              <>
+                <CollapsiblePromptEditor
+                  label="Start frame prompt"
+                  value={bakePromptValue}
+                  onChange={setBakeStartFramePrompt}
+                  placeholder="Bake start frame prompt…"
+                  ariaLabel="Bake start frame prompt"
+                />
+                <button
+                  type="button"
+                  onClick={() => bakeStartFrame()}
+                  disabled={isBakingStartFrame || workflowSteps.some((s) => !s.done && s.id !== 'bake')}
+                  className="w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-lg bg-brand-600 hover:bg-brand-500 disabled:opacity-40 text-white"
+                >
+                  {isBakingStartFrame ? 'Baking…' : 'Bake Start Frame'}
+                </button>
+              </>
             )}
           </div>
         </fieldset>

@@ -26,8 +26,7 @@ import {
 import { prepareSceneTextForGeneration } from '@/lib/studio/legacy-scene-boilerplate';
 import { shouldInjectFieldSizePrompt, shouldUseBakedStartFrameForVideo } from '@/lib/studio/workflow';
 
-import { buildVideoEnvironmentPrompt } from '@/lib/studio/video-environment-prompt';
-import { buildVideoLightingPrompt } from '@/lib/studio/video-lighting-prompt';
+import { resolveLightingAtmospherePrompt } from '@/lib/studio/lighting-atmosphere-prompt';
 
 export function getGenerationFramePrompt(
   fieldSize: string,
@@ -278,15 +277,18 @@ export function buildGenerationPrompt(input: {
     ? [prepared.shotActivity].filter(Boolean)
     : [prepared.sceneSetup, prepared.shotActivity].filter(Boolean);
   const sceneBlock = sceneParts.join('. ');
-  const videoLightingLine =
-    !useBakedFrame && includeVideoLighting ? buildVideoLightingPrompt(lighting) : '';
-  const videoEnvironmentLine =
-    !useBakedFrame && includeVideoEnvironment ? buildVideoEnvironmentPrompt(lighting) : '';
+  const lightingAtmosphereLine =
+    !useBakedFrame
+      ? resolveLightingAtmospherePrompt(lighting, shot?.lightingAtmospherePrompt, {
+          includeVideoLighting,
+          includeVideoEnvironment,
+        })
+      : '';
   const cameraLine = useBakedFrame ? '' : getGenerationCameraPrompt(camera, frame, shot);
   const motionLine =
     resolveCameraPromptInclusion(camera).includeInPrompt ? buildMotionPrompt(motion) : '';
 
-  const blocks = [sceneBlock, videoLightingLine, videoEnvironmentLine, cameraLine, motionLine];
+  const blocks = [sceneBlock, lightingAtmosphereLine, cameraLine, motionLine];
 
   return blocks
     .filter(Boolean)

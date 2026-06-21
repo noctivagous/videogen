@@ -280,6 +280,8 @@ export function migrateShot(
     sceneSetup: stripLegacySceneBoilerplate(shot.sceneSetup ?? shot.prompt ?? defaults.sceneSetup),
     shotActivity: shot.shotActivity ?? '',
     promptAdditions: shot.promptAdditions ?? '',
+    lightingAtmospherePrompt: shot.lightingAtmospherePrompt ?? '',
+    bakeStartFramePrompt: shot.bakeStartFramePrompt ?? '',
     referenceRoles: slotOrderMigrated.referenceRoles,
     references: healStockDemoReferences(
       slotOrderMigrated.references.map((ref, i) => {

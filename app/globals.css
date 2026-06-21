@@ -849,6 +849,109 @@ input[type="range"]::-moz-range-thumb:hover {
   @apply mt-2 mb-0 py-2;
 }
 
+.workflow-step-substep {
+  margin-left: 1.375rem;
+  padding-left: 0.625rem;
+  border-left: 1px solid rgba(63, 63, 70, 0.75);
+}
+
+.mannequin-assignment-table,
+.workflow-settings-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 8px;
+  background: rgba(10, 10, 11, 0.82);
+  border: 1px solid rgba(63, 63, 70, 0.9);
+  overflow: hidden;
+  table-layout: fixed;
+}
+
+.mannequin-assignment-table thead th,
+.workflow-settings-table thead th {
+  padding: 4px 8px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: left;
+  color: #71717a;
+  background: rgba(24, 24, 27, 0.9);
+  border-bottom: 1px solid rgba(63, 63, 70, 0.55);
+}
+
+.mannequin-assignment-table tbody td,
+.workflow-settings-table tbody td {
+  padding: 6px 8px;
+  font-size: 10px;
+  vertical-align: middle;
+  color: #d4d4d8;
+}
+
+.mannequin-assignment-table tbody tr:not(:last-child) td,
+.workflow-settings-table tbody tr:not(:last-child) td {
+  border-bottom: 1px solid rgba(63, 63, 70, 0.55);
+}
+
+.mannequin-assignment-table__empty,
+.workflow-settings-table__empty {
+  @apply px-0.5;
+}
+
+.mannequin-assignment-table__mannequin,
+.workflow-settings-table__label {
+  width: 38%;
+  font-weight: 600;
+}
+
+.mannequin-assignment-table__assignment,
+.workflow-settings-table__value {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.mannequin-assignment-table__assignment--assigned,
+.workflow-settings-table__value--active {
+  color: #86efac;
+}
+
+.mannequin-assignment-table__assignment--unassigned,
+.workflow-settings-table__value--inactive {
+  color: #a1a1aa;
+  font-style: italic;
+}
+
+.collapsible-prompt-editor {
+  @apply flex flex-col gap-1.5 min-w-0;
+}
+
+.collapsible-prompt-editor__header {
+  @apply flex items-center gap-1.5 min-w-0;
+}
+
+.collapsible-prompt-editor__toggle {
+  @apply inline-flex shrink-0 items-center justify-center w-4 h-4 rounded text-gray-500 hover:text-gray-300 hover:bg-surface-700/80;
+}
+
+.collapsible-prompt-editor__chevron {
+  width: 10px;
+  height: 10px;
+  transition: transform 0.15s ease;
+}
+
+.collapsible-prompt-editor__chevron--open {
+  transform: rotate(90deg);
+}
+
+.collapsible-prompt-editor__label {
+  @apply text-[10px] uppercase tracking-wider font-semibold text-gray-400;
+}
+
+.collapsible-prompt-editor__input {
+  @apply w-full rounded-lg border border-surface-600 bg-surface-800 px-2.5 py-2 text-[11px] text-gray-200 outline-none focus:ring-2 focus:ring-brand-500 resize-none min-h-[4.5rem] placeholder:text-gray-600;
+}
+
 .reference-prompt-additions__input {
   @apply placeholder:text-gray-600;
 }

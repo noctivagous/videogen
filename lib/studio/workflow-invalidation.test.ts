@@ -126,6 +126,15 @@ describe('checklist after reference removal', () => {
     expect(assignStep?.done).toBe(false);
   });
 
+  it('marks lock-backdrop incomplete when backdrop is not locked', () => {
+    const shot = baseShot({
+      backdropFramingByAspect: {},
+      backdropCropStatusByAspect: {},
+    });
+    const steps = getWorkflowReferenceSteps(shot, undefined, '16:9');
+    expect(steps.find((s) => s.id === 'lock-backdrop')?.done).toBe(false);
+  });
+
   it('marks backdrop step incomplete and clears bake when backdrop is cleared', () => {
     const shot = baseShot();
     const backdropIdx = getBackdropSlotIndex(shot);

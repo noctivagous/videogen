@@ -57,8 +57,8 @@ import { DEFAULT_XAI_BAKE_IMAGE_MODEL, getWorkflowLabel, normalizeWorkflow } fro
 import { isWorkflowImplemented } from '@/lib/constants/video-generation-workflows';
 import {
   bakeBlobsToDataUrls,
-  BAKE_XAI_EDIT_PROMPT,
   appendBakePromptAdditions,
+  resolveBakeStartFramePass1Prompt,
   persistBakedImageUrl,
   renderBakeFrames,
 } from '@/lib/studio/bake-start-frame';
@@ -428,6 +428,8 @@ interface StudioStore {
   setSceneSetup: (sceneSetup: string) => void;
   setShotActivity: (shotActivity: string) => void;
   setPromptAdditions: (promptAdditions: string) => void;
+  setLightingAtmospherePrompt: (lightingAtmospherePrompt: string) => void;
+  setBakeStartFramePrompt: (bakeStartFramePrompt: string) => void;
   setShotFrameComposition: (patch: Partial<FrameComposition>) => void;
   toggleCompositionOverlay: () => void;
   handleCameraCompositionChange: (
@@ -1161,6 +1163,18 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     }));
   },
 
+  setLightingAtmospherePrompt(lightingAtmospherePrompt) {
+    set((s) => ({
+      shots: patchCurrentShot(s.shots, s.currentShot, { lightingAtmospherePrompt }),
+    }));
+  },
+
+  setBakeStartFramePrompt(bakeStartFramePrompt) {
+    set((s) => ({
+      shots: patchCurrentShot(s.shots, s.currentShot, { bakeStartFramePrompt }),
+    }));
+  },
+
   setShotFrameComposition(patch) {
     const shot = get().getCurrentShot();
     if (!shot) return;
@@ -1829,7 +1843,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const shot = getCurrentShotFromList(shots, currentShot);
     if (!shot || !isBakeStartFrame(shot)) return;
 
-    const steps = getWorkflowReferenceSteps(shot, shot.lighting);
+    const steps = getWorkflowReferenceSteps(shot, shot.lighting, project.aspectRatio as AspectRatio);
     const incomplete = steps.find((s) => !s.done && s.id !== 'bake');
     if (incomplete) {
       get().showToast(`Complete step: ${incomplete.label}`, 'error');
@@ -1874,7 +1888,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       let identityPasses: BakeStartFrameRequest['identityPasses'];
 
       const promptAdditions = shot.promptAdditions;
-      const pass1Prompt = appendBakePromptAdditions(BAKE_XAI_EDIT_PROMPT, promptAdditions);
+      const pass1Prompt = resolveBakeStartFramePass1Prompt(shot);
 
       if (identityPlan && xaiModelId) {
         identityPasses = identityPlan.passes.map((spec) => ({

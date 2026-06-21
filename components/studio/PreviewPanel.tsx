@@ -138,8 +138,11 @@ export function PreviewPanel() {
     ? Boolean(bakedPreviewUrl)
     : Boolean(shot?.previewFrameUrl);
   const workflowSteps = useMemo(
-    () => (shot ? getWorkflowReferenceSteps(shot, shot.lighting) : []),
-    [shot],
+    () =>
+      shot
+        ? getWorkflowReferenceSteps(shot, shot.lighting, (project.aspectRatio || '16:9') as AspectRatio)
+        : [],
+    [shot, project.aspectRatio],
   );
   const checklistIncomplete = workflowSteps.some((step) => !step.done && step.id !== 'bake');
   const showBakedEmptyState =

@@ -1,7 +1,7 @@
 import { normalizeReferenceRole } from '@/lib/constants/camera';
 import { normalizeWorkflow } from '@/lib/constants/workflows';
 import { syncMannequinsFromShot } from '@/lib/studio/mannequin-sync';
-import { getBackdropSlotIndex } from '@/lib/studio/backdrop-framing';
+import { getBackdropSlotIndex, isBackdropCropCommitted } from '@/lib/studio/backdrop-framing';
 import { getSubjectReference } from '@/lib/constants/stock-demo';
 import type {
   AspectRatio,
@@ -40,6 +40,7 @@ export {
 export type WorkflowStepId =
   | 'character-sheet'
   | 'backdrop'
+  | 'lock-backdrop'
   | 'place-mannequins'
   | 'assign-characters'
   | 'bake';
@@ -89,10 +90,12 @@ function slotHasImage(
 export function getWorkflowReferenceSteps(
   shot: Shot | undefined,
   lighting?: LightingSettings,
+  aspectRatio: AspectRatio = '16:9',
 ): WorkflowReferenceStep[] {
   if (!shot || !isBakeStartFrame(shot)) return [];
 
   const backdropIdx = getBackdropSlotIndex(shot);
+  const backdropReady = backdropIdx >= 0 && slotHasImage(shot, backdropIdx, lighting);
   const bakeStatus: BakeStatus = shot.bakeStatus ?? 'idle';
   const requiredSheets = getRequiredSubjectSheetCount(shot);
   const sheetsLabel =
@@ -107,7 +110,12 @@ export function getWorkflowReferenceSteps(
     {
       id: 'backdrop',
       label: 'Backdrop',
-      done: backdropIdx >= 0 && slotHasImage(shot, backdropIdx, lighting),
+      done: backdropReady,
+    },
+    {
+      id: 'lock-backdrop',
+      label: 'Lock Backdrop',
+      done: backdropReady && isBackdropCropCommitted(shot, aspectRatio),
     },
     {
       id: 'place-mannequins',

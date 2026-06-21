@@ -7,7 +7,8 @@ import {
   renderBackdropCropBlob,
 } from '@/lib/studio/backdrop-framing';
 import { parseResolution } from '@/lib/studio/generation/adapters/shared';
-import type { AspectRatio, Mannequin, Shot } from '@/lib/types/studio';
+import { buildIdentityPassPlan } from '@/lib/studio/bake-identity-pass';
+import type { AspectRatio, LightingSettings, Mannequin, Shot } from '@/lib/types/studio';
 
 export interface BakeFrameOutput {
   backdropBlob: Blob;
@@ -224,4 +225,34 @@ export function appendBakePromptAdditions(
   const extra = additions?.trim();
   if (!extra) return basePrompt;
   return `${basePrompt.trimEnd()} ${extra}`;
+}
+
+export function resolveBakeStartFramePass1Prompt(shot: {
+  promptAdditions?: string | null;
+  bakeStartFramePrompt?: string | null;
+}): string {
+  const override = shot.bakeStartFramePrompt?.trim();
+  if (override) {
+    const pass1Match = override.match(/^Pass 1[^\n]*\n([\s\S]*?)(?:\n\nPass \d|$)/);
+    if (pass1Match) return pass1Match[1].trim();
+    return override;
+  }
+  return appendBakePromptAdditions(BAKE_XAI_EDIT_PROMPT, shot.promptAdditions);
+}
+
+export function buildBakeStartFramePromptPreview(
+  shot: Shot,
+  lighting?: LightingSettings,
+): string {
+  const pass1 = resolveBakeStartFramePass1Prompt(shot);
+  const sections = [`Pass 1 — Silhouette edit\n${pass1}`];
+  const plan = buildIdentityPassPlan(shot, '<scene>', lighting ?? shot.lighting);
+  if (plan) {
+    plan.passes.forEach((spec, index) => {
+      sections.push(
+        `Pass ${index + 2} — Identity\n${appendBakePromptAdditions(spec.prompt, shot.promptAdditions)}`,
+      );
+    });
+  }
+  return sections.join('\n\n');
 }
