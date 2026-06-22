@@ -1,11 +1,14 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { ProviderIcon } from '@/components/studio/ProviderIcon';
 import { SplitButton } from '@/components/ui/SplitButton';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { STUDIO_LAUNCHER_ITEMS } from '@/lib/constants/studio-launcher';
 import { launchStudioLauncherItem } from '@/lib/studio/launch-studio-launcher-item';
+import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 import {
+  getBuiltInProvider,
   getProviderStatus,
   getSelectedImageModelDisplay,
   getSelectedVideoModelDisplay,
@@ -329,6 +332,8 @@ function ProjectFolderBadge({
 
 function ProviderBadge({
   kind,
+  providerId,
+  fallbackIcon,
   providerName,
   modelLabel,
   connected,
@@ -336,6 +341,8 @@ function ProviderBadge({
   sectionId,
 }: {
   kind: 'Video' | 'Image';
+  providerId?: string;
+  fallbackIcon: string;
   providerName: string;
   modelLabel: string | null;
   connected: boolean;
@@ -361,6 +368,12 @@ function ProviderBadge({
             ? 'bg-amber-500'
             : 'bg-gray-500'
       }`} />
+      <ProviderIcon
+        providerId={providerId}
+        fallbackIcon={fallbackIcon}
+        size="xs"
+        className="rounded-md"
+      />
       <div className="min-w-0 text-left leading-tight">
         <div className="text-[9px] uppercase tracking-wider text-gray-500 font-semibold">{kind}</div>
         <div className="font-medium text-gray-300 truncate">{providerName}</div>
@@ -400,7 +413,7 @@ export function HeaderBar() {
   const openAppsLauncher = useStudioStore((s) => s.openAppsLauncher);
   const showToast = useStudioStore((s) => s.showToast);
   const workspaceView = useStudioStore((s) => s.workspaceView);
-  const setWorkspaceView = useStudioStore((s) => s.setWorkspaceView);
+  const navigateToPanel = useNavigateToStudioPanel();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -439,7 +452,7 @@ export function HeaderBar() {
             label: item.title,
             onSelect: () =>
               launchStudioLauncherItem(item.id, {
-                setWorkspaceView,
+                navigateToPanel,
                 openSettings,
                 showToast,
               }),
@@ -502,7 +515,9 @@ export function HeaderBar() {
           <button
             type="button"
             onClick={() =>
-              setWorkspaceView(workspaceView === 'media-library' ? 'shot' : 'media-library')
+              navigateToPanel(
+                workspaceView === 'media-library' ? 'shot-designer' : 'media-library',
+              )
             }
             className={`px-2.5 py-1.5 text-xs font-medium border rounded-lg transition-all ${
               workspaceView === 'media-library'
@@ -529,6 +544,8 @@ export function HeaderBar() {
         <div className="hidden sm:flex items-center gap-2 min-w-0" {...uiSectionProps(UI_SECTIONS.studioHeaderProviderBadge)}>
           <ProviderBadge
             kind="Video"
+            providerId={isCustomVideo ? undefined : ai.defaultVideoProvider}
+            fallbackIcon={isCustomVideo ? '🛠️' : getBuiltInProvider(ai.defaultVideoProvider)?.icon ?? '🔌'}
             providerName={videoDisplay.providerName}
             modelLabel={videoDisplay.modelLabel}
             connected={videoConnected}
@@ -537,6 +554,8 @@ export function HeaderBar() {
           />
           <ProviderBadge
             kind="Image"
+            providerId={isCustomImage ? undefined : ai.defaultImageProvider}
+            fallbackIcon={isCustomImage ? '🛠️' : getBuiltInProvider(ai.defaultImageProvider)?.icon ?? '🔌'}
             providerName={imageDisplay.providerName}
             modelLabel={imageDisplay.modelLabel}
             connected={imageConnected}

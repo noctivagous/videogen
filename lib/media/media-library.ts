@@ -44,6 +44,57 @@ export async function blobFromDataUrl(dataUrl: string): Promise<Blob | null> {
   return new Blob([Uint8Array.from(parsed.bytes)], { type: parsed.mime });
 }
 
+/** Fetch a blob from any URL — data URL, blob URL, or regular HTTP/path URL. */
+export async function blobFromUrl(url: string): Promise<Blob | null> {
+  if (url.startsWith('data:') || url.startsWith('blob:')) {
+    return blobFromDataUrl(url);
+  }
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    return res.blob();
+  } catch {
+    return null;
+  }
+}
+
+export async function createMediaAssetFromUrl(
+  library: MediaAsset[],
+  url: string,
+  opts: CreateMediaAssetOptions,
+): Promise<{ library: MediaAsset[]; asset: MediaAsset }> {
+  const blob = await blobFromUrl(url);
+  if (!blob) throw new Error('Could not fetch image data');
+
+  const id = await hashBlobContent(blob);
+  const existing = library.find((asset) => asset.id === id);
+  if (existing) return { library, asset: existing };
+
+  // Store as a data URL so the asset survives page reloads.
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error ?? new Error('Failed to read blob'));
+    reader.readAsDataURL(blob);
+  });
+
+  const thumbnailUrl = await generateThumbnailDataUrl(dataUrl);
+  const asset: MediaAsset = {
+    id,
+    type: opts.type,
+    url: dataUrl,
+    thumbnailUrl,
+    createdAt: Date.now(),
+    workflowOrigin: opts.workflowOrigin,
+    metadata: {
+      usedInShots: [],
+      ...opts.metadata,
+    },
+  };
+
+  return { library: [...library, asset], asset };
+}
+
 export async function hashBlobContent(blob: Blob): Promise<string> {
   const buffer = await blob.arrayBuffer();
   const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);

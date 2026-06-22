@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ReferenceImageViewerModal } from '@/components/studio/ReferenceImageViewerModal';
 import {
   formatMediaAssetOrigin,
@@ -13,6 +13,42 @@ import { getMediaAsset, resolveAssetDisplayUrl } from '@/lib/media/media-library
 import type { MediaAsset, MediaAssetType, MediaWorkflowOrigin, ShotWorkflowSnapshot } from '@/lib/types/media-library';
 import type { Shot } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
+
+const IMAGE_TYPES = new Set<MediaAssetType>([
+  'character-sheet', 'backdrop-plate', 'backdrop', 'baked-frame', 'intermediate-frame', 'reference',
+]);
+
+function mimeFromUrl(url: string): string | null {
+  if (url.startsWith('data:')) {
+    const match = url.match(/^data:([^;,]+)/);
+    return match?.[1] ?? null;
+  }
+  const ext = url.split('?')[0].split('.').pop()?.toLowerCase();
+  const extMap: Record<string, string> = {
+    jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
+    webp: 'image/webp', gif: 'image/gif', avif: 'image/avif',
+    mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime',
+  };
+  return ext ? (extMap[ext] ?? null) : null;
+}
+
+function formatMime(mime: string | null): string {
+  if (!mime) return '—';
+  return mime.replace('image/', '').replace('video/', 'video/').toUpperCase();
+}
+
+function useImageDimensions(url: string | null): { width: number; height: number } | null {
+  const [dims, setDims] = useState<{ width: number; height: number } | null>(null);
+  useEffect(() => {
+    if (!url) { setDims(null); return; }
+    setDims(null);
+    const img = new Image();
+    img.onload = () => setDims({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = () => setDims(null);
+    img.src = url;
+  }, [url]);
+  return dims;
+}
 
 interface MediaLibraryInspectorProps {
   selectedId: string | null;
@@ -80,6 +116,10 @@ export function MediaLibraryInspector({
 
   const scope = asset.scope === 'global' ? 'global' : 'project';
   const displayUrl = urlDraft ?? asset.url;
+  const isImage = IMAGE_TYPES.has(asset.type);
+  const mime = isImage ? mimeFromUrl(asset.url) : null;
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const dims = useImageDimensions(isImage ? resolveAssetDisplayUrl(asset) : null);
 
   return (
     <div className="media-library-inspector flex flex-col h-full overflow-y-auto">
@@ -99,20 +139,47 @@ export function MediaLibraryInspector({
       </div>
 
       <div className="p-3 border-b border-surface-700">
-        <button
-          type="button"
-          onClick={() => setPreviewOpen(true)}
-          className="media-library-inspector__preview block w-full rounded-lg overflow-hidden border border-surface-700 hover:border-brand-500/40 transition-colors"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={resolveAssetDisplayUrl(asset)}
-            alt=""
-            className="w-full aspect-video object-contain bg-surface-900"
+        {asset.type === 'video' ? (
+          <video
+            key={asset.url}
+            src={asset.url}
+            controls
+            playsInline
+            loop
+            muted
+            className="w-full aspect-video rounded-lg bg-surface-900"
           />
-        </button>
-        <p className="text-[10px] text-gray-500 mt-1.5">Click to open full preview</p>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => setPreviewOpen(true)}
+              className="media-library-inspector__preview block w-full rounded-lg overflow-hidden border border-surface-700 hover:border-brand-500/40 transition-colors"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={resolveAssetDisplayUrl(asset)}
+                alt=""
+                className="w-full aspect-video object-contain bg-surface-900"
+              />
+            </button>
+            <p className="text-[10px] text-gray-500 mt-1.5">Click to open full preview</p>
+          </>
+        )}
       </div>
+
+      {isImage && (
+        <div className="px-3 py-2 border-b border-surface-700 flex items-center gap-4 text-[10px] text-gray-400">
+          <span>
+            <span className="text-gray-500 uppercase tracking-wider font-semibold mr-1">Format</span>
+            {formatMime(mime)}
+          </span>
+          <span>
+            <span className="text-gray-500 uppercase tracking-wider font-semibold mr-1">Size</span>
+            {dims ? `${dims.width} × ${dims.height}` : '—'}
+          </span>
+        </div>
+      )}
 
       <div className="p-3 flex flex-col gap-3">
         <InspectorField label="Type">

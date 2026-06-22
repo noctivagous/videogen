@@ -14,12 +14,15 @@ import { AppsLauncherModal } from '@/components/studio/AppsLauncherModal';
 import { SettingsModal } from '@/components/studio/SettingsModal';
 import { Toast } from '@/components/studio/Toast';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
+import { useStudioPanelRouteSync } from '@/hooks/use-studio-panel-navigation';
 import { useStudioStore } from '@/store/useStudioStore';
 
 export function StudioShell() {
   const init = useStudioStore((s) => s.init);
   const mobileDrawerOpen = useStudioStore((s) => s.mobileDrawerOpen);
   const setMobileDrawerOpen = useStudioStore((s) => s.setMobileDrawerOpen);
+
+  useStudioPanelRouteSync();
 
   useEffect(() => {
     init();

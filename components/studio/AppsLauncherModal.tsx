@@ -3,20 +3,21 @@
 import { ManagedModal } from '@/components/ui/ModalManager';
 import { STUDIO_LAUNCHER_ITEMS } from '@/lib/constants/studio-launcher';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
+import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 import { launchStudioLauncherItem } from '@/lib/studio/launch-studio-launcher-item';
 import { useStudioStore } from '@/store/useStudioStore';
 
 export function AppsLauncherModal() {
   const appsLauncherOpen = useStudioStore((s) => s.appsLauncherOpen);
   const closeAppsLauncher = useStudioStore((s) => s.closeAppsLauncher);
-  const setWorkspaceView = useStudioStore((s) => s.setWorkspaceView);
+  const navigateToPanel = useNavigateToStudioPanel();
   const openSettings = useStudioStore((s) => s.openSettings);
   const showToast = useStudioStore((s) => s.showToast);
 
   const handleSelect = (id: (typeof STUDIO_LAUNCHER_ITEMS)[number]['id']) => {
     closeAppsLauncher();
     launchStudioLauncherItem(id, {
-      setWorkspaceView,
+      navigateToPanel,
       openSettings,
       showToast,
     });

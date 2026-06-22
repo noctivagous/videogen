@@ -40,12 +40,22 @@ export function ReferenceImageViewerModal({
         </button>
       </div>
       <div className="reference-image-viewer__body flex-1 min-h-0 flex items-center justify-center bg-surface-900/60 p-4">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={imageUrl}
-          alt={label}
-          className="reference-image-viewer__img max-w-full max-h-[calc(92vh-4.5rem)] object-contain rounded-lg"
-        />
+        {imageUrl.endsWith('.mp4') || imageUrl.endsWith('.webm') || imageUrl.endsWith('.mov') || imageUrl.includes('/video') ? (
+          <video
+            src={imageUrl}
+            controls
+            playsInline
+            loop
+            className="reference-image-viewer__img max-w-full max-h-[calc(92vh-4.5rem)] rounded-lg"
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={imageUrl}
+            alt={label}
+            className="reference-image-viewer__img max-w-full max-h-[calc(92vh-4.5rem)] object-contain rounded-lg"
+          />
+        )}
       </div>
     </ManagedModal>
   );

@@ -100,6 +100,7 @@ import {
   splitInvalidationPatch,
 } from '@/lib/studio/workflow-invalidation';
 import {
+  createMediaAssetFromUrl,
   createWorkflowSnapshot,
   getMediaAsset,
   ingestBakedFramesForShot,
@@ -247,6 +248,9 @@ import type {
   ToastType,
 } from '@/lib/types/studio';
 import type { FrameView } from '@/components/studio/FrameViewSegment';
+import type { StudioPanelId } from '@/lib/studio/studio-routes';
+
+export type { StudioPanelId, WorkspaceView } from '@/lib/studio/studio-routes';
 
 const PREVIEW_MODE_KEY = 'videogen_preview_mode';
 
@@ -446,8 +450,6 @@ function themeLightingInvalidationPatch(shot: Shot | undefined): Partial<Shot> {
 
 const stockState = getStockDefaults();
 
-export type WorkspaceView = 'shot' | 'media-library';
-
 interface StudioStore {
   project: ProjectSettings;
   camera: CameraSettings;
@@ -493,11 +495,11 @@ interface StudioStore {
   projectLocationKind: ProjectLocationKind;
   projectSaveState: ProjectSaveState;
   fileApiSupported: boolean;
-  workspaceView: WorkspaceView;
+  workspaceView: StudioPanelId;
   selectedMediaLibraryItemId: string | null;
 
   init: () => void;
-  setWorkspaceView: (view: WorkspaceView) => void;
+  setWorkspaceView: (view: StudioPanelId) => void;
   selectMediaLibraryItem: (id: string | null) => void;
   updateMediaAsset: (
     assetId: string,
@@ -604,6 +606,7 @@ interface StudioStore {
   saveBakedFrameToAssets: () => Promise<void>;
   loadBakedFrameFromAsset: (assetId: string) => void;
   archiveBakeFromShot: (shot: Shot) => Promise<void>;
+  saveBackdropPlateToLibrary: (setupId: number, backdropId: string) => Promise<void>;
   applyThemeTransformSlot: (index: number) => Promise<void>;
 
   generate: () => Promise<void>;
@@ -712,7 +715,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   projectSaveState: 'none',
   fileApiSupported: false,
   backdropSelected: false,
-  workspaceView: 'shot',
+  workspaceView: 'shot-designer',
   selectedMediaLibraryItemId: null,
 
   setBackdropSelected(selected) {
@@ -730,7 +733,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   setWorkspaceView(view) {
     set({
       workspaceView: view,
-      ...(view === 'shot' ? { selectedMediaLibraryItemId: null } : {}),
+      ...(view === 'shot-designer' ? { selectedMediaLibraryItemId: null } : {}),
     });
   },
 
@@ -2199,6 +2202,31 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     }
     await get().archiveBakeFromShot(shot);
     get().showToast('Saved to Assets');
+  },
+
+  async saveBackdropPlateToLibrary(setupId, backdropId) {
+    const { setups, mediaLibrary } = get();
+    const setup = setups.find((s) => s.id === setupId);
+    const backdrop = setup?.backdrops.find((b) => b.id === backdropId);
+    if (!backdrop?.url) {
+      get().showToast('No backdrop image to save', 'error');
+      return;
+    }
+    try {
+      const result = await createMediaAssetFromUrl(mediaLibrary, backdrop.url, {
+        type: 'backdrop-plate',
+        workflowOrigin: 'upload',
+        metadata: { usedInShots: [] },
+      });
+      if (result.library === mediaLibrary) {
+        get().showToast('Already in library');
+        return;
+      }
+      set({ mediaLibrary: result.library });
+      get().showToast('Backdrop plate saved to library');
+    } catch {
+      get().showToast('Could not save backdrop plate to library', 'error');
+    }
   },
 
   loadBakedFrameFromAsset(assetId: string) {

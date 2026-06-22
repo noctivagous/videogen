@@ -5,6 +5,7 @@ import { filterAssetsByClipThreshold, rankAssetsByClipQuery } from '@/lib/media/
 
 export const MEDIA_ASSET_TYPE_ORDER: MediaAssetType[] = [
   'character-sheet',
+  'backdrop-plate',
   'backdrop',
   'baked-frame',
   'intermediate-frame',
@@ -16,6 +17,7 @@ export const MEDIA_ASSET_TYPE_ORDER: MediaAssetType[] = [
 
 const TYPE_LABELS: Record<MediaAssetType, string> = {
   'character-sheet': 'Character Sheets',
+  'backdrop-plate': 'Backdrop Plates',
   backdrop: 'Backdrops',
   'baked-frame': 'Baked Frames',
   'intermediate-frame': 'Intermediate Frames',

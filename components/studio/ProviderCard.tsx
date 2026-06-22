@@ -1,6 +1,7 @@
 'use client';
 
 import { ModalityChips } from '@/components/studio/ModalityChips';
+import { ProviderIcon } from '@/components/studio/ProviderIcon';
 import { isBuiltInProviderEnabled } from '@/lib/constants/providers';
 import { hasGenerationAdapter } from '@/lib/studio/generation/capabilities';
 import {
@@ -84,9 +85,11 @@ export function ProviderCard({ provider, isCustom }: ProviderCardProps) {
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-surface-700 flex items-center justify-center text-3xl flex-shrink-0 ring-1 ring-inset ring-white/5">
-            {isCustom ? '🛠️' : builtIn!.icon}
-          </div>
+          <ProviderIcon
+            providerId={isCustom ? undefined : id}
+            fallbackIcon={isCustom ? '🛠️' : builtIn!.icon}
+            size="md"
+          />
           <div className="min-w-0">
             <div className="font-semibold text-[15px] leading-tight">
               {isCustom ? custom!.name : builtIn!.name}

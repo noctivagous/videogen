@@ -3,6 +3,7 @@ import type { WorkflowStepId } from '@/lib/studio/workflow';
 
 export type MediaAssetType =
   | 'character-sheet'
+  | 'backdrop-plate'
   | 'backdrop'
   | 'baked-frame'
   | 'intermediate-frame'

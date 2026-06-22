@@ -34,6 +34,9 @@ import {
 } from '@/lib/studio/backdrop-framing';
 import type { AspectRatio } from '@/lib/types/studio';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
+import { isShotDesignerPanel, isStudioAppPanel } from '@/lib/studio/studio-routes';
+import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
+import { AppPlaceholderPanel } from '@/components/studio/AppPlaceholderPanel';
 import { formatDuration } from '@/lib/studio/shot-display';
 import { getGeneratedVideoCount, getShotActiveVideoUrl } from '@/lib/studio/shot-videos';
 import { isPreviewFrameSupported } from '@/lib/studio/generation/preview-frame-supported';
@@ -76,7 +79,8 @@ export function PreviewPanel() {
   const frameView = useStudioStore((s) => s.frameView);
   const setFrameView = useStudioStore((s) => s.setFrameView);
   const workspaceView = useStudioStore((s) => s.workspaceView);
-  const setWorkspaceView = useStudioStore((s) => s.setWorkspaceView);
+  const navigateToPanel = useNavigateToStudioPanel();
+  const isShotDesigner = isShotDesignerPanel(workspaceView);
   const project = useStudioStore((s) => s.project);
   const camera = useStudioStore((s) => s.camera);
   const lighting = useStudioStore((s) => s.lighting);
@@ -185,6 +189,7 @@ export function PreviewPanel() {
 
   useEffect(() => {
     if (frameView === 'prompt' || frameView === 'bake-prompt') return;
+    if (!isShotDesigner) return;
 
     const frame = previewFrameRef.current;
     const container = previewStageRef.current;
@@ -197,7 +202,7 @@ export function PreviewPanel() {
     observer.observe(container);
 
     return () => observer.disconnect();
-  }, [project.aspectRatio, frameView]);
+  }, [project.aspectRatio, frameView, workspaceView, isShotDesigner]);
 
   useEffect(() => {
     if (frameView === 'generated' && !generatedVideo) {
@@ -318,7 +323,7 @@ export function PreviewPanel() {
         className="absolute inset-x-0 top-0 z-30 pointer-events-none flex items-start justify-between gap-3"
         {...uiSectionProps(UI_SECTIONS.studioPreviewMainChrome)}
       >
-        {workspaceView === 'shot' && (
+        {isShotDesigner && (
         <div className="preview-panel-controls pointer-events-auto shrink-0 flex flex-col gap-1.5">
           <FrameViewSegment
             value={frameView}
@@ -330,13 +335,13 @@ export function PreviewPanel() {
         )}
       </div>
 
-      {frameView === 'bake-prompt' && workspaceView === 'shot' && (
+      {frameView === 'bake-prompt' && isShotDesigner && (
         <div className="absolute inset-0 z-10 min-h-0">
           <BakePromptStackView />
         </div>
       )}
 
-      {frameView === 'prompt' && workspaceView === 'shot' && (
+      {frameView === 'prompt' && isShotDesigner && (
         <div className="absolute inset-0 z-10 min-h-0">
           <PromptStackView />
         </div>
@@ -344,11 +349,17 @@ export function PreviewPanel() {
 
       {workspaceView === 'media-library' && (
         <div className="absolute inset-0 z-10 min-h-0">
-          <MediaLibraryViewer onBack={() => setWorkspaceView('shot')} />
+          <MediaLibraryViewer onBack={() => navigateToPanel('shot-designer')} />
         </div>
       )}
 
-      {frameView !== 'prompt' && frameView !== 'bake-prompt' && workspaceView === 'shot' && (
+      {isStudioAppPanel(workspaceView) && (
+        <div className="absolute inset-0 z-10 min-h-0">
+          <AppPlaceholderPanel appId={workspaceView} />
+        </div>
+      )}
+
+      {frameView !== 'prompt' && frameView !== 'bake-prompt' && isShotDesigner && (
       <div className="preview-panel-stage-shell p-4 md:p-8">
         <div
           ref={previewStageRef}

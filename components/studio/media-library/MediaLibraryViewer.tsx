@@ -15,7 +15,9 @@ import { MediaLibraryTreeView } from '@/components/studio/media-library/MediaLib
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { mergeMediaLibraries, type MediaLibraryCollection } from '@/lib/media/media-library-mutations';
 import { searchMediaLibrary } from '@/lib/media/media-library-query';
+import { deriveProjectAssets, mergeWithDerivedAssets } from '@/lib/media/derive-project-assets';
 import type { MediaAssetType } from '@/lib/types/media-library';
+import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 import { useStudioStore } from '@/store/useStudioStore';
 
 interface MediaLibraryViewerProps {
@@ -25,12 +27,13 @@ interface MediaLibraryViewerProps {
 export function MediaLibraryViewer({ onBack }: MediaLibraryViewerProps) {
   const mediaLibrary = useStudioStore((s) => s.mediaLibrary);
   const globalMediaLibrary = useStudioStore((s) => s.globalMediaLibrary);
+  const setups = useStudioStore((s) => s.setups);
   const shotWorkflowSnapshots = useStudioStore((s) => s.shotWorkflowSnapshots);
   const shots = useStudioStore((s) => s.shots);
   const selectedId = useStudioStore((s) => s.selectedMediaLibraryItemId);
   const selectMediaLibraryItem = useStudioStore((s) => s.selectMediaLibraryItem);
   const selectShot = useStudioStore((s) => s.selectShot);
-  const setWorkspaceView = useStudioStore((s) => s.setWorkspaceView);
+  const navigateToPanel = useNavigateToStudioPanel();
   const importMediaAssets = useStudioStore((s) => s.importMediaAssets);
   const deleteMediaAssets = useStudioStore((s) => s.deleteMediaAssets);
 
@@ -41,11 +44,21 @@ export function MediaLibraryViewer({ onBack }: MediaLibraryViewerProps) {
   const [layoutMode, setLayoutMode] = useState<MediaLibraryLayoutMode>('grid');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  // Assets derived directly from the live project state — always up to date,
+  // no manual save required.
+  const derivedAssets = useMemo(() => deriveProjectAssets(setups), [setups]);
+
+  // Merge: explicit mediaLibrary wins over derived when both cover the same URL.
+  const projectAssets = useMemo(
+    () => mergeWithDerivedAssets(mediaLibrary, derivedAssets),
+    [mediaLibrary, derivedAssets],
+  );
+
   const scopedAssets = useMemo(() => {
-    if (scopeFilter === 'project') return mediaLibrary;
+    if (scopeFilter === 'project') return projectAssets;
     if (scopeFilter === 'global') return globalMediaLibrary;
-    return mergeMediaLibraries(mediaLibrary, globalMediaLibrary);
-  }, [mediaLibrary, globalMediaLibrary, scopeFilter]);
+    return mergeMediaLibraries(projectAssets, globalMediaLibrary);
+  }, [projectAssets, globalMediaLibrary, scopeFilter]);
 
   const filtered = useMemo(
     () =>
@@ -85,7 +98,7 @@ export function MediaLibraryViewer({ onBack }: MediaLibraryViewerProps) {
 
   const handleGoToShot = (shotId: number) => {
     selectShot(shotId);
-    setWorkspaceView('shot');
+    navigateToPanel('shot-designer');
   };
 
   const handleImport = (files: FileList | null) => {
@@ -112,6 +125,7 @@ export function MediaLibraryViewer({ onBack }: MediaLibraryViewerProps) {
     onSelectAsset: handleSelectAsset,
     onToggleSelect: toggleSelected,
     onSelectSnapshot: handleSelectSnapshot,
+    onImport: (files: FileList) => handleImport(files),
   };
 
   return (
