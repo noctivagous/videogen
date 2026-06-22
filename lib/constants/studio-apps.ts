@@ -13,7 +13,7 @@ export interface StudioAppDefinition {
 export const STUDIO_APPS: readonly StudioAppDefinition[] = [
   {
     id: 'character-sheet-generator',
-    title: 'Character Sheet Generator',
+    title: 'Character Manager',
     description: 'Build subject reference sheets for shot workflows',
   },
   {

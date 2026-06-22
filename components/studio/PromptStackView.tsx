@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { buildModelPayloadStack } from '@/lib/studio/model-payload';
 import { formatReferenceRoleLabel } from '@/lib/studio/reference-slots';
+import { shouldUseBakedStartFrameForVideo } from '@/lib/studio/workflow';
 import { useStudioStore } from '@/store/useStudioStore';
 
 const VARIANT_STYLES: Record<string, string> = {
@@ -30,6 +31,10 @@ export function PromptStackView() {
 
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
 
+  const useBakedFrame = shouldUseBakedStartFrameForVideo(shot);
+  const atmosphereText = shot?.lightingAtmospherePrompt?.trim() ?? '';
+  const showAtmosphereOverlap = useBakedFrame && Boolean(atmosphereText);
+
   const stack = useMemo(
     () => buildModelPayloadStack({ project, camera, lighting, motion, sceneSetup, shotActivity, shot, ai }),
     [project, camera, lighting, motion, sceneSetup, shotActivity, shot, ai],
@@ -41,6 +46,19 @@ export function PromptStackView() {
       {...uiSectionProps(UI_SECTIONS.studioPreviewPromptStack)}
     >
       <div className="prompt-stack-inner p-4 md:p-8 pt-16 md:pt-20">
+        {showAtmosphereOverlap && (
+          <div className="mb-6 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+            <span className="font-semibold">Atmosphere (from bake)</span>
+            <span className="mx-2 text-amber-400/60">·</span>
+            <span className="text-amber-100/80">&ldquo;{atmosphereText}&rdquo;</span>
+            <p className="mt-1.5 text-xs text-amber-300/70">
+              This atmosphere was also sent to the Baked Image payload (Pass 1). Here it instructs the video
+              model to animate the atmosphere — drifting fog, flickering light, falling rain, etc. —
+              matching what was baked into the start frame.
+            </p>
+          </div>
+        )}
+
         <section className="prompt-table-section mb-8" {...uiSectionProps(UI_SECTIONS.studioPromptTable)}>
           <h3 className="prompt-table-heading text-xs uppercase tracking-widest text-gray-300 mb-3 font-semibold">
             Prompt Table

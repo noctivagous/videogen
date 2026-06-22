@@ -17,6 +17,7 @@ import { PreviewProjectSettingsBar } from '@/components/studio/PreviewProjectSet
 import { LoadAssetModal } from '@/components/studio/LoadAssetModal';
 import { MediaLibraryViewer } from '@/components/studio/media-library/MediaLibraryViewer';
 import { PreviewSubModeSegment } from '@/components/studio/PreviewSubModeSegment';
+import { BakePromptStackView } from '@/components/studio/BakePromptStackView';
 import { PromptStackView } from '@/components/studio/PromptStackView';
 import { ReferencePreviewScene } from '@/components/studio/ReferencePreviewScene';
 import type { BakedImageVariant } from '@/lib/types/studio';
@@ -177,7 +178,13 @@ export function PreviewPanel() {
   const canQuickPreview = isPreviewFrameSupported(imageProviderId, isCustom);
 
   useEffect(() => {
-    if (frameView === 'prompt') return;
+    if (frameView === 'bake-prompt' && !bakeStartFrame) {
+      setFrameView('preview');
+    }
+  }, [bakeStartFrame, frameView, setFrameView]);
+
+  useEffect(() => {
+    if (frameView === 'prompt' || frameView === 'bake-prompt') return;
 
     const frame = previewFrameRef.current;
     const container = previewStageRef.current;
@@ -317,10 +324,17 @@ export function PreviewPanel() {
             value={frameView}
             onChange={setFrameView}
             generatedVideoCount={generatedVideoCount}
+            showBakePromptTab={bakeStartFrame}
           />
         </div>
         )}
       </div>
+
+      {frameView === 'bake-prompt' && workspaceView === 'shot' && (
+        <div className="absolute inset-0 z-10 min-h-0">
+          <BakePromptStackView />
+        </div>
+      )}
 
       {frameView === 'prompt' && workspaceView === 'shot' && (
         <div className="absolute inset-0 z-10 min-h-0">
@@ -334,7 +348,7 @@ export function PreviewPanel() {
         </div>
       )}
 
-      {frameView !== 'prompt' && workspaceView === 'shot' && (
+      {frameView !== 'prompt' && frameView !== 'bake-prompt' && workspaceView === 'shot' && (
       <div className="preview-panel-stage-shell p-4 md:p-8">
         <div
           ref={previewStageRef}

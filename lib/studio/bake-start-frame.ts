@@ -248,6 +248,9 @@ export function augmentBakePass1Prompt(basePrompt: string, shot: Shot): string {
     if (crowdType) parts.push(crowdType);
   }
 
+  const atmo = shot.lightingAtmospherePrompt?.trim();
+  if (atmo) parts.push(atmo);
+
   return parts.filter(Boolean).join(' ');
 }
 

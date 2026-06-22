@@ -277,13 +277,14 @@ export function buildGenerationPrompt(input: {
     ? [prepared.shotActivity].filter(Boolean)
     : [prepared.sceneSetup, prepared.shotActivity].filter(Boolean);
   const sceneBlock = sceneParts.join('. ');
-  const lightingAtmosphereLine =
-    !useBakedFrame
-      ? resolveLightingAtmospherePrompt(lighting, shot?.lightingAtmospherePrompt, {
-          includeVideoLighting,
-          includeVideoEnvironment,
-        })
-      : '';
+  const lightingAtmosphereLine = useBakedFrame
+    ? (shot?.lightingAtmospherePrompt?.trim()
+        ? `Preserve the atmosphere: ${shot.lightingAtmospherePrompt.trim()}`
+        : '')
+    : resolveLightingAtmospherePrompt(lighting, shot?.lightingAtmospherePrompt, {
+        includeVideoLighting,
+        includeVideoEnvironment,
+      });
   const cameraLine = useBakedFrame ? '' : getGenerationCameraPrompt(camera, frame, shot);
   const motionLine =
     resolveCameraPromptInclusion(camera).includeInPrompt ? buildMotionPrompt(motion) : '';

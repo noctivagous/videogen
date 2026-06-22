@@ -3,8 +3,8 @@
 import { useRef, useState } from 'react';
 import { SplitButton } from '@/components/ui/SplitButton';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
-import { STUDIO_APPS } from '@/lib/constants/studio-apps';
-import { launchStudioApp } from '@/lib/studio/launch-studio-app';
+import { STUDIO_LAUNCHER_ITEMS } from '@/lib/constants/studio-launcher';
+import { launchStudioLauncherItem } from '@/lib/studio/launch-studio-launcher-item';
 import {
   getProviderStatus,
   getSelectedImageModelDisplay,
@@ -432,12 +432,17 @@ export function HeaderBar() {
         <div className="h-8 w-px bg-surface-600 hidden md:block flex-shrink-0" />
 
         <SplitButton
-          label="Apps"
+          label="App"
           onPrimaryClick={openAppsLauncher}
-          items={STUDIO_APPS.map((app) => ({
-            id: app.id,
-            label: app.title,
-            onSelect: () => launchStudioApp(app.id, showToast),
+          items={STUDIO_LAUNCHER_ITEMS.map((item) => ({
+            id: item.id,
+            label: item.title,
+            onSelect: () =>
+              launchStudioLauncherItem(item.id, {
+                setWorkspaceView,
+                openSettings,
+                showToast,
+              }),
           }))}
           className="hidden sm:inline-flex flex-shrink-0"
           primaryUiSection={uiSectionProps(UI_SECTIONS.studioHeaderAppsSplit)}

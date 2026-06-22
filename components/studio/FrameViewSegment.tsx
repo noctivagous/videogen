@@ -2,15 +2,16 @@
 
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 
-export type FrameView = 'preview' | 'prompt' | 'generated';
+export type FrameView = 'preview' | 'bake-prompt' | 'prompt' | 'generated';
 
 interface FrameViewSegmentProps {
   value: FrameView;
   onChange: (view: FrameView) => void;
   generatedVideoCount?: number;
+  showBakePromptTab?: boolean;
 }
 
-export function FrameViewSegment({ value, onChange, generatedVideoCount = 0 }: FrameViewSegmentProps) {
+export function FrameViewSegment({ value, onChange, generatedVideoCount = 0, showBakePromptTab = false }: FrameViewSegmentProps) {
   const hasGeneratedVideo = generatedVideoCount > 0;
   return (
     <div
@@ -28,6 +29,17 @@ export function FrameViewSegment({ value, onChange, generatedVideoCount = 0 }: F
       >
         Preview
       </button>
+      {showBakePromptTab && (
+        <button
+          type="button"
+          role="tab"
+          aria-selected={value === 'bake-prompt'}
+          className={`frame-view-segment-btn ${value === 'bake-prompt' ? 'active' : ''}`}
+          onClick={() => onChange('bake-prompt')}
+        >
+          Baked Image Payload
+        </button>
+      )}
       <button
         type="button"
         role="tab"
@@ -35,7 +47,7 @@ export function FrameViewSegment({ value, onChange, generatedVideoCount = 0 }: F
         className={`frame-view-segment-btn ${value === 'prompt' ? 'active' : ''}`}
         onClick={() => onChange('prompt')}
       >
-        Prompt Payload
+        Video Payload
       </button>
       {hasGeneratedVideo && (
         <button
