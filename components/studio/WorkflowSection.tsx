@@ -4,7 +4,7 @@ import { ReferenceSlots } from '@/components/studio/ReferenceSlots';
 import { CoverageShotSelector } from '@/components/studio/CoverageShotSelector';
 import { ProjectHierarchyTree } from '@/components/studio/ProjectHierarchyTree';
 import { SetupSelector } from '@/components/studio/SetupSelector';
-import { WorkflowDropdown } from '@/components/studio/WorkflowDropdown';
+import { WorkflowHierarchyNode } from '@/components/studio/WorkflowHierarchyNode';
 import { useThemeTransformConnectorContext } from '@/components/studio/ThemeTransformConnectorProvider';
 import { getWorkflowDefinition } from '@/lib/constants/video-generation-workflows';
 import { normalizeWorkflow } from '@/lib/constants/workflows';
@@ -31,17 +31,16 @@ export function WorkflowSection({ shot, onChange }: WorkflowSectionProps) {
       <ProjectHierarchyTree
         setup={<SetupSelector />}
         shot={<CoverageShotSelector />}
-        workflow={<WorkflowDropdown shot={shot} onChange={onChange} />}
+        workflow={
+          <WorkflowHierarchyNode
+            shot={shot}
+            onChange={onChange}
+            description={definition?.description}
+            availabilityMessage={availability.message}
+            availabilityAvailable={availability.available}
+          />
+        }
       />
-
-      {definition && (
-        <div className="space-y-1 px-0.5">
-          <p className="text-[10px] text-[#242424] leading-snug">{definition.description}</p>
-          {!availability.available && availability.message && (
-            <p className="text-[10px] text-amber-400/90 leading-snug">{availability.message}</p>
-          )}
-        </div>
-      )}
 
       <div
         className="camera-panel-workflow-refs"

@@ -334,29 +334,40 @@ body.backdrop-widget-dragging * {
 
 .project-hierarchy-tree__branch {
   position: relative;
-  margin-left: 0.375rem;
-  padding-left: 0.875rem;
-  border-left: 1px solid rgba(57, 55, 55, 0.45);
+  margin-left: 0.125rem;
+  padding-left: 0.5rem;
 }
 
 .project-hierarchy-tree__branch--depth-2 {
-  margin-top: 0.625rem;
-  margin-left: 0.5rem;
+  margin-top: 0.375rem;
+  margin-left: 0;
+  padding-left: 0;
 }
 
-.project-hierarchy-tree__bracket {
+.project-hierarchy-tree__branch--depth-2 > .hierarchy-tree-connector {
+  display: none;
+}
+
+.hierarchy-tree-connector {
   position: absolute;
   left: 0;
-  top: 0.625rem;
-  transform: translate(-50%, -50%);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.6875rem;
-  line-height: 1;
-  color: rgba(57, 55, 55, 0.85);
-  background-color: #808080;
-  padding: 0 1px;
+  top: 0;
+  bottom: 0;
+  width: 0.5rem;
   pointer-events: none;
-  user-select: none;
+  overflow: visible;
+}
+
+.hierarchy-tree-connector__vertical {
+  position: absolute;
+  left: 0;
+  width: 1px;
+}
+
+.hierarchy-tree-connector__horizontal {
+  position: absolute;
+  left: 0;
+  height: 1px;
 }
 
 input[type="range"] {
@@ -803,6 +814,15 @@ input[type="range"]::-moz-range-thumb:hover {
   padding-top: 0.5rem;
 }
 
+.preview-panel-stage-shell {
+  position: absolute;
+  top: 58px;
+  right: 0;
+  bottom: 0;
+  left: -31px;
+  z-index: 0;
+}
+
 .preview-panel-controls {
   display: inline-flex;
   flex-direction: column;
@@ -885,6 +905,33 @@ input[type="range"]::-moz-range-thumb:hover {
 
 .workflow-step-fieldset--nested {
   @apply mt-2 mb-0 py-2;
+}
+
+.workflow-step-fieldset--square {
+  border-radius: 0;
+  border-color: rgba(103, 103, 126, 1);
+  color: rgba(243, 244, 246, 1);
+  margin: 0;
+}
+
+.workflow-step-fieldset--square.workflow-step-fieldset--nested {
+  margin: 0;
+}
+
+.project-hierarchy-tree__branch--depth-2 > .project-hierarchy-tree__content {
+  padding-top: 3px;
+}
+
+.workflow-description-collapsed {
+  @apply mt-2 flex items-center gap-1 min-w-0;
+}
+
+.workflow-description__toggle {
+  color: #393737;
+}
+
+.workflow-description__toggle:hover {
+  color: #242424;
 }
 
 .workflow-step-substep {

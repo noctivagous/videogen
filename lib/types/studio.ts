@@ -131,6 +131,13 @@ export interface ProjectSettings {
   aspectRatio: AspectRatio;
   fps: number;
   duration: number;
+  /** Per-project UI preferences (persisted in project.json). */
+  ui?: ProjectUiSettings;
+}
+
+export interface ProjectUiSettings {
+  /** Workflow description fieldset in camera panel — default expanded. */
+  workflowDescriptionExpanded?: boolean;
 }
 
 /** Per-section opt-in for camera settings in generation prompts (default on). */

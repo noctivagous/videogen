@@ -44,7 +44,7 @@ export function CoverageShotSelector() {
   return (
     <Select
       label="Shot"
-      labelClassName="text-[10px] uppercase tracking-wider font-semibold text-gray-400 mb-1"
+      labelClassName="text-[10px] uppercase tracking-wider font-semibold text-gray-400 mb-1 ml-1"
       value={String(activeId ?? '')}
       onChange={(e) => handleChange(e.target.value)}
       className="text-xs py-1.5"

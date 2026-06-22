@@ -36,6 +36,7 @@ export const STOCK_PROJECT: ProjectSettings = {
   aspectRatio: '16:9',
   fps: 24,
   duration: 5,
+  ui: { workflowDescriptionExpanded: true },
 };
 
 export const STOCK_CAMERA: CameraSettings = {
@@ -228,6 +229,7 @@ export const EMPTY_PROJECT: ProjectSettings = {
   aspectRatio: '16:9',
   fps: 24,
   duration: 5,
+  ui: { workflowDescriptionExpanded: true },
 };
 
 export const EMPTY_SHOTS: Shot[] = [
