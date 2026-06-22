@@ -2,6 +2,7 @@
 
 import { ReferenceSlots } from '@/components/studio/ReferenceSlots';
 import { CoverageShotSelector } from '@/components/studio/CoverageShotSelector';
+import { ProjectHierarchyTree } from '@/components/studio/ProjectHierarchyTree';
 import { SetupSelector } from '@/components/studio/SetupSelector';
 import { WorkflowDropdown } from '@/components/studio/WorkflowDropdown';
 import { useThemeTransformConnectorContext } from '@/components/studio/ThemeTransformConnectorProvider';
@@ -27,14 +28,11 @@ export function WorkflowSection({ shot, onChange }: WorkflowSectionProps) {
 
   return (
     <div className="mb-4 space-y-3" {...uiSectionProps(UI_SECTIONS.studioWorkflowSection, { id: false })}>
-      <SetupSelector />
-      <CoverageShotSelector />
-
-      <span className="camera-panel-subheading text-xs font-semibold uppercase tracking-wider">
-        Workflow
-      </span>
-
-      <WorkflowDropdown shot={shot} onChange={onChange} />
+      <ProjectHierarchyTree
+        setup={<SetupSelector />}
+        shot={<CoverageShotSelector />}
+        workflow={<WorkflowDropdown shot={shot} onChange={onChange} />}
+      />
 
       {definition && (
         <div className="space-y-1 px-0.5">

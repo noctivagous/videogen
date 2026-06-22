@@ -16,6 +16,8 @@ import type { Shot, Workflow } from '@/lib/types/studio';
 interface WorkflowDropdownProps {
   shot: Shot | undefined;
   onChange: (workflow: Workflow) => void;
+  label?: string;
+  labelClassName?: string;
 }
 
 function buildWorkflowGroups(shot: Shot | undefined): VisualDropdownGroup<Workflow>[] {
@@ -40,13 +42,20 @@ function flattenGroups(groups: VisualDropdownGroup<Workflow>[]): VisualDropdownO
   return groups.flatMap((g) => g.options);
 }
 
-export function WorkflowDropdown({ shot, onChange }: WorkflowDropdownProps) {
+export function WorkflowDropdown({
+  shot,
+  onChange,
+  label = 'Workflow',
+  labelClassName = 'text-[10px] uppercase tracking-wider font-semibold text-gray-400 mb-1',
+}: WorkflowDropdownProps) {
   const workflow = normalizeWorkflow(shot);
   const groups = useMemo(() => buildWorkflowGroups(shot), [shot]);
   const options = useMemo(() => flattenGroups(groups), [groups]);
 
   return (
     <VisualDropdown
+      label={label}
+      labelClassName={labelClassName}
       value={workflow}
       onChange={onChange}
       options={options}

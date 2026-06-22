@@ -321,6 +321,44 @@ body.backdrop-widget-dragging * {
   color: #393737;
 }
 
+.project-hierarchy-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.project-hierarchy-tree__root,
+.project-hierarchy-tree__content {
+  min-width: 0;
+}
+
+.project-hierarchy-tree__branch {
+  position: relative;
+  margin-left: 0.375rem;
+  padding-left: 0.875rem;
+  border-left: 1px solid rgba(57, 55, 55, 0.45);
+}
+
+.project-hierarchy-tree__branch--depth-2 {
+  margin-top: 0.625rem;
+  margin-left: 0.5rem;
+}
+
+.project-hierarchy-tree__bracket {
+  position: absolute;
+  left: 0;
+  top: 0.625rem;
+  transform: translate(-50%, -50%);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.6875rem;
+  line-height: 1;
+  color: rgba(57, 55, 55, 0.85);
+  background-color: #808080;
+  padding: 0 1px;
+  pointer-events: none;
+  user-select: none;
+}
+
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
