@@ -1,7 +1,9 @@
 import { DEFAULT_FRAME_COMPOSITION } from '@/lib/constants/camera';
 import { DEFAULT_REFERENCE_MODE } from '@/lib/constants/reference-modes';
+import { normalizeReferenceRole } from '@/lib/constants/camera';
 import { normalizeLensCamera } from '@/lib/constants/lens';
 import { DEFAULT_COLOR_PALETTE, normalizeColorPalette } from '@/lib/constants/color-palette';
+import { STOCK_CHARACTER_REF } from '@/lib/constants/stock-project';
 import {
   DEFAULT_THEME_TRANSFORM_LIGHTING_INCLUSION,
   normalizeThemeTransformLighting,
@@ -209,7 +211,52 @@ export function createSetup(
   };
 }
 
+function isStockDemoReference(ref: string | null | undefined): boolean {
+  return Boolean(ref && ref.includes('demo-surfer'));
+}
+
+function healStockDemoSubjectReference(setup: Setup): {
+  references: (string | null)[];
+  referenceRoles: Setup['referenceRoles'];
+} {
+  const references = [...(setup.references ?? [])];
+  const referenceRoles = [...(setup.referenceRoles ?? [])];
+  while (references.length < 2) references.push(null);
+  while (referenceRoles.length < 2) referenceRoles.push(referenceRoles.length === 0 ? 'Subject' : 'Style');
+
+  const hasStockContext =
+    setup.backdrops?.some((b) => isStockDemoReference(b.url)) ||
+    references.some((ref) => isStockDemoReference(ref));
+  if (!hasStockContext) {
+    return { references, referenceRoles };
+  }
+
+  const normalizedRoles = referenceRoles.map((role) => normalizeReferenceRole(role ?? 'None'));
+  let subjectIdx = normalizedRoles.findIndex((role) => role === 'Subject');
+  if (subjectIdx < 0) {
+    subjectIdx = 0;
+    referenceRoles[0] = 'Subject';
+  }
+
+  if (references[subjectIdx]) {
+    return { references, referenceRoles };
+  }
+
+  const stockDonorIdx = references.findIndex(
+    (ref, i) => isStockDemoReference(ref) && normalizeReferenceRole(referenceRoles[i] ?? 'None') !== 'Subject',
+  );
+  if (stockDonorIdx >= 0) {
+    references[subjectIdx] = references[stockDonorIdx];
+    references[stockDonorIdx] = null;
+    return { references, referenceRoles };
+  }
+
+  references[subjectIdx] = STOCK_CHARACTER_REF;
+  return { references, referenceRoles };
+}
+
 export function migrateSetup(setup: Setup, defaults: SetupProjectDefaults): Setup {
+  const healed = healStockDemoSubjectReference(setup);
   return {
     ...setup,
     sceneSetup: setup.sceneSetup ?? defaults.sceneSetup,
@@ -218,6 +265,8 @@ export function migrateSetup(setup: Setup, defaults: SetupProjectDefaults): Setu
       ...setup.lighting,
       colorPalette: normalizeColorPalette(setup.lighting?.colorPalette ?? defaults.lighting.colorPalette),
     },
+    references: healed.references,
+    referenceRoles: healed.referenceRoles,
     backdrops: setup.backdrops?.length ? setup.backdrops : [createDefaultBackdrop()],
     shots: setup.shots?.length ? setup.shots : [],
   };
