@@ -90,6 +90,8 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
   const loadBakedFrameFromAsset = useStudioStore((s) => s.loadBakedFrameFromAsset);
   const invalidateBakedFrame = useStudioStore((s) => s.invalidateBakedFrame);
   const isBakingStartFrame = useStudioStore((s) => s.isBakingStartFrame);
+  const generate = useStudioStore((s) => s.generate);
+  const isGenerating = useStudioStore((s) => s.isGenerating);
   const project = useStudioStore((s) => s.project);
   const fileInputs = useRef<(HTMLInputElement | null)[]>([]);
   const localSlotRefs = useRef<(HTMLElement | null)[]>([]);
@@ -173,6 +175,8 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
   const slotIndices = getReferenceSlotIndices(shot);
   const isBakeStartFrameWorkflow = isBakeStartFrame(shot);
   const workflowSteps = getWorkflowReferenceSteps(shot, shot?.lighting, aspectRatio);
+  const checklistTasks = workflowSteps.filter((step) => step.id !== 'bake');
+  const checklistTasksDone = checklistTasks.filter((step) => step.done).length;
   const bakeReady = shot.bakeStatus === 'ready' && Boolean(shot.bakedStartFrame);
   const hasInterruptedBake =
     isBakeStartFrameWorkflow && !bakeReady && (shot.savedBakedFrameAssetIds?.length ?? 0) > 0;
@@ -601,9 +605,16 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
     <>
     <div className="flex flex-col gap-1.5">
       <div className="image-references-header flex flex-col gap-1.5">
-        <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-300">
-          Checklist
-        </span>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-300">
+            Checklist
+          </span>
+          {isBakeStartFrameWorkflow && checklistTasks.length > 0 && (
+            <span className="text-[10px] text-gray-400">
+              ({checklistTasksDone} / {checklistTasks.length} tasks completed)
+            </span>
+          )}
+        </div>
         {!isBakeStartFrameWorkflow && (
           <select
             value={referenceMode}
@@ -721,6 +732,14 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
                 </button>
               </>
             )}
+            <button
+              type="button"
+              onClick={generate}
+              disabled={isGenerating || !bakeReady}
+              className="w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-lg bg-brand-600 hover:bg-brand-500 disabled:opacity-40 text-white"
+            >
+              Generate Video
+            </button>
           </div>
         </fieldset>
       )}

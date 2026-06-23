@@ -1,10 +1,10 @@
 'use client';
 
 import { Fragment, useState } from 'react';
-import { groupMediaAssetsByType } from '@/lib/media/media-library-query';
+import { groupMediaAssetsBySetupAndShot, groupMediaAssetsByType } from '@/lib/media/media-library-query';
 import { resolveAssetDisplayUrl } from '@/lib/media/media-library';
 import type { MediaAsset, MediaAssetType, ShotWorkflowSnapshot } from '@/lib/types/media-library';
-import type { Shot } from '@/lib/types/studio';
+import type { Setup, Shot } from '@/lib/types/studio';
 import {
   formatMediaAssetOrigin,
   formatMediaAssetSummary,
@@ -16,6 +16,7 @@ interface MediaLibraryListViewProps {
   assets: MediaAsset[];
   snapshots: ShotWorkflowSnapshot[];
   shots: Shot[];
+  setups: Setup[];
   selectedId: string | null;
   selectedIds: Set<string>;
   onSelectAsset: (assetId: string, additive?: boolean) => void;
@@ -27,6 +28,7 @@ export function MediaLibraryListView({
   assets,
   snapshots,
   shots,
+  setups,
   selectedId,
   selectedIds,
   onSelectAsset,
@@ -34,9 +36,16 @@ export function MediaLibraryListView({
   onSelectSnapshot,
 }: MediaLibraryListViewProps) {
   const reorderMediaAssets = useStudioStore((s) => s.reorderMediaAssets);
-  const groups = groupMediaAssetsByType(assets);
-  const empty = groups.length === 0 && snapshots.length === 0;
+  const { setupGroups, unassigned } = groupMediaAssetsBySetupAndShot(assets, setups);
+  const unassignedGroups = groupMediaAssetsByType(unassigned);
+  const empty = setupGroups.length === 0 && unassignedGroups.length === 0 && snapshots.length === 0;
   const [dragAssetId, setDragAssetId] = useState<string | null>(null);
+  const setupNameByShotId = new Map<number, string>();
+  for (const setup of setups) {
+    for (const shot of setup.shots) {
+      setupNameByShotId.set(shot.id, setup.name);
+    }
+  }
 
   const handleReorder = (type: MediaAssetType, groupAssets: MediaAsset[], targetId: string) => {
     if (!dragAssetId || dragAssetId === targetId) return;
@@ -65,6 +74,8 @@ export function MediaLibraryListView({
           <tr className="text-[10px] uppercase tracking-wider text-gray-500 border-b border-surface-700">
             <th className="px-2 py-2 font-semibold w-8" />
             <th className="px-3 py-2 font-semibold w-14" />
+            <th className="px-3 py-2 font-semibold hidden md:table-cell">Setup</th>
+            <th className="px-3 py-2 font-semibold hidden md:table-cell">Shot</th>
             <th className="px-3 py-2 font-semibold">Name</th>
             <th className="px-3 py-2 font-semibold hidden md:table-cell">Scope</th>
             <th className="px-3 py-2 font-semibold hidden md:table-cell">Origin</th>
@@ -74,11 +85,49 @@ export function MediaLibraryListView({
           </tr>
         </thead>
         <tbody>
-          {groups.map((group) => (
-            <Fragment key={group.type}>
+          {setupGroups.map((setupGroup) => (
+            <Fragment key={setupGroup.setupId}>
               <tr className="media-library-list-section-header">
-                <td colSpan={8} className="px-3 py-2 text-[10px] uppercase tracking-wider font-semibold text-gray-400 bg-surface-800/50 border-y border-surface-700/80">
-                  {group.label} ({group.assets.length})
+                <td colSpan={10} className="px-3 py-2 text-[10px] uppercase tracking-wider font-semibold text-gray-300 bg-surface-800/60 border-y border-surface-700/80">
+                  {setupGroup.setupName} ({setupGroup.assetCount})
+                </td>
+              </tr>
+              {setupGroup.shots.map((shotGroup) => (
+                <Fragment key={shotGroup.shotId}>
+                  <tr className="media-library-list-section-header">
+                    <td colSpan={10} className="px-4 py-1.5 text-[10px] uppercase tracking-wider font-semibold text-gray-400 bg-surface-800/35 border-b border-surface-700/60">
+                      {shotGroup.shotName} ({shotGroup.assetCount})
+                    </td>
+                  </tr>
+                  {shotGroup.assets.map((asset) => (
+                    <AssetListRow
+                      key={asset.id}
+                      asset={asset}
+                      shots={shots}
+                      setupName={setupGroup.setupName}
+                      shotName={shotGroup.shotName}
+                      selected={selectedId === asset.id}
+                      bulkSelected={selectedIds.has(asset.id)}
+                      dragging={dragAssetId === asset.id}
+                      onSelect={(additive) => onSelectAsset(asset.id, additive)}
+                      onToggleSelect={(additive) => onToggleSelect(asset.id, additive)}
+                      onDragStart={() => setDragAssetId(asset.id)}
+                      onDragEnd={() => setDragAssetId(null)}
+                      onDrop={() => {
+                        const sameType = shotGroup.assets.filter((a) => a.type === asset.type);
+                        handleReorder(asset.type, sameType, asset.id);
+                      }}
+                    />
+                  ))}
+                </Fragment>
+              ))}
+            </Fragment>
+          ))}
+          {unassignedGroups.map((group) => (
+            <Fragment key={`unassigned-${group.type}`}>
+              <tr className="media-library-list-section-header">
+                <td colSpan={10} className="px-3 py-2 text-[10px] uppercase tracking-wider font-semibold text-gray-400 bg-surface-800/50 border-y border-surface-700/80">
+                  Unassigned · {group.label} ({group.assets.length})
                 </td>
               </tr>
               {group.assets.map((asset) => (
@@ -86,6 +135,8 @@ export function MediaLibraryListView({
                   key={asset.id}
                   asset={asset}
                   shots={shots}
+                  setupName="—"
+                  shotName="—"
                   selected={selectedId === asset.id}
                   bulkSelected={selectedIds.has(asset.id)}
                   dragging={dragAssetId === asset.id}
@@ -101,7 +152,7 @@ export function MediaLibraryListView({
           {snapshots.length > 0 && (
             <>
               <tr className="media-library-list-section-header">
-                <td colSpan={8} className="px-3 py-2 text-[10px] uppercase tracking-wider font-semibold text-gray-400 bg-surface-800/50 border-y border-surface-700/80">
+                <td colSpan={10} className="px-3 py-2 text-[10px] uppercase tracking-wider font-semibold text-gray-400 bg-surface-800/50 border-y border-surface-700/80">
                   Workflow Snapshots ({snapshots.length})
                 </td>
               </tr>
@@ -109,6 +160,7 @@ export function MediaLibraryListView({
                 <SnapshotListRow
                   key={snapshot.id}
                   snapshot={snapshot}
+                  setupName={setupNameByShotId.get(snapshot.shotId) ?? '—'}
                   selected={selectedId === `snapshot:${snapshot.id}`}
                   onSelect={() => onSelectSnapshot(snapshot.id)}
                 />
@@ -124,6 +176,8 @@ export function MediaLibraryListView({
 function AssetListRow({
   asset,
   shots,
+  setupName,
+  shotName,
   selected,
   bulkSelected,
   dragging,
@@ -135,6 +189,8 @@ function AssetListRow({
 }: {
   asset: MediaAsset;
   shots: Shot[];
+  setupName: string;
+  shotName: string;
   selected: boolean;
   bulkSelected: boolean;
   dragging: boolean;
@@ -184,6 +240,8 @@ function AssetListRow({
           className="w-10 h-7 object-cover rounded bg-surface-900"
         />
       </td>
+      <td className="px-3 py-2 text-gray-500 hidden md:table-cell">{setupName}</td>
+      <td className="px-3 py-2 text-gray-500 hidden md:table-cell">{shotName}</td>
       <td className="px-3 py-2 font-medium text-gray-200">{formatMediaAssetSummary(asset)}</td>
       <td className="px-3 py-2 text-gray-500 hidden md:table-cell capitalize">
         {asset.scope === 'global' ? 'Global' : 'Project'}
@@ -200,10 +258,12 @@ function AssetListRow({
 
 function SnapshotListRow({
   snapshot,
+  setupName,
   selected,
   onSelect,
 }: {
   snapshot: ShotWorkflowSnapshot;
+  setupName: string;
   selected: boolean;
   onSelect: () => void;
 }) {
@@ -220,6 +280,8 @@ function SnapshotListRow({
           SNAP
         </div>
       </td>
+      <td className="px-3 py-2 text-gray-500 hidden md:table-cell">{setupName}</td>
+      <td className="px-3 py-2 text-gray-500 hidden md:table-cell">{snapshot.shotName}</td>
       <td className="px-3 py-2 font-medium text-gray-200">{snapshot.shotName}</td>
       <td className="px-3 py-2 text-gray-500 hidden md:table-cell">—</td>
       <td className="px-3 py-2 text-gray-500 hidden md:table-cell">{snapshot.workflow}</td>

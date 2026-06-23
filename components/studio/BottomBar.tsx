@@ -4,7 +4,8 @@ import { useMemo } from 'react';
 import { MentionTextarea } from '@/components/ui/MentionTextarea';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { buildPromptMentionOptions } from '@/lib/studio/prompt-mentions';
-import { SetupTimeline } from '@/components/studio/SetupTimeline';
+import { getWorkflowReferenceSteps, isBakeStartFrame } from '@/lib/studio/workflow';
+import type { AspectRatio } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
 
 export function BottomBar() {
@@ -13,13 +14,28 @@ export function BottomBar() {
   const setSceneSetup = useStudioStore((s) => s.setSceneSetup);
   const setShotActivity = useStudioStore((s) => s.setShotActivity);
   const generate = useStudioStore((s) => s.generate);
+  const bakeStartFrame = useStudioStore((s) => s.bakeStartFrame);
+  const invalidateBakedFrame = useStudioStore((s) => s.invalidateBakedFrame);
   const isGenerating = useStudioStore((s) => s.isGenerating);
+  const isBakingStartFrame = useStudioStore((s) => s.isBakingStartFrame);
   const shots = useStudioStore((s) => s.shots);
   const currentShot = useStudioStore((s) => s.currentShot);
+  const project = useStudioStore((s) => s.project);
 
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
   const hasAnyImage = shot?.references.some(Boolean) ?? false;
   const mentionOptions = useMemo(() => buildPromptMentionOptions(shot), [shot]);
+  const isBakeWorkflow = isBakeStartFrame(shot);
+  const workflowSteps = shot
+    ? getWorkflowReferenceSteps(shot, shot.lighting, (project.aspectRatio || '16:9') as AspectRatio)
+    : [];
+  const checklistTasks = workflowSteps.filter((step) => step.id !== 'bake');
+  const checklistDone = checklistTasks.filter((step) => step.done).length;
+  const checklistTotal = checklistTasks.length;
+  const remainingChecklistSteps = checklistTasks.filter((step) => !step.done);
+  const checklistReadyToBake = workflowSteps.every((step) => step.done || step.id === 'bake');
+  const bakeReady = shot?.bakeStatus === 'ready' && Boolean(shot?.bakedStartFrame);
+  const disableGenerate = isGenerating || (isBakeWorkflow && !bakeReady);
 
   const textareaClass =
     'w-full bg-surface-700 hover:bg-surface-600 focus:bg-surface-600 border border-surface-600 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all resize-none h-[80px]';
@@ -77,21 +93,71 @@ export function BottomBar() {
             className="studio-bottom-panel studio-bottom-panel--generate shrink-0 flex"
             {...uiSectionProps(UI_SECTIONS.studioBottomGenerate)}
           >
-            <button
-              type="button"
-              onClick={generate}
-              disabled={isGenerating}
-              className="w-full min-w-[5.5rem] bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-500 disabled:opacity-50 px-6 rounded-lg font-bold text-base transition-all shadow-lg shadow-brand-500/30 flex flex-col items-center justify-center gap-1 group"
-            >
-              <svg className="w-6 h-6 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              <span>Generate</span>
-            </button>
+            {isBakeWorkflow ? (
+              <div className="w-full min-w-[8rem] flex flex-col gap-2">
+                {bakeReady ? (
+                  <button
+                    type="button"
+                    onClick={() => invalidateBakedFrame()}
+                    disabled={isBakingStartFrame}
+                    className="w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-lg bg-surface-700 hover:bg-surface-600 disabled:opacity-40 text-gray-200 border border-surface-600"
+                  >
+                    Invalidate Baked Frame
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => bakeStartFrame()}
+                      disabled={isBakingStartFrame || !checklistReadyToBake}
+                      className="w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-lg bg-brand-600 hover:bg-brand-500 disabled:opacity-40 text-white"
+                    >
+                      {isBakingStartFrame ? 'Baking…' : 'Bake Start Frame'}
+                      {checklistTotal > 0 ? ` (${checklistDone}/${checklistTotal})` : ''}
+                    </button>
+                    {remainingChecklistSteps.length > 0 && (
+                      <div className="rounded-md border border-surface-700 bg-surface-800/70 px-2 py-1.5">
+                        <p className="text-[9px] uppercase tracking-wider text-gray-400 mb-1">
+                          Remaining checklist items
+                        </p>
+                        <ul className="text-[10px] text-gray-300 space-y-0.5">
+                          {remainingChecklistSteps.map((step) => (
+                            <li key={step.id}>- {step.label}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                <button
+                  type="button"
+                  onClick={generate}
+                  disabled={disableGenerate}
+                  className="w-full min-w-[8rem] bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-500 disabled:opacity-40 px-4 py-3 rounded-lg font-bold text-sm transition-all shadow-lg shadow-brand-500/30 flex items-center justify-center gap-1 group"
+                >
+                  <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  <span>Generate Video</span>
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={generate}
+                disabled={disableGenerate}
+                className="w-full min-w-[5.5rem] bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-500 disabled:opacity-50 px-6 rounded-lg font-bold text-base transition-all shadow-lg shadow-brand-500/30 flex flex-col items-center justify-center gap-1 group"
+              >
+                <svg className="w-6 h-6 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <span>Generate</span>
+              </button>
+            )}
           </div>
         </div>
 
-        <SetupTimeline />
       </div>
     </div>
   );

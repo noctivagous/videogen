@@ -191,9 +191,9 @@ export function MediaLibraryViewer({ onBack }: MediaLibraryViewerProps) {
           className="media-library-viewer__browser flex-1 min-w-0 border-r border-surface-700"
           {...uiSectionProps(UI_SECTIONS.studioMediaLibraryBrowser)}
         >
-          {layoutMode === 'grid' && <MediaLibraryGridView {...browserProps} />}
+          {layoutMode === 'grid' && <MediaLibraryGridView {...browserProps} setups={setups} />}
           {layoutMode === 'list' && (
-            <MediaLibraryListView {...browserProps} shots={shots} />
+            <MediaLibraryListView {...browserProps} shots={shots} setups={setups} />
           )}
           {layoutMode === 'tree' && <MediaLibraryTreeView {...browserProps} shots={shots} />}
         </div>

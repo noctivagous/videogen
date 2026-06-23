@@ -1,5 +1,5 @@
 import type { MediaAsset, MediaAssetType, MediaWorkflowOrigin, ShotWorkflowSnapshot } from '@/lib/types/media-library';
-import type { Shot, Workflow } from '@/lib/types/studio';
+import type { Setup, Shot, Workflow } from '@/lib/types/studio';
 import { getWorkflowLabel } from '@/lib/constants/workflows';
 import { filterAssetsByClipThreshold, rankAssetsByClipQuery } from '@/lib/media/clip-search';
 
@@ -181,6 +181,20 @@ export type ShotMediaGroup = {
   assetCount: number;
 };
 
+export type SetupShotAssetGroup = {
+  shotId: number;
+  shotName: string;
+  assets: MediaAsset[];
+  assetCount: number;
+};
+
+export type SetupMediaGroup = {
+  setupId: number;
+  setupName: string;
+  shots: SetupShotAssetGroup[];
+  assetCount: number;
+};
+
 function workflowGroupLabel(workflow: MediaWorkflowOrigin | 'unassigned'): string {
   if (workflow === 'unassigned') return 'Other';
   if (workflow === 'upload') return 'Uploads';
@@ -235,4 +249,42 @@ export function groupMediaAssetsByShotAndWorkflow(
   }
 
   return { shotGroups, unassigned: unassigned.sort((a, b) => b.createdAt - a.createdAt) };
+}
+
+export function groupMediaAssetsBySetupAndShot(
+  assets: MediaAsset[],
+  setups: Setup[],
+): { setupGroups: SetupMediaGroup[]; unassigned: MediaAsset[] } {
+  const setupGroups: SetupMediaGroup[] = [];
+  const matchedAssetIds = new Set<string>();
+
+  for (const setup of setups) {
+    const shotGroups: SetupShotAssetGroup[] = [];
+    for (const shot of setup.shots) {
+      const shotAssets = assets
+        .filter((asset) => asset.metadata.usedInShots.includes(shot.id))
+        .sort(sortAssetsInGroup);
+      if (shotAssets.length === 0) continue;
+      for (const asset of shotAssets) matchedAssetIds.add(asset.id);
+      shotGroups.push({
+        shotId: shot.id,
+        shotName: shot.name,
+        assets: shotAssets,
+        assetCount: shotAssets.length,
+      });
+    }
+    if (shotGroups.length === 0) continue;
+    setupGroups.push({
+      setupId: setup.id,
+      setupName: setup.name,
+      shots: shotGroups,
+      assetCount: shotGroups.reduce((sum, shotGroup) => sum + shotGroup.assetCount, 0),
+    });
+  }
+
+  const unassigned = assets
+    .filter((asset) => !matchedAssetIds.has(asset.id))
+    .sort((a, b) => b.createdAt - a.createdAt);
+
+  return { setupGroups, unassigned };
 }

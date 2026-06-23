@@ -2,8 +2,11 @@
 
 import { useRef, useState } from 'react';
 import { groupMediaAssetsByType } from '@/lib/media/media-library-query';
+import { groupMediaAssetsBySetupAndShot } from '@/lib/media/media-library-query';
 import { resolveAssetDisplayUrl } from '@/lib/media/media-library';
 import type { MediaAsset, ShotWorkflowSnapshot } from '@/lib/types/media-library';
+import type { Setup } from '@/lib/types/studio';
+import { getMediaAssetTypeLabel } from '@/lib/media/media-library-query';
 import {
   formatMediaAssetSummary,
   truncateId,
@@ -12,6 +15,7 @@ import {
 interface MediaLibraryGridViewProps {
   assets: MediaAsset[];
   snapshots: ShotWorkflowSnapshot[];
+  setups: Setup[];
   selectedId: string | null;
   selectedIds: Set<string>;
   onSelectAsset: (assetId: string, additive?: boolean) => void;
@@ -24,6 +28,7 @@ interface MediaLibraryGridViewProps {
 export function MediaLibraryGridView({
   assets,
   snapshots,
+  setups,
   selectedId,
   selectedIds,
   onSelectAsset,
@@ -32,8 +37,9 @@ export function MediaLibraryGridView({
   onImport,
   dropHint = 'Drop images to import',
 }: MediaLibraryGridViewProps) {
-  const groups = groupMediaAssetsByType(assets);
-  const empty = groups.length === 0 && snapshots.length === 0;
+  const { setupGroups, unassigned } = groupMediaAssetsBySetupAndShot(assets, setups);
+  const unassignedGroups = groupMediaAssetsByType(unassigned);
+  const empty = setupGroups.length === 0 && unassignedGroups.length === 0 && snapshots.length === 0;
   const [dragging, setDragging] = useState(false);
   const dragCounterRef = useRef(0);
 
@@ -90,26 +96,67 @@ export function MediaLibraryGridView({
           <p className="text-brand-300 font-semibold text-sm">{dropHint}</p>
         </div>
       )}
-      {groups.map((group) => (
-        <section key={group.type} className="media-library-grid-section">
-          <h3 className="media-library-section-title text-[10px] uppercase tracking-wider font-semibold text-gray-400 mb-2">
-            {group.label}
-            <span className="text-gray-600 font-normal ml-1">({group.assets.length})</span>
+      {setupGroups.map((setupGroup) => (
+        <section key={setupGroup.setupId} className="media-library-grid-section">
+          <h3 className="media-library-section-title text-[10px] uppercase tracking-wider font-semibold text-gray-300 mb-2">
+            {setupGroup.setupName}
+            <span className="text-gray-600 font-normal ml-1">({setupGroup.assetCount})</span>
           </h3>
-          <div className="media-library-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
-            {group.assets.map((asset) => (
-              <AssetGridCard
-                key={asset.id}
-                asset={asset}
-                selected={selectedId === asset.id}
-                bulkSelected={selectedIds.has(asset.id)}
-                onSelect={(additive) => onSelectAsset(asset.id, additive)}
-                onToggleSelect={(additive) => onToggleSelect(asset.id, additive)}
-              />
+          <div className="flex flex-col gap-4">
+            {setupGroup.shots.map((shotGroup) => (
+              <div key={shotGroup.shotId}>
+                <h4 className="text-[10px] uppercase tracking-wider font-semibold text-gray-400 mb-2">
+                  {shotGroup.shotName}
+                  <span className="text-gray-600 font-normal ml-1">({shotGroup.assetCount})</span>
+                </h4>
+                <div className="media-library-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+                  {shotGroup.assets.map((asset) => (
+                    <AssetGridCard
+                      key={asset.id}
+                      asset={asset}
+                      selected={selectedId === asset.id}
+                      bulkSelected={selectedIds.has(asset.id)}
+                      onSelect={(additive) => onSelectAsset(asset.id, additive)}
+                      onToggleSelect={(additive) => onToggleSelect(asset.id, additive)}
+                    />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </section>
       ))}
+
+      {unassignedGroups.length > 0 && (
+        <section className="media-library-grid-section">
+          <h3 className="media-library-section-title text-[10px] uppercase tracking-wider font-semibold text-gray-400 mb-2">
+            Unassigned
+            <span className="text-gray-600 font-normal ml-1">
+              ({unassignedGroups.reduce((sum, group) => sum + group.assets.length, 0)})
+            </span>
+          </h3>
+          {unassignedGroups.map((group) => (
+            <div key={group.type} className="mb-4 last:mb-0">
+              <h4 className="text-[10px] uppercase tracking-wider font-semibold text-gray-500 mb-2">
+                {group.label}
+                <span className="text-gray-600 font-normal ml-1">({group.assets.length})</span>
+              </h4>
+              <div className="media-library-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+                {group.assets.map((asset) => (
+                  <AssetGridCard
+                    key={asset.id}
+                    asset={asset}
+                    selected={selectedId === asset.id}
+                    bulkSelected={selectedIds.has(asset.id)}
+                    onSelect={(additive) => onSelectAsset(asset.id, additive)}
+                    onToggleSelect={(additive) => onToggleSelect(asset.id, additive)}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
 
       {snapshots.length > 0 && (
         <section className="media-library-grid-section">
@@ -194,6 +241,7 @@ function AssetGridCard({
             {formatMediaAssetSummary(asset)}
           </div>
           <div className="text-[9px] text-gray-500 truncate">{truncateId(asset.id)}</div>
+          <div className="text-[9px] text-gray-600 truncate">{getMediaAssetTypeLabel(asset.type)}</div>
           <div className="text-[9px] text-gray-600 capitalize mt-0.5">
             {asset.scope === 'global' ? 'Global' : 'Project'}
           </div>
