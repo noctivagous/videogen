@@ -61,7 +61,7 @@ Bake architecture and prompt details: [`MANNEQUINS-BAKE-START-FRAME.md`](MANNEQU
 |-------|----------|
 | Bake two-pass design, cast tiers, orchestration | [`MANNEQUINS-BAKE-START-FRAME.md`](MANNEQUINS-BAKE-START-FRAME.md) |
 | Composition stack origin (mannequin-first plan) | Grok session plan — not in repo; superseded by this tracker for status |
-| Field size / subject count semantics | [`FIELD-SIZES.md`](FIELD-SIZES.md), [`SUBJECT-COUNTS.md`](SUBJECT-COUNTS.md) |
+| Field size / subject count semantics | [`FILM-TERMS.md`](FILM-TERMS.md), [`SUBJECT-COUNTS.md`](SUBJECT-COUNTS.md) |
 
 ---
 
