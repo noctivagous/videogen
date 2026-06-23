@@ -590,6 +590,9 @@ interface StudioStore {
   removeReferenceSlot: (index: number) => void;
   backdropSelected: boolean;
   setBackdropSelected: (selected: boolean) => void;
+  selectedMannequinIds: string[];
+  selectMannequin: (id: string, options?: { shiftKey?: boolean }) => void;
+  clearMannequinSelection: () => void;
   setBackdropFraming: (patch: Partial<BackdropFraming>) => void;
   toggleBackdropFramingLock: () => void;
   resetBackdropFraming: () => void;
@@ -716,11 +719,29 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   projectSaveState: 'none',
   fileApiSupported: false,
   backdropSelected: false,
+  selectedMannequinIds: [],
   workspaceView: 'shot-designer',
   selectedMediaLibraryItemId: null,
 
   setBackdropSelected(selected) {
     set({ backdropSelected: selected });
+  },
+
+  selectMannequin(id, options) {
+    const { selectedMannequinIds } = get();
+    if (options?.shiftKey) {
+      if (selectedMannequinIds.includes(id)) {
+        set({ selectedMannequinIds: selectedMannequinIds.filter((sid) => sid !== id) });
+      } else {
+        set({ selectedMannequinIds: [...selectedMannequinIds, id] });
+      }
+      return;
+    }
+    set({ selectedMannequinIds: [id] });
+  },
+
+  clearMannequinSelection() {
+    set({ selectedMannequinIds: [] });
   },
 
   syncProjectFileUi() {
@@ -2069,7 +2090,8 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       return;
     }
     const mannequins = [...migrateMannequins(shot?.mannequins)];
-    mannequins.push(createDefaultMannequin());
+    const created = createDefaultMannequin();
+    mannequins.push(created);
     const finalized = shot ? finalizeMannequinsForShot(shot, mannequins) : mannequins;
     const layoutPatch = shot
       ? splitInvalidationPatch(
@@ -2081,6 +2103,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         mannequins: finalized,
         ...layoutPatch,
       }),
+      selectedMannequinIds: [created.id],
     }));
   },
 
@@ -2159,6 +2182,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         mannequins,
         ...layoutPatch,
       }),
+      selectedMannequinIds: s.selectedMannequinIds.filter((sid) => sid !== id),
     }));
   },
 

@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { BottomBar } from '@/components/studio/BottomBar';
 import { CameraPanel } from '@/components/studio/CameraPanel';
 import { HeaderBar } from '@/components/studio/HeaderBar';
-import { LightingPanel } from '@/components/studio/LightingPanel';
+import { StudioRightPanel } from '@/components/studio/StudioRightPanel';
 import { PreviewPanel } from '@/components/studio/PreviewPanel';
 import { ContextMenuManager } from '@/components/ui/ContextMenuManager';
 import { ModalManager } from '@/components/ui/ModalManager';
@@ -53,7 +53,7 @@ export function StudioShell() {
           className="hidden lg:block w-72 glass border-l border-surface-700 overflow-y-auto control-panel"
           {...uiSectionProps(UI_SECTIONS.studioLightingPanel)}
         >
-          <LightingPanel />
+          <StudioRightPanel />
         </aside>
       </ThemeTransformConnectorProvider>
 
@@ -90,7 +90,7 @@ export function StudioShell() {
               </div>
               <CameraPanel />
               <div className="mt-6 border-t border-surface-700 pt-4">
-                <LightingPanel />
+                <StudioRightPanel />
               </div>
             </div>
           </div>

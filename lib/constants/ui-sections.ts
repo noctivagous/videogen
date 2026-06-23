@@ -6,6 +6,7 @@ export const UI_SECTIONS = {
   studioCameraPanel: { id: 'studio-camera-panel', name: 'Camera Panel' },
   studioPreviewMain: { id: 'studio-preview-main', name: 'Preview Main' },
   studioLightingPanel: { id: 'studio-lighting-panel', name: 'Lighting Panel' },
+  studioPoseBlockPanel: { id: 'studio-poseblock-panel', name: 'PoseBlock Mannequin Panel' },
   studioBottomBar: { id: 'studio-bottom-bar', name: 'Bottom Bar' },
   studioMobileFab: { id: 'studio-mobile-fab', name: 'Mobile Controls FAB' },
   studioMobileDrawer: { id: 'studio-mobile-drawer', name: 'Mobile Controls Drawer' },

@@ -22,7 +22,6 @@ import { PromptStackView } from '@/components/studio/PromptStackView';
 import { ReferencePreviewScene } from '@/components/studio/ReferencePreviewScene';
 import type { BakedImageVariant } from '@/lib/types/studio';
 import {
-  canAddMannequin,
   getWorkflowReferenceSteps,
   isBakeStartFrame,
 } from '@/lib/studio/workflow';
@@ -101,7 +100,6 @@ export function PreviewPanel() {
   const setPreviewSubMode = useStudioStore((s) => s.setPreviewSubMode);
   const generatePreviewFrame = useStudioStore((s) => s.generatePreviewFrame);
   const resetBackdropFraming = useStudioStore((s) => s.resetBackdropFraming);
-  const addMannequin = useStudioStore((s) => s.addMannequin);
   const updateMannequin = useStudioStore((s) => s.updateMannequin);
   const removeMannequin = useStudioStore((s) => s.removeMannequin);
   const isBakingStartFrame = useStudioStore((s) => s.isBakingStartFrame);
@@ -111,7 +109,9 @@ export function PreviewPanel() {
   const saveBakedFrameToAssets = useStudioStore((s) => s.saveBakedFrameToAssets);
   const loadBakedFrameFromAsset = useStudioStore((s) => s.loadBakedFrameFromAsset);
   const ai = useStudioStore((s) => s.ai);
-  const [selectedMannequinId, setSelectedMannequinId] = useState<string | null>(null);
+  const selectedMannequinIds = useStudioStore((s) => s.selectedMannequinIds);
+  const selectMannequin = useStudioStore((s) => s.selectMannequin);
+  const clearMannequinSelection = useStudioStore((s) => s.clearMannequinSelection);
   const [bakedImageVariant, setBakedImageVariant] = useState<BakedImageVariant>('final');
   const [loadAssetOpen, setLoadAssetOpen] = useState(false);
 
@@ -279,11 +279,12 @@ export function PreviewPanel() {
           />
           <MannequinPlacementLayer
             mannequins={mannequins}
-            selectedId={selectedMannequinId}
-            onSelect={setSelectedMannequinId}
+            selectedId={selectedMannequinIds[0] ?? null}
+            onSelect={(id, options) => {
+              if (id === null) clearMannequinSelection();
+              else selectMannequin(id, options);
+            }}
             onUpdate={updateMannequin}
-            canAdd={canAddMannequin(shot)}
-            onAdd={addMannequin}
             onRemove={removeMannequin}
           />
         </>
