@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { MannequinInspectorControls } from '@/components/studio/MannequinInspectorControls';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { migrateMannequins } from '@/lib/studio/migrate-mannequin';
@@ -28,7 +28,10 @@ export function PoseBlockPanel() {
   const assignMannequinSubjectSlot = useStudioStore((s) => s.assignMannequinSubjectSlot);
 
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
-  const mannequins = migrateMannequins(shot?.mannequins);
+  const mannequins = useMemo(
+    () => migrateMannequins(shot?.mannequins),
+    [shot?.mannequins],
+  );
   const aspectRatio = (project.aspectRatio || '16:9') as AspectRatio;
   const primaryId = selectedMannequinIds[0] ?? null;
   const primary = mannequins.find((m) => m.id === primaryId);
@@ -36,14 +39,20 @@ export function PoseBlockPanel() {
 
   useEffect(() => {
     if (mannequins.length === 0) {
-      clearMannequinSelection();
+      if (selectedMannequinIds.length > 0) {
+        clearMannequinSelection();
+      }
+      return;
+    }
+    if (selectedMannequinIds.length === 0) {
+      selectMannequin(mannequins[0].id);
       return;
     }
     const valid = selectedMannequinIds.filter((id) => mannequins.some((m) => m.id === id));
     if (valid.length !== selectedMannequinIds.length) {
       useStudioStore.setState({ selectedMannequinIds: valid });
     }
-  }, [mannequins, selectedMannequinIds, clearMannequinSelection]);
+  }, [mannequins, selectedMannequinIds, clearMannequinSelection, selectMannequin]);
 
   return (
     <div

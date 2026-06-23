@@ -140,5 +140,13 @@ npm install
 cd PoseBlock && npm install && npm run dev
 ```
 
-After `npm install`, VideoGen resolves the local package via `"poseblock": "file:./PoseBlock"`.
+After `npm install`, VideoGen resolves the local package via `"poseblock": "file:./PoseBlock"`. The same install step links PoseBlock's GLB models into `public/poseblock-models` (symlink when possible, copy fallback on Windows). If models 404 after cloning, run `git submodule update --init --recursive` then `npm run setup:poseblock`.
+
+To enable the 3D compositor in the studio preview (instead of PNG mannequins), add to `.env.local`:
+
+```bash
+NEXT_PUBLIC_POSEBLOCK_COMPOSITOR=1
+```
+
+Restart `npm run dev`, open a shot on **Bake Start Frame** or **Auto-place Character**, and switch the preview to **Framing** mode.
 

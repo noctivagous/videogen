@@ -16,6 +16,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "postinstall": "node scripts/link-poseblock-assets.mjs",
+    "setup:poseblock": "node scripts/link-poseblock-assets.mjs",
     "generate:mannequin-bounds-presets": "tsx scripts/generate-mannequin-bounds-presets.ts",
     "check:secrets": "git grep -nE 'r8_[A-Za-z0-9]{10,}|sk-[A-Za-z0-9]{20,}|hf_[A-Za-z0-9]{20,}' -- ':!package-lock.json' && exit 1 || exit 0",
     "stock:cutouts": "node scripts/generate-subject-cutouts.mjs",

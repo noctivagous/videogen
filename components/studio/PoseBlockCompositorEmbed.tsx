@@ -34,6 +34,7 @@ interface CompositorProps {
   onSelect?: (ids: string[]) => void;
   onInstanceChange?: (id: string, patch: Partial<PoseBlockInstance>) => void;
   enableExport?: boolean;
+  embedMode?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -149,7 +150,7 @@ export function PoseBlockCompositorEmbed({
   };
 
   return (
-    <div className="absolute inset-0">
+    <div className="absolute inset-0 z-[2]">
       {Compositor ? (
         <Compositor
           className="relative h-full min-h-0 w-full"
@@ -161,6 +162,7 @@ export function PoseBlockCompositorEmbed({
           onSelect={handleSelect}
           onInstanceChange={onInstanceChange}
           enableExport={false}
+          embedMode
         />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center">

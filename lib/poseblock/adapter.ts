@@ -29,10 +29,12 @@ export interface PoseBlockInstance {
 // Model URL resolution
 // ---------------------------------------------------------------------------
 
-/** GLB assets served from PoseBlock's /public/models directory. */
+/** GLB assets — served from `public/poseblock-models` (symlink to PoseBlock/public/models). */
+const POSEBLOCK_MODELS_BASE = '/poseblock-models';
+
 const MODEL_URLS: Record<MannequinGender, string> = {
-  male: '/models/X Bot.glb',
-  female: '/models/Y Bot.glb',
+  male: `${POSEBLOCK_MODELS_BASE}/X Bot.glb`,
+  female: `${POSEBLOCK_MODELS_BASE}/Y Bot.glb`,
 };
 
 export function modelUrlForMannequin(gender: MannequinGender): string {
@@ -44,9 +46,9 @@ export function modelUrlForMannequin(gender: MannequinGender): string {
 // ---------------------------------------------------------------------------
 
 const POSE_TO_BASE_POSE_ID: Record<MannequinPose, string> = {
-  standard: 'a_pose',
-  walking: 'walking',
-  seated: 'seated',
+  standard: 't_pose',
+  walking: 't_pose',
+  seated: 't_pose',
 };
 
 export function basePoseIdForMannequin(pose: MannequinPose): string {
