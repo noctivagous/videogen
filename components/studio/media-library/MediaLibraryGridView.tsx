@@ -18,6 +18,7 @@ interface MediaLibraryGridViewProps {
   onToggleSelect: (assetId: string, additive: boolean) => void;
   onSelectSnapshot: (snapshotId: string) => void;
   onImport: (files: FileList) => void;
+  dropHint?: string;
 }
 
 export function MediaLibraryGridView({
@@ -29,6 +30,7 @@ export function MediaLibraryGridView({
   onToggleSelect,
   onSelectSnapshot,
   onImport,
+  dropHint = 'Drop images to import',
 }: MediaLibraryGridViewProps) {
   const groups = groupMediaAssetsByType(assets);
   const empty = groups.length === 0 && snapshots.length === 0;
@@ -67,7 +69,7 @@ export function MediaLibraryGridView({
         {...dropZoneProps}
       >
         {dragging ? (
-          <p className="text-brand-300 font-medium">Drop to import</p>
+          <p className="text-brand-300 font-medium">{dropHint}</p>
         ) : (
           <>
             <p>No assets match your search.</p>
@@ -85,7 +87,7 @@ export function MediaLibraryGridView({
     >
       {dragging && (
         <div className="pointer-events-none absolute inset-0 z-20 border-2 border-dashed border-brand-500/60 rounded-lg flex items-center justify-center bg-brand-600/10">
-          <p className="text-brand-300 font-semibold text-sm">Drop images to import</p>
+          <p className="text-brand-300 font-semibold text-sm">{dropHint}</p>
         </div>
       )}
       {groups.map((group) => (
@@ -166,13 +168,19 @@ function AssetGridCard({
         className="block w-full text-left"
       >
         {asset.type === 'video' ? (
-          <video
-            src={resolveAssetDisplayUrl(asset)}
-            className="w-full aspect-video object-cover bg-surface-900"
-            muted
-            preload="metadata"
-            playsInline
-          />
+          <div className="w-full aspect-video bg-surface-900 flex items-center justify-center relative">
+            <svg
+              className="w-10 h-10 text-gray-600"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden
+            >
+              <path d="M8 5v14l11-7z" />
+            </svg>
+            <span className="absolute bottom-1.5 right-1.5 text-[9px] font-semibold uppercase tracking-wider text-gray-500 bg-surface-900/80 px-1 py-0.5 rounded">
+              Video
+            </span>
+          </div>
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
           <img

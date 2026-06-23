@@ -12,7 +12,7 @@
  */
 
 import type { MediaAsset, MediaAssetType } from '@/lib/types/media-library';
-import type { GeneratedVideo, ReferenceRole, Setup } from '@/lib/types/studio';
+import type { ReferenceRole, Setup } from '@/lib/types/studio';
 
 /** Stable derived-asset ID from a source descriptor. Does not require hashing. */
 function derivedId(...parts: (string | number)[]): string {
@@ -114,17 +114,9 @@ export function deriveProjectAssets(setups: Setup[]): MediaAsset[] {
           metadata: { usedInShots: [coverage.id] },
         });
       }
-      for (const video of (coverage.generatedVideos ?? []) as GeneratedVideo[]) {
-        if (!video.url) continue;
-        push({
-          id: derivedId('video', coverage.id, video.url.slice(-16)),
-          type: 'video',
-          url: video.url,
-          createdAt: now,
-          workflowOrigin: coverage.workflow ?? 'generated',
-          metadata: { usedInShots: [coverage.id] },
-        });
-      }
+      // Generated videos are NOT derived from project state because the provider
+      // URLs are temporary (e.g. xAI URLs expire after ~1 hour). Videos are
+      // saved to the explicit mediaLibrary as blobs at generation time instead.
     }
   }
 

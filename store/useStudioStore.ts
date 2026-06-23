@@ -100,6 +100,7 @@ import {
   splitInvalidationPatch,
 } from '@/lib/studio/workflow-invalidation';
 import {
+  archiveGeneratedVideoToLibrary,
   createMediaAssetFromUrl,
   createWorkflowSnapshot,
   getMediaAsset,
@@ -2794,6 +2795,18 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         progressDetail: '',
       }));
       get().showToast('Video generation complete!');
+
+      // Archive the video to the media library immediately while the provider
+      // URL is still live. Provider URLs (e.g. xAI) expire after ~1 hour.
+      archiveGeneratedVideoToLibrary(get().mediaLibrary, videoUrl, {
+        shotId: shot.id,
+        workflowOrigin: shot.workflow ?? 'generated',
+        providerJobId: result.providerJobId,
+      }).then(({ library, assetId }) => {
+        if (assetId) set({ mediaLibrary: library });
+      }).catch(() => {
+        // Non-fatal — the provider URL is still usable until it expires.
+      });
 
       setTimeout(() => set({ showPreviewSuccess: false }), 5000);
     } catch (e) {

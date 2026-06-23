@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { MediaLibraryGridView } from '@/components/studio/media-library/MediaLibraryGridView';
+import { MediaLibraryImportScopeDialog, importDropHint } from '@/components/studio/media-library/MediaLibraryImportScopeDialog';
 import { MediaLibraryInspector } from '@/components/studio/media-library/MediaLibraryInspector';
 import { snapshotItemId } from '@/lib/media/media-library-query';
 import { MediaLibraryListView } from '@/components/studio/media-library/MediaLibraryListView';
@@ -43,6 +44,7 @@ export function MediaLibraryViewer({ onBack }: MediaLibraryViewerProps) {
   const [scopeFilter, setScopeFilter] = useState<MediaLibraryScopeFilter>('all');
   const [layoutMode, setLayoutMode] = useState<MediaLibraryLayoutMode>('grid');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [pendingImportFiles, setPendingImportFiles] = useState<File[] | null>(null);
 
   // Assets derived directly from the live project state — always up to date,
   // no manual save required.
@@ -73,8 +75,33 @@ export function MediaLibraryViewer({ onBack }: MediaLibraryViewerProps) {
     [scopedAssets, shotWorkflowSnapshots, searchQuery, typeFilter, shots, searchMode],
   );
 
-  const importScope: MediaLibraryCollection =
-    scopeFilter === 'global' ? 'global' : 'project';
+  const handleImport = useCallback(
+    (files: FileList | null) => {
+      if (!files?.length) return;
+      const fileArray = Array.from(files);
+
+      if (scopeFilter === 'global') {
+        void importMediaAssets(fileArray, 'global');
+        return;
+      }
+      if (scopeFilter === 'project') {
+        void importMediaAssets(fileArray, 'project');
+        return;
+      }
+
+      setPendingImportFiles(fileArray);
+    },
+    [scopeFilter, importMediaAssets],
+  );
+
+  const confirmImportScope = useCallback(
+    (scope: MediaLibraryCollection) => {
+      if (!pendingImportFiles?.length) return;
+      void importMediaAssets(pendingImportFiles, scope);
+      setPendingImportFiles(null);
+    },
+    [pendingImportFiles, importMediaAssets],
+  );
 
   const toggleSelected = useCallback((assetId: string, additive: boolean) => {
     setSelectedIds((prev) => {
@@ -101,11 +128,6 @@ export function MediaLibraryViewer({ onBack }: MediaLibraryViewerProps) {
     navigateToPanel('shot-designer');
   };
 
-  const handleImport = (files: FileList | null) => {
-    if (!files?.length) return;
-    void importMediaAssets(Array.from(files), importScope);
-  };
-
   const handleDeleteSelected = () => {
     const ids = [...selectedIds];
     if (ids.length === 0) return;
@@ -126,6 +148,7 @@ export function MediaLibraryViewer({ onBack }: MediaLibraryViewerProps) {
     onToggleSelect: toggleSelected,
     onSelectSnapshot: handleSelectSnapshot,
     onImport: (files: FileList) => handleImport(files),
+    dropHint: importDropHint(scopeFilter),
   };
 
   return (
@@ -156,7 +179,14 @@ export function MediaLibraryViewer({ onBack }: MediaLibraryViewerProps) {
         />
       </div>
 
-      <div className="media-library-viewer__body flex flex-1 min-h-0">
+      <div className="media-library-viewer__body flex flex-1 min-h-0 relative">
+        {pendingImportFiles && (
+          <MediaLibraryImportScopeDialog
+            fileCount={pendingImportFiles.length}
+            onSelect={confirmImportScope}
+            onCancel={() => setPendingImportFiles(null)}
+          />
+        )}
         <div
           className="media-library-viewer__browser flex-1 min-w-0 border-r border-surface-700"
           {...uiSectionProps(UI_SECTIONS.studioMediaLibraryBrowser)}

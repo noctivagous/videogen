@@ -1,0 +1,3 @@
+[submodule "PoseBlock"]
+	path = PoseBlock
+	url = https://github.com/noctivagous/PoseBlock.git

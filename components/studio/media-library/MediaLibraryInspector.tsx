@@ -83,6 +83,17 @@ export function MediaLibraryInspector({
   const [urlDraft, setUrlDraft] = useState<string | null>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
 
+  const selectedAsset =
+    selectedId && !selectedId.startsWith('snapshot:')
+      ? assets.find((a) => a.id === selectedId) ?? getMediaAsset(assets, selectedId)
+      : undefined;
+
+  const imageUrlForDims =
+    selectedAsset && IMAGE_TYPES.has(selectedAsset.type)
+      ? resolveAssetDisplayUrl(selectedAsset)
+      : null;
+  const dims = useImageDimensions(imageUrlForDims);
+
   if (!selectedId) {
     return (
       <div className="media-library-inspector media-library-inspector--empty flex items-center justify-center h-full p-4 text-sm text-gray-500 text-center">
@@ -102,7 +113,7 @@ export function MediaLibraryInspector({
     return <SnapshotInspector snapshot={snapshot} onSelectAsset={onSelectAsset} onGoToShot={onGoToShot} />;
   }
 
-  const asset = assets.find((a) => a.id === selectedId) ?? getMediaAsset(assets, selectedId);
+  const asset = selectedAsset;
   if (!asset) {
     return <div className="media-library-inspector p-4 text-sm text-gray-500">Asset not found.</div>;
   }
@@ -118,8 +129,6 @@ export function MediaLibraryInspector({
   const displayUrl = urlDraft ?? asset.url;
   const isImage = IMAGE_TYPES.has(asset.type);
   const mime = isImage ? mimeFromUrl(asset.url) : null;
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const dims = useImageDimensions(isImage ? resolveAssetDisplayUrl(asset) : null);
 
   return (
     <div className="media-library-inspector flex flex-col h-full overflow-y-auto">
@@ -146,7 +155,6 @@ export function MediaLibraryInspector({
             controls
             playsInline
             loop
-            muted
             className="w-full aspect-video rounded-lg bg-surface-900"
           />
         ) : (

@@ -87,6 +87,13 @@ export function MediaLibraryToolbar({
       <button
         type="button"
         onClick={() => importInputRef.current?.click()}
+        title={
+          scopeFilter === 'project'
+            ? 'Import into Project library'
+            : scopeFilter === 'global'
+              ? 'Import into Global library'
+              : 'Import — choose Project or Global'
+        }
         className="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-brand-600/40 bg-brand-600/10 hover:bg-brand-600/20 text-brand-300 transition-colors"
       >
         Import

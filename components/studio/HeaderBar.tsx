@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { ProviderIcon } from '@/components/studio/ProviderIcon';
 import { SplitButton } from '@/components/ui/SplitButton';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
-import { STUDIO_LAUNCHER_ITEMS } from '@/lib/constants/studio-launcher';
+import { getStudioPanelTitle, STUDIO_LAUNCHER_ITEMS } from '@/lib/constants/studio-launcher';
 import { launchStudioLauncherItem } from '@/lib/studio/launch-studio-launcher-item';
 import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 import {
@@ -444,23 +444,25 @@ export function HeaderBar() {
 
         <div className="h-8 w-px bg-surface-600 hidden md:block flex-shrink-0" />
 
-        <SplitButton
-          label="App"
-          onPrimaryClick={openAppsLauncher}
-          items={STUDIO_LAUNCHER_ITEMS.map((item) => ({
-            id: item.id,
-            label: item.title,
-            onSelect: () =>
-              launchStudioLauncherItem(item.id, {
-                navigateToPanel,
-                openSettings,
-                showToast,
-              }),
-          }))}
-          className="hidden sm:inline-flex flex-shrink-0"
-          primaryUiSection={uiSectionProps(UI_SECTIONS.studioHeaderAppsSplit)}
-          menuUiSection={uiSectionProps(UI_SECTIONS.studioHeaderAppsMenu)}
-        />
+        <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
+          <label className="text-[10px] uppercase tracking-wider text-gray-500">Studio</label>
+          <SplitButton
+            label={getStudioPanelTitle(workspaceView)}
+            onPrimaryClick={openAppsLauncher}
+            items={STUDIO_LAUNCHER_ITEMS.map((item) => ({
+              id: item.id,
+              label: item.title,
+              onSelect: () =>
+                launchStudioLauncherItem(item.id, {
+                  navigateToPanel,
+                  openSettings,
+                  showToast,
+                }),
+            }))}
+            primaryUiSection={uiSectionProps(UI_SECTIONS.studioHeaderAppsSplit)}
+            menuUiSection={uiSectionProps(UI_SECTIONS.studioHeaderAppsMenu)}
+          />
+        </div>
 
         <div className="h-8 w-px bg-surface-600 hidden md:block flex-shrink-0" />
 

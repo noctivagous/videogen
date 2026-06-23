@@ -122,3 +122,23 @@ craft shots in a workflow with a variety of custom settings.
 
 Describe each image in your prompt or use **@Image1** / **@Image2** / **@Image3** (slot-indexed; on generate they become `<IMAGE_1>`, `<IMAGE_2>`, etc.).
 
+## PoseBlock (3D mannequin compositor)
+
+VideoGen embeds **[PoseBlock](PoseBlock/)** as a git submodule for 3D pose blocking (replacing static PNG mannequins over time). Integration plan: [`PoseBlock/INTEGRATION.md`](PoseBlock/INTEGRATION.md).
+
+```bash
+# Fresh clone — include submodule
+git clone --recurse-submodules https://github.com/noctivagous/videogen.git
+cd videogen
+npm install
+
+# Existing clone — init submodule
+git submodule update --init --recursive
+npm install
+
+# Work on PoseBlock alone
+cd PoseBlock && npm install && npm run dev
+```
+
+After `npm install`, VideoGen resolves the local package via `"poseblock": "file:./PoseBlock"`.
+

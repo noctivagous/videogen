@@ -285,3 +285,57 @@ export async function ingestBakedFramesForShot(
 export function resolveAssetDisplayUrl(asset: MediaAsset): string {
   return asset.thumbnailUrl ?? asset.url;
 }
+
+/**
+ * Fetch a generated video from its (possibly temporary) provider URL and save
+ * it as a blob data URL in the project media library.
+ *
+ * This must be called immediately after generation while the URL is still live.
+ * Provider URLs like xAI's expire after ~1 hour.
+ */
+export async function archiveGeneratedVideoToLibrary(
+  library: MediaAsset[],
+  videoUrl: string,
+  opts: {
+    shotId: number;
+    workflowOrigin?: MediaWorkflowOrigin;
+    providerJobId?: string;
+  },
+): Promise<{ library: MediaAsset[]; assetId: string | null }> {
+  // Download the video blob from the provider URL.
+  let blob: Blob;
+  try {
+    const res = await fetch(videoUrl);
+    if (!res.ok) return { library, assetId: null };
+    blob = await res.blob();
+  } catch {
+    return { library, assetId: null };
+  }
+
+  const id = await hashBlobContent(blob);
+  const existing = library.find((a) => a.id === id);
+  if (existing) return { library, assetId: id };
+
+  // Convert to a data URL so it survives page reloads without relying on the
+  // provider URL remaining valid.
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error ?? new Error('Failed to read video blob'));
+    reader.readAsDataURL(blob);
+  });
+
+  const asset: MediaAsset = {
+    id,
+    type: 'video',
+    url: dataUrl,
+    createdAt: Date.now(),
+    workflowOrigin: opts.workflowOrigin ?? 'generated',
+    metadata: {
+      usedInShots: [opts.shotId],
+      ...(opts.providerJobId ? { provider: opts.providerJobId } : {}),
+    },
+  };
+
+  return { library: [...library, asset], assetId: id };
+}

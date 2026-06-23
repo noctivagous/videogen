@@ -1,4 +1,5 @@
 import { STUDIO_APPS, type StudioAppId } from '@/lib/constants/studio-apps';
+import type { StudioPanelId } from '@/lib/studio/studio-routes';
 
 export type StudioLauncherItemId = 'shot-designer' | 'media-library' | StudioAppId | 'settings';
 
@@ -35,4 +36,9 @@ export function getStudioLauncherItem(id: StudioLauncherItemId): StudioLauncherI
   const item = STUDIO_LAUNCHER_ITEMS.find((entry) => entry.id === id);
   if (!item) throw new Error(`Unknown studio launcher item: ${id}`);
   return item;
+}
+
+export function getStudioPanelTitle(panel: StudioPanelId): string {
+  const item = STUDIO_LAUNCHER_ITEMS.find((entry) => entry.id === panel);
+  return item?.title ?? 'App';
 }
