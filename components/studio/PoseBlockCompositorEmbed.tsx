@@ -1,6 +1,6 @@
 'use client';
 
-import dynamic from 'next/dynamic';
+import { useState, useEffect, type ComponentType } from 'react';
 import {
   mannequinsToInstances,
   instancePatchToMannequinPatch,
@@ -16,13 +16,14 @@ import type { AspectRatio, Mannequin, Shot } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
 
 // ---------------------------------------------------------------------------
-// Dynamic import via non-literal string so VideoGen tsc does not resolve into
-// the PoseBlock submodule's @/ aliases.
+// Runtime import via non-literal string — Turbopack does not statically follow
+// variable-based import() calls, so PoseBlock's @/ aliases never resolve
+// against VideoGen's tsconfig and the build stays clean.
 // ---------------------------------------------------------------------------
 
 const POSEBLOCK_PKG = 'poseblock';
 
-// PoseBlockCompositor props shape — mirrors PoseBlock/types.ts
+// PoseBlockCompositor props shape — mirrors PoseBlock/types.ts without importing it.
 interface CompositorProps {
   className?: string;
   backdropUrl?: string | null;
@@ -34,14 +35,6 @@ interface CompositorProps {
   onInstanceChange?: (id: string, patch: Partial<PoseBlockInstance>) => void;
   enableExport?: boolean;
 }
-
-const PoseBlockCompositor = dynamic<CompositorProps>(
-  () =>
-    import(POSEBLOCK_PKG).then(
-      (m) => m.PoseBlockCompositor as React.ComponentType<CompositorProps>,
-    ),
-  { ssr: false },
-);
 
 // ---------------------------------------------------------------------------
 // Aspect ratio → frame dimensions
@@ -131,6 +124,20 @@ export function PoseBlockCompositorEmbed({
   onInstanceChange,
   shot,
 }: PoseBlockCompositorEmbedProps) {
+  const [Compositor, setCompositor] = useState<ComponentType<CompositorProps> | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void import(POSEBLOCK_PKG).then((m) => {
+      if (!cancelled) {
+        setCompositor(() => m.PoseBlockCompositor as ComponentType<CompositorProps>);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const { width, height } = frameDimensions(aspectRatio);
 
   const handleSelect = (ids: string[]) => {
@@ -143,17 +150,23 @@ export function PoseBlockCompositorEmbed({
 
   return (
     <div className="absolute inset-0">
-      <PoseBlockCompositor
-        className="relative h-full min-h-0 w-full"
-        backdropUrl={backdropUrl ?? undefined}
-        frameWidth={width}
-        frameHeight={height}
-        instances={mannequinsToInstances(mannequins)}
-        selectedIds={selectedIds}
-        onSelect={handleSelect}
-        onInstanceChange={onInstanceChange}
-        enableExport={false}
-      />
+      {Compositor ? (
+        <Compositor
+          className="relative h-full min-h-0 w-full"
+          backdropUrl={backdropUrl ?? undefined}
+          frameWidth={width}
+          frameHeight={height}
+          instances={mannequinsToInstances(mannequins)}
+          selectedIds={selectedIds}
+          onSelect={handleSelect}
+          onInstanceChange={onInstanceChange}
+          enableExport={false}
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-xs text-gray-500">Loading 3D compositor…</span>
+        </div>
+      )}
       <ConnectorAnchors mannequins={mannequins} shot={shot} />
     </div>
   );
