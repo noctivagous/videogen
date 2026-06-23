@@ -449,6 +449,18 @@ function themeLightingInvalidationPatch(shot: Shot | undefined): Partial<Shot> {
   return patchThemeTransformInvalidation(shot, [0, 1, 2], 'lighting');
 }
 
+const POSEBLOCK_BAKE_EXPORT_ENABLED = process.env.NEXT_PUBLIC_POSEBLOCK_COMPOSITOR === '1';
+
+async function tryExportPoseBlockComposite(): Promise<string | null> {
+  if (!POSEBLOCK_BAKE_EXPORT_ENABLED) return null;
+  try {
+    const poseblock = await import('poseblock');
+    return await poseblock.runCompositeExport();
+  } catch {
+    return null;
+  }
+}
+
 const stockState = getStockDefaults();
 
 interface StudioStore {
@@ -2322,7 +2334,22 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         resolution: project.resolution,
         mannequins: shot.mannequins ?? [],
       });
-      const { imageUrl, compositeUrl } = await bakeBlobsToDataUrls(bakeOutput);
+      const { imageUrl, compositeUrl: fallbackCompositeUrl } = await bakeBlobsToDataUrls(bakeOutput);
+
+      let compositeUrl = fallbackCompositeUrl;
+      if (POSEBLOCK_BAKE_EXPORT_ENABLED) {
+        set({
+          bakeProgress: 'Capturing 3D mannequin composite',
+          bakeProgressDetail: 'Using PoseBlock overlay for bake input',
+        });
+        const poseBlockComposite = await tryExportPoseBlockComposite();
+        if (!poseBlockComposite) {
+          throw new Error(
+            '3D compositor export is unavailable. Open the Framing view and wait for the PoseBlock scene to load, then try baking again.',
+          );
+        }
+        compositeUrl = poseBlockComposite;
+      }
 
       set({
         bakeProgress: 'Encoding composite for API upload',

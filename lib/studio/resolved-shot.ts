@@ -1,5 +1,5 @@
 import { normalizeReferenceRole } from '@/lib/constants/camera';
-import { getBackdropSlotIndex } from '@/lib/studio/backdrop-framing';
+import { getBackdropSlotIndexFromRoles } from '@/lib/studio/backdrop-framing';
 import type {
   AspectRatio,
   BackdropCropStatus,
@@ -119,7 +119,7 @@ function buildResolvedReferences(
     refs[backdropIdx] = backdropUrl ?? refs[backdropIdx];
     return refs;
   }
-  return [backdropUrl, ...subjectRefs.slice(0, 2)];
+  return [backdropUrl, ...subjectRefs];
 }
 
 function buildResolvedReferenceRoles(
@@ -131,10 +131,53 @@ function buildResolvedReferenceRoles(
     (r) => normalizeReferenceRole(r) === 'Backdrop' || normalizeReferenceRole(r) === 'Depth',
   );
   if (hasBackdropRole) return roles;
-  if (backdrop?.url) {
-    return ['Backdrop', ...roles.slice(0, 2)];
+  if (backdrop?.url || roles.length > 0) {
+    return ['Backdrop', ...roles];
   }
-  return roles.length ? roles : ['Backdrop', 'Subject', 'Style'];
+  return ['Backdrop', 'Subject', 'Style'];
+}
+
+function setupHasBackdropRole(setup: Setup): boolean {
+  return (setup.referenceRoles ?? []).some(
+    (r) => normalizeReferenceRole(r) === 'Backdrop' || normalizeReferenceRole(r) === 'Depth',
+  );
+}
+
+function isBackdropReferenceRole(role: ReferenceRole | string | undefined): boolean {
+  const normalized = normalizeReferenceRole(role ?? 'None');
+  return normalized === 'Backdrop' || normalized === 'Depth';
+}
+
+/** Map resolved slot arrays back onto setup storage (backdrop may be prepended or in-place). */
+export function resolvedSlotArrayToSetup<T>(
+  setup: Setup,
+  resolvedValues: T[],
+  resolvedRoles: ReferenceRole[] | undefined,
+  backdropFill: T,
+): T[] {
+  const roles = resolvedRoles ?? [];
+  if (setupHasBackdropRole(setup)) {
+    const setupRoles = setup.referenceRoles ?? [];
+    return resolvedValues.map((value, i) =>
+      isBackdropReferenceRole(roles[i] ?? setupRoles[i]) ? backdropFill : value,
+    );
+  }
+
+  const withoutPrependedBackdrop = resolvedValues.slice(1);
+  const setupLen = Math.max(setup.references?.length ?? 0, (setup.referenceRoles ?? []).length);
+  const result = [...withoutPrependedBackdrop];
+  while (result.length < setupLen) result.push(backdropFill);
+  return result;
+}
+
+function resolvedReferenceRolesToSetup(
+  setup: Setup,
+  resolvedRoles: ReferenceRole[],
+): ReferenceRole[] {
+  if (setupHasBackdropRole(setup)) {
+    return resolvedRoles.map((role) => normalizeReferenceRole(role));
+  }
+  return resolvedRoles.slice(1).map((role) => normalizeReferenceRole(role));
 }
 
 export function resolveSetupActiveShot(setup: Setup): ResolvedShot | undefined {
@@ -237,6 +280,8 @@ export type BackdropLevelPatch = Partial<
 export function splitResolvedShotPatch(
   patch: Partial<Shot>,
   context: ResolvedShotContext,
+  resolved: ResolvedShot | undefined,
+  setup: Setup,
 ): {
   setupPatch: SetupLevelPatch;
   coveragePatch: CoverageLevelPatch;
@@ -245,6 +290,7 @@ export function splitResolvedShotPatch(
   const setupPatch: SetupLevelPatch = {};
   const coveragePatch: CoverageLevelPatch = {};
   const backdropPatch: BackdropLevelPatch = {};
+  const effectiveRoles = patch.referenceRoles ?? resolved?.referenceRoles;
 
   if (patch.name !== undefined) coveragePatch.name = patch.name;
   if (patch.duration !== undefined) coveragePatch.duration = patch.duration;
@@ -291,25 +337,57 @@ export function splitResolvedShotPatch(
   if (patch.sceneSetup !== undefined) setupPatch.sceneSetup = patch.sceneSetup;
   if (patch.lighting !== undefined) setupPatch.lighting = patch.lighting;
   if (patch.crowdTypePrompt !== undefined) setupPatch.crowdTypePrompt = patch.crowdTypePrompt;
-  if (patch.references !== undefined) setupPatch.references = stripBackdropFromReferences(patch);
+  if (patch.references !== undefined) {
+    setupPatch.references = resolvedSlotArrayToSetup(
+      setup,
+      patch.references,
+      effectiveRoles,
+      null,
+    );
+  }
   if (patch.referenceRoles !== undefined) {
-    setupPatch.referenceRoles = stripBackdropFromRoles(patch.referenceRoles);
+    setupPatch.referenceRoles = resolvedReferenceRolesToSetup(setup, patch.referenceRoles);
   }
   if (patch.referenceMode !== undefined) setupPatch.referenceMode = patch.referenceMode;
   if (patch.transformedReferences !== undefined) {
-    setupPatch.transformedReferences = patch.transformedReferences;
+    setupPatch.transformedReferences = resolvedSlotArrayToSetup(
+      setup,
+      patch.transformedReferences,
+      effectiveRoles,
+      null,
+    );
   }
   if (patch.themeTransformFingerprint !== undefined) {
-    setupPatch.themeTransformFingerprint = patch.themeTransformFingerprint;
+    setupPatch.themeTransformFingerprint = resolvedSlotArrayToSetup(
+      setup,
+      patch.themeTransformFingerprint,
+      effectiveRoles,
+      null,
+    );
   }
   if (patch.themeTransformStatus !== undefined) {
-    setupPatch.themeTransformStatus = patch.themeTransformStatus;
+    setupPatch.themeTransformStatus = resolvedSlotArrayToSetup(
+      setup,
+      patch.themeTransformStatus,
+      effectiveRoles,
+      'idle',
+    );
   }
   if (patch.themeTransformError !== undefined) {
-    setupPatch.themeTransformError = patch.themeTransformError;
+    setupPatch.themeTransformError = resolvedSlotArrayToSetup(
+      setup,
+      patch.themeTransformError,
+      effectiveRoles,
+      null,
+    );
   }
   if (patch.themeTransformLinked !== undefined) {
-    setupPatch.themeTransformLinked = patch.themeTransformLinked;
+    setupPatch.themeTransformLinked = resolvedSlotArrayToSetup(
+      setup,
+      patch.themeTransformLinked,
+      effectiveRoles,
+      false,
+    );
   }
 
   if (patch.backdropFramingByAspect !== undefined) {
@@ -323,7 +401,7 @@ export function splitResolvedShotPatch(
   }
 
   if (patch.references !== undefined) {
-    const backdropIdx = getBackdropSlotIndex(patch as Shot);
+    const backdropIdx = getBackdropSlotIndexFromRoles(effectiveRoles);
     if (backdropIdx >= 0 && patch.references[backdropIdx] !== undefined) {
       backdropPatch.url = patch.references[backdropIdx];
     }
@@ -332,24 +410,6 @@ export function splitResolvedShotPatch(
   void context;
 
   return { setupPatch, coveragePatch, backdropPatch };
-}
-
-function stripBackdropFromReferences(patch: Partial<Shot>): (string | null)[] {
-  const refs = patch.references ?? [];
-  const roles = patch.referenceRoles ?? [];
-  return refs.map((ref, i) => {
-    const role = normalizeReferenceRole(roles[i] ?? 'None');
-    if (role === 'Backdrop' || role === 'Depth') return null;
-    return ref;
-  });
-}
-
-function stripBackdropFromRoles(roles: ReferenceRole[]): ReferenceRole[] {
-  return roles.map((r) => {
-    const role = normalizeReferenceRole(r);
-    if (role === 'Backdrop' || role === 'Depth') return 'None';
-    return role;
-  });
 }
 
 export function patchSetup(
@@ -410,7 +470,14 @@ export function patchCurrentResolvedShot(
   const context = getResolvedShotContext(setup, coverage);
   if (!context) return setups;
 
-  const { setupPatch, coveragePatch, backdropPatch } = splitResolvedShotPatch(patch, context);
+  const backdrop = getSetupBackdrop(setup, coverage.backdropId);
+  const resolved = resolveShot(setup, coverage, backdrop);
+  const { setupPatch, coveragePatch, backdropPatch } = splitResolvedShotPatch(
+    patch,
+    context,
+    resolved,
+    setup,
+  );
 
   let next = patchSetup(setups, setupId, setupPatch);
   next = patchCoverageShot(next, setupId, coverageShotId, coveragePatch);

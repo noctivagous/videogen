@@ -11,6 +11,7 @@ import type {
   BackdropCropStatus,
   BackdropFraming,
   LightingSettings,
+  ReferenceRole,
   Shot,
 } from '@/lib/types/studio';
 
@@ -43,13 +44,18 @@ export function isBackdropTransformPatch(patch: Partial<BackdropFraming>): boole
   return Object.keys(patch).some((key) => TRANSFORM_PATCH_KEYS.has(key));
 }
 
-export function getBackdropSlotIndex(shot: Shot | undefined): number {
-  if (!shot) return -1;
-  for (let i = 0; i < shot.referenceRoles.length; i++) {
-    const role = normalizeReferenceRole(shot.referenceRoles[i] ?? 'None');
+export function getBackdropSlotIndexFromRoles(roles: ReferenceRole[] | undefined): number {
+  const list = roles ?? [];
+  for (let i = 0; i < list.length; i++) {
+    const role = normalizeReferenceRole(list[i] ?? 'None');
     if (role === 'Backdrop' || role === 'Depth') return i;
   }
   return -1;
+}
+
+export function getBackdropSlotIndex(shot: Shot | undefined): number {
+  if (!shot) return -1;
+  return getBackdropSlotIndexFromRoles(shot.referenceRoles);
 }
 
 export function getEffectiveBackdropSourceUrl(

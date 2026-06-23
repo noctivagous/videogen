@@ -161,7 +161,7 @@ export function PoseBlockCompositorEmbed({
           selectedIds={selectedIds}
           onSelect={handleSelect}
           onInstanceChange={onInstanceChange}
-          enableExport={false}
+          enableExport
           embedMode
         />
       ) : (

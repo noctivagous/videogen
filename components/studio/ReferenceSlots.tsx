@@ -138,6 +138,21 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
     reader.readAsDataURL(file);
   };
 
+  const handleImageDrop = (index: number, dataTransfer: DataTransfer) => {
+    const file = dataTransfer.files[0];
+    if (file?.type.startsWith('image/')) {
+      handleFile(index, file);
+      return;
+    }
+    const uri = dataTransfer.getData('text/uri-list').split('\n').find((line) => {
+      const trimmed = line.trim();
+      return trimmed && !trimmed.startsWith('#');
+    });
+    if (uri && (uri.startsWith('data:image/') || uri.startsWith('blob:') || /^https?:\/\//.test(uri))) {
+      setReference(index, uri);
+    }
+  };
+
   const openFilePicker = (index: number) => {
     fileInputs.current[index]?.click();
   };
@@ -247,7 +262,7 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
                   if (slotDisabled) return;
                   e.preventDefault();
                   setDragOverIndex(null);
-                  handleFile(index, e.dataTransfer.files[0]);
+                  handleImageDrop(index, e.dataTransfer);
                 }}
               >
                 {!isChecklistLockedSlot && (
