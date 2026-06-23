@@ -12,6 +12,10 @@ import { GeneratedVideoStrip } from '@/components/studio/GeneratedVideoStrip';
 import { FrameViewSegment } from '@/components/studio/FrameViewSegment';
 import { GenerationProgressOverlay } from '@/components/studio/GenerationProgressOverlay';
 import { MannequinPlacementLayer } from '@/components/studio/MannequinPlacementLayer';
+import {
+  PoseBlockCompositorEmbed,
+  usePoseBlockCompositorProps,
+} from '@/components/studio/PoseBlockCompositorEmbed';
 import { ModelPreviewScene } from '@/components/studio/ModelPreviewScene';
 import { PreviewProjectSettingsBar } from '@/components/studio/PreviewProjectSettingsBar';
 import { LoadAssetModal } from '@/components/studio/LoadAssetModal';
@@ -72,6 +76,9 @@ function fitPreviewFrame(
   frame.style.aspectRatio = `${w} / ${h}`;
 }
 
+/** Set NEXT_PUBLIC_POSEBLOCK_COMPOSITOR=1 to enable 3D compositor in framing mode. */
+const COMPOSITOR_ENABLED = process.env.NEXT_PUBLIC_POSEBLOCK_COMPOSITOR === '1';
+
 export function PreviewPanel() {
   const previewStageRef = useRef<HTMLDivElement>(null);
   const previewFrameRef = useRef<HTMLDivElement>(null);
@@ -112,6 +119,7 @@ export function PreviewPanel() {
   const selectedMannequinIds = useStudioStore((s) => s.selectedMannequinIds);
   const selectMannequin = useStudioStore((s) => s.selectMannequin);
   const clearMannequinSelection = useStudioStore((s) => s.clearMannequinSelection);
+  const compositorProps = usePoseBlockCompositorProps();
   const [bakedImageVariant, setBakedImageVariant] = useState<BakedImageVariant>('final');
   const [loadAssetOpen, setLoadAssetOpen] = useState(false);
 
@@ -270,6 +278,19 @@ export function PreviewPanel() {
       );
     }
     if (frameView === 'preview' && previewSubMode === 'framing') {
+      if (COMPOSITOR_ENABLED) {
+        return (
+          <PoseBlockCompositorEmbed
+            mannequins={mannequins}
+            backdropUrl={backdropSourceUrl}
+            aspectRatio={aspectRatio}
+            selectedIds={compositorProps.selectedMannequinIds}
+            onSelect={compositorProps.onSelect}
+            onInstanceChange={compositorProps.onInstanceChange}
+            shot={shot}
+          />
+        );
+      }
       return (
         <>
           <ReferencePreviewScene
