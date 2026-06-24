@@ -517,6 +517,12 @@ export interface Setup {
   characterSlots?: (string | null)[];
   /** Character sheet IDs per subject slot — parallel to characterSlots. */
   characterSheetSlots?: (string | null)[];
+  /**
+   * Active source per subject slot:
+   * - typed: manager-backed typed entity (character record)
+   * - manual: direct uploaded/manual reference slot image
+   */
+  subjectSlotSourceModes?: ('typed' | 'manual' | null)[];
   /** Location ID assigned to this setup. Plates live on the Location object. */
   locationId?: string | null;
 }

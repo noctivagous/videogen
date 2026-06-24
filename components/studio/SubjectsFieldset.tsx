@@ -9,6 +9,9 @@ import {
 } from '@/components/studio/entity-picker/EntityDropdown';
 import { resolveReferenceDisplayUrl } from '@/lib/storage/reference-url';
 import {
+  getSubjectCharacterSource,
+} from '@/lib/studio/character-sheet-source';
+import {
   getSubjectChecklistSlotIndices,
   getSubjectSheetSlotCount,
   getSubjectSlotDisplayLabel,
@@ -47,12 +50,16 @@ function isSubjectSlotFilled(
 
 interface CharacterSlotPickerProps {
   slotOrdinal: number;
+  refSlotIndex: number;
+  shot: Shot;
   fallback: ReactNode;
   hideHeader?: boolean;
 }
 
 function CharacterSlotPicker({
   slotOrdinal,
+  refSlotIndex,
+  shot,
   fallback,
   hideHeader = false,
 }: CharacterSlotPickerProps) {
@@ -60,11 +67,11 @@ function CharacterSlotPicker({
   const setups = useStudioStore((s) => s.setups);
   const currentSetupId = useStudioStore((s) => s.currentSetupId);
   const assignCharacterToSlot = useStudioStore((s) => s.assignCharacterToSlot);
+  const setSubjectSlotSourceMode = useStudioStore((s) => s.setSubjectSlotSourceMode);
   const navigateToPanel = useNavigateToStudioPanel();
 
   const [characterOpen, setCharacterOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [sourceMode, setSourceMode] = useState<'manager' | 'manual'>('manager');
 
   const setup = setups.find((s) => s.id === currentSetupId);
   const assignedId = setup?.characterSlots?.[slotOrdinal] ?? null;
@@ -78,6 +85,7 @@ function CharacterSlotPicker({
     selectableSheets.find((s) => s.id === assignedSheetId)
     ?? selectableSheets[0]
     ?? null;
+  const sourceMode = getSubjectCharacterSource(setup, shot, slotOrdinal, refSlotIndex);
 
   return (
     <div className="flex flex-col gap-2">
@@ -100,7 +108,7 @@ function CharacterSlotPicker({
             type="radio"
             name={`subject-source-mode-${slotOrdinal}`}
             checked={sourceMode === 'manager'}
-            onChange={() => setSourceMode('manager')}
+            onChange={() => setSubjectSlotSourceMode(currentSetupId, slotOrdinal, 'typed')}
             className="h-3.5 w-3.5 rounded-full border-surface-500 text-brand-500 focus:ring-brand-500/40"
             aria-label={`Use character manager source for slot ${slotOrdinal + 1}`}
           />
@@ -113,7 +121,7 @@ function CharacterSlotPicker({
             placeholder="Select character…"
             open={characterOpen}
             onToggle={() => {
-              if (sourceMode !== 'manager') return;
+              if (sourceMode === 'manual') return;
               setCharacterOpen((v) => !v);
               setSheetOpen(false);
             }}
@@ -222,7 +230,7 @@ function CharacterSlotPicker({
             name={`subject-source-mode-${slotOrdinal}`}
             checked={sourceMode === 'manual'}
             onChange={() => {
-              setSourceMode('manual');
+              setSubjectSlotSourceMode(currentSetupId, slotOrdinal, 'manual');
               setCharacterOpen(false);
               setSheetOpen(false);
             }}
@@ -380,6 +388,8 @@ export function SubjectsFieldset({
                   )}
                   <CharacterSlotPicker
                     slotOrdinal={index}
+                    refSlotIndex={slotIndex}
+                    shot={shot}
                     fallback={renderReferenceSlotRow(slotIndex)}
                     hideHeader
                   />

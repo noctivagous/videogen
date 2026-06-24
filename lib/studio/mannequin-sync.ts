@@ -1,6 +1,7 @@
 import { mannequinVariantFrom } from '@/lib/constants/mannequin-assets';
 import { fieldSizeAnchor } from '@/lib/studio/mannequin-bounds-framing';
 import { getFigureCount } from '@/lib/studio/blocking-layout';
+import { getShotFrameComposition } from '@/lib/studio/composition';
 import { migrateMannequins } from '@/lib/studio/migrate-mannequin';
 import { createDefaultMannequin, getMannequinLimit } from '@/lib/studio/mannequin-factory';
 import { layoutFromCamera } from '@/lib/studio/mannequin-layouts';

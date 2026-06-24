@@ -227,6 +227,7 @@ export function createStockSetup(
       referenceMode: shot.referenceMode,
       characterSlots: options.withReferences !== false ? [STOCK_CHARACTER_BUD_ID] : undefined,
       characterSheetSlots: options.withReferences !== false ? [STOCK_CHARACTER_BUD_SHEET_ID] : undefined,
+      subjectSlotSourceModes: options.withReferences !== false ? ['typed'] : undefined,
       locationId: options.withReferences !== false ? STOCK_LOCATION_CHK_OFFICE_ID : null,
     },
   });

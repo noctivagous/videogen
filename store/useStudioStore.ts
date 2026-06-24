@@ -369,6 +369,9 @@ function withDemoEntityDefaults(data: StudioProject): StudioProject {
     const characterSheetSlots = setup.characterSheetSlots?.length
       ? setup.characterSheetSlots
       : [STOCK_CHARACTER_BUD_SHEET_ID];
+    const subjectSlotSourceModes: NonNullable<Setup['subjectSlotSourceModes']> = setup.subjectSlotSourceModes?.length
+      ? setup.subjectSlotSourceModes
+      : ['typed'];
     const locationId = setup.locationId ?? STOCK_LOCATION_CHK_OFFICE_ID;
     const hasNamedPlate = setup.backdrops.some((plate) => plate.id === STOCK_LOCATION_CHK_PLATE_ID);
     const demoBackdropUrl = setup.backdrops[0]?.url ?? STOCK_BACKDROP_REF;
@@ -389,6 +392,7 @@ function withDemoEntityDefaults(data: StudioProject): StudioProject {
       ...setup,
       characterSlots,
       characterSheetSlots,
+      subjectSlotSourceModes,
       locationId,
       backdrops,
       shots,
@@ -717,6 +721,11 @@ interface StudioStore {
     slotIndex: number,
     characterId: string | null,
     sheetId?: string | null,
+  ) => void;
+  setSubjectSlotSourceMode: (
+    setupId: number,
+    slotIndex: number,
+    mode: 'typed' | 'manual' | null,
   ) => void;
 
   // ── Location Manager ─────────────────────────────────────────────────────
@@ -3333,7 +3342,13 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         const characterSheetSlots = (setup.characterSheetSlots ?? []).map((sheetId, i) =>
           setup.characterSlots?.[i] === id ? null : sheetId,
         );
-        return { ...setup, characterSlots, characterSheetSlots };
+        const subjectSlotSourceModes = [...(setup.subjectSlotSourceModes ?? [])];
+        for (let i = 0; i < characterSlots.length; i++) {
+          if (!characterSlots[i] && subjectSlotSourceModes[i] === 'typed') {
+            subjectSlotSourceModes[i] = null;
+          }
+        }
+        return { ...setup, characterSlots, characterSheetSlots, subjectSlotSourceModes };
       }),
     }));
   },
@@ -3344,8 +3359,10 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         if (setup.id !== setupId) return setup;
         const slots = [...(setup.characterSlots ?? [])];
         const sheetSlots = [...(setup.characterSheetSlots ?? [])];
+        const sourceModes = [...(setup.subjectSlotSourceModes ?? [])];
         while (slots.length <= slotIndex) slots.push(null);
         while (sheetSlots.length <= slotIndex) sheetSlots.push(null);
+        while (sourceModes.length <= slotIndex) sourceModes.push(null);
         slots[slotIndex] = characterId;
 
         const character = characterId ? s.characters.find((c) => c.id === characterId) : null;
@@ -3360,19 +3377,26 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
           resolvedSheetId = sheet?.id ?? null;
           sheetUrl = sheet?.url ?? null;
           sheetSlots[slotIndex] = resolvedSheetId;
+          sourceModes[slotIndex] = 'typed';
         } else {
           sheetSlots[slotIndex] = null;
+          if (sourceModes[slotIndex] === 'typed') {
+            sourceModes[slotIndex] = null;
+          }
         }
 
-        let refs = [...(setup.references ?? [])];
-        const roles = [...(setup.referenceRoles ?? [])];
-        let subjectOrdinal = -1;
-        for (let i = 0; i < refs.length; i++) {
-          if ((roles[i] ?? 'None') === 'Subject') {
-            subjectOrdinal++;
-            if (subjectOrdinal === slotIndex) {
-              refs[i] = sheetUrl;
-              break;
+        let refs = setup.references ?? [];
+        if (character) {
+          refs = [...refs];
+          const roles = setup.referenceRoles ?? [];
+          let subjectOrdinal = -1;
+          for (let i = 0; i < refs.length; i++) {
+            if ((roles[i] ?? 'None') === 'Subject') {
+              subjectOrdinal++;
+              if (subjectOrdinal === slotIndex) {
+                refs[i] = sheetUrl;
+                break;
+              }
             }
           }
         }
@@ -3380,7 +3404,23 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
           ...setup,
           characterSlots: slots,
           characterSheetSlots: sheetSlots,
+          subjectSlotSourceModes: sourceModes,
           references: refs,
+        };
+      }),
+    }));
+  },
+
+  setSubjectSlotSourceMode(setupId, slotIndex, mode) {
+    set((s) => ({
+      setups: s.setups.map((setup) => {
+        if (setup.id !== setupId) return setup;
+        const sourceModes = [...(setup.subjectSlotSourceModes ?? [])];
+        while (sourceModes.length <= slotIndex) sourceModes.push(null);
+        sourceModes[slotIndex] = mode;
+        return {
+          ...setup,
+          subjectSlotSourceModes: sourceModes,
         };
       }),
     }));

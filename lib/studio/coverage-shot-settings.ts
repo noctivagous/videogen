@@ -138,6 +138,7 @@ export function createBlankSetupSettings(): Omit<
     themeTransformStatus: defaultThemeTransformStatus(),
     themeTransformError: emptyThemeTransformArray(null),
     themeTransformLinked: emptyThemeTransformArray(false),
+    subjectSlotSourceModes: [],
   };
 }
 
@@ -163,6 +164,7 @@ export function cloneInheritedSetupSettings(source: Setup): Omit<
     themeTransformStatus: [...(source.themeTransformStatus ?? defaultThemeTransformStatus())],
     themeTransformError: [...(source.themeTransformError ?? emptyThemeTransformArray(null))],
     themeTransformLinked: [...(source.themeTransformLinked ?? emptyThemeTransformArray(false))],
+    subjectSlotSourceModes: [...(source.subjectSlotSourceModes ?? [])],
   };
 }
 

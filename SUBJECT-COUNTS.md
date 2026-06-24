@@ -21,7 +21,6 @@ group of friends, or a confrontation involving three parties. Like the Two Shot,
 it emphasizes the group dynamic and the spatial relationship between all three
 individuals simultaneously, rather than cutting between individual reactions
 
-
 Specialized Multi-Subject Framings When the number of subjects exceeds three, or
 when the arrangement is specific, other terms come into play to describe the
 composition relative to the group count.

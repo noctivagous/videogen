@@ -31,6 +31,11 @@ import {
   getSubjectSlotDisplayLabel,
   getSubjectSlotOrdinal,
 } from '@/lib/studio/subject-sheet-slots';
+import {
+  getSubjectCharacterSource,
+  getManualCharacterSheetUrl,
+  MANUAL_CHARACTER_SHEET_LABEL,
+} from '@/lib/studio/character-sheet-source';
 import { getReferenceSlotLabel } from '@/lib/studio/reference-slots';
 import { isBakeStartFrame } from '@/lib/studio/workflow';
 import { maxFeetAnchorY } from '@/lib/studio/mannequin-layout';
@@ -104,6 +109,7 @@ export function MannequinInspectorControls({
   const characters = useStudioStore((s) => s.characters);
   const currentSetupId = useStudioStore((s) => s.currentSetupId);
   const assignCharacterToSlot = useStudioStore((s) => s.assignCharacterToSlot);
+  const setSubjectSlotSourceMode = useStudioStore((s) => s.setSubjectSlotSourceMode);
   const subjectSlotIndices = shot ? getSubjectSlotIndices(shot) : [];
   const placementX = shot ? placementAnchorX(shot) : 0.5;
   const setup = setups.find((s) => s.id === currentSetupId);
@@ -125,6 +131,14 @@ export function MannequinInspectorControls({
     selectableSheets.find((entry) => entry.id === assignedSheetId)
     ?? selectableSheets[0]
     ?? null;
+  const sourceMode =
+    shot && selectedSlotIndex != null && selectedSlotOrdinal >= 0
+      ? getSubjectCharacterSource(setup, shot, selectedSlotOrdinal, selectedSlotIndex)
+      : 'none';
+  const isManualSheet = sourceMode === 'manual';
+  const manualSheetUrl =
+    shot && selectedSlotIndex != null ? getManualCharacterSheetUrl(shot, selectedSlotIndex) : null;
+  const canPickManualOption = Boolean(manualSheetUrl) || sourceMode === 'manual';
 
   const bounds = useMemo(
     () => anchorToBoundsFrame(mannequin, aspectRatio, placementX),
@@ -267,8 +281,12 @@ export function MannequinInspectorControls({
             <>
               <EntityDropdown
                 label="Character"
-                value={assignedCharacter?.name ?? ''}
-                thumbnailUrl={assignedSheet?.url ?? selectableSheets[0]?.url}
+                value={isManualSheet ? MANUAL_CHARACTER_SHEET_LABEL : assignedCharacter?.name ?? ''}
+                thumbnailUrl={
+                  isManualSheet
+                    ? manualSheetUrl ?? undefined
+                    : assignedSheet?.url ?? selectableSheets[0]?.url
+                }
                 placeholder="Select character…"
                 onToggle={() => {
                   setCharacterOpen((value) => !value);
@@ -284,12 +302,40 @@ export function MannequinInspectorControls({
               >
                 <EntityDropdownPanel>
                   <div className="p-1 space-y-0.5 max-h-48 overflow-y-auto">
+                    {canPickManualOption && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSubjectSlotSourceMode(currentSetupId, selectedSlotOrdinal, 'manual');
+                          onAssignSubjectSlot(mannequin.id, selectedSlotIndex!);
+                          setCharacterOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left hover:bg-surface-700 transition-colors text-[11px]
+                          ${isManualSheet ? 'bg-brand-500/10 text-brand-300' : 'text-gray-200'}`}
+                      >
+                        {manualSheetUrl ? (
+                          <img
+                            src={manualSheetUrl}
+                            alt={MANUAL_CHARACTER_SHEET_LABEL}
+                            className="w-7 h-7 rounded-md object-cover border border-surface-600 flex-shrink-0"
+                          />
+                        ) : (
+                          <span className="w-7 h-7 rounded-md border border-surface-600 flex-shrink-0 flex items-center justify-center bg-surface-800">
+                            <svg className="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                          </span>
+                        )}
+                        <span className="truncate flex-1">{MANUAL_CHARACTER_SHEET_LABEL}</span>
+                      </button>
+                    )}
                     {characters.map((character) => (
                       <button
                         key={character.id}
                         type="button"
                         onClick={() => {
                           assignCharacterToSlot(currentSetupId, selectedSlotOrdinal, character.id);
+                          setSubjectSlotSourceMode(currentSetupId, selectedSlotOrdinal, 'typed');
                           onAssignSubjectSlot(mannequin.id, selectedSlotIndex!);
                           setCharacterOpen(false);
                         }}
@@ -307,7 +353,7 @@ export function MannequinInspectorControls({
                   </div>
                 </EntityDropdownPanel>
               </EntityDropdown>
-              {assignedCharacter && assignedSheet && (
+              {assignedCharacter && assignedSheet && !isManualSheet && (
                 <EntityDropdown
                   label="Character Sheet"
                   value={characterSheetLabel(
@@ -331,6 +377,7 @@ export function MannequinInspectorControls({
                           type="button"
                           onClick={() => {
                             assignCharacterToSlot(currentSetupId, selectedSlotOrdinal, assignedCharacter.id, sheet.id);
+                            setSubjectSlotSourceMode(currentSetupId, selectedSlotOrdinal, 'typed');
                             onAssignSubjectSlot(mannequin.id, selectedSlotIndex!);
                             setSheetOpen(false);
                           }}

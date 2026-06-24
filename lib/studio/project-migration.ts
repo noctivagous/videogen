@@ -236,6 +236,9 @@ export function migrateV18toV19(data: StudioProject): StudioProject {
   const updatedSetups: Setup[] = data.setups.map((setup) => {
     const characterSlots: (string | null)[] = [...(setup.characterSlots ?? [])];
     const characterSheetSlots: (string | null)[] = [...(setup.characterSheetSlots ?? [])];
+    const subjectSlotSourceModes: NonNullable<Setup['subjectSlotSourceModes']> = [
+      ...(setup.subjectSlotSourceModes ?? []),
+    ];
     let locationId: string | null = setup.locationId ?? null;
 
     // ── Migrate subject references → Characters ─────────────────────────────
@@ -250,6 +253,7 @@ export function migrateV18toV19(data: StudioProject): StudioProject {
       const url = refs[i];
       while (characterSlots.length <= slotOrdinal) characterSlots.push(null);
       while (characterSheetSlots.length <= slotOrdinal) characterSheetSlots.push(null);
+      while (subjectSlotSourceModes.length <= slotOrdinal) subjectSlotSourceModes.push(null);
 
       if (url && !characterSlots[slotOrdinal]) {
         let charId = urlToCharacterId.get(url);
@@ -278,6 +282,7 @@ export function migrateV18toV19(data: StudioProject): StudioProject {
         }
         characterSlots[slotOrdinal] = charId;
         characterSheetSlots[slotOrdinal] = sheetId ?? null;
+        subjectSlotSourceModes[slotOrdinal] = 'typed';
       }
 
       slotOrdinal++;
@@ -324,6 +329,8 @@ export function migrateV18toV19(data: StudioProject): StudioProject {
       ...setup,
       characterSlots: characterSlots.length > 0 ? characterSlots : undefined,
       characterSheetSlots: characterSheetSlots.length > 0 ? characterSheetSlots : undefined,
+      subjectSlotSourceModes:
+        subjectSlotSourceModes.some((mode) => mode != null) ? subjectSlotSourceModes : undefined,
       locationId,
     };
   });

@@ -227,6 +227,7 @@ export type SetupLevelPatch = Partial<
     | 'themeTransformStatus'
     | 'themeTransformError'
     | 'themeTransformLinked'
+    | 'subjectSlotSourceModes'
     | 'backdrops'
     | 'active'
   >
