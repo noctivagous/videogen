@@ -20,6 +20,7 @@ import { restrictsReferenceSlotsToFirst } from '@/lib/studio/xai-video-models';
 import { getWorkflowReferenceSteps, isBakeStartFrame } from '@/lib/studio/workflow';
 import { useCharacterAssignmentConnectorContext } from '@/components/studio/ThemeTransformConnectorProvider';
 import { BackdropFramingLockButton } from '@/components/studio/BackdropFramingLockButton';
+import { GeneratedVideoList } from '@/components/studio/GeneratedVideoList';
 import { SubjectsFieldset } from '@/components/studio/SubjectsFieldset';
 import {
   getSubjectChecklistSlotIndices,
@@ -798,25 +799,10 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
               Generate Video
             </button>
             {shot.generatedVideos && shot.generatedVideos.length > 0 && (
-              <div className="text-[10px] text-gray-500 rounded-lg border border-surface-700 bg-surface-800/60 px-2 py-1.5">
-                <div className="font-semibold text-gray-400 mb-1">Generated videos</div>
-                <ul className="flex flex-col gap-0.5">
-                  {shot.generatedVideos.map((video, index) => (
-                    <li key={video.id} className="truncate">
-                      <a
-                        href={video.mediaLibraryAssetId ? `/studio/media-library/generated/video/${encodeURIComponent(video.mediaLibraryAssetId)}` : `/studio/shot-designer/generated/video/${encodeURIComponent(video.id)}`}
-                        onClick={(event) => {
-                          event.preventDefault();
-                          openGeneratedVideo(video, shot.id);
-                        }}
-                        className="text-brand-400 hover:text-brand-300 underline-offset-2 hover:underline"
-                      >
-                        {index + 1}. {new Date(video.createdAt).toLocaleString()}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <GeneratedVideoList
+                videos={shot.generatedVideos}
+                onVideoClick={(video) => openGeneratedVideo(video, shot.id)}
+              />
             )}
           </div>
         </fieldset>

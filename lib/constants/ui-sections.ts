@@ -38,6 +38,10 @@ export const UI_SECTIONS = {
   studioPreviewGeneratingOverlay: { id: 'studio-preview-generating-overlay', name: 'Preview Generating Overlay' },
   studioPreviewCompositionOverlay: { id: 'studio-preview-composition-overlay', name: 'Composition Overlay' },
   studioPreviewFrameViewSegment: { id: 'studio-preview-frame-view-segment', name: 'Frame View Segment' },
+  studioPreviewGeneratedVideoDropdown: {
+    id: 'studio-preview-generated-video-dropdown',
+    name: 'Generated Video Dropdown',
+  },
   studioPreviewShotLabel: { id: 'studio-preview-shot-label', name: 'Setup Selector' },
   studioPreviewMainChrome: { id: 'studio-preview-main-chrome', name: 'Preview Main Chrome' },
   studioShotWorkflow: { id: 'studio-shot-workflow', name: 'Shot Workflow' },

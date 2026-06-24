@@ -9,6 +9,7 @@ import {
 } from '@/components/studio/BackdropFramingControls';
 import { CompositionOverlay } from '@/components/studio/CompositionOverlay';
 import { GeneratedVideoStrip } from '@/components/studio/GeneratedVideoStrip';
+import { GeneratedVideoDropdown } from '@/components/studio/GeneratedVideoDropdown';
 import { FrameViewSegment } from '@/components/studio/FrameViewSegment';
 import { GenerationProgressOverlay } from '@/components/studio/GenerationProgressOverlay';
 import { MannequinPlacementLayer } from '@/components/studio/MannequinPlacementLayer';
@@ -349,12 +350,17 @@ export function PreviewPanel() {
       >
         {isShotDesigner && (
         <div className="preview-panel-controls pointer-events-auto shrink-0 flex flex-col gap-1.5">
-          <FrameViewSegment
-            value={frameView}
-            onChange={setFrameView}
-            generatedVideoCount={generatedVideoCount}
-            showBakePromptTab={bakeStartFrame}
-          />
+          <div className="preview-panel-frame-view-row flex items-center gap-2">
+            <FrameViewSegment
+              value={frameView}
+              onChange={setFrameView}
+              generatedVideoCount={generatedVideoCount}
+              showBakePromptTab={bakeStartFrame}
+            />
+            {frameView === 'generated' && generatedVideoCount > 0 && shot && (
+              <GeneratedVideoDropdown shot={shot} />
+            )}
+          </div>
         </div>
         )}
       </div>
