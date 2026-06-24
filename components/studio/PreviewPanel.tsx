@@ -247,14 +247,6 @@ export function PreviewPanel() {
   const showFramingBackdrop = showFramingGuides && Boolean(backdropSourceUrl);
   const showBackdropEditStack = showFramingBackdrop && !backdropCropCommitted;
 
-  useEffect(() => {
-    if (!shot) return;
-    const framing = shot.backdropFramingByAspect?.[aspectRatio];
-    // #region agent log
-    fetch('http://127.0.0.1:7482/ingest/6c08d204-7375-479b-93c4-549795bfa7f2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4dcda5'},body:JSON.stringify({sessionId:'4dcda5',runId:'pre-fix',hypothesisId:'A,D',location:'PreviewPanel.tsx:backdropFlags',message:'preview backdrop flags',data:{shotId:shot.id,aspectRatio,showFramingBackdrop,showBackdropEditStack,backdropCropCommitted,backdropSourceUrl:Boolean(backdropSourceUrl),savedFramingScale:framing?.scale??null,savedFramingLocked:framing?.locked??null},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-  }, [shot, aspectRatio, showFramingBackdrop, showBackdropEditStack, backdropCropCommitted, backdropSourceUrl]);
-
   const renderPreviewContent = () => {
     if (showBakedEmptyState && shot) {
       return (
@@ -447,7 +439,7 @@ export function PreviewPanel() {
               {...uiSectionProps(UI_SECTIONS.studioPreviewFrame)}
             >
           <div
-            className={`absolute inset-0 ${showFramingBackdrop ? 'bg-transparent' : 'bg-surface-900'} ${showBackdropEditStack ? 'pointer-events-none' : ''}`}
+            className={`preview-frame-clip absolute inset-0 ${showFramingBackdrop ? 'bg-transparent' : 'bg-surface-900'} ${showBackdropEditStack ? 'pointer-events-none' : ''}`}
             {...uiSectionProps(UI_SECTIONS.studioPreviewContent)}
           >
             {backdropCropCommitted && shot && backdropSourceUrl && !showModelPreview && (

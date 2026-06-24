@@ -392,9 +392,6 @@ export function getBackdropFraming(
 ): BackdropFraming {
   const saved = shot?.backdropFramingByAspect?.[aspectRatio];
   const merged = saved ? { ...DEFAULT_BACKDROP_FRAMING, ...saved } : { ...DEFAULT_BACKDROP_FRAMING };
-  // #region agent log
-  fetch('http://127.0.0.1:7482/ingest/6c08d204-7375-479b-93c4-549795bfa7f2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4dcda5'},body:JSON.stringify({sessionId:'4dcda5',runId:'pre-fix',hypothesisId:'A',location:'backdrop-framing.ts:getBackdropFraming',message:'framing resolved',data:{aspectRatio,shotId:shot?.id??null,hasSaved:Boolean(saved),savedScale:saved?.scale??null,mergedScale:merged.scale,mergedLocked:merged.locked},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   return merged;
 }
 
@@ -497,9 +494,6 @@ export function computeBackdropDrawRect(
     height,
     scale,
   };
-  // #region agent log
-  fetch('http://127.0.0.1:7482/ingest/6c08d204-7375-479b-93c4-549795bfa7f2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4dcda5'},body:JSON.stringify({sessionId:'4dcda5',runId:'post-fix',hypothesisId:'A,C,E',location:'backdrop-framing.ts:computeBackdropDrawRect',message:'draw rect computed',data:{framingScale:framing.scale,framingScaleX:framing.scaleX,framingScaleY:framing.scaleY,appliedScale,baseline,imageWidth,imageHeight,frameWidth,frameHeight,rectWidth:result.width,rectHeight:result.height,coversFrame:result.width>=frameWidth&&result.height>=frameHeight},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   return result;
 }
 
@@ -523,11 +517,6 @@ export function framingToLayerStyle(
     frameHeight,
   );
   const transform = framingCssTransform(framing, offsetX, offsetY, appliedScale);
-  const cssScaleMatch = transform.match(/scale\(([^)]+)\)/);
-  const cssScale = cssScaleMatch?.[1] ?? null;
-  // #region agent log
-  fetch('http://127.0.0.1:7482/ingest/6c08d204-7375-479b-93c4-549795bfa7f2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4dcda5'},body:JSON.stringify({sessionId:'4dcda5',runId:'post-fix',hypothesisId:'E',location:'backdrop-framing.ts:framingToLayerStyle',message:'layer style computed',data:{framingScale:framing.scale,appliedScale,rectWidth:rect.width,rectHeight:rect.height,frameWidth,frameHeight,baseWidthPct,cssScale,transform,offsetX,offsetY,rectCoversFrame:rect.width>=frameWidth&&rect.height>=frameHeight},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   return {
     position: 'absolute',
     left: '50%',

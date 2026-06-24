@@ -73,10 +73,23 @@
 
 .backdrop-framing-layer--dimmed {
   z-index: 0;
+  border-radius: 0.75rem;
+  overflow: hidden;
 }
 
 .backdrop-framing-layer--bright {
   z-index: 1;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+.preview-frame-clip {
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+.backdrop-framing-edit-stack {
+  border-radius: inherit;
   overflow: hidden;
 }
 
@@ -95,6 +108,7 @@
 
 .backdrop-framing-layer--crop {
   z-index: 1;
+  border-radius: inherit;
   overflow: hidden;
 }
 

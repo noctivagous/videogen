@@ -179,12 +179,6 @@ export function BackdropFramingLayer({
   }, [stageRef, frameRef, positionMode, updateFrameBox]);
 
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7482/ingest/6c08d204-7375-479b-93c4-549795bfa7f2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4dcda5'},body:JSON.stringify({sessionId:'4dcda5',runId:'pre-fix',hypothesisId:'B,C,D',location:'BackdropFramingLayer.tsx:state',message:'layer state update',data:{part,positionMode,frameBox,imageSize,framingScale:framing.scale,shotId:shot.id},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-  }, [part, positionMode, frameBox, imageSize, framing.scale, shot.id]);
-
-  useEffect(() => {
     let cancelled = false;
     const url = part === 'crop' ? getBackdropPreviewUrl(shot, aspectRatio, shot.lighting) : imageUrl;
     if (!url) return;
