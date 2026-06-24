@@ -293,17 +293,39 @@ export function framingCssTransform(
   framing: BackdropFraming,
   offsetX: number,
   offsetY: number,
+  appliedScale: number,
 ): string {
   const parts = [
     `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px))`,
     `rotate(${framing.rotation}deg)`,
     `skew(${framing.skewX}deg, ${framing.skewY}deg)`,
-    `scale(${framing.scale * framing.scaleX}, ${framing.scale * framing.scaleY})`,
+    `scale(${appliedScale * framing.scaleX}, ${appliedScale * framing.scaleY})`,
   ];
   if (framing.perspective > 0) {
     parts.unshift(`perspective(${framing.perspective}px)`);
   }
   return parts.join(' ');
+}
+
+/** User scale clamped so the backdrop always covers the frame (never underscans). */
+export function resolveBackdropAppliedScale(
+  framing: BackdropFraming,
+  imageWidth: number,
+  imageHeight: number,
+  frameWidth: number,
+  frameHeight: number,
+): number {
+  const baseline = computeCoverBaselineScale(imageWidth, imageHeight, frameWidth, frameHeight);
+  const scaleX = Math.max(0.25, framing.scaleX);
+  const scaleY = Math.max(0.25, framing.scaleY);
+  const widthAtUnitScale = imageWidth * baseline * scaleX;
+  const heightAtUnitScale = imageHeight * baseline * scaleY;
+  const minCoverScale = Math.max(
+    widthAtUnitScale > 0 ? frameWidth / widthAtUnitScale : 1,
+    heightAtUnitScale > 0 ? frameHeight / heightAtUnitScale : 1,
+    1,
+  );
+  return Math.max(0.25, framing.scale, minCoverScale);
 }
 
 /** Canvas matrix matching framingToLayerStyle + framingCssTransform (left/top 50%, origin center). */
@@ -320,6 +342,13 @@ export function buildBackdropFramingMatrix(
   const rect = computeBackdropDrawRect(framing, imageWidth, imageHeight, frameWidth, frameHeight);
   const offsetX = rect.x + rect.width / 2 - frameWidth / 2;
   const offsetY = rect.y + rect.height / 2 - frameHeight / 2;
+  const appliedScale = resolveBackdropAppliedScale(
+    framing,
+    imageWidth,
+    imageHeight,
+    frameWidth,
+    frameHeight,
+  );
   const originX = baseW / 2;
   const originY = baseH / 2;
 
@@ -336,7 +365,7 @@ export function buildBackdropFramingMatrix(
     .rotateSelf(framing.rotation)
     .skewXSelf(framing.skewX)
     .skewYSelf(framing.skewY)
-    .scaleSelf(framing.scale * framing.scaleX, framing.scale * framing.scaleY)
+    .scaleSelf(appliedScale * framing.scaleX, appliedScale * framing.scaleY)
     .translateSelf(-originX, -originY);
 
   return { matrix, baseW, baseH };
@@ -362,7 +391,11 @@ export function getBackdropFraming(
   aspectRatio: AspectRatio,
 ): BackdropFraming {
   const saved = shot?.backdropFramingByAspect?.[aspectRatio];
-  return saved ? { ...DEFAULT_BACKDROP_FRAMING, ...saved } : { ...DEFAULT_BACKDROP_FRAMING };
+  const merged = saved ? { ...DEFAULT_BACKDROP_FRAMING, ...saved } : { ...DEFAULT_BACKDROP_FRAMING };
+  // #region agent log
+  fetch('http://127.0.0.1:7482/ingest/6c08d204-7375-479b-93c4-549795bfa7f2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4dcda5'},body:JSON.stringify({sessionId:'4dcda5',runId:'pre-fix',hypothesisId:'A',location:'backdrop-framing.ts:getBackdropFraming',message:'framing resolved',data:{aspectRatio,shotId:shot?.id??null,hasSaved:Boolean(saved),savedScale:saved?.scale??null,mergedScale:merged.scale,mergedLocked:merged.locked},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
+  return merged;
 }
 
 export function computeCoverBaselineScale(
@@ -440,21 +473,34 @@ export function computeBackdropDrawRect(
   frameWidth: number,
   frameHeight: number,
 ): BackdropDrawRect {
+  const scaleX = Math.max(0.25, framing.scaleX);
+  const scaleY = Math.max(0.25, framing.scaleY);
+  const appliedScale = resolveBackdropAppliedScale(
+    framing,
+    imageWidth,
+    imageHeight,
+    frameWidth,
+    frameHeight,
+  );
   const baseline = computeCoverBaselineScale(imageWidth, imageHeight, frameWidth, frameHeight);
-  const scale = baseline * Math.max(0.25, framing.scale);
-  const width = imageWidth * scale * Math.max(0.25, framing.scaleX);
-  const height = imageHeight * scale * Math.max(0.25, framing.scaleY);
+  const scale = baseline * appliedScale;
+  const width = imageWidth * scale * scaleX;
+  const height = imageHeight * scale * scaleY;
   const maxPanX = Math.max(0, (width - frameWidth) / 2);
   const maxPanY = Math.max(0, (height - frameHeight) / 2);
   const centerX = frameWidth / 2 + framing.offsetX * maxPanX;
   const centerY = frameHeight / 2 + framing.offsetY * maxPanY;
-  return {
+  const result = {
     x: centerX - width / 2,
     y: centerY - height / 2,
     width,
     height,
     scale,
   };
+  // #region agent log
+  fetch('http://127.0.0.1:7482/ingest/6c08d204-7375-479b-93c4-549795bfa7f2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4dcda5'},body:JSON.stringify({sessionId:'4dcda5',runId:'post-fix',hypothesisId:'A,C,E',location:'backdrop-framing.ts:computeBackdropDrawRect',message:'draw rect computed',data:{framingScale:framing.scale,framingScaleX:framing.scaleX,framingScaleY:framing.scaleY,appliedScale,baseline,imageWidth,imageHeight,frameWidth,frameHeight,rectWidth:result.width,rectHeight:result.height,coversFrame:result.width>=frameWidth&&result.height>=frameHeight},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
+  return result;
 }
 
 export function framingToLayerStyle(
@@ -469,7 +515,19 @@ export function framingToLayerStyle(
   const offsetY = rect.y + rect.height / 2 - frameHeight / 2;
   const baseWidthPct =
     (imageWidth / frameWidth) * 100 * computeCoverBaselineScale(imageWidth, imageHeight, frameWidth, frameHeight);
-
+  const appliedScale = resolveBackdropAppliedScale(
+    framing,
+    imageWidth,
+    imageHeight,
+    frameWidth,
+    frameHeight,
+  );
+  const transform = framingCssTransform(framing, offsetX, offsetY, appliedScale);
+  const cssScaleMatch = transform.match(/scale\(([^)]+)\)/);
+  const cssScale = cssScaleMatch?.[1] ?? null;
+  // #region agent log
+  fetch('http://127.0.0.1:7482/ingest/6c08d204-7375-479b-93c4-549795bfa7f2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4dcda5'},body:JSON.stringify({sessionId:'4dcda5',runId:'post-fix',hypothesisId:'E',location:'backdrop-framing.ts:framingToLayerStyle',message:'layer style computed',data:{framingScale:framing.scale,appliedScale,rectWidth:rect.width,rectHeight:rect.height,frameWidth,frameHeight,baseWidthPct,cssScale,transform,offsetX,offsetY,rectCoversFrame:rect.width>=frameWidth&&rect.height>=frameHeight},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
   return {
     position: 'absolute',
     left: '50%',
@@ -477,7 +535,7 @@ export function framingToLayerStyle(
     width: `${baseWidthPct}%`,
     height: 'auto',
     maxWidth: 'none',
-    transform: framingCssTransform(framing, offsetX, offsetY),
+    transform,
     transformOrigin: 'center center',
     pointerEvents: 'none',
   };

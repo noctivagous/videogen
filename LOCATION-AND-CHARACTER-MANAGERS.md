@@ -1,6 +1,5 @@
-LOCATION AND CHARACTER MANAGERS
 
-APP ROUTING
+[ ] APP ROUTING
 
 localhost/demo-surfer/shot-designer/setup?item=setup1/shot?item=shot1/workflow=bakeStartFrame
 localhost/app/settings
@@ -15,6 +14,7 @@ by itself individually.
 
 ---
 
+[x]  LOCATION AND CHARACTER MANAGERS
 
 We will have a Location Manager
 and a Character Manager.  Right now
@@ -54,8 +54,9 @@ images by themselves.  Standalone
 images can exist in the Media Library
 database but when they are part of
 a character or location object, they
-should be grouped underneath them.  
-In the storage of data the image.
+should be grouped underneath them in 
+the views.  
+
 
 
 
