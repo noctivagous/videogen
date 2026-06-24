@@ -97,6 +97,10 @@ import {
   type MannequinSyncReason,
 } from '@/lib/studio/mannequin-sync';
 import {
+  applySubjectCountToShot,
+  subjectCountFromMannequins,
+} from '@/lib/studio/subject-count-from-mannequins';
+import {
   ensureSubjectChecklistSlots,
   getRemovedSubjectChecklistSlots,
 } from '@/lib/studio/subject-sheet-slots';
@@ -2198,15 +2202,35 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       get().showToast('Mannequin limit reached for this subject count', 'error');
       return;
     }
-    const mannequins = [...migrateMannequins(shot?.mannequins)];
+    const aspectRatio = (get().project.aspectRatio || '16:9') as AspectRatio;
     const created = createDefaultMannequin();
-    mannequins.push(created);
+    const mannequins = [...migrateMannequins(shot?.mannequins), created];
     const finalized = shot ? finalizeMannequinsForShot(shot, mannequins) : mannequins;
     const layoutPatch = shot
       ? splitInvalidationPatch(
           resolveWorkflowInvalidation(shot, { kind: 'mannequin_layout_changed' }),
         ).shotPatch
       : {};
+
+    if (shot) {
+      const nextSubjectCount = subjectCountFromMannequins(finalized);
+      if (nextSubjectCount !== shot.camera.subjectCount) {
+        const synced = applySubjectCountToShot(shot, nextSubjectCount, finalized, aspectRatio);
+        set((s) => ({
+          camera: synced.camera,
+          ...applyShotPatch(s, {
+            camera: synced.camera,
+            frameComposition: synced.frameComposition,
+            mannequins: synced.mannequins,
+            ...synced.slotPatch,
+            ...layoutPatch,
+          }),
+          selectedMannequinIds: [created.id],
+        }));
+        return;
+      }
+    }
+
     set((s) => ({
       ...applyShotPatch(s, {
         mannequins: finalized,
@@ -2279,6 +2303,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   removeMannequin(id) {
     const shot = get().getCurrentShot();
     if (!shot) return;
+    const aspectRatio = (get().project.aspectRatio || '16:9') as AspectRatio;
     const mannequins = finalizeMannequinsForShot(
       shot,
       (shot.mannequins ?? []).filter((m) => m.id !== id),
@@ -2286,6 +2311,24 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const { shotPatch: layoutPatch } = splitInvalidationPatch(
       resolveWorkflowInvalidation(shot, { kind: 'mannequin_layout_changed' }),
     );
+
+    const nextSubjectCount = subjectCountFromMannequins(mannequins);
+    if (nextSubjectCount !== shot.camera.subjectCount) {
+      const synced = applySubjectCountToShot(shot, nextSubjectCount, mannequins, aspectRatio);
+      set((s) => ({
+        camera: synced.camera,
+        ...applyShotPatch(s, {
+          camera: synced.camera,
+          frameComposition: synced.frameComposition,
+          mannequins: synced.mannequins,
+          ...synced.slotPatch,
+          ...layoutPatch,
+        }),
+        selectedMannequinIds: s.selectedMannequinIds.filter((sid) => sid !== id),
+      }));
+      return;
+    }
+
     set((s) => ({
       ...applyShotPatch(s, {
         mannequins,

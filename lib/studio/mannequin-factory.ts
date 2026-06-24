@@ -1,4 +1,6 @@
+import { getPrincipalMannequins } from '@/lib/studio/mannequin-character-assignment';
 import { defaultFeetAnchorY } from '@/lib/studio/mannequin-layout';
+import { MAX_PRINCIPAL_MANNEQUINS } from '@/lib/studio/subject-count-from-mannequins';
 import { DEFAULT_POSEBLOCK_BASE_POSE_ID } from '@/lib/poseblock/posePresets';
 import type { Mannequin, MannequinAngle, Shot } from '@/lib/types/studio';
 
@@ -48,5 +50,7 @@ export function getMannequinLimit(shot: Shot | undefined): number {
 
 export function canAddMannequin(shot: Shot | undefined): boolean {
   if (!shot) return false;
-  return (shot.mannequins?.length ?? 0) < getMannequinLimit(shot);
+  const principalCount = getPrincipalMannequins(shot.mannequins).length;
+  if (principalCount >= MAX_PRINCIPAL_MANNEQUINS) return false;
+  return (shot.mannequins?.length ?? 0) < MAX_PRINCIPAL_MANNEQUINS;
 }

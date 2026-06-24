@@ -271,7 +271,7 @@ export function MannequinPlacementLayer({
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <p className="text-xs text-gray-400 bg-surface-900/80 px-3 py-2 rounded-lg border border-surface-700">
             Click <span className="text-gray-200 font-semibold">Add mannequin</span> in the
-            right panel to place a subject
+            checklist to place a subject
           </p>
         </div>
       )}
