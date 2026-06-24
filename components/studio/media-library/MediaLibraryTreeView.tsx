@@ -110,7 +110,7 @@ export function MediaLibraryTreeView({
 
       {unassigned.length > 0 && (
         <TreeFolder
-          label={`Unassigned (${unassigned.length})`}
+          label={`Unclassified (${unassigned.length})`}
           expanded={expanded.unassigned ?? false}
           onToggle={() => toggle('unassigned')}
         >

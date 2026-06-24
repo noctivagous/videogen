@@ -12,6 +12,18 @@ import {
   truncateId,
 } from '@/components/studio/media-library/media-library-labels';
 
+/** Responsive asset tile grid — columns grow from a minimum tile width instead of a fixed count. */
+const ASSET_GRID_CLASS =
+  'media-library-grid grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-2';
+
+/** Top-level sections (Characters, Locations, etc.) share a row when space allows. */
+const SECTIONS_LAYOUT_CLASS =
+  'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start auto-rows-min';
+
+/** Character/location/setup sub-groups expand to full width when alone, sit side-by-side when several. */
+const SUBSECTIONS_LAYOUT_CLASS =
+  'grid grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))] gap-4';
+
 interface MediaLibraryGridViewProps {
   assets: MediaAsset[];
   snapshots: ShotWorkflowSnapshot[];
@@ -49,9 +61,10 @@ export function MediaLibraryGridView({
 
   const { setupGroups, unassigned } = groupMediaAssetsBySetupAndShot(remainingAssets, setups);
   const unassignedGroups = groupMediaAssetsByType(unassigned);
+  const unclassifiedAssets = unassignedGroups.flatMap((group) => group.assets);
   const hasCharacters = characters.length > 0;
   const hasLocations = locations.length > 0;
-  const empty = !hasCharacters && !hasLocations && setupGroups.length === 0 && unassignedGroups.length === 0 && snapshots.length === 0;
+  const empty = !hasCharacters && !hasLocations && setupGroups.length === 0 && unclassifiedAssets.length === 0 && snapshots.length === 0;
   const [dragging, setDragging] = useState(false);
   const dragCounterRef = useRef(0);
 
@@ -91,7 +104,7 @@ export function MediaLibraryGridView({
         ) : (
           <>
             <p>No assets match your search.</p>
-            <p className="mt-1 text-xs text-gray-600">Add backdrop plates or references to your project, or drop images here to import.</p>
+            <p className="mt-1 text-xs text-gray-600">Add backdrop plates or references to your project, or drop images here to import as unclassified.</p>
           </>
         )}
       </div>
@@ -100,7 +113,7 @@ export function MediaLibraryGridView({
 
   return (
     <div
-      className={`media-library-grid-view relative p-3 flex flex-col gap-6 overflow-y-auto h-full transition-colors ${dragging ? 'bg-brand-600/5' : ''}`}
+      className={`media-library-grid-view relative p-3 ${SECTIONS_LAYOUT_CLASS} overflow-y-auto h-full transition-colors ${dragging ? 'bg-brand-600/5' : ''}`}
       {...dropZoneProps}
     >
       {dragging && (
@@ -115,7 +128,7 @@ export function MediaLibraryGridView({
             Characters
             <span className="text-gray-600 font-normal ml-1">({characters.length})</span>
           </h3>
-          <div className="flex flex-col gap-4">
+          <div className={SUBSECTIONS_LAYOUT_CLASS}>
             {characters.map((character) => {
               const charAssets = assets.filter((a) => a.metadata.characterId === character.id);
               if (charAssets.length === 0) return null;
@@ -132,7 +145,7 @@ export function MediaLibraryGridView({
                     {character.name}
                     <span className="text-gray-600 font-normal">({charAssets.length})</span>
                   </h4>
-                  <div className="media-library-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+                  <div className={ASSET_GRID_CLASS}>
                     {charAssets.map((asset) => (
                       <AssetGridCard
                         key={asset.id}
@@ -158,7 +171,7 @@ export function MediaLibraryGridView({
             Locations
             <span className="text-gray-600 font-normal ml-1">({locations.length})</span>
           </h3>
-          <div className="flex flex-col gap-4">
+          <div className={SUBSECTIONS_LAYOUT_CLASS}>
             {locations.map((location) => {
               const locAssets = assets.filter((a) => a.metadata.locationId === location.id);
               if (locAssets.length === 0) return null;
@@ -175,7 +188,7 @@ export function MediaLibraryGridView({
                     {location.name}
                     <span className="text-gray-600 font-normal">({locAssets.length})</span>
                   </h4>
-                  <div className="media-library-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+                  <div className={ASSET_GRID_CLASS}>
                     {locAssets.map((asset) => (
                       <AssetGridCard
                         key={asset.id}
@@ -200,14 +213,14 @@ export function MediaLibraryGridView({
             {setupGroup.setupName}
             <span className="text-gray-600 font-normal ml-1">({setupGroup.assetCount})</span>
           </h3>
-          <div className="flex flex-col gap-4">
+          <div className={SUBSECTIONS_LAYOUT_CLASS}>
             {setupGroup.shots.map((shotGroup) => (
               <div key={shotGroup.shotId}>
                 <h4 className="text-[10px] uppercase tracking-wider font-semibold text-gray-400 mb-2">
                   {shotGroup.shotName}
                   <span className="text-gray-600 font-normal ml-1">({shotGroup.assetCount})</span>
                 </h4>
-                <div className="media-library-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+                <div className={ASSET_GRID_CLASS}>
                   {shotGroup.assets.map((asset) => (
                     <AssetGridCard
                       key={asset.id}
@@ -225,44 +238,34 @@ export function MediaLibraryGridView({
         </section>
       ))}
 
-      {unassignedGroups.length > 0 && (
-        <section className="media-library-grid-section">
+      {unclassifiedAssets.length > 0 && (
+        <section className="media-library-grid-section md:col-span-2 xl:col-span-3">
           <h3 className="media-library-section-title text-[10px] uppercase tracking-wider font-semibold text-gray-400 mb-2">
-            Unassigned
-            <span className="text-gray-600 font-normal ml-1">
-              ({unassignedGroups.reduce((sum, group) => sum + group.assets.length, 0)})
-            </span>
+            Unclassified
+            <span className="text-gray-600 font-normal ml-1">({unclassifiedAssets.length})</span>
           </h3>
-          {unassignedGroups.map((group) => (
-            <div key={group.type} className="mb-4 last:mb-0">
-              <h4 className="text-[10px] uppercase tracking-wider font-semibold text-gray-500 mb-2">
-                {group.label}
-                <span className="text-gray-600 font-normal ml-1">({group.assets.length})</span>
-              </h4>
-              <div className="media-library-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
-                {group.assets.map((asset) => (
-                  <AssetGridCard
-                    key={asset.id}
-                    asset={asset}
-                    selected={selectedId === asset.id}
-                    bulkSelected={selectedIds.has(asset.id)}
-                    onSelect={(additive) => onSelectAsset(asset.id, additive)}
-                    onToggleSelect={(additive) => onToggleSelect(asset.id, additive)}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
+          <div className={ASSET_GRID_CLASS}>
+            {unclassifiedAssets.map((asset) => (
+              <AssetGridCard
+                key={asset.id}
+                asset={asset}
+                selected={selectedId === asset.id}
+                bulkSelected={selectedIds.has(asset.id)}
+                onSelect={(additive) => onSelectAsset(asset.id, additive)}
+                onToggleSelect={(additive) => onToggleSelect(asset.id, additive)}
+              />
+            ))}
+          </div>
         </section>
       )}
 
       {snapshots.length > 0 && (
-        <section className="media-library-grid-section">
+        <section className="media-library-grid-section md:col-span-2 xl:col-span-3">
           <h3 className="media-library-section-title text-[10px] uppercase tracking-wider font-semibold text-gray-400 mb-2">
             Workflow Snapshots
             <span className="text-gray-600 font-normal ml-1">({snapshots.length})</span>
           </h3>
-          <div className="media-library-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+          <div className={ASSET_GRID_CLASS}>
             {snapshots.map((snapshot) => (
               <SnapshotGridCard
                 key={snapshot.id}
@@ -293,7 +296,7 @@ function AssetGridCard({
 }) {
   return (
     <div
-      className={`media-library-grid-card rounded-xl border overflow-hidden text-left transition-colors relative ${
+      className={`media-library-grid-card min-w-0 w-full rounded-xl border overflow-hidden text-left transition-colors relative ${
         selected
           ? 'border-brand-500 ring-1 ring-brand-500/40 bg-surface-800'
           : 'border-surface-700 bg-surface-800/60 hover:border-brand-500/40'

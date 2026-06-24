@@ -15,7 +15,7 @@ import type { Shot } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
 
 const IMAGE_TYPES = new Set<MediaAssetType>([
-  'character-sheet', 'backdrop-plate', 'backdrop', 'baked-frame', 'intermediate-frame', 'reference',
+  'unclassified', 'character-sheet', 'backdrop-plate', 'backdrop', 'baked-frame', 'intermediate-frame', 'reference',
 ]);
 
 function mimeFromUrl(url: string): string | null {

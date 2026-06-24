@@ -4,6 +4,7 @@ import { getWorkflowLabel } from '@/lib/constants/workflows';
 import { filterAssetsByClipThreshold, rankAssetsByClipQuery } from '@/lib/media/clip-search';
 
 export const MEDIA_ASSET_TYPE_ORDER: MediaAssetType[] = [
+  'unclassified',
   'character-sheet',
   'backdrop-plate',
   'backdrop',
@@ -16,6 +17,7 @@ export const MEDIA_ASSET_TYPE_ORDER: MediaAssetType[] = [
 ];
 
 const TYPE_LABELS: Record<MediaAssetType, string> = {
+  unclassified: 'Unclassified',
   'character-sheet': 'Character Sheets',
   'backdrop-plate': 'Backdrop Plates',
   backdrop: 'Backdrops',

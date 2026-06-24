@@ -127,7 +127,7 @@ export function MediaLibraryListView({
             <Fragment key={`unassigned-${group.type}`}>
               <tr className="media-library-list-section-header">
                 <td colSpan={10} className="px-3 py-2 text-[10px] uppercase tracking-wider font-semibold text-gray-400 bg-surface-800/50 border-y border-surface-700/80">
-                  Unassigned · {group.label} ({group.assets.length})
+                  Unclassified · {group.label} ({group.assets.length})
                 </td>
               </tr>
               {group.assets.map((asset) => (

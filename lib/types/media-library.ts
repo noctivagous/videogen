@@ -2,6 +2,7 @@ import type { Mannequin, Workflow } from '@/lib/types/studio';
 import type { WorkflowStepId } from '@/lib/studio/workflow';
 
 export type MediaAssetType =
+  | 'unclassified'
   | 'character-sheet'
   | 'backdrop-plate'
   | 'backdrop'

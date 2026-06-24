@@ -292,7 +292,7 @@ export async function importMediaFilesToLibrary(
 
 function inferTypeFromMime(mime: string): MediaAssetType {
   if (mime.startsWith('video/')) return 'video';
-  return 'reference';
+  return 'unclassified';
 }
 
 function readFileAsDataUrl(file: File): Promise<string> {
