@@ -5,7 +5,6 @@ import dynamic from 'next/dynamic';
 
 /** Non-literal specifiers so VideoGen tsc does not follow into the PoseBlock submodule. */
 const POSEBLOCK_PKG = 'poseblock';
-const POSEBLOCK_POSES = 'poseblock/poses';
 const POSEBLOCK_TOOLBAR = 'poseblock/PoseAdjustToolbar';
 
 const PoseAdjustToolbar = dynamic(
@@ -19,15 +18,31 @@ export function PoseBlockPoseSection() {
 
   useEffect(() => {
     let cancelled = false;
-    void Promise.all([import(POSEBLOCK_POSES), import(POSEBLOCK_PKG)]).then(
-      ([{ POSES }, poseblock]) => {
-        if (cancelled) return;
-        poseblock.useStore.getState().set({
-          posePresets: POSES,
+    void import(POSEBLOCK_PKG).then((poseblock) => {
+      if (cancelled) return;
+
+      void fetch('/api/poseblock/poses')
+        .then((res) => (res.ok ? res.json() : Promise.reject(new Error('Failed to load poses'))))
+        .then((poses: Record<string, unknown>) => {
+          if (cancelled) return;
+          poseblock.useStore.getState().set({
+            posePresets: poses,
+          });
+          setReady(true);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          void import('poseblock/poses')
+            .then(({ POSES }) => {
+              if (cancelled) return;
+              poseblock.useStore.getState().set({ posePresets: POSES });
+              setReady(true);
+            })
+            .catch(() => {
+              if (!cancelled) setReady(true);
+            });
         });
-        setReady(true);
-      },
-    );
+    });
     return () => {
       cancelled = true;
     };

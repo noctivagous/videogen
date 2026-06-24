@@ -147,16 +147,24 @@ export function MannequinInspectorControls({
   );
 
   useEffect(() => {
-    const POSEBLOCK_POSES = 'poseblock/poses';
     let cancelled = false;
-    void import(POSEBLOCK_POSES)
-      .then(({ POSES }) => {
+    void fetch('/api/poseblock/poses')
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('Failed to load poses'))))
+      .then((poses: Record<string, unknown>) => {
         if (cancelled) return;
-        const ids = Object.keys(POSES ?? {});
+        const ids = Object.keys(poses ?? {});
         setBasePoseOptions(ids.length > 0 ? ids : ['t_pose']);
       })
       .catch(() => {
-        if (!cancelled) setBasePoseOptions(['t_pose']);
+        void import('poseblock/poses')
+          .then(({ POSES }) => {
+            if (cancelled) return;
+            const ids = Object.keys(POSES ?? {});
+            setBasePoseOptions(ids.length > 0 ? ids : ['t_pose']);
+          })
+          .catch(() => {
+            if (!cancelled) setBasePoseOptions(['t_pose']);
+          });
       });
     return () => {
       cancelled = true;
