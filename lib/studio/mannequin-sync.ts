@@ -173,11 +173,11 @@ function smartResyncMannequins(
         next.scale = variantAnchor.scale;
       }
     } else if (fieldSizeChanged) {
-      // Preserve user mannequin placement and scale when field size changes.
-      // Field size should change framing intent/prompting only, not overwrite blocking.
-      next.x = prev.x;
-      next.y = prev.y;
-      next.scale = prev.scale;
+      const variantAnchor = mannequinFieldSizeAnchor(shot, prev, aspectRatio);
+      next.x = variantAnchor.x;
+      next.y = variantAnchor.y;
+      next.scale = variantAnchor.scale;
+      // Field size reframes position/scale from presets; preserve user rotation/facing.
       next.rotation = prev.rotation;
       next.angle = prev.angle;
     } else if (placementChanged && (reason === 'placement' || nearDefault)) {

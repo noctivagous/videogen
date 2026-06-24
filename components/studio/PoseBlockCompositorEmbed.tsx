@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, type ComponentType } from 'react';
+import { useEffect, useState, type ComponentType } from 'react';
+import { usePoseBlockPresetBootstrap } from '@/lib/poseblock/usePoseBlockPresetBootstrap';
 import {
   mannequinsToInstances,
   instancePatchToMannequinPatch,
@@ -126,6 +127,8 @@ export function PoseBlockCompositorEmbed({
   shot,
 }: PoseBlockCompositorEmbedProps) {
   const [Compositor, setCompositor] = useState<ComponentType<CompositorProps> | null>(null);
+
+  usePoseBlockPresetBootstrap();
 
   useEffect(() => {
     let cancelled = false;

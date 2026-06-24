@@ -5,6 +5,7 @@
  * so the translation is mostly about model URL resolution and enum mapping.
  */
 
+import { DEFAULT_POSEBLOCK_BASE_POSE_ID } from '@/lib/poseblock/posePresets';
 import type { Mannequin, MannequinAngle, MannequinGender, MannequinPose } from '@/lib/types/studio';
 
 // ---------------------------------------------------------------------------
@@ -48,13 +49,13 @@ export function modelUrlForMannequin(gender: MannequinGender): string {
 // ---------------------------------------------------------------------------
 
 const POSE_TO_BASE_POSE_ID: Record<MannequinPose, string> = {
-  standard: 't_pose',
-  walking: 't_pose',
-  seated: 't_pose',
+  standard: DEFAULT_POSEBLOCK_BASE_POSE_ID,
+  walking: DEFAULT_POSEBLOCK_BASE_POSE_ID,
+  seated: DEFAULT_POSEBLOCK_BASE_POSE_ID,
 };
 
 export function basePoseIdForMannequin(pose: MannequinPose): string {
-  return POSE_TO_BASE_POSE_ID[pose] ?? 'a_pose';
+  return POSE_TO_BASE_POSE_ID[pose] ?? DEFAULT_POSEBLOCK_BASE_POSE_ID;
 }
 
 // ---------------------------------------------------------------------------

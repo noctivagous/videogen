@@ -2,6 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
+  DEFAULT_POSEBLOCK_BASE_POSE_ID,
+  fetchPoseBlockPresetEntries,
+  formatPosePresetLabel,
+  type PoseBlockPresetEntry,
+} from '@/lib/poseblock/posePresets';
+import {
   MANNEQUIN_AGE_OPTIONS,
   MANNEQUIN_GENDER_OPTIONS,
   MANNEQUIN_POSE_OPTIONS,
@@ -103,7 +109,8 @@ export function MannequinInspectorControls({
   onUpdate,
   onAssignSubjectSlot,
 }: MannequinInspectorControlsProps) {
-  const [basePoseOptions, setBasePoseOptions] = useState<string[]>(['t_pose']);
+  const [basePoseOptions, setBasePoseOptions] = useState<string[]>([DEFAULT_POSEBLOCK_BASE_POSE_ID]);
+  const [basePoseMeta, setBasePoseMeta] = useState<Record<string, PoseBlockPresetEntry>>({});
   const [characterOpen, setCharacterOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const setups = useStudioStore((s) => s.setups);
@@ -148,22 +155,22 @@ export function MannequinInspectorControls({
 
   useEffect(() => {
     let cancelled = false;
-    void fetch('/api/poseblock/poses')
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('Failed to load poses'))))
-      .then((poses: Record<string, unknown>) => {
+    void fetchPoseBlockPresetEntries()
+      .then((poses: Record<string, PoseBlockPresetEntry>) => {
         if (cancelled) return;
         const ids = Object.keys(poses ?? {});
-        setBasePoseOptions(ids.length > 0 ? ids : ['t_pose']);
+        setBasePoseMeta(poses ?? {});
+        setBasePoseOptions(ids.length > 0 ? ids : [DEFAULT_POSEBLOCK_BASE_POSE_ID]);
       })
       .catch(() => {
         void import('poseblock/poses')
           .then(({ POSES }) => {
             if (cancelled) return;
             const ids = Object.keys(POSES ?? {});
-            setBasePoseOptions(ids.length > 0 ? ids : ['t_pose']);
+            setBasePoseOptions(ids.length > 0 ? ids : [DEFAULT_POSEBLOCK_BASE_POSE_ID]);
           })
           .catch(() => {
-            if (!cancelled) setBasePoseOptions(['t_pose']);
+            if (!cancelled) setBasePoseOptions([DEFAULT_POSEBLOCK_BASE_POSE_ID]);
           });
       });
     return () => {
@@ -193,16 +200,20 @@ export function MannequinInspectorControls({
     <div className="flex flex-col gap-3 text-xs">
       <Select
         label="Base pose"
-        value={mannequin.poseBlockBasePoseId ?? 't_pose'}
+        value={mannequin.poseBlockBasePoseId ?? DEFAULT_POSEBLOCK_BASE_POSE_ID}
         onChange={(e) =>
           onUpdate(mannequin.id, { poseBlockBasePoseId: e.target.value })
         }
       >
-        {basePoseOptions.map((poseId) => (
-          <option key={poseId} value={poseId}>
-            {poseId}
-          </option>
-        ))}
+        {basePoseOptions.map((poseId) => {
+          const meta = basePoseMeta[poseId];
+          const label = meta ? formatPosePresetLabel(meta) : poseId;
+          return (
+            <option key={poseId} value={poseId}>
+              {label}
+            </option>
+          );
+        })}
       </Select>
 
       <div className="flex flex-wrap items-center gap-2">

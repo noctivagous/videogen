@@ -1,4 +1,5 @@
 import { defaultFeetAnchorY } from '@/lib/studio/mannequin-layout';
+import { DEFAULT_POSEBLOCK_BASE_POSE_ID } from '@/lib/poseblock/posePresets';
 import type { Mannequin, MannequinAngle, Shot } from '@/lib/types/studio';
 
 function newMannequinId(): string {
@@ -17,6 +18,7 @@ export function createDefaultMannequin(
     gender: partial.gender ?? 'male',
     age: partial.age ?? 'adult',
     pose: partial.pose ?? 'standard',
+    poseBlockBasePoseId: partial.poseBlockBasePoseId ?? DEFAULT_POSEBLOCK_BASE_POSE_ID,
     x: partial.x ?? 0.5,
     y: partial.y ?? defaultFeetAnchorY('ms'),
     scale: partial.scale ?? 1,
