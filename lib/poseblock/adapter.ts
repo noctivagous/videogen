@@ -115,7 +115,7 @@ export function mannequinToInstance(m: Mannequin): PoseBlockInstance {
   return {
     id: m.id,
     modelUrl: modelUrlForMannequin(m.gender),
-    basePoseId: basePoseIdForMannequin(m.pose),
+    basePoseId: m.poseBlockBasePoseId ?? basePoseIdForMannequin(m.pose),
     x: m.x,
     y: m.y,
     scale: m.scale,

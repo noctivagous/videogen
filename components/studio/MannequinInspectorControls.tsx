@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   MANNEQUIN_AGE_OPTIONS,
   MANNEQUIN_GENDER_OPTIONS,
@@ -103,6 +103,7 @@ export function MannequinInspectorControls({
   onUpdate,
   onAssignSubjectSlot,
 }: MannequinInspectorControlsProps) {
+  const [basePoseOptions, setBasePoseOptions] = useState<string[]>(['t_pose']);
   const [characterOpen, setCharacterOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const setups = useStudioStore((s) => s.setups);
@@ -145,6 +146,23 @@ export function MannequinInspectorControls({
     [mannequin, aspectRatio, placementX],
   );
 
+  useEffect(() => {
+    const POSEBLOCK_POSES = 'poseblock/poses';
+    let cancelled = false;
+    void import(POSEBLOCK_POSES)
+      .then(({ POSES }) => {
+        if (cancelled) return;
+        const ids = Object.keys(POSES ?? {});
+        setBasePoseOptions(ids.length > 0 ? ids : ['t_pose']);
+      })
+      .catch(() => {
+        if (!cancelled) setBasePoseOptions(['t_pose']);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const widthToHeightMax = useMemo(
     () => maxWidthToFrameHeight(mannequinTrim(mannequinVariantFrom(mannequin))),
     [mannequin],
@@ -165,6 +183,20 @@ export function MannequinInspectorControls({
 
   return (
     <div className="flex flex-col gap-3 text-xs">
+      <Select
+        label="Base pose"
+        value={mannequin.poseBlockBasePoseId ?? 't_pose'}
+        onChange={(e) =>
+          onUpdate(mannequin.id, { poseBlockBasePoseId: e.target.value })
+        }
+      >
+        {basePoseOptions.map((poseId) => (
+          <option key={poseId} value={poseId}>
+            {poseId}
+          </option>
+        ))}
+      </Select>
+
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-gray-400">Face</span>
         <button

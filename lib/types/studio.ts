@@ -101,6 +101,8 @@ export interface Mannequin {
   gender: MannequinGender;
   age: MannequinAge;
   pose: MannequinPose;
+  /** Optional PoseBlock base pose id used by 3D compositor. */
+  poseBlockBasePoseId?: string;
   /** Normalized feet-anchor X (0 = left, 1 = right). */
   x: number;
   /** Normalized feet-anchor Y (0 = top, 1 = frame bottom, >1 = below frame for CU/MCU). */
