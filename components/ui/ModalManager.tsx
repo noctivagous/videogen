@@ -5,6 +5,8 @@ import { useSyncExternalStore, type ReactNode } from 'react';
 
 export { ManagedModal } from '@/components/ui/ManagedModal';
 export type { ManagedModalProps } from '@/components/ui/ManagedModal';
+export { ManagedPopover } from '@/components/ui/ManagedPopover';
+export type { ManagedPopoverProps } from '@/components/ui/ManagedPopover';
 export {
   getModalStack,
   getTopModal,

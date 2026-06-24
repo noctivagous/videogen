@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { MentionTextarea } from '@/components/ui/MentionTextarea';
+import { ManagedPopover } from '@/components/ui/ModalManager';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { buildModelPayloadStack } from '@/lib/studio/model-payload';
 import { buildPromptMentionOptions } from '@/lib/studio/prompt-mentions';
@@ -19,6 +20,58 @@ interface PromptRefMeta {
   url: string;
   dataType: string;
   parentLabel?: string;
+}
+
+interface PromptImageTagProps {
+  tag: string;
+  meta: PromptRefMeta;
+}
+
+function PromptImageTag({ tag, meta }: PromptImageTagProps) {
+  const triggerRef = useRef<HTMLSpanElement>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
+
+  const openPreview = () => {
+    const rect = triggerRef.current?.getBoundingClientRect() ?? null;
+    setAnchorRect(rect);
+    setIsPreviewOpen(true);
+  };
+
+  return (
+    <>
+      <span
+        ref={triggerRef}
+        className="inline-flex items-center gap-1 rounded border border-surface-500 bg-surface-800/90 px-1 py-0.5 align-middle"
+        onMouseEnter={openPreview}
+        onMouseLeave={() => setIsPreviewOpen(false)}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={meta.url}
+          alt=""
+          className="h-3.5 w-3.5 rounded object-cover bg-surface-600"
+        />
+        <span className="font-semibold text-brand-200">{tag}</span>
+        <span className="text-gray-400">({meta.dataType}{meta.parentLabel ? ` · ${meta.parentLabel}` : ''})</span>
+      </span>
+      <ManagedPopover
+        open={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        anchorRect={anchorRect}
+        className="pointer-events-none -translate-x-1/2 -translate-y-full"
+      >
+        <div className="w-40 rounded-md border border-surface-500 bg-surface-900/95 p-1 shadow-xl">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={meta.url}
+            alt=""
+            className="h-24 w-full rounded object-cover bg-surface-700"
+          />
+        </div>
+      </ManagedPopover>
+    </>
+  );
 }
 
 function renderPromptTextWithImageTags(
@@ -41,26 +94,7 @@ function renderPromptTextWithImageTags(
     if (!meta) {
       parts.push(full);
     } else {
-      parts.push(
-        <span key={`${tag}-${start}`} className="inline-flex items-center gap-1 rounded border border-surface-500 bg-surface-800/90 px-1 py-0.5 align-middle">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={meta.url}
-            alt=""
-            className="h-3.5 w-3.5 rounded object-cover bg-surface-600"
-          />
-          <span className="font-semibold text-brand-200">{tag}</span>
-          <span className="text-gray-400">({meta.dataType}{meta.parentLabel ? ` · ${meta.parentLabel}` : ''})</span>
-          <span className="pointer-events-none absolute left-0 top-full z-40 mt-1 hidden w-40 rounded-md border border-surface-500 bg-surface-900/95 p-1 shadow-xl group-hover:block">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={meta.url}
-              alt=""
-              className="h-24 w-full rounded object-cover bg-surface-700"
-            />
-          </span>
-        </span>,
-      );
+      parts.push(<PromptImageTag key={`${tag}-${start}`} tag={tag} meta={meta} />);
     }
     lastIndex = start + full.length;
   }
@@ -239,11 +273,11 @@ export function BottomBar() {
                 <div className="flex flex-wrap items-start gap-1 mb-2 max-h-[2.75rem] overflow-y-auto pr-1">
                   {promptSettings.length > 0 ? (
                     promptSettings.map((row, index) => (
-                      <span
-                        key={`${row.source}-${row.text}-${index}`}
-                        className="group relative inline-flex items-stretch rounded-md border border-surface-600 bg-surface-700/70 text-[10px] text-gray-200 leading-tight"
-                        title={`${row.source}: ${row.text}`}
-                      >
+                        <span
+                          key={`${row.source}-${row.text}-${index}`}
+                          className="inline-flex items-stretch rounded-md border border-surface-600 bg-surface-700/70 text-[10px] text-gray-200 leading-tight"
+                          title={`${row.source}: ${row.text}`}
+                        >
                         <span className="px-1.5 py-1 uppercase tracking-wider font-semibold text-brand-200 border-r border-brand-400/30 bg-brand-500/20">
                           {row.source}
                         </span>

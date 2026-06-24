@@ -612,6 +612,18 @@ input[type="range"]::-moz-range-thumb:hover {
   backdrop-filter: blur(4px);
 }
 
+.studio-floating-popover[popover] {
+  position: fixed;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  overflow: visible;
+  width: max-content;
+  max-width: none;
+  max-height: none;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
