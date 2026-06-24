@@ -27,7 +27,7 @@ import {
   getSubjectSlotOrdinal,
 } from '@/lib/studio/subject-sheet-slots';
 import { LightingAtmosphereSfxFieldset } from '@/components/studio/LightingAtmosphereSfxFieldset';
-import { SetupBackdropPanel } from '@/components/studio/SetupBackdropPanel';
+import { LocationPickerSection } from '@/components/studio/location-manager/LocationPickerSection';
 import { MannequinAssignmentTable } from '@/components/studio/MannequinAssignmentTable';
 import { MannequinPlacementControls } from '@/components/studio/MannequinPlacementControls';
 import { CollapsiblePromptEditor } from '@/components/ui/CollapsiblePromptEditor';
@@ -93,6 +93,7 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
   const generate = useStudioStore((s) => s.generate);
   const isGenerating = useStudioStore((s) => s.isGenerating);
   const project = useStudioStore((s) => s.project);
+  const locations = useStudioStore((s) => s.locations);
   const fileInputs = useRef<(HTMLInputElement | null)[]>([]);
   const localSlotRefs = useRef<(HTMLElement | null)[]>([]);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -537,7 +538,7 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
             <legend className="workflow-step-fieldset__legend">Backdrop</legend>
             <div className="flex flex-col gap-1.5 text-[10px] text-gray-400">
               {renderWorkflowStepHeader(backdropStep, stepNumber++)}
-              {backdropSlotIndex >= 0 && renderReferenceSlotRow(backdropSlotIndex)}
+              {backdropSlotIndex >= 0 && locations.length === 0 && renderReferenceSlotRow(backdropSlotIndex)}
               {lockBackdropStep && (
                 <div className="workflow-step-substep flex flex-col gap-1.5">
                   {renderWorkflowStepHeader(lockBackdropStep, stepNumber++)}
@@ -546,7 +547,7 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
                   )}
                 </div>
               )}
-              <SetupBackdropPanel />
+              <LocationPickerSection />
             </div>
           </fieldset>
         )}

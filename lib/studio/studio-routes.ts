@@ -10,6 +10,8 @@ export const STUDIO_PANEL_IDS: readonly StudioPanelId[] = [
 export const IMPLEMENTED_STUDIO_PANELS = new Set<StudioPanelId>([
   'shot-designer',
   'media-library',
+  'character-sheet-generator',
+  'location-manager',
 ]);
 
 export const DEFAULT_STUDIO_PANEL: StudioPanelId = 'shot-designer';

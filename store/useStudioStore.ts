@@ -22,13 +22,19 @@ import {
   EMPTY_SETUPS,
   STOCK_BACKDROP_REF,
   STOCK_CAMERA,
+  STOCK_CHARACTER_BUD_ID,
+  STOCK_CHARACTER_BUD_SHEET_ID,
   STOCK_CHARACTER_REF,
+  STOCK_LOCATION_CHK_OFFICE_ID,
+  STOCK_LOCATION_CHK_PLATE_ID,
   STOCK_LIGHTING,
   STOCK_MOTION,
   STOCK_PROJECT,
   STOCK_PROMPT,
   STOCK_REFERENCE_ROLES,
   STOCK_SETUPS,
+  STOCK_CHARACTERS,
+  STOCK_LOCATIONS,
 } from '@/lib/constants/stock-project';
 import { isPreviewFrameSupported } from '@/lib/studio/generation/preview-frame-supported';
 import { isGenerationSupported } from '@/lib/studio/generation/supported';
@@ -234,9 +240,13 @@ import type {
   AspectRatio,
   BackdropFraming,
   CameraSettings,
+  Character,
+  CharacterSheet,
   FrameComposition,
   ColorPaletteSettings,
   LightingSettings,
+  Location,
+  LocationBackdropPlate,
   MotionSettings,
   ProjectSettings,
   ReferenceMode,
@@ -285,6 +295,8 @@ function getStockDefaults() {
     currentCoverageShotId: hierarchy.currentCoverageShotId,
     shots: getTimelineShots(hierarchy.setups),
     currentShot: hierarchy.currentSetupId,
+    characters: STOCK_CHARACTERS,
+    locations: STOCK_LOCATIONS,
     mediaLibrary: [],
     globalMediaLibrary: [] as MediaAsset[],
     shotWorkflowSnapshots: [],
@@ -318,6 +330,8 @@ function getEmptyDefaults() {
     currentCoverageShotId: hierarchy.currentCoverageShotId,
     shots: getTimelineShots(hierarchy.setups),
     currentShot: hierarchy.currentSetupId,
+    characters: [] as Character[],
+    locations: [] as Location[],
     mediaLibrary: [] as MediaAsset[],
     globalMediaLibrary: [] as MediaAsset[],
     shotWorkflowSnapshots: [] as ShotWorkflowSnapshot[],
@@ -329,12 +343,72 @@ function getEmptyDefaults() {
   };
 }
 
-function applyStudioProject(data: StudioProject, globalMediaLibrary: MediaAsset[] = []) {
-  const project = {
-    ...data.project,
-    aspectRatio: data.project.aspectRatio || '16:9',
+function setupHasStockDemoContext(setup: Setup): boolean {
+  return Boolean(
+    setup.references?.some((ref) => ref?.includes('demo-surfer'))
+    || setup.backdrops?.some((plate) => plate.url?.includes('demo-surfer')),
+  );
+}
+
+function withDemoEntityDefaults(data: StudioProject): StudioProject {
+  const hasStockDemo = data.setups.some(setupHasStockDemoContext);
+  if (!hasStockDemo) return data;
+
+  const hasBud = (data.characters ?? []).some((character) => character.id === STOCK_CHARACTER_BUD_ID);
+  const hasChkOffice = (data.locations ?? []).some((location) => location.id === STOCK_LOCATION_CHK_OFFICE_ID);
+  const characters = hasBud ? (data.characters ?? []) : STOCK_CHARACTERS;
+  const locations = hasChkOffice ? (data.locations ?? []) : STOCK_LOCATIONS;
+
+  const setups = data.setups.map((setup) => {
+    if (!setupHasStockDemoContext(setup)) return setup;
+
+    const characterSlots = setup.characterSlots?.length
+      ? setup.characterSlots
+      : [STOCK_CHARACTER_BUD_ID];
+    const characterSheetSlots = setup.characterSheetSlots?.length
+      ? setup.characterSheetSlots
+      : [STOCK_CHARACTER_BUD_SHEET_ID];
+    const locationId = setup.locationId ?? STOCK_LOCATION_CHK_OFFICE_ID;
+    const hasNamedPlate = setup.backdrops.some((plate) => plate.id === STOCK_LOCATION_CHK_PLATE_ID);
+    const demoBackdropUrl = setup.backdrops[0]?.url ?? STOCK_BACKDROP_REF;
+    const backdrops = hasNamedPlate
+      ? setup.backdrops
+      : [{
+          id: STOCK_LOCATION_CHK_PLATE_ID,
+          label: '57th St. Entry - Left',
+          url: demoBackdropUrl,
+        }];
+    const shots = setup.shots.map((shot, index) => (
+      index === 0 || shot.backdropId === DEFAULT_BACKDROP_ID
+        ? { ...shot, backdropId: STOCK_LOCATION_CHK_PLATE_ID }
+        : shot
+    ));
+
+    return {
+      ...setup,
+      characterSlots,
+      characterSheetSlots,
+      locationId,
+      backdrops,
+      shots,
+    };
+  });
+
+  return {
+    ...data,
+    characters,
+    locations,
+    setups,
   };
-  const hierarchy = applyProjectHierarchy(data, projectDefaultsFromStudioData(data));
+}
+
+function applyStudioProject(data: StudioProject, globalMediaLibrary: MediaAsset[] = []) {
+  const hydrated = withDemoEntityDefaults(data);
+  const project = {
+    ...hydrated.project,
+    aspectRatio: hydrated.project.aspectRatio || '16:9',
+  };
+  const hierarchy = applyProjectHierarchy(hydrated, projectDefaultsFromStudioData(hydrated));
   return {
     project: ensureResolution(project),
     scenes: hierarchy.scenes,
@@ -344,9 +418,11 @@ function applyStudioProject(data: StudioProject, globalMediaLibrary: MediaAsset[
     currentCoverageShotId: hierarchy.currentCoverageShotId,
     shots: getTimelineShots(hierarchy.setups),
     currentShot: hierarchy.currentSetupId,
-    mediaLibrary: data.mediaLibrary ?? [],
+    characters: hydrated.characters ?? [],
+    locations: hydrated.locations ?? [],
+    mediaLibrary: hydrated.mediaLibrary ?? [],
     globalMediaLibrary,
-    shotWorkflowSnapshots: data.shotWorkflowSnapshots ?? [],
+    shotWorkflowSnapshots: hydrated.shotWorkflowSnapshots ?? [],
     camera: hierarchy.camera,
     lighting: hierarchy.lighting,
     motion: hierarchy.motion,
@@ -479,6 +555,10 @@ interface StudioStore {
   shots: Shot[];
   /** @deprecated Alias for currentSetupId — timeline selection. */
   currentShot: number;
+  /** Named characters with their reference sheets — project-level. */
+  characters: Character[];
+  /** Named locations with their backdrop plates — project-level. */
+  locations: Location[];
   mediaLibrary: MediaAsset[];
   globalMediaLibrary: MediaAsset[];
   shotWorkflowSnapshots: ShotWorkflowSnapshot[];
@@ -625,6 +705,28 @@ interface StudioStore {
   saveBackdropPlateToLibrary: (setupId: number, backdropId: string) => Promise<void>;
   applyThemeTransformSlot: (index: number) => Promise<void>;
 
+  // ── Character Manager ────────────────────────────────────────────────────
+  createCharacter: (name: string, firstSheetUrl: string) => Character;
+  renameCharacter: (id: string, name: string) => void;
+  addCharacterSheet: (characterId: string, url: string, label?: string) => void;
+  removeCharacterSheet: (characterId: string, sheetId: string) => void;
+  deleteCharacter: (id: string) => void;
+  assignCharacterToSlot: (
+    setupId: number,
+    slotIndex: number,
+    characterId: string | null,
+    sheetId?: string | null,
+  ) => void;
+
+  // ── Location Manager ─────────────────────────────────────────────────────
+  createLocation: (name: string, firstPlateUrl: string) => Location;
+  renameLocation: (id: string, name: string) => void;
+  addLocationPlate: (locationId: string, url: string, label?: string) => void;
+  removeLocationPlate: (locationId: string, plateId: string) => void;
+  deleteLocation: (id: string) => void;
+  assignLocationToSetup: (setupId: number, locationId: string | null) => void;
+  assignPlateToShot: (setupId: number, coverageShotId: number, plateId: string) => void;
+
   generate: () => Promise<void>;
   saveProject: () => Promise<void>;
   saveProjectQuick: () => Promise<void>;
@@ -701,6 +803,8 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   currentCoverageShotId: stockState.currentCoverageShotId,
   shots: stockState.shots,
   currentShot: stockState.currentShot,
+  characters: stockState.characters,
+  locations: stockState.locations,
   mediaLibrary: stockState.mediaLibrary,
   globalMediaLibrary: stockState.globalMediaLibrary,
   shotWorkflowSnapshots: stockState.shotWorkflowSnapshots,
@@ -3145,6 +3249,208 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   setMobileDrawerOpen(open) {
     set({ mobileDrawerOpen: open });
   },
+
+  // ── Character Manager actions ────────────────────────────────────────────
+
+  createCharacter(name, firstSheetUrl) {
+    const now = Date.now();
+    const id = Math.random().toString(36).slice(2, 12);
+    const sheet: CharacterSheet = { id: Math.random().toString(36).slice(2, 12), url: firstSheetUrl, createdAt: now };
+    const character: Character = { id, name, sheets: [sheet], createdAt: now };
+    set((s) => ({ characters: [...s.characters, character] }));
+    return character;
+  },
+
+  renameCharacter(id, name) {
+    set((s) => ({
+      characters: s.characters.map((c) => (c.id === id ? { ...c, name } : c)),
+    }));
+  },
+
+  addCharacterSheet(characterId, url, label) {
+    const now = Date.now();
+    const sheet: CharacterSheet = { id: Math.random().toString(36).slice(2, 12), url, label, createdAt: now };
+    set((s) => ({
+      characters: s.characters.map((c) =>
+        c.id === characterId ? { ...c, sheets: [...c.sheets, sheet] } : c,
+      ),
+    }));
+  },
+
+  removeCharacterSheet(characterId, sheetId) {
+    set((s) => ({
+      characters: s.characters.map((c) => {
+        if (c.id !== characterId) return c;
+        if (c.sheets.length <= 1) return c; // guard: keep at least one sheet
+        return { ...c, sheets: c.sheets.filter((sh) => sh.id !== sheetId) };
+      }),
+    }));
+  },
+
+  deleteCharacter(id) {
+    set((s) => ({
+      characters: s.characters.filter((c) => c.id !== id),
+      setups: s.setups.map((setup) => {
+        if (!setup.characterSlots?.includes(id)) return setup;
+        const characterSlots = setup.characterSlots.map((slotId) => (slotId === id ? null : slotId));
+        const characterSheetSlots = (setup.characterSheetSlots ?? []).map((sheetId, i) =>
+          setup.characterSlots?.[i] === id ? null : sheetId,
+        );
+        return { ...setup, characterSlots, characterSheetSlots };
+      }),
+    }));
+  },
+
+  assignCharacterToSlot(setupId, slotIndex, characterId, sheetId) {
+    set((s) => ({
+      setups: s.setups.map((setup) => {
+        if (setup.id !== setupId) return setup;
+        const slots = [...(setup.characterSlots ?? [])];
+        const sheetSlots = [...(setup.characterSheetSlots ?? [])];
+        while (slots.length <= slotIndex) slots.push(null);
+        while (sheetSlots.length <= slotIndex) sheetSlots.push(null);
+        slots[slotIndex] = characterId;
+
+        const character = characterId ? s.characters.find((c) => c.id === characterId) : null;
+        let resolvedSheetId: string | null = null;
+        let sheetUrl: string | null = null;
+        if (character) {
+          const sheet =
+            sheetId != null
+              ? character.sheets.find((sh) => sh.id === sheetId)
+              : character.sheets.find((sh) => sh.id === sheetSlots[slotIndex]) ??
+                character.sheets[0];
+          resolvedSheetId = sheet?.id ?? null;
+          sheetUrl = sheet?.url ?? null;
+          sheetSlots[slotIndex] = resolvedSheetId;
+        } else {
+          sheetSlots[slotIndex] = null;
+        }
+
+        let refs = [...(setup.references ?? [])];
+        const roles = [...(setup.referenceRoles ?? [])];
+        let subjectOrdinal = -1;
+        for (let i = 0; i < refs.length; i++) {
+          if ((roles[i] ?? 'None') === 'Subject') {
+            subjectOrdinal++;
+            if (subjectOrdinal === slotIndex) {
+              refs[i] = sheetUrl;
+              break;
+            }
+          }
+        }
+        return {
+          ...setup,
+          characterSlots: slots,
+          characterSheetSlots: sheetSlots,
+          references: refs,
+        };
+      }),
+    }));
+  },
+
+  // ── Location Manager actions ─────────────────────────────────────────────
+
+  createLocation(name, firstPlateUrl) {
+    const now = Date.now();
+    const id = Math.random().toString(36).slice(2, 12);
+    const plate: LocationBackdropPlate = {
+      id: Math.random().toString(36).slice(2, 12),
+      url: firstPlateUrl,
+      label: 'Plate 1',
+      createdAt: now,
+    };
+    const location: Location = { id, name, plates: [plate], createdAt: now };
+    set((s) => ({ locations: [...s.locations, location] }));
+    return location;
+  },
+
+  renameLocation(id, name) {
+    set((s) => ({
+      locations: s.locations.map((loc) => (loc.id === id ? { ...loc, name } : loc)),
+    }));
+  },
+
+  addLocationPlate(locationId, url, label) {
+    const now = Date.now();
+    const plate: LocationBackdropPlate = {
+      id: Math.random().toString(36).slice(2, 12),
+      url,
+      label: label ?? `Plate ${Date.now()}`,
+      createdAt: now,
+    };
+    set((s) => ({
+      locations: s.locations.map((loc) =>
+        loc.id === locationId ? { ...loc, plates: [...loc.plates, plate] } : loc,
+      ),
+    }));
+  },
+
+  removeLocationPlate(locationId, plateId) {
+    set((s) => ({
+      locations: s.locations.map((loc) => {
+        if (loc.id !== locationId) return loc;
+        if (loc.plates.length <= 1) return loc; // guard: keep at least one plate
+        return { ...loc, plates: loc.plates.filter((p) => p.id !== plateId) };
+      }),
+    }));
+  },
+
+  deleteLocation(id) {
+    set((s) => ({
+      locations: s.locations.filter((loc) => loc.id !== id),
+      setups: s.setups.map((setup) =>
+        setup.locationId === id ? { ...setup, locationId: null } : setup,
+      ),
+    }));
+  },
+
+  assignLocationToSetup(setupId, locationId) {
+    set((s) => ({
+      setups: s.setups.map((setup) =>
+        setup.id === setupId ? { ...setup, locationId } : setup,
+      ),
+    }));
+  },
+
+  assignPlateToShot(setupId, coverageShotId, plateId) {
+    const { locations, setups } = get();
+    const setup = setups.find((s) => s.id === setupId);
+    if (!setup?.locationId) return;
+    const location = locations.find((l) => l.id === setup.locationId);
+    const plate = location?.plates.find((p) => p.id === plateId);
+    if (!plate) return;
+
+    set((s) => ({
+      setups: s.setups.map((su) => {
+        if (su.id !== setupId) return su;
+        const shots = su.shots.map((sh) => {
+          if (sh.id !== coverageShotId) return sh;
+          return { ...sh, backdropId: plateId };
+        });
+        // Mirror plate URL into the SetupBackdrop for the resolved-shot pipeline.
+        const backdrops = su.backdrops.map((b) =>
+          b.id === plateId ? { ...b, url: plate.url } : b,
+        );
+        // If no matching backdrop exists yet, add one.
+        const hasBackdrop = su.backdrops.some((b) => b.id === plateId);
+        const nextBackdrops = hasBackdrop
+          ? backdrops
+          : [
+              ...backdrops,
+              {
+                id: plateId,
+                label: plate.label,
+                url: plate.url,
+                backdropFramingByAspect: plate.backdropFramingByAspect,
+                backdropCropsByAspect: plate.backdropCropsByAspect,
+                backdropCropStatusByAspect: plate.backdropCropStatusByAspect,
+              },
+            ];
+        return { ...su, shots, backdrops: nextBackdrops };
+      }),
+    }));
+  },
 }));
 
 function isPersistedProjectDirty(state: StudioStore, prevState: StudioStore): boolean {
@@ -3155,6 +3461,8 @@ function isPersistedProjectDirty(state: StudioStore, prevState: StudioStore): bo
     state.currentCoverageShotId !== prevState.currentCoverageShotId ||
     state.shots !== prevState.shots ||
     state.currentShot !== prevState.currentShot ||
+    state.characters !== prevState.characters ||
+    state.locations !== prevState.locations ||
     state.mediaLibrary !== prevState.mediaLibrary ||
     state.globalMediaLibrary !== prevState.globalMediaLibrary ||
     state.shotWorkflowSnapshots !== prevState.shotWorkflowSnapshots

@@ -2,7 +2,11 @@ import { normalizeReferenceRole } from '@/lib/constants/camera';
 import { DEFAULT_BACKDROP_ID } from '@/lib/studio/resolved-shot';
 import { migrateAllShots, type ShotProjectDefaults } from '@/lib/studio/shot-settings';
 import type {
+  Character,
+  CharacterSheet,
   CoverageShot,
+  Location,
+  LocationBackdropPlate,
   Scene,
   Setup,
   SetupBackdrop,
@@ -185,11 +189,154 @@ export function migrateV17ToV18(
   };
 }
 
+function nanoidLite(): string {
+  return Math.random().toString(36).slice(2, 12);
+}
+
+/**
+ * v18 → v19: Promote raw subject references to project-level Character objects
+ * and setup backdrop plates to project-level Location objects.
+ *
+ * The existing setup.references[] and setup.backdrops[] are kept intact so the
+ * bake pipeline continues to work unchanged. Character/Location IDs are written
+ * into setup.characterSlots[] / setup.locationId as the authoritative layer.
+ */
+export function migrateV18toV19(data: StudioProject): StudioProject {
+  if ((data.schemaVersion ?? 0) >= 19) {
+    return {
+      ...data,
+      schemaVersion: 19,
+      characters: data.characters ?? [],
+      locations: data.locations ?? [],
+    };
+  }
+
+  const now = Date.now();
+  const characters: Character[] = [...(data.characters ?? [])];
+  const locations: Location[] = [...(data.locations ?? [])];
+
+  // Deduplicate by URL so the same image shared across setups → one Character.
+  const urlToCharacterId = new Map<string, string>();
+  for (const ch of characters) {
+    for (const sheet of ch.sheets) {
+      urlToCharacterId.set(sheet.url, ch.id);
+    }
+  }
+
+  const urlToLocationId = new Map<string, string>();
+  for (const loc of locations) {
+    for (const plate of loc.plates) {
+      if (plate.url) urlToLocationId.set(plate.url, loc.id);
+    }
+  }
+
+  let characterOrdinal = characters.length + 1;
+  let locationOrdinal = locations.length + 1;
+
+  const updatedSetups: Setup[] = data.setups.map((setup) => {
+    const characterSlots: (string | null)[] = [...(setup.characterSlots ?? [])];
+    const characterSheetSlots: (string | null)[] = [...(setup.characterSheetSlots ?? [])];
+    let locationId: string | null = setup.locationId ?? null;
+
+    // ── Migrate subject references → Characters ─────────────────────────────
+    const refs = setup.references ?? [];
+    const roles = setup.referenceRoles ?? [];
+    let slotOrdinal = 0;
+
+    for (let i = 0; i < refs.length; i++) {
+      const role = normalizeReferenceRole(roles[i] ?? 'None');
+      if (role !== 'Subject') continue;
+
+      const url = refs[i];
+      while (characterSlots.length <= slotOrdinal) characterSlots.push(null);
+      while (characterSheetSlots.length <= slotOrdinal) characterSheetSlots.push(null);
+
+      if (url && !characterSlots[slotOrdinal]) {
+        let charId = urlToCharacterId.get(url);
+        let sheetId: string | undefined;
+        if (!charId) {
+          charId = nanoidLite();
+          sheetId = nanoidLite();
+          const sheet: CharacterSheet = { id: sheetId, url, createdAt: now };
+          const character: Character = {
+            id: charId,
+            name: `Character ${characterOrdinal++}`,
+            sheets: [sheet],
+            createdAt: now,
+          };
+          characters.push(character);
+          urlToCharacterId.set(url, charId);
+        } else {
+          const existing = characters.find((c) => c.id === charId);
+          sheetId =
+            existing?.sheets.find((s) => s.url === url)?.id ?? existing?.sheets[0]?.id;
+        }
+        characterSlots[slotOrdinal] = charId;
+        characterSheetSlots[slotOrdinal] = sheetId ?? null;
+      }
+
+      slotOrdinal++;
+    }
+
+    // ── Migrate setup backdrops → Location ──────────────────────────────────
+    const backdrops = setup.backdrops ?? [];
+    if (backdrops.length > 0 && !locationId) {
+      // Check if any plate URL already belongs to an existing location.
+      const firstUrl = backdrops.find((b) => b.url)?.url ?? null;
+      const existingLocId = firstUrl ? urlToLocationId.get(firstUrl) : undefined;
+
+      if (existingLocId) {
+        locationId = existingLocId;
+      } else {
+        const plates: LocationBackdropPlate[] = backdrops.map((b) => ({
+          id: b.id,
+          url: b.url,
+          label: b.label,
+          backdropFramingByAspect: b.backdropFramingByAspect,
+          backdropCropsByAspect: b.backdropCropsByAspect,
+          backdropCropStatusByAspect: b.backdropCropStatusByAspect,
+          createdAt: now,
+        }));
+        const locId = nanoidLite();
+        const location: Location = {
+          id: locId,
+          name: setup.name || `Location ${locationOrdinal}`,
+          plates,
+          createdAt: now,
+        };
+        locationOrdinal++;
+        locations.push(location);
+        locationId = locId;
+
+        for (const b of backdrops) {
+          if (b.url) urlToLocationId.set(b.url, locId);
+        }
+      }
+    }
+
+    return {
+      ...setup,
+      characterSlots: characterSlots.length > 0 ? characterSlots : undefined,
+      characterSheetSlots: characterSheetSlots.length > 0 ? characterSheetSlots : undefined,
+      locationId,
+    };
+  });
+
+  return {
+    ...data,
+    schemaVersion: 19,
+    characters,
+    locations,
+    setups: updatedSetups,
+  };
+}
+
 export function migrateStudioProject(
   data: StudioProject,
   defaults: ShotProjectDefaults,
 ): StudioProject {
-  return migrateV17ToV18(data, defaults);
+  const v18 = migrateV17ToV18(data, defaults);
+  return migrateV18toV19(v18);
 }
 
 export function ensureDefaultScene(project: StudioProject): Scene[] {

@@ -30,6 +30,8 @@ export function validateStudioProject(data: unknown): StudioProject | null {
     setups: migrated.setups,
     currentSetupId: migrated.currentSetupId,
     currentCoverageShotId: migrated.currentCoverageShotId,
+    characters: migrated.characters ?? [],
+    locations: migrated.locations ?? [],
     ...(migrated.mediaLibrary ? { mediaLibrary: migrated.mediaLibrary } : {}),
     ...(migrated.shotWorkflowSnapshots ? { shotWorkflowSnapshots: migrated.shotWorkflowSnapshots } : {}),
   });

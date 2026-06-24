@@ -18,6 +18,7 @@ export type MediaLibraryScope = 'project' | 'global';
 
 export interface MediaAssetMetadata {
   characterId?: string;
+  locationId?: string;
   prompt?: string;
   provider?: string;
   usedInShots: number[];

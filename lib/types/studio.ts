@@ -355,6 +355,45 @@ export interface Scene {
   name: string;
 }
 
+// ── Character & Location first-class types ────────────────────────────────
+
+export interface CharacterSheet {
+  id: string;
+  url: string;
+  label?: string;
+  createdAt: number;
+}
+
+/** Named character entity that owns one or more reference sheets. */
+export interface Character {
+  id: string;
+  name: string;
+  /** At least one sheet required before a Character can be assigned. */
+  sheets: CharacterSheet[];
+  createdAt: number;
+}
+
+export interface LocationBackdropPlate {
+  id: string;
+  url: string | null;
+  label: string;
+  backdropFramingByAspect?: Partial<Record<AspectRatio, BackdropFraming>>;
+  backdropCropsByAspect?: Partial<Record<AspectRatio, string>>;
+  backdropCropStatusByAspect?: Partial<Record<AspectRatio, BackdropCropStatus>>;
+  createdAt: number;
+}
+
+/** Named location entity that owns one or more backdrop plates. */
+export interface Location {
+  id: string;
+  name: string;
+  /** At least one plate required before a Location can be assigned. */
+  plates: LocationBackdropPlate[];
+  createdAt: number;
+}
+
+// ── SetupBackdrop (per-setup storage — kept for backward compat) ───────────
+
 /** Backdrop plate within a setup (LS, MS, CU from same location). */
 export interface SetupBackdrop {
   id: string;
@@ -416,6 +455,12 @@ export interface Setup {
   themeTransformLinked?: boolean[];
   backdrops: SetupBackdrop[];
   shots: CoverageShot[];
+  /** Character IDs assigned to each subject slot (index matches subject checklist order). */
+  characterSlots?: (string | null)[];
+  /** Character sheet IDs per subject slot — parallel to characterSlots. */
+  characterSheetSlots?: (string | null)[];
+  /** Location ID assigned to this setup. Plates live on the Location object. */
+  locationId?: string | null;
 }
 
 /** @deprecated Legacy monolithic shot — use Setup + CoverageShot. Kept as resolved runtime view. */
@@ -494,6 +539,10 @@ export interface StudioProject {
   setups: Setup[];
   currentSetupId: number;
   currentCoverageShotId: number;
+  /** Named characters with their reference sheets — project-level. */
+  characters?: Character[];
+  /** Named locations with their backdrop plates — project-level. */
+  locations?: Location[];
   mediaLibrary?: MediaAsset[];
   shotWorkflowSnapshots?: ShotWorkflowSnapshot[];
   /** @deprecated v17 — migrated to setups on load */

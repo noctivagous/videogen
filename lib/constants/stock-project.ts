@@ -9,9 +9,11 @@ import { DEFAULT_VIDEO_LIGHTING } from '@/lib/constants/video-lighting';
 import { STOCK_ASSETS, STOCK_MS_PROMPT, STOCK_SURFER_SHOT_ACTIVITY } from '@/lib/constants/stock-demo';
 import type {
   CameraSettings,
+  Character,
   CoverageShot,
   FrameComposition,
   LightingSettings,
+  Location,
   MotionSettings,
   ProjectSettings,
   ReferenceRole,
@@ -87,6 +89,44 @@ export const STOCK_SHOT_COMPOSITION: FrameComposition = {
 
 export const STOCK_REFERENCE_ROLES: ReferenceRole[] = ['Backdrop', 'Subject', 'Style'];
 
+/** Stable IDs for demo Character / Location entities. */
+export const STOCK_CHARACTER_BUD_ID = 'stock-character-bud';
+export const STOCK_CHARACTER_BUD_SHEET_ID = 'stock-character-bud-sheet-1';
+export const STOCK_LOCATION_CHK_OFFICE_ID = 'stock-location-chk-office';
+export const STOCK_LOCATION_CHK_PLATE_ID = 'stock-plate-57th-entry-left';
+
+export const STOCK_CHARACTERS: Character[] = [
+  {
+    id: STOCK_CHARACTER_BUD_ID,
+    name: 'Bud',
+    sheets: [
+      {
+        id: STOCK_CHARACTER_BUD_SHEET_ID,
+        url: STOCK_ASSETS.demoSurferCharacterSheet,
+        label: 'Character Sheet 1',
+        createdAt: 0,
+      },
+    ],
+    createdAt: 0,
+  },
+];
+
+export const STOCK_LOCATIONS: Location[] = [
+  {
+    id: STOCK_LOCATION_CHK_OFFICE_ID,
+    name: 'CHK Office',
+    plates: [
+      {
+        id: STOCK_LOCATION_CHK_PLATE_ID,
+        url: STOCK_ASSETS.demoSurferBackdrop,
+        label: '57th St. Entry - Left',
+        createdAt: 0,
+      },
+    ],
+    createdAt: 0,
+  },
+];
+
 export interface CreateStockShotOptions {
   duration?: number;
   placement?: FrameComposition['placement'];
@@ -161,7 +201,7 @@ export function createStockSetup(
 ): Setup {
   const shot = createStockShot(id, `Shot ${String(id).padStart(2, '0')}`, active, options);
   const backdropUrl = options.withReferences !== false ? STOCK_BACKDROP_REF : null;
-  const coverage = createCoverageShot(id, shot.name, active, createDefaultBackdrop().id, {
+  const coverage = createCoverageShot(id, shot.name, active, STOCK_LOCATION_CHK_PLATE_ID, {
     duration: shot.duration,
     thumbnail: shot.thumbnail,
     videoUrl: shot.videoUrl,
@@ -173,7 +213,7 @@ export function createStockSetup(
     frameComposition: shot.frameComposition,
   });
 
-  return createSetup(id, name.replace(/^Shot\s+/i, 'Setup '), 1, active, coverage, {
+  const setup = createSetup(id, name.replace(/^Shot\s+/i, 'Setup '), 1, active, coverage, {
     backdropUrl,
     setupSettings: {
       sceneSetup: shot.sceneSetup,
@@ -183,8 +223,24 @@ export function createStockSetup(
         : [null, null],
       referenceRoles: ['Subject', 'Style'],
       referenceMode: shot.referenceMode,
+      characterSlots: options.withReferences !== false ? [STOCK_CHARACTER_BUD_ID] : undefined,
+      characterSheetSlots: options.withReferences !== false ? [STOCK_CHARACTER_BUD_SHEET_ID] : undefined,
+      locationId: options.withReferences !== false ? STOCK_LOCATION_CHK_OFFICE_ID : null,
     },
   });
+
+  if (options.withReferences !== false) {
+    setup.backdrops = [
+      {
+        id: STOCK_LOCATION_CHK_PLATE_ID,
+        label: '57th St. Entry - Left',
+        url: backdropUrl,
+      },
+    ];
+    setup.shots[0].backdropId = STOCK_LOCATION_CHK_PLATE_ID;
+  }
+
+  return setup;
 }
 
 export const STOCK_SETUPS: Setup[] = [

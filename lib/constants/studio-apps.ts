@@ -1,5 +1,6 @@
 export type StudioAppId =
   | 'character-sheet-generator'
+  | 'location-manager'
   | 'film-look-maker'
   | 'color-palette-maker'
   | 'image-editor';
@@ -14,7 +15,12 @@ export const STUDIO_APPS: readonly StudioAppDefinition[] = [
   {
     id: 'character-sheet-generator',
     title: 'Character Manager',
-    description: 'Build subject reference sheets for shot workflows',
+    description: 'Create and manage named characters with reference sheets',
+  },
+  {
+    id: 'location-manager',
+    title: 'Location Manager',
+    description: 'Create and manage named locations with backdrop plates',
   },
   {
     id: 'film-look-maker',

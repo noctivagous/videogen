@@ -1,7 +1,7 @@
 import { sanitizeProjectForPersistence } from '@/lib/storage/sanitize-secrets';
 import type { StudioProject } from '@/lib/types/studio';
 
-export const PROJECT_SCHEMA_VERSION = 18;
+export const PROJECT_SCHEMA_VERSION = 19;
 export const STUDIO_STATE_KEY = 'vgen_studio_draft';
 
 export function buildStudioProject(state: {
@@ -11,6 +11,8 @@ export function buildStudioProject(state: {
   setups: StudioProject['setups'];
   currentSetupId: number;
   currentCoverageShotId: number;
+  characters?: StudioProject['characters'];
+  locations?: StudioProject['locations'];
   mediaLibrary?: StudioProject['mediaLibrary'];
   shotWorkflowSnapshots?: StudioProject['shotWorkflowSnapshots'];
 }): StudioProject {
@@ -22,6 +24,8 @@ export function buildStudioProject(state: {
     setups: state.setups,
     currentSetupId: state.currentSetupId,
     currentCoverageShotId: state.currentCoverageShotId,
+    characters: state.characters ?? [],
+    locations: state.locations ?? [],
     mediaLibrary: state.mediaLibrary ?? [],
     shotWorkflowSnapshots: state.shotWorkflowSnapshots ?? [],
   });

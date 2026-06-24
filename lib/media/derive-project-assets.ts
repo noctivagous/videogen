@@ -12,7 +12,7 @@
  */
 
 import type { MediaAsset, MediaAssetType } from '@/lib/types/media-library';
-import type { ReferenceRole, Setup } from '@/lib/types/studio';
+import type { Character, Location, ReferenceRole, Setup } from '@/lib/types/studio';
 
 /** Stable derived-asset ID from a source descriptor. Does not require hashing. */
 function derivedId(...parts: (string | number)[]): string {
@@ -31,10 +31,14 @@ function roleToAssetType(role: ReferenceRole): MediaAssetType {
 }
 
 /**
- * Derive MediaAsset records from a project's setups.
+ * Derive MediaAsset records from a project's setups, characters, and locations.
  * The caller is responsible for deduplicating against the explicit mediaLibrary.
  */
-export function deriveProjectAssets(setups: Setup[]): MediaAsset[] {
+export function deriveProjectAssets(
+  setups: Setup[],
+  characters: Character[] = [],
+  locations: Location[] = [],
+): MediaAsset[] {
   const assets: MediaAsset[] = [];
   const seenUrls = new Set<string>();
 
@@ -46,8 +50,44 @@ export function deriveProjectAssets(setups: Setup[]): MediaAsset[] {
 
   const now = Date.now();
 
+  // ── Character sheets (project-level objects) ───────────────────────────────
+  for (const character of characters) {
+    for (const sheet of character.sheets) {
+      if (!sheet.url) continue;
+      push({
+        id: derivedId('character-sheet', character.id, sheet.id),
+        type: 'character-sheet',
+        url: sheet.url,
+        thumbnailUrl: sheet.url,
+        createdAt: sheet.createdAt,
+        workflowOrigin: 'upload',
+        metadata: { characterId: character.id, usedInShots: [] },
+      });
+    }
+  }
+
+  // ── Location backdrop plates (project-level objects) ──────────────────────
+  for (const location of locations) {
+    for (const plate of location.plates) {
+      if (!plate.url) continue;
+      // Which setups/coverages use this plate?
+      const shotIds = setups.flatMap((setup) =>
+        setup.shots.filter((c) => c.backdropId === plate.id).map((c) => c.id),
+      );
+      push({
+        id: derivedId('location-plate', location.id, plate.id),
+        type: 'backdrop-plate',
+        url: plate.url,
+        thumbnailUrl: plate.url,
+        createdAt: plate.createdAt,
+        workflowOrigin: 'upload',
+        metadata: { locationId: location.id, usedInShots: shotIds },
+      });
+    }
+  }
+
   for (const setup of setups) {
-    // ── Backdrop plates ────────────────────────────────────────────────────
+    // ── Backdrop plates (legacy setup-level) ──────────────────────────────
     for (const backdrop of setup.backdrops) {
       if (!backdrop.url) continue;
       // Which coverage shots use this backdrop?

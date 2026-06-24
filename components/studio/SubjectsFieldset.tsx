@@ -1,6 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import { CharacterSheetCompositionControls } from '@/components/studio/CharacterSheetCompositionControls';
+import {
+  characterSheetLabel,
+  EntityDropdown,
+  EntityDropdownPanel,
+} from '@/components/studio/entity-picker/EntityDropdown';
 import { resolveReferenceDisplayUrl } from '@/lib/storage/reference-url';
 import {
   getSubjectChecklistSlotIndices,
@@ -10,7 +16,9 @@ import {
 } from '@/lib/studio/subject-sheet-slots';
 import type { Shot } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
+import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 import type { ReactNode } from 'react';
+import { WorkflowCollapsibleSection } from '@/components/ui/WorkflowCollapsibleSection';
 
 interface CharacterSheetWorkflowStep {
   id: string;
@@ -24,8 +32,194 @@ export interface SubjectsFieldsetProps {
   renderReferenceSlotRow: (index: number) => ReactNode;
 }
 
-function isSubjectSlotFilled(shot: Shot, slotIndex: number): boolean {
+function isSubjectSlotFilled(
+  shot: Shot,
+  slotIndex: number,
+  setup: { characterSlots?: (string | null)[] } | undefined,
+  slotOrdinal: number,
+): boolean {
+  if (setup?.characterSlots?.[slotOrdinal]) return true;
   return Boolean(resolveReferenceDisplayUrl(shot.references[slotIndex]));
+}
+
+// ── Character Slot Picker ────────────────────────────────────────────────────
+
+interface CharacterSlotPickerProps {
+  slotOrdinal: number;
+  fallback: ReactNode;
+}
+
+function CharacterSlotPicker({ slotOrdinal, fallback }: CharacterSlotPickerProps) {
+  const characters = useStudioStore((s) => s.characters);
+  const setups = useStudioStore((s) => s.setups);
+  const currentSetupId = useStudioStore((s) => s.currentSetupId);
+  const assignCharacterToSlot = useStudioStore((s) => s.assignCharacterToSlot);
+  const navigateToPanel = useNavigateToStudioPanel();
+
+  const [characterOpen, setCharacterOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sourceMode, setSourceMode] = useState<'manager' | 'manual'>('manager');
+
+  const setup = setups.find((s) => s.id === currentSetupId);
+  const assignedId = setup?.characterSlots?.[slotOrdinal] ?? null;
+  const assignedSheetId = setup?.characterSheetSlots?.[slotOrdinal] ?? null;
+  const assigned = characters.find((c) => c.id === assignedId) ?? null;
+  const assignedSheet =
+    assigned?.sheets.find((s) => s.id === assignedSheetId) ?? assigned?.sheets[0] ?? null;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-1.5 text-[10px] text-gray-500">
+        <span className="uppercase tracking-wider font-semibold">Characters</span>
+        <button
+          type="button"
+          onClick={() => navigateToPanel('character-sheet-generator')}
+          className="ml-auto text-brand-400 hover:text-brand-300 transition-colors text-[9px]"
+        >
+          Manage →
+        </button>
+      </div>
+
+      <div className="flex items-start gap-2">
+        <input
+          type="radio"
+          name={`subject-source-mode-${slotOrdinal}`}
+          checked={sourceMode === 'manager'}
+          onChange={() => setSourceMode('manager')}
+          className="mt-2 h-3.5 w-3.5 rounded-full border-surface-500 text-brand-500 focus:ring-brand-500/40"
+          aria-label={`Use character manager source for slot ${slotOrdinal + 1}`}
+        />
+        <div className="flex-1 flex flex-col gap-2">
+          <EntityDropdown
+            label="Character"
+            value={assigned?.name ?? ''}
+            thumbnailUrl={assignedSheet?.url}
+            placeholder="Select character…"
+            open={characterOpen}
+            onToggle={() => {
+              if (sourceMode !== 'manager') return;
+              setCharacterOpen((v) => !v);
+              setSheetOpen(false);
+            }}
+            thumbnailAspect="square"
+            emptyIcon={
+              <svg className="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            }
+          >
+            <EntityDropdownPanel>
+              <div className="p-1 space-y-0.5 max-h-48 overflow-y-auto">
+                {characters.map((character) => (
+                  <button
+                    key={character.id}
+                    type="button"
+                    onClick={() => {
+                      assignCharacterToSlot(currentSetupId, slotOrdinal, character.id);
+                      setCharacterOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left hover:bg-surface-700 transition-colors text-[11px]
+                      ${character.id === assignedId ? 'bg-brand-500/10 text-brand-300' : 'text-gray-200'}`}
+                  >
+                    <img
+                      src={character.sheets[0]?.url}
+                      alt={character.name}
+                      className="w-7 h-7 rounded-md object-cover border border-surface-600 flex-shrink-0"
+                    />
+                    <span className="truncate flex-1">{character.name}</span>
+                  </button>
+                ))}
+                {characters.length === 0 && (
+                  <div className="px-2.5 py-2 text-[11px] text-gray-500">
+                    No characters yet. Create one in Character Manager.
+                  </div>
+                )}
+              </div>
+              {assigned && (
+                <div className="border-t border-surface-700 p-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      assignCharacterToSlot(currentSetupId, slotOrdinal, null);
+                      setCharacterOpen(false);
+                    }}
+                    className="w-full px-2.5 py-1.5 rounded-lg text-left text-[11px] text-red-400 hover:bg-surface-700 transition-colors"
+                  >
+                    Remove assignment
+                  </button>
+                </div>
+              )}
+            </EntityDropdownPanel>
+          </EntityDropdown>
+
+          {assigned && assignedSheet && (
+            <EntityDropdown
+              label="Character Sheet"
+              value={characterSheetLabel(
+                assignedSheet.label,
+                Math.max(0, assigned.sheets.findIndex((s) => s.id === assignedSheet.id)),
+              )}
+              thumbnailUrl={assignedSheet.url}
+              placeholder="Select character sheet…"
+              open={sheetOpen}
+              onToggle={() => {
+                if (sourceMode !== 'manager') return;
+                setSheetOpen((v) => !v);
+                setCharacterOpen(false);
+              }}
+              thumbnailAspect="square"
+            >
+              <EntityDropdownPanel>
+                <div className="p-1 space-y-0.5 max-h-48 overflow-y-auto">
+                  {assigned.sheets.map((sheet, sheetIndex) => (
+                    <button
+                      key={sheet.id}
+                      type="button"
+                      onClick={() => {
+                        assignCharacterToSlot(currentSetupId, slotOrdinal, assigned.id, sheet.id);
+                        setSheetOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left hover:bg-surface-700 transition-colors text-[11px]
+                        ${sheet.id === assignedSheet.id ? 'bg-brand-500/10 text-brand-300' : 'text-gray-200'}`}
+                    >
+                      <img
+                        src={sheet.url}
+                        alt={characterSheetLabel(sheet.label, sheetIndex)}
+                        className="w-7 h-7 rounded-md object-cover border border-surface-600 flex-shrink-0"
+                      />
+                      <span className="truncate flex-1">
+                        {characterSheetLabel(sheet.label, sheetIndex)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </EntityDropdownPanel>
+            </EntityDropdown>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-start gap-2">
+        <input
+          type="radio"
+          name={`subject-source-mode-${slotOrdinal}`}
+          checked={sourceMode === 'manual'}
+          onChange={() => {
+            setSourceMode('manual');
+            setCharacterOpen(false);
+            setSheetOpen(false);
+          }}
+          className="mt-2 h-3.5 w-3.5 rounded-full border-surface-500 text-brand-500 focus:ring-brand-500/40"
+          aria-label={`Use manual character sheet source for slot ${slotOrdinal + 1}`}
+        />
+        <div className="flex-1">
+          <WorkflowCollapsibleSection label="Manual Character Sheet" defaultCollapsed>
+            {fallback}
+          </WorkflowCollapsibleSection>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function SubjectsFieldset({
@@ -34,11 +228,14 @@ export function SubjectsFieldset({
   renderReferenceSlotRow,
 }: SubjectsFieldsetProps) {
   const shots = useStudioStore((s) => s.shots);
+  const setups = useStudioStore((s) => s.setups);
   const currentShot = useStudioStore((s) => s.currentShot);
+  const currentSetupId = useStudioStore((s) => s.currentSetupId);
   const camera = useStudioStore((s) => s.camera);
   const handleCameraCompositionChange = useStudioStore((s) => s.handleCameraCompositionChange);
   const setCrowdTypePrompt = useStudioStore((s) => s.setCrowdTypePrompt);
   const shot = shots.find((s) => s.id === currentShot) ?? shots[0];
+  const setup = setups.find((s) => s.id === currentSetupId);
 
   if (!shot) return null;
 
@@ -121,7 +318,7 @@ export function SubjectsFieldset({
 
         {showSheetRows &&
           subjectSlotIndices.map((slotIndex, index) => {
-            const filled = isSubjectSlotFilled(shot, slotIndex);
+            const filled = isSubjectSlotFilled(shot, slotIndex, setup, index);
             return (
               <div key={slotIndex} className="flex flex-col gap-1.5">
                 <div className="flex items-center gap-1.5">
@@ -136,7 +333,11 @@ export function SubjectsFieldset({
                     {getSubjectSlotDisplayLabel(shot, slotIndex, index + 1)}
                   </span>
                 </div>
-                {renderReferenceSlotRow(slotIndex)}
+                {/* Character picker — falls back to raw image slot if no characters in project. */}
+                <CharacterSlotPicker
+                  slotOrdinal={index}
+                  fallback={renderReferenceSlotRow(slotIndex)}
+                />
               </div>
             );
           })}

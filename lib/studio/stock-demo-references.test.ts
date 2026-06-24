@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   STOCK_CHARACTER_REF,
+  STOCK_CHARACTERS,
+  STOCK_CHARACTER_BUD_ID,
+  STOCK_CHARACTER_BUD_SHEET_ID,
+  STOCK_LOCATION_CHK_OFFICE_ID,
+  STOCK_LOCATION_CHK_PLATE_ID,
+  STOCK_LOCATIONS,
   STOCK_SETUPS,
 } from '@/lib/constants/stock-project';
 import { resolveShot } from '@/lib/studio/resolved-shot';
@@ -13,6 +19,17 @@ import { STOCK_LIGHTING, STOCK_PROJECT } from '@/lib/constants/stock-project';
 import { migrateSetup } from '@/lib/studio/coverage-shot-settings';
 
 describe('stock demo surfer references', () => {
+  it('includes Bud character and CHK Office location on default stock setup', () => {
+    const setup = STOCK_SETUPS[0];
+    expect(STOCK_CHARACTERS[0]?.name).toBe('Bud');
+    expect(STOCK_LOCATIONS[0]?.name).toBe('CHK Office');
+    expect(setup.characterSlots).toEqual([STOCK_CHARACTER_BUD_ID]);
+    expect(setup.characterSheetSlots).toEqual([STOCK_CHARACTER_BUD_SHEET_ID]);
+    expect(setup.locationId).toBe(STOCK_LOCATION_CHK_OFFICE_ID);
+    expect(setup.shots[0].backdropId).toBe(STOCK_LOCATION_CHK_PLATE_ID);
+    expect(setup.backdrops[0].label).toBe('57th St. Entry - Left');
+  });
+
   it('loads character sheet in the subject checklist slot for default stock setup', () => {
     const setup = STOCK_SETUPS[0];
     const resolved = resolveShot(setup, setup.shots[0])!;

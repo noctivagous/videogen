@@ -29,6 +29,8 @@ export function MediaLibraryViewer({ onBack }: MediaLibraryViewerProps) {
   const mediaLibrary = useStudioStore((s) => s.mediaLibrary);
   const globalMediaLibrary = useStudioStore((s) => s.globalMediaLibrary);
   const setups = useStudioStore((s) => s.setups);
+  const characters = useStudioStore((s) => s.characters);
+  const locations = useStudioStore((s) => s.locations);
   const shotWorkflowSnapshots = useStudioStore((s) => s.shotWorkflowSnapshots);
   const shots = useStudioStore((s) => s.shots);
   const selectedId = useStudioStore((s) => s.selectedMediaLibraryItemId);
@@ -48,7 +50,10 @@ export function MediaLibraryViewer({ onBack }: MediaLibraryViewerProps) {
 
   // Assets derived directly from the live project state — always up to date,
   // no manual save required.
-  const derivedAssets = useMemo(() => deriveProjectAssets(setups), [setups]);
+  const derivedAssets = useMemo(
+    () => deriveProjectAssets(setups, characters, locations),
+    [setups, characters, locations],
+  );
 
   // Merge: explicit mediaLibrary wins over derived when both cover the same URL.
   const projectAssets = useMemo(
@@ -191,7 +196,7 @@ export function MediaLibraryViewer({ onBack }: MediaLibraryViewerProps) {
           className="media-library-viewer__browser flex-1 min-w-0 border-r border-surface-700"
           {...uiSectionProps(UI_SECTIONS.studioMediaLibraryBrowser)}
         >
-          {layoutMode === 'grid' && <MediaLibraryGridView {...browserProps} setups={setups} />}
+          {layoutMode === 'grid' && <MediaLibraryGridView {...browserProps} setups={setups} characters={characters} locations={locations} />}
           {layoutMode === 'list' && (
             <MediaLibraryListView {...browserProps} shots={shots} setups={setups} />
           )}

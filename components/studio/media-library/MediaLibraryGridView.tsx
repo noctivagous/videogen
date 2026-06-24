@@ -5,7 +5,7 @@ import { groupMediaAssetsByType } from '@/lib/media/media-library-query';
 import { groupMediaAssetsBySetupAndShot } from '@/lib/media/media-library-query';
 import { resolveAssetDisplayUrl } from '@/lib/media/media-library';
 import type { MediaAsset, ShotWorkflowSnapshot } from '@/lib/types/media-library';
-import type { Setup } from '@/lib/types/studio';
+import type { Character, Location, Setup } from '@/lib/types/studio';
 import { getMediaAssetTypeLabel } from '@/lib/media/media-library-query';
 import {
   formatMediaAssetSummary,
@@ -16,6 +16,8 @@ interface MediaLibraryGridViewProps {
   assets: MediaAsset[];
   snapshots: ShotWorkflowSnapshot[];
   setups: Setup[];
+  characters?: Character[];
+  locations?: Location[];
   selectedId: string | null;
   selectedIds: Set<string>;
   onSelectAsset: (assetId: string, additive?: boolean) => void;
@@ -29,6 +31,8 @@ export function MediaLibraryGridView({
   assets,
   snapshots,
   setups,
+  characters = [],
+  locations = [],
   selectedId,
   selectedIds,
   onSelectAsset,
@@ -37,9 +41,17 @@ export function MediaLibraryGridView({
   onImport,
   dropHint = 'Drop images to import',
 }: MediaLibraryGridViewProps) {
-  const { setupGroups, unassigned } = groupMediaAssetsBySetupAndShot(assets, setups);
+  // Separate assets owned by characters/locations from everything else.
+  const characterAssetIds = new Set(assets.filter((a) => a.metadata.characterId).map((a) => a.id));
+  const locationAssetIds = new Set(assets.filter((a) => a.metadata.locationId).map((a) => a.id));
+  const ownedAssetIds = new Set([...characterAssetIds, ...locationAssetIds]);
+  const remainingAssets = assets.filter((a) => !ownedAssetIds.has(a.id));
+
+  const { setupGroups, unassigned } = groupMediaAssetsBySetupAndShot(remainingAssets, setups);
   const unassignedGroups = groupMediaAssetsByType(unassigned);
-  const empty = setupGroups.length === 0 && unassignedGroups.length === 0 && snapshots.length === 0;
+  const hasCharacters = characters.length > 0;
+  const hasLocations = locations.length > 0;
+  const empty = !hasCharacters && !hasLocations && setupGroups.length === 0 && unassignedGroups.length === 0 && snapshots.length === 0;
   const [dragging, setDragging] = useState(false);
   const dragCounterRef = useRef(0);
 
@@ -96,6 +108,92 @@ export function MediaLibraryGridView({
           <p className="text-brand-300 font-semibold text-sm">{dropHint}</p>
         </div>
       )}
+      {/* ── Characters section ──────────────────────────────────────────────── */}
+      {hasCharacters && (
+        <section className="media-library-grid-section">
+          <h3 className="media-library-section-title text-[10px] uppercase tracking-wider font-semibold text-gray-300 mb-2">
+            Characters
+            <span className="text-gray-600 font-normal ml-1">({characters.length})</span>
+          </h3>
+          <div className="flex flex-col gap-4">
+            {characters.map((character) => {
+              const charAssets = assets.filter((a) => a.metadata.characterId === character.id);
+              if (charAssets.length === 0) return null;
+              return (
+                <div key={character.id}>
+                  <h4 className="text-[10px] uppercase tracking-wider font-semibold text-gray-400 mb-2 flex items-center gap-2">
+                    {character.sheets[0]?.url && (
+                      <img
+                        src={character.sheets[0].url}
+                        alt=""
+                        className="w-5 h-5 rounded-md object-cover border border-surface-600 flex-shrink-0"
+                      />
+                    )}
+                    {character.name}
+                    <span className="text-gray-600 font-normal">({charAssets.length})</span>
+                  </h4>
+                  <div className="media-library-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+                    {charAssets.map((asset) => (
+                      <AssetGridCard
+                        key={asset.id}
+                        asset={asset}
+                        selected={selectedId === asset.id}
+                        bulkSelected={selectedIds.has(asset.id)}
+                        onSelect={(additive) => onSelectAsset(asset.id, additive)}
+                        onToggleSelect={(additive) => onToggleSelect(asset.id, additive)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* ── Locations section ────────────────────────────────────────────────── */}
+      {hasLocations && (
+        <section className="media-library-grid-section">
+          <h3 className="media-library-section-title text-[10px] uppercase tracking-wider font-semibold text-gray-300 mb-2">
+            Locations
+            <span className="text-gray-600 font-normal ml-1">({locations.length})</span>
+          </h3>
+          <div className="flex flex-col gap-4">
+            {locations.map((location) => {
+              const locAssets = assets.filter((a) => a.metadata.locationId === location.id);
+              if (locAssets.length === 0) return null;
+              return (
+                <div key={location.id}>
+                  <h4 className="text-[10px] uppercase tracking-wider font-semibold text-gray-400 mb-2 flex items-center gap-2">
+                    {location.plates[0]?.url && (
+                      <img
+                        src={location.plates[0].url}
+                        alt=""
+                        className="w-7 h-4 rounded object-cover border border-surface-600 flex-shrink-0"
+                      />
+                    )}
+                    {location.name}
+                    <span className="text-gray-600 font-normal">({locAssets.length})</span>
+                  </h4>
+                  <div className="media-library-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+                    {locAssets.map((asset) => (
+                      <AssetGridCard
+                        key={asset.id}
+                        asset={asset}
+                        selected={selectedId === asset.id}
+                        bulkSelected={selectedIds.has(asset.id)}
+                        onSelect={(additive) => onSelectAsset(asset.id, additive)}
+                        onToggleSelect={(additive) => onToggleSelect(asset.id, additive)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {setupGroups.map((setupGroup) => (
         <section key={setupGroup.setupId} className="media-library-grid-section">
           <h3 className="media-library-section-title text-[10px] uppercase tracking-wider font-semibold text-gray-300 mb-2">
