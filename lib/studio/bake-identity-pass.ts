@@ -5,6 +5,7 @@ import {
 } from '@/lib/studio/mannequin-character-assignment';
 import { buildMultiSubjectBakeIdentityPrompt } from '@/lib/studio/generation-prompt';
 import { mannequinAngleLabel } from '@/lib/studio/mannequin-rotation';
+import { effectiveReferenceUrl } from '@/lib/studio/theme-transform';
 import type { GenerationRef } from '@/lib/studio/generation/types';
 import type { LightingSettings, Mannequin, Shot } from '@/lib/types/studio';
 
@@ -17,8 +18,14 @@ export interface BakeIdentityPassPlan {
   passes: BakeIdentityPassSpec[];
 }
 
-function subjectSheetUrl(shot: Shot, slotIndex: number): string | null {
-  return shot.references[slotIndex] ?? null;
+function subjectSheetUrl(
+  shot: Shot,
+  slotIndex: number,
+  lighting?: LightingSettings,
+): string | null {
+  return effectiveReferenceUrl(shot, slotIndex, lighting ?? shot.lighting)
+    ?? shot.references[slotIndex]
+    ?? null;
 }
 
 function buildIdentityAssignments(
@@ -39,6 +46,7 @@ function buildPassForAssignments(
   assigned: Mannequin[],
   sceneUrl: string,
   spatialContext: Mannequin[],
+  lighting?: LightingSettings,
 ): BakeIdentityPassSpec | null {
   if (assigned.length === 0) return null;
 
@@ -47,7 +55,7 @@ function buildPassForAssignments(
   for (const mannequin of sorted) {
     const slotIndex = mannequin.subjectSlotIndex;
     if (slotIndex == null) return null;
-    const sheetUrl = subjectSheetUrl(shot, slotIndex);
+    const sheetUrl = subjectSheetUrl(shot, slotIndex, lighting);
     if (!sheetUrl) return null;
     subjectRefs.push({ role: 'Subject', url: sheetUrl, slotIndex });
   }
@@ -71,19 +79,20 @@ function buildSequentialPlan(
   shot: Shot,
   assigned: Mannequin[],
   bakedSceneUrl: string,
+  lighting?: LightingSettings,
 ): BakeIdentityPassPlan | null {
   if (assigned.length <= 2) {
-    const spec = buildPassForAssignments(shot, assigned, bakedSceneUrl, assigned);
+    const spec = buildPassForAssignments(shot, assigned, bakedSceneUrl, assigned, lighting);
     return spec ? { passes: [spec] } : null;
   }
 
   if (assigned.length === 3) {
     const firstTwo = assigned.slice(0, 2);
     const third = assigned[2];
-    const pass1 = buildPassForAssignments(shot, firstTwo, bakedSceneUrl, assigned);
+    const pass1 = buildPassForAssignments(shot, firstTwo, bakedSceneUrl, assigned, lighting);
     if (!pass1 || third.subjectSlotIndex == null) return null;
 
-    const thirdUrl = subjectSheetUrl(shot, third.subjectSlotIndex);
+    const thirdUrl = subjectSheetUrl(shot, third.subjectSlotIndex, lighting);
     if (!thirdUrl) return null;
 
     const pass2Refs: GenerationRef[] = [
@@ -103,8 +112,8 @@ function buildSequentialPlan(
 
   const firstTwo = assigned.slice(0, 2);
   const nextTwo = assigned.slice(2, 4);
-  const pass1 = buildPassForAssignments(shot, firstTwo, bakedSceneUrl, assigned);
-  const pass2 = buildPassForAssignments(shot, nextTwo, bakedSceneUrl, assigned);
+  const pass1 = buildPassForAssignments(shot, firstTwo, bakedSceneUrl, assigned, lighting);
+  const pass2 = buildPassForAssignments(shot, nextTwo, bakedSceneUrl, assigned, lighting);
   if (!pass1 || !pass2) return null;
 
   return { passes: [pass1, pass2] };
@@ -114,9 +123,9 @@ function buildSequentialPlan(
 export function buildIdentityPassPlan(
   shot: Shot,
   bakedSceneUrl: string,
-  _lighting?: LightingSettings,
+  lighting?: LightingSettings,
 ): BakeIdentityPassPlan | null {
-  const assigned = getAssignedMannequins(shot, _lighting).sort((a, b) => a.x - b.x);
+  const assigned = getAssignedMannequins(shot, lighting).sort((a, b) => a.x - b.x);
   if (assigned.length === 0) return null;
-  return buildSequentialPlan(shot, assigned, bakedSceneUrl);
+  return buildSequentialPlan(shot, assigned, bakedSceneUrl, lighting);
 }

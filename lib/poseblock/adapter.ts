@@ -16,6 +16,7 @@ export interface PoseBlockInstance {
   id: string;
   modelUrl: string;
   basePoseId: string;
+  poseAdjustments?: Array<{ type: string; [key: string]: unknown }>;
   x: number;
   y: number;
   scale: number;
@@ -116,6 +117,7 @@ export function mannequinToInstance(m: Mannequin): PoseBlockInstance {
     id: m.id,
     modelUrl: modelUrlForMannequin(m.gender),
     basePoseId: m.poseBlockBasePoseId ?? basePoseIdForMannequin(m.pose),
+    poseAdjustments: m.poseBlockPoseAdjustments,
     x: m.x,
     y: m.y,
     scale: m.scale,
@@ -146,6 +148,14 @@ export function instancePatchToMannequinPatch(
 
   if (patch.characterRotationY !== undefined) {
     result.angle = angleForRotationY(patch.characterRotationY);
+  }
+
+  if (patch.basePoseId !== undefined) {
+    result.poseBlockBasePoseId = patch.basePoseId;
+  }
+
+  if (patch.poseAdjustments !== undefined) {
+    result.poseBlockPoseAdjustments = patch.poseAdjustments;
   }
 
   return result;

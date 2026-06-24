@@ -3,7 +3,7 @@ import { fieldSizeAnchor } from '@/lib/studio/mannequin-bounds-framing';
 import { getFigureCount } from '@/lib/studio/blocking-layout';
 import { getShotFrameComposition } from '@/lib/studio/composition';
 import { migrateMannequins } from '@/lib/studio/migrate-mannequin';
-import { createDefaultMannequin, getMannequinLimit } from '@/lib/studio/mannequin-factory';
+import { getMannequinLimit } from '@/lib/studio/mannequin-factory';
 import { layoutFromCamera } from '@/lib/studio/mannequin-layouts';
 import {
   sanitizeMannequinSubjectSlots,
@@ -173,14 +173,13 @@ function smartResyncMannequins(
         next.scale = variantAnchor.scale;
       }
     } else if (fieldSizeChanged) {
-      const variantAnchor = mannequinFieldSizeAnchor(shot, prev, aspectRatio);
-      next.x = variantAnchor.x;
-      next.y = variantAnchor.y;
-      next.scale = variantAnchor.scale;
-      if (nearDefault) {
-        next.rotation = def.rotation;
-        next.angle = def.angle;
-      }
+      // Preserve user mannequin placement and scale when field size changes.
+      // Field size should change framing intent/prompting only, not overwrite blocking.
+      next.x = prev.x;
+      next.y = prev.y;
+      next.scale = prev.scale;
+      next.rotation = prev.rotation;
+      next.angle = prev.angle;
     } else if (placementChanged && (reason === 'placement' || nearDefault)) {
       next.x = def.x;
       next.y = def.y;
