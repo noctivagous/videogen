@@ -1,3 +1,5 @@
+![VideoGen Shot Designer](public/readme/vg-screenshot.png)
+
 VideoGen
 
 VideoGen is a workflow-based video generation app,
