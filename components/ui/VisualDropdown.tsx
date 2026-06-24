@@ -57,6 +57,21 @@ function isSelectable<T extends string>(option: VisualDropdownOption<T>): boolea
   return !option.disabled;
 }
 
+const MENU_PAD_PX = 12;
+const GRID_GAP_PX = 6;
+
+function menuColumnsThatFit(
+  containerWidth: number,
+  desiredColumns: number,
+  cellWidth: number,
+): number {
+  for (let columns = desiredColumns; columns > 1; columns--) {
+    const needed = columns * cellWidth + (columns - 1) * GRID_GAP_PX + MENU_PAD_PX;
+    if (containerWidth >= needed) return columns;
+  }
+  return 1;
+}
+
 export function VisualDropdown<T extends string>({
   label,
   labelClassName = '',
@@ -76,6 +91,7 @@ export function VisualDropdown<T extends string>({
 }: VisualDropdownProps<T>) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [effectiveColumns, setEffectiveColumns] = useState(menuColumns);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const listboxId = useId();
@@ -99,6 +115,21 @@ export function VisualDropdown<T extends string>({
     },
     [close, flatOptions, onChange],
   );
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || menuVariant === 'list') return;
+
+    const updateColumns = () => {
+      const width = root.getBoundingClientRect().width;
+      setEffectiveColumns(menuColumnsThatFit(width, menuColumns, cellWidth));
+    };
+
+    updateColumns();
+    const observer = new ResizeObserver(updateColumns);
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, [cellWidth, menuColumns, menuVariant]);
 
   useEffect(() => {
     if (!open) return;
@@ -129,16 +160,17 @@ export function VisualDropdown<T extends string>({
 
   const moveGrid = (rowDelta: number, colDelta: number) => {
     setActiveIndex((prev) => {
-      const row = Math.floor(prev / menuColumns);
-      const col = prev % menuColumns;
-      const totalRows = Math.ceil(flatOptions.length / menuColumns);
+      const columns = effectiveColumns;
+      const row = Math.floor(prev / columns);
+      const col = prev % columns;
+      const totalRows = Math.ceil(flatOptions.length / columns);
       const nextRow = Math.min(Math.max(row + rowDelta, 0), totalRows - 1);
       let nextCol = col + colDelta;
-      if (nextCol < 0) nextCol = menuColumns - 1;
-      if (nextCol >= menuColumns) nextCol = 0;
-      let nextIndex = nextRow * menuColumns + nextCol;
+      if (nextCol < 0) nextCol = columns - 1;
+      if (nextCol >= columns) nextCol = 0;
+      let nextIndex = nextRow * columns + nextCol;
       if (nextIndex >= flatOptions.length) {
-        nextIndex = Math.min(nextRow * menuColumns + col, flatOptions.length - 1);
+        nextIndex = Math.min(nextRow * columns + col, flatOptions.length - 1);
       }
       return nextIndex;
     });
@@ -338,7 +370,9 @@ export function VisualDropdown<T extends string>({
             className={menuClass}
             style={
               menuVariant === 'grid' || menuVariant === 'columns'
-                ? { gridTemplateColumns: `repeat(${menuColumns}, minmax(0, 1fr))` }
+                ? {
+                    gridTemplateColumns: `repeat(${effectiveColumns}, minmax(var(--vd-cell-w, 6rem), 1fr))`,
+                  }
                 : undefined
             }
           >

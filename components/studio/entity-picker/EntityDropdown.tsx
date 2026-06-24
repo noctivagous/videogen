@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 
 interface EntityDropdownProps {
   label: string;
@@ -25,15 +25,30 @@ export function EntityDropdown({
   emptyIcon,
   children,
 }: EntityDropdownProps) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const thumbClass =
     thumbnailAspect === 'square'
       ? 'w-7 h-7 rounded-md object-cover border border-surface-600 flex-shrink-0'
       : 'w-10 h-6 rounded object-cover border border-surface-600 flex-shrink-0';
 
+  useEffect(() => {
+    if (!open) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (rootRef.current?.contains(target)) return;
+      onToggle();
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [open, onToggle]);
+
   return (
     <div className="flex flex-col gap-1">
       <div className="text-[9px] text-gray-600 uppercase tracking-wider">{label}</div>
-      <div className="relative">
+      <div className="relative" ref={rootRef}>
         <button
           type="button"
           onClick={onToggle}
