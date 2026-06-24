@@ -14,6 +14,11 @@ const PoseBlockPoseSection = dynamic(
     import('@/components/studio/PoseBlockPoseSection').then((m) => m.PoseBlockPoseSection),
   { ssr: false },
 );
+const POSEBLOCK_GIZMO_SEGMENT = 'poseblock/PoseGizmoModeSegment';
+const PoseGizmoModeSegment = dynamic(
+  () => import(POSEBLOCK_GIZMO_SEGMENT).then((m) => m.PoseGizmoModeSegment),
+  { ssr: false },
+);
 
 export function PoseBlockPanel() {
   const shots = useStudioStore((s) => s.shots);
@@ -72,6 +77,8 @@ export function PoseBlockPanel() {
           Mannequins
         </h3>
       </div>
+
+      <PoseGizmoModeSegment />
 
       <div className="flex items-center gap-2">
         <button

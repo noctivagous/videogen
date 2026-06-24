@@ -24,7 +24,6 @@ export function PoseBlockPoseSection() {
         if (cancelled) return;
         poseblock.useStore.getState().set({
           posePresets: POSES,
-          interactionMode: 'pose',
         });
         setReady(true);
       },
@@ -38,9 +37,9 @@ export function PoseBlockPoseSection() {
     <div className="flex flex-col gap-2">
       <p className="text-[10px] uppercase tracking-wide text-gray-400">3D pose adjust</p>
       <p className="text-[10px] text-gray-500 leading-snug">
-        Mixamo bone edits preview here; compositor embed (Phase 4) applies them to the 3D
-        mannequin.
+        Fine-tune pose ops numerically while the canvas gizmo mode is controlled above.
       </p>
+
       <div className="poseblock-embed rounded-lg border border-surface-700 bg-surface-900/80 p-1">
         {ready ? <PoseAdjustToolbar /> : (
           <p className="px-2 py-3 text-[10px] text-gray-500">Loading pose controls…</p>
