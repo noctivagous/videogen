@@ -711,7 +711,7 @@ input[type="range"]::-moz-range-thumb:hover {
 }
 
 .reference-slot-actions .reference-viewer-btn,
-.reference-slot-actions .backdrop-framing-lock-segment {
+.reference-slot-actions .backdrop-framing-lock-control {
   margin-top: 0;
 }
 
@@ -869,55 +869,60 @@ input[type="range"]::-moz-range-thumb:hover {
   max-width: min(18rem, 70vw);
 }
 
-.backdrop-framing-lock-segment {
+.backdrop-framing-lock-control {
+  display: inline-flex;
+  align-items: center;
   gap: 2px;
   padding: 2px;
   border-radius: 8px;
+  background: rgba(10, 10, 11, 0.82);
+  border: 1px solid rgba(63, 63, 70, 0.9);
 }
 
-.backdrop-framing-lock-segment-btn {
-  position: relative;
+.backdrop-framing-lock-control__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 1.25rem;
   height: 1.25rem;
   padding: 0;
-  justify-content: center;
+  border: 0;
   border-radius: 6px;
+  background: #27272a;
+  color: #a1a1aa;
+  transition: color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
-.backdrop-framing-lock-segment-btn .backdrop-framing-lock-segment__spinner {
-  position: absolute;
-  inset: 0;
-  margin: auto;
+.backdrop-framing-lock-control__btn:hover:not(:disabled) {
+  color: #e4e4e7;
 }
 
-.backdrop-framing-lock-segment__icon {
-  width: 0.875rem;
-  height: 0.875rem;
+.backdrop-framing-lock-control__btn--active {
+  background: #6366f1;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
 }
 
-.backdrop-framing-lock-segment--ready .backdrop-framing-lock-segment-btn.active {
+.backdrop-framing-lock-control--ready .backdrop-framing-lock-control__btn--active {
   background: #10b981;
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
 }
 
-.backdrop-framing-lock-segment--error .backdrop-framing-lock-segment-btn.active {
+.backdrop-framing-lock-control--error .backdrop-framing-lock-control__btn--active {
   background: #ef4444;
   box-shadow: 0 2px 8px rgba(239, 68, 68, 0.35);
 }
 
-.backdrop-framing-lock-segment-btn:disabled {
+.backdrop-framing-lock-control__btn:disabled {
   opacity: 0.7;
   cursor: wait;
 }
 
-.backdrop-framing-lock-segment__spinner {
-  display: block;
+.backdrop-framing-lock-control__icon {
   width: 0.875rem;
   height: 0.875rem;
-  border: 2px solid rgba(161, 161, 170, 0.35);
-  border-top-color: #a1a1aa;
-  border-radius: 999px;
-  animation: spin 0.8s linear infinite;
+  display: block;
+  stroke: currentColor;
 }
 
 .reference-slot-add-btn {

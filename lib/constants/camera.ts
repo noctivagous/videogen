@@ -119,15 +119,19 @@ export const DEFAULT_FRAME_COMPOSITION: FrameComposition = {
 
 export const FRAME_GUIDE_LABELS: Record<string, string> = {
   none: 'None',
-  'grid-3x3': '3x3 Positions',
+  'grid-3x3': 'Rule of Thirds',
+  'golden-section': 'Golden Section',
   center: 'Center',
   'fill-frame': 'Fill Frame',
 };
 
-/** Migrate persisted rule-of-thirds / golden-ratio guides to grid-3x3. */
+/** Migrate persisted legacy guide keys to current guide ids. */
 export function normalizeCompositionGuide(guide: string | undefined): FrameComposition['guide'] {
-  if (guide === 'rule-of-thirds' || guide === 'golden-ratio' || guide === 'grid-3x3') {
+  if (guide === 'rule-of-thirds' || guide === 'grid-3x3') {
     return 'grid-3x3';
+  }
+  if (guide === 'golden-ratio' || guide === 'golden-section') {
+    return 'golden-section';
   }
   if (guide === 'none' || guide === 'center' || guide === 'fill-frame') {
     return guide;

@@ -1491,26 +1491,9 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     const shot = get().getCurrentShot();
     if (!shot) return;
     const frameComposition = { ...shot.frameComposition, ...patch };
-    const layoutChanged =
-      (patch.placement !== undefined && patch.placement !== shot.frameComposition.placement) ||
-      (patch.headroom !== undefined && patch.headroom !== shot.frameComposition.headroom) ||
-      (patch.guide !== undefined && patch.guide !== shot.frameComposition.guide);
-
-    let shotPatch: Partial<Shot> = { frameComposition };
-    if (layoutChanged) {
-      shotPatch = {
-        ...shotPatch,
-        ...mannequinResyncPatch(
-          shot,
-          { ...shot, frameComposition },
-          'placement',
-          (get().project.aspectRatio || '16:9') as AspectRatio,
-        ),
-      };
-    }
 
     set((s) => ({
-      ...applyShotPatch(s, shotPatch),
+      ...applyShotPatch(s, { frameComposition }),
     }));
   },
 

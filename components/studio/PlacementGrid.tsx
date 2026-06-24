@@ -18,7 +18,7 @@ export function PlacementGrid({ value, onChange }: PlacementGridProps) {
   const marker = PLACEMENT_POSITIONS[placement];
 
   return (
-    <div className="placement-grid-frame" role="group" aria-label="3x3 subject placement">
+    <div className="placement-grid-frame" role="group" aria-label="Composition guide placement overlay">
       <div className="placement-grid-lines" aria-hidden>
         <span className="placement-grid-line placement-grid-line-v" style={{ left: '33.33%' }} />
         <span className="placement-grid-line placement-grid-line-v" style={{ left: '66.66%' }} />

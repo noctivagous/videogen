@@ -12,26 +12,30 @@ export interface BackdropFramingLockButtonProps {
 
 function UnlockedLockIcon() {
   return (
-    <svg className="backdrop-framing-lock-segment__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-        d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"
-      />
+    <svg
+      className="backdrop-framing-lock-control__icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+    >
+      <rect x="3" y="11" width="18" height="10" rx="2" ry="2" strokeWidth="2" />
+      <path d="M7 11V7a5 5 0 0 1 9.9-1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 15v2" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
 
 function LockedLockIcon() {
   return (
-    <svg className="backdrop-framing-lock-segment__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-      />
+    <svg
+      className="backdrop-framing-lock-control__icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+    >
+      <rect x="3" y="11" width="18" height="10" rx="2" ry="2" strokeWidth="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 15v2" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -70,11 +74,11 @@ export function BackdropFramingLockButton({ aspectRatio, className = '' }: Backd
 
   return (
     <div
-      className={`frame-view-segment backdrop-framing-lock-segment ${
+      className={`backdrop-framing-lock-control ${
         backdropLockError
-          ? 'backdrop-framing-lock-segment--error'
+          ? 'backdrop-framing-lock-control--error'
           : backdropLockReady
-            ? 'backdrop-framing-lock-segment--ready'
+            ? 'backdrop-framing-lock-control--ready'
             : ''
       } ${className}`.trim()}
       role="radiogroup"
@@ -85,8 +89,8 @@ export function BackdropFramingLockButton({ aspectRatio, className = '' }: Backd
         type="button"
         role="radio"
         aria-checked={!lockedSelected}
-        className={`frame-view-segment-btn backdrop-framing-lock-segment-btn ${
-          !lockedSelected ? 'active' : ''
+        className={`backdrop-framing-lock-control__btn ${
+          !lockedSelected ? 'backdrop-framing-lock-control__btn--active' : ''
         }`}
         onClick={handleUnlock}
         disabled={backdropLockPending}
@@ -99,9 +103,9 @@ export function BackdropFramingLockButton({ aspectRatio, className = '' }: Backd
         type="button"
         role="radio"
         aria-checked={lockedSelected}
-        className={`frame-view-segment-btn backdrop-framing-lock-segment-btn ${
-          lockedSelected ? 'active' : ''
-        } ${backdropLockReady ? 'backdrop-framing-lock-segment-btn--ready' : ''}`}
+        className={`backdrop-framing-lock-control__btn ${
+          lockedSelected ? 'backdrop-framing-lock-control__btn--active' : ''
+        }`}
         onClick={handleLock}
         disabled={backdropLockPending}
         title={lockTitle}

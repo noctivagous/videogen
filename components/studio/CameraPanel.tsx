@@ -202,7 +202,8 @@ export function CameraPanel() {
             }}
           >
             <option value="none">None</option>
-            <option value="grid-3x3">3x3 Positions</option>
+            <option value="grid-3x3">Rule of Thirds</option>
+            <option value="golden-section">Golden Section</option>
             <option value="center">Center / Symmetry</option>
             <option value="fill-frame">Fill Frame</option>
           </Select>

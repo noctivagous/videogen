@@ -1,8 +1,6 @@
-import { PLACEMENT_POSITIONS } from '@/lib/constants/camera';
 import { mannequinVariantFrom } from '@/lib/constants/mannequin-assets';
 import { fieldSizeAnchor } from '@/lib/studio/mannequin-bounds-framing';
 import { getFigureCount } from '@/lib/studio/blocking-layout';
-import { getShotFrameComposition } from '@/lib/studio/composition';
 import { migrateMannequins } from '@/lib/studio/migrate-mannequin';
 import { createDefaultMannequin, getMannequinLimit } from '@/lib/studio/mannequin-factory';
 import { layoutFromCamera } from '@/lib/studio/mannequin-layouts';
@@ -30,9 +28,9 @@ function finalizeMannequins(shot: Shot, mannequins: Mannequin[]): Mannequin[] {
 }
 
 export function placementAnchorX(shot: Shot): number {
-  const frame = getShotFrameComposition(shot);
-  const placement = PLACEMENT_POSITIONS[frame.placement] ?? PLACEMENT_POSITIONS['cell-1-1'];
-  return placement.x / 100;
+  void shot;
+  // Placement guides are preview-only overlays and no longer drive mannequin/object layout.
+  return 0.5;
 }
 
 export function mannequinFieldSizeAnchor(

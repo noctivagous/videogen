@@ -89,7 +89,7 @@ export function applyFrameCompositionSmartDefaults(
 }
 
 export function showPlacementGrid(guide: CompositionGuide): boolean {
-  return guide === 'grid-3x3';
+  return guide === 'grid-3x3' || guide === 'golden-section';
 }
 
 export function showHeadroomControl(fieldSize: string): boolean {
@@ -99,6 +99,8 @@ export function showHeadroomControl(fieldSize: string): boolean {
 export function getCompositionSvgLines(guide: CompositionGuide): string {
   const lines = (x1: number, y1: number, x2: number, y2: number) =>
     `<line x1="${x1}%" y1="${y1}%" x2="${x2}%" y2="${y2}%"/>`;
+  const phi = 61.8034;
+  const invPhi = 100 - phi;
 
   switch (guide) {
     case 'grid-3x3':
@@ -107,6 +109,13 @@ export function getCompositionSvgLines(guide: CompositionGuide): string {
         lines(66.66, 0, 66.66, 100),
         lines(0, 33.33, 100, 33.33),
         lines(0, 66.66, 100, 66.66),
+      ].join('');
+    case 'golden-section':
+      return [
+        lines(invPhi, 0, invPhi, 100),
+        lines(phi, 0, phi, 100),
+        lines(0, invPhi, 100, invPhi),
+        lines(0, phi, 100, phi),
       ].join('');
     case 'center':
       return [lines(50, 0, 50, 100), lines(0, 50, 100, 50)].join('');
@@ -159,21 +168,8 @@ export function getFullCameraPrompt(camera: CameraSettings, frame: FrameComposit
 }
 
 function getFrameCompositionPrompt(fieldSize: string, frame: FrameComposition): string {
-  if (frame.guide === 'none') return '';
-
-  const parts: string[] = [];
-
-  if (frame.guide === 'grid-3x3') {
-    parts.push(placementFramingPrompt(frame.placement));
-  } else if (frame.guide === 'center') {
-    parts.push('symmetrical centered composition with subject in the exact center of the frame');
-  } else if (frame.guide === 'fill-frame') {
-    parts.push('subject fills the frame edge to edge');
-  }
-
-  if (HEADROOM_FIELD_SIZES.has(fieldSize as never) && frame.headroom !== 'normal') {
-    parts.push(`${frame.headroom} headroom above subject`);
-  }
-
-  return parts.filter(Boolean).join(', ');
+  void fieldSize;
+  void frame;
+  // Composition guides are now preview-only overlays and should not affect generation prompts.
+  return '';
 }

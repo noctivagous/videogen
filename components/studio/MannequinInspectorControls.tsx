@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   MANNEQUIN_AGE_OPTIONS,
   MANNEQUIN_GENDER_OPTIONS,
@@ -34,9 +34,15 @@ import {
 import { getReferenceSlotLabel } from '@/lib/studio/reference-slots';
 import { isBakeStartFrame } from '@/lib/studio/workflow';
 import { maxFeetAnchorY } from '@/lib/studio/mannequin-layout';
+import {
+  characterSheetLabel,
+  EntityDropdown,
+  EntityDropdownPanel,
+} from '@/components/studio/entity-picker/EntityDropdown';
 import type { AspectRatio, Mannequin, Shot } from '@/lib/types/studio';
 import { Select } from '@/components/ui/Select';
 import { RangeSlider } from '@/components/ui/RangeSlider';
+import { useStudioStore } from '@/store/useStudioStore';
 
 const BOUNDS_INPUT_MIN = -0.75;
 const BOUNDS_INPUT_MAX = 1.5;
@@ -92,8 +98,33 @@ export function MannequinInspectorControls({
   onUpdate,
   onAssignSubjectSlot,
 }: MannequinInspectorControlsProps) {
+  const [characterOpen, setCharacterOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const setups = useStudioStore((s) => s.setups);
+  const characters = useStudioStore((s) => s.characters);
+  const currentSetupId = useStudioStore((s) => s.currentSetupId);
+  const assignCharacterToSlot = useStudioStore((s) => s.assignCharacterToSlot);
   const subjectSlotIndices = shot ? getSubjectSlotIndices(shot) : [];
   const placementX = shot ? placementAnchorX(shot) : 0.5;
+  const setup = setups.find((s) => s.id === currentSetupId);
+  const selectedSlotIndex =
+    mannequin.subjectSlotIndex != null && subjectSlotIndices.includes(mannequin.subjectSlotIndex)
+      ? mannequin.subjectSlotIndex
+      : null;
+  const selectedSlotOrdinal = selectedSlotIndex != null ? subjectSlotIndices.indexOf(selectedSlotIndex) : -1;
+  const assignedCharacterId =
+    selectedSlotOrdinal >= 0 ? setup?.characterSlots?.[selectedSlotOrdinal] ?? null : null;
+  const assignedCharacter = characters.find((entry) => entry.id === assignedCharacterId) ?? null;
+  const selectableSheets = (assignedCharacter?.sheets ?? []).filter((sheet) => {
+    const dataType = (sheet as { dataType?: string }).dataType;
+    return !dataType || dataType === 'character-sheet';
+  });
+  const assignedSheetId =
+    selectedSlotOrdinal >= 0 ? setup?.characterSheetSlots?.[selectedSlotOrdinal] ?? null : null;
+  const assignedSheet =
+    selectableSheets.find((entry) => entry.id === assignedSheetId)
+    ?? selectableSheets[0]
+    ?? null;
 
   const bounds = useMemo(
     () => anchorToBoundsFrame(mannequin, aspectRatio, placementX),
@@ -151,20 +182,22 @@ export function MannequinInspectorControls({
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-2">
-        <Select
-          label="Gender"
-          value={mannequin.gender}
-          onChange={(e) =>
-            onUpdate(mannequin.id, { gender: e.target.value as Mannequin['gender'] })
-          }
-        >
-          {MANNEQUIN_GENDER_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </Select>
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 items-end">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-gray-400 mb-1 block">Gender</label>
+          <div className="frame-view-segment w-full">
+            {MANNEQUIN_GENDER_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={`frame-view-segment-btn flex-1 justify-center ${mannequin.gender === option.value ? 'active' : ''}`}
+                onClick={() => onUpdate(mannequin.id, { gender: option.value as Mannequin['gender'] })}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
         <Select
           label="Age"
           value={mannequin.age}
@@ -178,6 +211,8 @@ export function MannequinInspectorControls({
             </option>
           ))}
         </Select>
+      </div>
+      <div className="grid grid-cols-1 gap-2">
         <Select
           label="Pose"
           value={mannequin.pose}
@@ -196,7 +231,7 @@ export function MannequinInspectorControls({
       {isPrincipalMannequin(mannequin) && shot && isBakeStartFrame(shot) && (
         <div className="flex flex-col gap-1">
           <Select
-            label="Character sheet"
+            label="Character slot"
             value={
               mannequin.subjectSlotIndex != null &&
               subjectSlotIndices.includes(mannequin.subjectSlotIndex)
@@ -211,7 +246,7 @@ export function MannequinInspectorControls({
               );
             }}
           >
-            <option value="">Unassigned</option>
+            <option value="">Unassigned slot</option>
             {subjectSlotIndices.map((slotIndex) => {
               const role = normalizeReferenceRole(
                 shot.referenceRoles[slotIndex] ?? 'Subject',
@@ -228,6 +263,96 @@ export function MannequinInspectorControls({
               );
             })}
           </Select>
+          {selectedSlotOrdinal >= 0 && (
+            <>
+              <EntityDropdown
+                label="Character"
+                value={assignedCharacter?.name ?? ''}
+                thumbnailUrl={assignedSheet?.url ?? selectableSheets[0]?.url}
+                placeholder="Select character…"
+                onToggle={() => {
+                  setCharacterOpen((value) => !value);
+                  setSheetOpen(false);
+                }}
+                open={characterOpen}
+                thumbnailAspect="square"
+                emptyIcon={
+                  <svg className="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                }
+              >
+                <EntityDropdownPanel>
+                  <div className="p-1 space-y-0.5 max-h-48 overflow-y-auto">
+                    {characters.map((character) => (
+                      <button
+                        key={character.id}
+                        type="button"
+                        onClick={() => {
+                          assignCharacterToSlot(currentSetupId, selectedSlotOrdinal, character.id);
+                          onAssignSubjectSlot(mannequin.id, selectedSlotIndex!);
+                          setCharacterOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left hover:bg-surface-700 transition-colors text-[11px]
+                          ${character.id === assignedCharacterId ? 'bg-brand-500/10 text-brand-300' : 'text-gray-200'}`}
+                      >
+                        <img
+                          src={character.sheets[0]?.url}
+                          alt={character.name}
+                          className="w-7 h-7 rounded-md object-cover border border-surface-600 flex-shrink-0"
+                        />
+                        <span className="truncate flex-1">{character.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </EntityDropdownPanel>
+              </EntityDropdown>
+              {assignedCharacter && assignedSheet && (
+                <EntityDropdown
+                  label="Character Sheet"
+                  value={characterSheetLabel(
+                    assignedSheet.label,
+                    Math.max(0, assignedCharacter.sheets.findIndex((s) => s.id === assignedSheet.id)),
+                  )}
+                  thumbnailUrl={assignedSheet.url}
+                  placeholder="Select character sheet…"
+                  onToggle={() => {
+                    setSheetOpen((value) => !value);
+                    setCharacterOpen(false);
+                  }}
+                  open={sheetOpen}
+                  thumbnailAspect="square"
+                >
+                  <EntityDropdownPanel>
+                    <div className="p-1 space-y-0.5 max-h-48 overflow-y-auto">
+                      {selectableSheets.map((sheet, sheetIndex) => (
+                        <button
+                          key={sheet.id}
+                          type="button"
+                          onClick={() => {
+                            assignCharacterToSlot(currentSetupId, selectedSlotOrdinal, assignedCharacter.id, sheet.id);
+                            onAssignSubjectSlot(mannequin.id, selectedSlotIndex!);
+                            setSheetOpen(false);
+                          }}
+                          className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left hover:bg-surface-700 transition-colors text-[11px]
+                            ${sheet.id === assignedSheet.id ? 'bg-brand-500/10 text-brand-300' : 'text-gray-200'}`}
+                        >
+                          <img
+                            src={sheet.url}
+                            alt={characterSheetLabel(sheet.label, sheetIndex)}
+                            className="w-7 h-7 rounded-md object-cover border border-surface-600 flex-shrink-0"
+                          />
+                          <span className="truncate flex-1">
+                            {characterSheetLabel(sheet.label, sheetIndex)}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </EntityDropdownPanel>
+                </EntityDropdown>
+              )}
+            </>
+          )}
           <p className="text-[10px] text-gray-500 leading-snug lg:hidden">
             Drag link on desktop — assign here on mobile.
           </p>

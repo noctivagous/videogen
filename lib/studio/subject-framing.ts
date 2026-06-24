@@ -134,15 +134,11 @@ export function getSubjectLayerStyle(opts: {
 }
 
 export function getBackdropLayerStyle(
-  placement: Placement,
   angle: CameraAngle,
 ): CSSProperties {
-  const pos = PLACEMENT_POSITIONS[placement] ?? PLACEMENT_POSITIONS['cell-1-1'];
-  const panX = (pos.x - 50) * 0.2;
-  const panY = (pos.y - 50) * 0.15;
   return {
     objectFit: 'cover',
-    objectPosition: `${50 + panX}% ${50 + panY}%`,
+    objectPosition: '50% 50%',
     transform: angleTransform(angle),
     transformOrigin: '50% 50%',
     width: '100%',

@@ -32,8 +32,8 @@ export function ReferencePreviewScene({
       : getBackdropReference(payload.shot);
 
   const backdropStyle = useMemo<CSSProperties>(
-    () => getBackdropLayerStyle(frame.placement, payload.camera.angle),
-    [frame.placement, payload.camera.angle],
+    () => getBackdropLayerStyle(payload.camera.angle),
+    [payload.camera.angle],
   );
 
   const fieldLabel =

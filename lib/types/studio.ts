@@ -43,7 +43,7 @@ export type CameraMovement =
 
 export type DepthOfField = 'very-shallow' | 'shallow' | 'medium' | 'deep';
 
-export type CompositionGuide = 'none' | 'grid-3x3' | 'center' | 'fill-frame';
+export type CompositionGuide = 'none' | 'grid-3x3' | 'golden-section' | 'center' | 'fill-frame';
 
 /** 4×4 line intersections, edge/center mids, or 3×3 cell centers — see placement-grid.ts */
 export type Placement = string;
