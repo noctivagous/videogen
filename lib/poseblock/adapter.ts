@@ -32,9 +32,10 @@ export interface PoseBlockInstance {
 /** GLB assets — served from `public/poseblock-models` (symlink to PoseBlock/public/models). */
 const POSEBLOCK_MODELS_BASE = '/poseblock-models';
 
+/** PoseBlock GLB filenames are not gendered — X Bot = female, Y Bot = male. */
 const MODEL_URLS: Record<MannequinGender, string> = {
-  male: `${POSEBLOCK_MODELS_BASE}/X Bot.glb`,
-  female: `${POSEBLOCK_MODELS_BASE}/Y Bot.glb`,
+  male: `${POSEBLOCK_MODELS_BASE}/Y Bot.glb`,
+  female: `${POSEBLOCK_MODELS_BASE}/X Bot.glb`,
 };
 
 export function modelUrlForMannequin(gender: MannequinGender): string {
