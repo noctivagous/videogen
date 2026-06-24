@@ -101,6 +101,22 @@ export function selectGeneratedVideoIndex(shot: Shot, index: number): Partial<Sh
   };
 }
 
+export function linkGeneratedVideoMediaAsset(
+  shot: Shot,
+  videoId: string,
+  mediaLibraryAssetId: string,
+): Partial<Shot> {
+  const videos = getShotGeneratedVideos(shot);
+  const index = videos.findIndex((video) => video.id === videoId);
+  if (index < 0) return {};
+
+  const nextVideos = videos.map((video) => (
+    video.id === videoId ? { ...video, mediaLibraryAssetId } : video
+  ));
+
+  return { generatedVideos: nextVideos };
+}
+
 export function deleteGeneratedVideoById(shot: Shot, id: string): Partial<Shot> {
   const videos = getShotGeneratedVideos(shot);
   const removeIdx = videos.findIndex((v) => v.id === id);

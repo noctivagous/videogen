@@ -711,7 +711,7 @@ input[type="range"]::-moz-range-thumb:hover {
 }
 
 .reference-slot-actions .reference-viewer-btn,
-.reference-slot-actions .backdrop-framing-lock-btn {
+.reference-slot-actions .backdrop-framing-lock-segment {
   margin-top: 0;
 }
 
@@ -836,27 +836,48 @@ input[type="range"]::-moz-range-thumb:hover {
   width: auto;
 }
 
-.backdrop-framing-lock-btn {
-  @apply flex shrink-0 items-center justify-center w-5 h-5 rounded-md border border-surface-700 bg-surface-900/80 text-gray-400 transition-all hover:border-brand-500 hover:text-white;
+.backdrop-framing-lock-segment {
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
 }
 
-.backdrop-framing-lock-btn--locked {
-  @apply border-brand-500/50 text-brand-400;
+.backdrop-framing-lock-segment-btn {
+  position: relative;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  justify-content: center;
+  border-radius: 6px;
 }
 
-.backdrop-framing-lock-btn--ready {
-  @apply border-emerald-500/50 text-emerald-400;
+.backdrop-framing-lock-segment-btn .backdrop-framing-lock-segment__spinner {
+  position: absolute;
+  inset: 0;
+  margin: auto;
 }
 
-.backdrop-framing-lock-btn--error {
-  @apply border-red-500/50 text-red-400;
+.backdrop-framing-lock-segment__icon {
+  width: 0.875rem;
+  height: 0.875rem;
 }
 
-.backdrop-framing-lock-btn:disabled {
-  @apply opacity-70 cursor-wait;
+.backdrop-framing-lock-segment--ready .backdrop-framing-lock-segment-btn.active {
+  background: #10b981;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
 }
 
-.backdrop-framing-lock-btn__spinner {
+.backdrop-framing-lock-segment--error .backdrop-framing-lock-segment-btn.active {
+  background: #ef4444;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.35);
+}
+
+.backdrop-framing-lock-segment-btn:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.backdrop-framing-lock-segment__spinner {
   display: block;
   width: 0.875rem;
   height: 0.875rem;
@@ -897,6 +918,13 @@ input[type="range"]::-moz-range-thumb:hover {
 
 .workflow-step-fieldset__legend {
   @apply px-1 text-[10px] uppercase tracking-wider font-semibold text-gray-400;
+}
+
+.workflow-step-fieldset__legend.w-full {
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .workflow-step-fieldset__legend-order {

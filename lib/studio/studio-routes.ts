@@ -24,11 +24,51 @@ export function studioPanelRoute(panel: StudioPanelId): string {
   return `/studio/${panel}`;
 }
 
-export function panelFromPathname(pathname: string): StudioPanelId | null {
-  const match = pathname.match(/^\/studio\/([^/]+)\/?$/);
+export interface StudioRouteTarget {
+  panel: StudioPanelId;
+  mediaAssetId?: string;
+  generatedVideoId?: string;
+}
+
+export function studioMediaLibraryVideoRoute(assetId: string): string {
+  return `/studio/media-library/generated/video/${encodeURIComponent(assetId)}`;
+}
+
+export function studioShotDesignerGeneratedVideoRoute(generatedVideoId: string): string {
+  return `/studio/shot-designer/generated/video/${encodeURIComponent(generatedVideoId)}`;
+}
+
+export function parseStudioPathname(pathname: string): StudioRouteTarget | null {
+  const match = pathname.match(/^\/studio\/([^/]+)(?:\/(.*))?$/);
   if (!match) return null;
+
   const slug = match[1];
-  return isStudioPanelId(slug) ? slug : null;
+  if (!isStudioPanelId(slug)) return null;
+
+  const rest = match[2]?.replace(/\/$/, '');
+  if (!rest) return { panel: slug };
+
+  const mediaLibraryVideoMatch = rest.match(/^generated\/video\/([^/]+)$/);
+  if (mediaLibraryVideoMatch && slug === 'media-library') {
+    return {
+      panel: slug,
+      mediaAssetId: decodeURIComponent(mediaLibraryVideoMatch[1]),
+    };
+  }
+
+  const shotDesignerVideoMatch = rest.match(/^generated\/video\/([^/]+)$/);
+  if (shotDesignerVideoMatch && slug === 'shot-designer') {
+    return {
+      panel: slug,
+      generatedVideoId: decodeURIComponent(shotDesignerVideoMatch[1]),
+    };
+  }
+
+  return null;
+}
+
+export function panelFromPathname(pathname: string): StudioPanelId | null {
+  return parseStudioPathname(pathname)?.panel ?? null;
 }
 
 export function isShotDesignerPanel(panel: StudioPanelId): boolean {

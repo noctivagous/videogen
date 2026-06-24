@@ -314,7 +314,10 @@ export async function archiveGeneratedVideoToLibrary(
 
   const id = await hashBlobContent(blob);
   const existing = library.find((a) => a.id === id);
-  if (existing) return { library, assetId: id };
+  if (existing) {
+    const nextLibrary = linkAssetToShot(library, id, opts.shotId);
+    return { library: nextLibrary, assetId: id };
+  }
 
   // Convert to a data URL so it survives page reloads without relying on the
   // provider URL remaining valid.

@@ -34,6 +34,7 @@ import { CollapsiblePromptEditor } from '@/components/ui/CollapsiblePromptEditor
 import { ReferenceImageViewerModal } from '@/components/studio/ReferenceImageViewerModal';
 import { countMannequinsLinkedToSlot } from '@/lib/studio/mannequin-character-assignment';
 import type { AspectRatio, ReferenceMode, ThemeTransformSlotStatus } from '@/lib/types/studio';
+import { useOpenGeneratedVideo } from '@/hooks/use-studio-panel-navigation';
 import { useStudioStore } from '@/store/useStudioStore';
 
 interface ViewerSlot {
@@ -94,10 +95,12 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
   const isGenerating = useStudioStore((s) => s.isGenerating);
   const project = useStudioStore((s) => s.project);
   const locations = useStudioStore((s) => s.locations);
+  const openGeneratedVideo = useOpenGeneratedVideo();
   const fileInputs = useRef<(HTMLInputElement | null)[]>([]);
   const localSlotRefs = useRef<(HTMLElement | null)[]>([]);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [viewerSlot, setViewerSlot] = useState<ViewerSlot | null>(null);
+  const [additionalResourcesExpanded, setAdditionalResourcesExpanded] = useState(false);
   const characterConnector = useCharacterAssignmentConnectorContext();
 
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
@@ -464,7 +467,14 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
   const placeMannequinsStep = stagingWorkflowSteps.find((step) => step.id === 'place-mannequins');
   const assignCharactersStep = stagingWorkflowSteps.find((step) => step.id === 'assign-characters');
   const bakeWorkflowStep = workflowSteps.find((step) => step.id === 'bake');
-  const bakeStepNumber = assetWorkflowSteps.length + stagingWorkflowSteps.length + 1;
+  const assetsDone = assetWorkflowSteps.length > 0 && assetWorkflowSteps.every((step) => step.done);
+  const backdropDone = Boolean(backdropStep?.done);
+  const subjectsDone = Boolean(characterSheetStep?.done);
+  const stagingDone =
+    stagingWorkflowSteps.length > 0 && stagingWorkflowSteps.every((step) => step.done);
+  const bakeDone = Boolean(bakeWorkflowStep?.done);
+  const hasGeneratedVideo = Boolean(shot.videoUrl || (shot.generatedVideos?.length ?? 0) > 0);
+  const generateDone = bakeDone && hasGeneratedVideo;
 
   const showAssetsFieldset =
     isBakeStartFrameWorkflow && workflowSteps.length > 0 && assetWorkflowSteps.length > 0;
@@ -483,91 +493,102 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
   const lightingFieldsetOrder = showLightingFieldset ? nextTopLevelFieldsetOrder() : null;
   const additionalResourcesFieldsetOrder = nextTopLevelFieldsetOrder();
   const bakeFieldsetOrder = isBakeStartFrameWorkflow ? nextTopLevelFieldsetOrder() : null;
+  const generateFieldsetOrder = isBakeStartFrameWorkflow ? nextTopLevelFieldsetOrder() : null;
 
   const bakePromptPreview = buildBakeStartFramePromptPreview(shot, shot.lighting);
   const bakePromptValue = shot.bakeStartFramePrompt ?? bakePromptPreview;
 
-  const renderTopLevelFieldsetLegend = (order: number, label: string) => (
+  const renderChecklistDot = (done: boolean) => (
+    <span
+      className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
+        done ? 'bg-brand-500/30 text-brand-300' : 'bg-surface-700 text-gray-500'
+      }`}
+      aria-hidden="true"
+    >
+      {done ? '✓' : ''}
+    </span>
+  );
+
+  const renderTopLevelFieldsetLegend = (
+    order: number,
+    label: string,
+    options: { done?: boolean; optional?: boolean } = {},
+  ) => (
     <legend className="workflow-step-fieldset__legend flex items-center gap-1.5">
+      {options.done != null ? renderChecklistDot(options.done) : null}
       <span className="workflow-step-fieldset__legend-order" aria-hidden="true">
         {order}
       </span>
-      {label}
+      <span>{label}</span>
+      {options.optional ? <span className="text-gray-500 normal-case text-[10px]">(optional)</span> : null}
     </legend>
   );
 
-  const renderWorkflowStepHeader = (
+  const renderWorkflowStepLegend = (
     step: (typeof workflowSteps)[number],
-    stepNumber: number,
+    stepLabel: string,
   ) => (
-    <div className="flex items-center gap-1.5">
+    <legend className="workflow-step-fieldset__legend flex items-center gap-1.5">
       <span
         className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
           step.done ? 'bg-brand-500/30 text-brand-300' : 'bg-surface-700 text-gray-500'
         }`}
       >
-        {step.done ? '✓' : stepNumber}
+        {step.done ? '✓' : stepLabel}
       </span>
       <span className={step.done ? 'text-gray-300' : ''}>{step.label}</span>
-    </div>
+    </legend>
   );
-
-  const renderWorkflowStep = (
-    step: (typeof workflowSteps)[number],
-    stepNumber: number,
-  ) => {
-    const slotIndex = checklistSlotIndexForStep(step.id);
-    return (
-      <li key={step.id} className="flex flex-col gap-1.5">
-        {renderWorkflowStepHeader(step, stepNumber)}
-        {slotIndex != null && slotIndex >= 0 && renderReferenceSlotRow(slotIndex)}
-      </li>
-    );
-  };
 
   const renderAssetsFieldset = (fieldsetOrder: number) => {
     if (assetWorkflowSteps.length === 0) return null;
 
-    let stepNumber = 1;
-
     return (
       <fieldset className="workflow-step-fieldset">
-        {renderTopLevelFieldsetLegend(fieldsetOrder, 'Assets')}
+        {renderTopLevelFieldsetLegend(fieldsetOrder, 'Assets', { done: assetsDone })}
             {backdropStep && (
           <fieldset className="workflow-step-fieldset workflow-step-fieldset--nested">
-            <legend className="workflow-step-fieldset__legend">Backdrop</legend>
-            <div className="flex flex-col gap-1.5 text-[10px] text-gray-400">
-              {renderWorkflowStepHeader(backdropStep, stepNumber++)}
-              {backdropSlotIndex >= 0 && locations.length === 0 && renderReferenceSlotRow(backdropSlotIndex)}
-              {lockBackdropStep && (
-                <div className="workflow-step-substep flex flex-col gap-1.5">
-                  {renderWorkflowStepHeader(lockBackdropStep, stepNumber++)}
+            <legend className="workflow-step-fieldset__legend flex items-center gap-1.5">
+              {renderChecklistDot(backdropDone)}
+              <span>Backdrop</span>
+            </legend>
+            {backdropSlotIndex >= 0 && locations.length === 0 && renderReferenceSlotRow(backdropSlotIndex)}
+            <LocationPickerSection checklistMarker="A" checklistDone={backdropStep.done} />
+            {lockBackdropStep && (
+              <fieldset className="workflow-step-fieldset workflow-step-fieldset--nested">
+                {renderWorkflowStepLegend(lockBackdropStep, 'B')}
+                <div className="flex flex-col gap-1.5 text-[10px] text-gray-400">
                   {backdropSlotIndex >= 0 && shot.references[backdropSlotIndex] && (
-                    <BackdropFramingLockButton aspectRatio={aspectRatio} />
+                    <div className="flex items-center gap-2">
+                      <BackdropFramingLockButton aspectRatio={aspectRatio} />
+                      <span>Click to lock the backdrop after scaling and positioning it.</span>
+                    </div>
                   )}
                 </div>
-              )}
-              <LocationPickerSection />
-            </div>
+              </fieldset>
+            )}
           </fieldset>
         )}
         {characterSheetStep && (
           <SubjectsFieldset
             characterSheetStep={characterSheetStep}
-            stepNumber={stepNumber++}
+            stepNumber={2}
             renderReferenceSlotRow={renderReferenceSlotRow}
+            legendDone={subjectsDone}
           />
         )}
       </fieldset>
     );
   };
 
-  const renderStagingFieldset = (startNumber: number, fieldsetOrder: number) => {
+  const renderStagingFieldset = (_startNumber: number, fieldsetOrder: number) => {
     if (stagingWorkflowSteps.length === 0) return null;
 
     return (
       <fieldset className="workflow-step-fieldset">
-        {renderTopLevelFieldsetLegend(fieldsetOrder, 'Staging, Blocking, and Framing')}
+        {renderTopLevelFieldsetLegend(fieldsetOrder, 'Staging, Blocking, and Framing', {
+          done: stagingDone,
+        })}
         {placeMannequinsStep && (
           <fieldset className="workflow-step-fieldset workflow-step-fieldset--nested">
             <legend className="workflow-step-fieldset__legend flex items-center gap-1.5">
@@ -576,7 +597,7 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
                   placeMannequinsStep.done ? 'bg-brand-500/30 text-brand-300' : 'bg-surface-700 text-gray-500'
                 }`}
               >
-                {placeMannequinsStep.done ? '✓' : startNumber}
+                {placeMannequinsStep.done ? '✓' : 'A'}
               </span>
               Place Mannequins
             </legend>
@@ -591,7 +612,7 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
                   assignCharactersStep.done ? 'bg-brand-500/30 text-brand-300' : 'bg-surface-700 text-gray-500'
                 }`}
               >
-                {assignCharactersStep.done ? '✓' : startNumber + (placeMannequinsStep ? 1 : 0)}
+                {assignCharactersStep.done ? '✓' : 'B'}
               </span>
               Assign Characters
             </legend>
@@ -639,14 +660,44 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
             {stagingFieldsetOrder != null &&
               renderStagingFieldset(assetWorkflowSteps.length + 1, stagingFieldsetOrder)}
             {lightingFieldsetOrder != null && (
-              <LightingAtmosphereSfxFieldset fieldsetOrder={lightingFieldsetOrder} />
+              <LightingAtmosphereSfxFieldset fieldsetOrder={lightingFieldsetOrder} optional />
             )}
           </div>
         )}
       </div>
 
       <fieldset className="workflow-step-fieldset">
-        {renderTopLevelFieldsetLegend(additionalResourcesFieldsetOrder, 'Additional Resources')}
+        <legend className="workflow-step-fieldset__legend flex items-center gap-1.5">
+          <button
+            type="button"
+            className="collapsible-prompt-editor__toggle"
+            onClick={() => setAdditionalResourcesExpanded((open) => !open)}
+            aria-expanded={additionalResourcesExpanded}
+            aria-label={
+              additionalResourcesExpanded
+                ? 'Collapse Additional Assets / Resources'
+                : 'Expand Additional Assets / Resources'
+            }
+          >
+            <svg
+              className={`collapsible-prompt-editor__chevron ${
+                additionalResourcesExpanded ? 'collapsible-prompt-editor__chevron--open' : ''
+              }`}
+              viewBox="0 0 16 16"
+              fill="currentColor"
+              aria-hidden
+            >
+              <path d="M6 4l4 4-4 4" />
+            </svg>
+          </button>
+          <span className="workflow-step-fieldset__legend-order" aria-hidden="true">
+            {additionalResourcesFieldsetOrder}
+          </span>
+          <span>Additional Assets / Resources</span>
+          <span className="text-gray-500 normal-case text-[10px]">(optional)</span>
+        </legend>
+        {additionalResourcesExpanded && (
+          <>
         <div className="reference-slots-stack flex flex-col gap-2">
         {stackSlotIndices.map((index) => renderReferenceSlotRow(index))}
 
@@ -682,16 +733,13 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
             />
           </label>
         )}
+          </>
+        )}
       </fieldset>
 
       {isBakeStartFrameWorkflow && bakeFieldsetOrder != null && (
         <fieldset className="workflow-step-fieldset">
-          {renderTopLevelFieldsetLegend(bakeFieldsetOrder, 'Bake')}
-          {bakeWorkflowStep && (
-            <ol className="workflow-steps flex flex-col gap-2 text-[10px] text-gray-400 mb-2">
-              {renderWorkflowStep(bakeWorkflowStep, bakeStepNumber)}
-            </ol>
-          )}
+          {renderTopLevelFieldsetLegend(bakeFieldsetOrder, 'Bake', { done: bakeDone })}
           <div className="reference-bake-actions flex flex-col gap-1.5">
             {hasInterruptedBake && lastSavedBakeId && (
               <p className="text-[10px] text-[#242424]">
@@ -733,6 +781,14 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
                 </button>
               </>
             )}
+          </div>
+        </fieldset>
+      )}
+
+      {isBakeStartFrameWorkflow && generateFieldsetOrder != null && (
+        <fieldset className="workflow-step-fieldset">
+          {renderTopLevelFieldsetLegend(generateFieldsetOrder, 'Generate Video', { done: generateDone })}
+          <div className="reference-bake-actions flex flex-col gap-1.5">
             <button
               type="button"
               onClick={generate}
@@ -741,6 +797,27 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
             >
               Generate Video
             </button>
+            {shot.generatedVideos && shot.generatedVideos.length > 0 && (
+              <div className="text-[10px] text-gray-500 rounded-lg border border-surface-700 bg-surface-800/60 px-2 py-1.5">
+                <div className="font-semibold text-gray-400 mb-1">Generated videos</div>
+                <ul className="flex flex-col gap-0.5">
+                  {shot.generatedVideos.map((video, index) => (
+                    <li key={video.id} className="truncate">
+                      <a
+                        href={video.mediaLibraryAssetId ? `/studio/media-library/generated/video/${encodeURIComponent(video.mediaLibraryAssetId)}` : `/studio/shot-designer/generated/video/${encodeURIComponent(video.id)}`}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          openGeneratedVideo(video, shot.id);
+                        }}
+                        className="text-brand-400 hover:text-brand-300 underline-offset-2 hover:underline"
+                      >
+                        {index + 1}. {new Date(video.createdAt).toLocaleString()}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </fieldset>
       )}

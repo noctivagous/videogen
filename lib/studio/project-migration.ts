@@ -257,7 +257,12 @@ export function migrateV18toV19(data: StudioProject): StudioProject {
         if (!charId) {
           charId = nanoidLite();
           sheetId = nanoidLite();
-          const sheet: CharacterSheet = { id: sheetId, url, createdAt: now };
+          const sheet: CharacterSheet = {
+            id: sheetId,
+            url,
+            dataType: 'character-sheet',
+            createdAt: now,
+          };
           const character: Character = {
             id: charId,
             name: `Character ${characterOrdinal++}`,
@@ -292,6 +297,7 @@ export function migrateV18toV19(data: StudioProject): StudioProject {
           id: b.id,
           url: b.url,
           label: b.label,
+          dataType: 'backdrop-plate',
           backdropFramingByAspect: b.backdropFramingByAspect,
           backdropCropsByAspect: b.backdropCropsByAspect,
           backdropCropStatusByAspect: b.backdropCropStatusByAspect,

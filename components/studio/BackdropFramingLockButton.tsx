@@ -10,6 +10,32 @@ export interface BackdropFramingLockButtonProps {
   className?: string;
 }
 
+function UnlockedLockIcon() {
+  return (
+    <svg className="backdrop-framing-lock-segment__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"
+      />
+    </svg>
+  );
+}
+
+function LockedLockIcon() {
+  return (
+    <svg className="backdrop-framing-lock-segment__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+      />
+    </svg>
+  );
+}
+
 export function BackdropFramingLockButton({ aspectRatio, className = '' }: BackdropFramingLockButtonProps) {
   const shots = useStudioStore((s) => s.shots);
   const currentShot = useStudioStore((s) => s.currentShot);
@@ -23,58 +49,66 @@ export function BackdropFramingLockButton({ aspectRatio, className = '' }: Backd
   const backdropLockPending = backdropCropStatus === 'pending';
   const backdropLockReady = backdropCropStatus === 'ready' && backdropFramingLocked;
   const backdropLockError = backdropCropStatus === 'error';
+  const lockedSelected = backdropFramingLocked || backdropLockPending;
 
-  const title = backdropLockPending
+  const unlockTitle = 'Unlock backdrop framing';
+  const lockTitle = backdropLockPending
     ? 'Cropping backdrop…'
     : backdropLockError
       ? 'Backdrop crop failed — click to retry lock'
-      : backdropFramingLocked
-        ? 'Unlock backdrop framing'
-        : 'Lock backdrop framing';
+      : 'Lock backdrop framing';
+
+  const handleUnlock = () => {
+    if (backdropLockPending || !backdropFramingLocked) return;
+    toggleBackdropFramingLock();
+  };
+
+  const handleLock = () => {
+    if (backdropLockPending || backdropFramingLocked) return;
+    toggleBackdropFramingLock();
+  };
 
   return (
-    <button
-      type="button"
-      onClick={() => toggleBackdropFramingLock()}
-      disabled={backdropLockPending}
-      className={`backdrop-framing-lock-btn ${
+    <div
+      className={`frame-view-segment backdrop-framing-lock-segment ${
         backdropLockError
-          ? 'backdrop-framing-lock-btn--error'
+          ? 'backdrop-framing-lock-segment--error'
           : backdropLockReady
-            ? 'backdrop-framing-lock-btn--ready'
-            : backdropFramingLocked
-              ? 'backdrop-framing-lock-btn--locked'
-              : ''
+            ? 'backdrop-framing-lock-segment--ready'
+            : ''
       } ${className}`.trim()}
-      title={title}
-      aria-label={title}
+      role="radiogroup"
+      aria-label="Backdrop framing lock"
       {...uiSectionProps(UI_SECTIONS.studioPreviewBackdropFramingLock)}
     >
-      {backdropLockPending ? (
-        <span className="backdrop-framing-lock-btn__spinner" aria-hidden />
-      ) : backdropLockReady ? (
-        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-        </svg>
-      ) : backdropFramingLocked ? (
-        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-          />
-        </svg>
-      ) : (
-        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"
-          />
-        </svg>
-      )}
-    </button>
+      <button
+        type="button"
+        role="radio"
+        aria-checked={!lockedSelected}
+        className={`frame-view-segment-btn backdrop-framing-lock-segment-btn ${
+          !lockedSelected ? 'active' : ''
+        }`}
+        onClick={handleUnlock}
+        disabled={backdropLockPending}
+        title={unlockTitle}
+        aria-label={unlockTitle}
+      >
+        <UnlockedLockIcon />
+      </button>
+      <button
+        type="button"
+        role="radio"
+        aria-checked={lockedSelected}
+        className={`frame-view-segment-btn backdrop-framing-lock-segment-btn ${
+          lockedSelected ? 'active' : ''
+        } ${backdropLockReady ? 'backdrop-framing-lock-segment-btn--ready' : ''}`}
+        onClick={handleLock}
+        disabled={backdropLockPending}
+        title={lockTitle}
+        aria-label={lockTitle}
+      >
+        <LockedLockIcon />
+      </button>
+    </div>
   );
 }

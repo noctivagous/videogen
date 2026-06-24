@@ -30,6 +30,7 @@ export interface SubjectsFieldsetProps {
   characterSheetStep: CharacterSheetWorkflowStep | undefined;
   stepNumber: number;
   renderReferenceSlotRow: (index: number) => ReactNode;
+  legendDone?: boolean;
 }
 
 function isSubjectSlotFilled(
@@ -47,9 +48,14 @@ function isSubjectSlotFilled(
 interface CharacterSlotPickerProps {
   slotOrdinal: number;
   fallback: ReactNode;
+  hideHeader?: boolean;
 }
 
-function CharacterSlotPicker({ slotOrdinal, fallback }: CharacterSlotPickerProps) {
+function CharacterSlotPicker({
+  slotOrdinal,
+  fallback,
+  hideHeader = false,
+}: CharacterSlotPickerProps) {
   const characters = useStudioStore((s) => s.characters);
   const setups = useStudioStore((s) => s.setups);
   const currentSetupId = useStudioStore((s) => s.currentSetupId);
@@ -64,36 +70,46 @@ function CharacterSlotPicker({ slotOrdinal, fallback }: CharacterSlotPickerProps
   const assignedId = setup?.characterSlots?.[slotOrdinal] ?? null;
   const assignedSheetId = setup?.characterSheetSlots?.[slotOrdinal] ?? null;
   const assigned = characters.find((c) => c.id === assignedId) ?? null;
+  const selectableSheets = (assigned?.sheets ?? []).filter((sheet) => {
+    const dataType = (sheet as { dataType?: string }).dataType;
+    return !dataType || dataType === 'character-sheet';
+  });
   const assignedSheet =
-    assigned?.sheets.find((s) => s.id === assignedSheetId) ?? assigned?.sheets[0] ?? null;
+    selectableSheets.find((s) => s.id === assignedSheetId)
+    ?? selectableSheets[0]
+    ?? null;
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-1.5 text-[10px] text-gray-500">
-        <span className="uppercase tracking-wider font-semibold">Characters</span>
-        <button
-          type="button"
-          onClick={() => navigateToPanel('character-sheet-generator')}
-          className="ml-auto text-brand-400 hover:text-brand-300 transition-colors text-[9px]"
-        >
-          Manage →
-        </button>
-      </div>
+      {!hideHeader && (
+        <div className="flex items-center gap-1.5 text-[10px] text-gray-500">
+          <span className="uppercase tracking-wider font-semibold">Characters</span>
+          <button
+            type="button"
+            onClick={() => navigateToPanel('character-sheet-generator')}
+            className="ml-auto text-brand-400 hover:text-brand-300 transition-colors text-[9px]"
+          >
+            Manage →
+          </button>
+        </div>
+      )}
 
-      <div className="flex items-start gap-2">
-        <input
-          type="radio"
-          name={`subject-source-mode-${slotOrdinal}`}
-          checked={sourceMode === 'manager'}
-          onChange={() => setSourceMode('manager')}
-          className="mt-2 h-3.5 w-3.5 rounded-full border-surface-500 text-brand-500 focus:ring-brand-500/40"
-          aria-label={`Use character manager source for slot ${slotOrdinal + 1}`}
-        />
+      <div className="grid grid-cols-[14px_minmax(0,1fr)] gap-2">
+        <div className="pt-6 flex justify-center">
+          <input
+            type="radio"
+            name={`subject-source-mode-${slotOrdinal}`}
+            checked={sourceMode === 'manager'}
+            onChange={() => setSourceMode('manager')}
+            className="h-3.5 w-3.5 rounded-full border-surface-500 text-brand-500 focus:ring-brand-500/40"
+            aria-label={`Use character manager source for slot ${slotOrdinal + 1}`}
+          />
+        </div>
         <div className="flex-1 flex flex-col gap-2">
           <EntityDropdown
             label="Character"
             value={assigned?.name ?? ''}
-            thumbnailUrl={assignedSheet?.url}
+            thumbnailUrl={assignedSheet?.url ?? selectableSheets[0]?.url}
             placeholder="Select character…"
             open={characterOpen}
             onToggle={() => {
@@ -171,7 +187,7 @@ function CharacterSlotPicker({ slotOrdinal, fallback }: CharacterSlotPickerProps
             >
               <EntityDropdownPanel>
                 <div className="p-1 space-y-0.5 max-h-48 overflow-y-auto">
-                  {assigned.sheets.map((sheet, sheetIndex) => (
+                  {selectableSheets.map((sheet, sheetIndex) => (
                     <button
                       key={sheet.id}
                       type="button"
@@ -199,19 +215,21 @@ function CharacterSlotPicker({ slotOrdinal, fallback }: CharacterSlotPickerProps
         </div>
       </div>
 
-      <div className="flex items-start gap-2">
-        <input
-          type="radio"
-          name={`subject-source-mode-${slotOrdinal}`}
-          checked={sourceMode === 'manual'}
-          onChange={() => {
-            setSourceMode('manual');
-            setCharacterOpen(false);
-            setSheetOpen(false);
-          }}
-          className="mt-2 h-3.5 w-3.5 rounded-full border-surface-500 text-brand-500 focus:ring-brand-500/40"
-          aria-label={`Use manual character sheet source for slot ${slotOrdinal + 1}`}
-        />
+      <div className="grid grid-cols-[14px_minmax(0,1fr)] gap-2 items-start">
+        <div className="pt-1 flex justify-center">
+          <input
+            type="radio"
+            name={`subject-source-mode-${slotOrdinal}`}
+            checked={sourceMode === 'manual'}
+            onChange={() => {
+              setSourceMode('manual');
+              setCharacterOpen(false);
+              setSheetOpen(false);
+            }}
+            className="h-3.5 w-3.5 rounded-full border-surface-500 text-brand-500 focus:ring-brand-500/40"
+            aria-label={`Use manual character sheet source for slot ${slotOrdinal + 1}`}
+          />
+        </div>
         <div className="flex-1">
           <WorkflowCollapsibleSection label="Manual Character Sheet" defaultCollapsed>
             {fallback}
@@ -224,8 +242,9 @@ function CharacterSlotPicker({ slotOrdinal, fallback }: CharacterSlotPickerProps
 
 export function SubjectsFieldset({
   characterSheetStep,
-  stepNumber,
+  stepNumber: _stepNumber,
   renderReferenceSlotRow,
+  legendDone = false,
 }: SubjectsFieldsetProps) {
   const shots = useStudioStore((s) => s.shots);
   const setups = useStudioStore((s) => s.setups);
@@ -234,6 +253,7 @@ export function SubjectsFieldset({
   const camera = useStudioStore((s) => s.camera);
   const handleCameraCompositionChange = useStudioStore((s) => s.handleCameraCompositionChange);
   const setCrowdTypePrompt = useStudioStore((s) => s.setCrowdTypePrompt);
+  const navigateToPanel = useNavigateToStudioPanel();
   const shot = shots.find((s) => s.id === currentShot) ?? shots[0];
   const setup = setups.find((s) => s.id === currentSetupId);
 
@@ -249,99 +269,128 @@ export function SubjectsFieldset({
   const showGroupWarning = shot.camera.subjectCount === 'group';
   const isCrowd = shot.camera.subjectCount === 'crowd';
   const showSheetRows = sheetCount > 0;
+  const charactersPickerDone = Boolean(characterSheetStep?.done);
 
   return (
     <fieldset className="workflow-step-fieldset workflow-step-fieldset--nested mt-2">
-      <legend className="workflow-step-fieldset__legend">Subjects</legend>
-      <div className="flex flex-col gap-1.5 text-[10px] text-gray-400">
-        <CharacterSheetCompositionControls compactCrowd={isCrowd} />
+      <legend className="workflow-step-fieldset__legend flex items-center gap-1.5">
+        <span
+          className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
+            legendDone ? 'bg-brand-500/30 text-brand-300' : 'bg-surface-700 text-gray-500'
+          }`}
+          aria-hidden="true"
+        >
+          {legendDone ? '✓' : ''}
+        </span>
+        <span>Subjects</span>
+      </legend>
 
-        {isCrowd && (
-          <label className="flex flex-col gap-1">
-            <span className="text-[10px] text-gray-500">Crowd Type</span>
-            <input
-              type="text"
-              className="bg-surface-800 border border-surface-600 rounded px-2 py-1 text-[11px] text-gray-200"
-              placeholder="e.g. concert audience, street market"
-              value={shot.crowdTypePrompt ?? ''}
-              onChange={(e) => setCrowdTypePrompt(e.target.value)}
-            />
-          </label>
-        )}
+      <fieldset className="workflow-step-fieldset workflow-step-fieldset--nested">
+        <legend className="workflow-step-fieldset__legend normal-case tracking-normal font-medium text-gray-400">
+          Subject Count
+        </legend>
+        <div className="flex flex-col gap-1.5 text-[10px] text-gray-400">
+          <CharacterSheetCompositionControls compactCrowd={isCrowd} hideSubjectCountLabel />
 
-        {isCrowd && (
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={camera.heroSubjectsEnabled}
-              onChange={(e) =>
-                handleCameraCompositionChange('heroSubjectsEnabled', {
-                  heroSubjectsEnabled: e.target.checked,
-                })
-              }
-              className="rounded border-surface-600"
-            />
-            <span>Hero Subjects — keep 1–2 characters recognizable in foreground</span>
-          </label>
-        )}
+          {isCrowd && (
+            <label className="flex flex-col gap-1">
+              <span className="text-[10px] text-gray-500">Crowd Type</span>
+              <input
+                type="text"
+                className="bg-surface-800 border border-surface-600 rounded px-2 py-1 text-[11px] text-gray-200"
+                placeholder="e.g. concert audience, street market"
+                value={shot.crowdTypePrompt ?? ''}
+                onChange={(e) => setCrowdTypePrompt(e.target.value)}
+              />
+            </label>
+          )}
 
-        {shot.camera.subjectCount === 'group' && (
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={camera.fillRestWithGenerics}
-              onChange={(e) =>
-                handleCameraCompositionChange('fillRestWithGenerics', {
-                  fillRestWithGenerics: e.target.checked,
-                })
-              }
-              className="rounded border-surface-600"
-            />
-            <span>Fill rest with generic figures (slots 5+ use outfit variants)</span>
-          </label>
-        )}
+          {isCrowd && (
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={camera.heroSubjectsEnabled}
+                onChange={(e) =>
+                  handleCameraCompositionChange('heroSubjectsEnabled', {
+                    heroSubjectsEnabled: e.target.checked,
+                  })
+                }
+                className="rounded border-surface-600"
+              />
+              <span>Hero Subjects — keep 1–2 characters recognizable in foreground</span>
+            </label>
+          )}
 
-        {showSheetRows && characterSheetStep && (
-          <div className="flex items-center gap-1.5">
+          {shot.camera.subjectCount === 'group' && (
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={camera.fillRestWithGenerics}
+                onChange={(e) =>
+                  handleCameraCompositionChange('fillRestWithGenerics', {
+                    fillRestWithGenerics: e.target.checked,
+                  })
+                }
+                className="rounded border-surface-600"
+              />
+              <span>Fill rest with generic figures (slots 5+ use outfit variants)</span>
+            </label>
+          )}
+        </div>
+      </fieldset>
+
+      {showSheetRows && (
+        <fieldset className="workflow-step-fieldset workflow-step-fieldset--nested">
+          <legend className="workflow-step-fieldset__legend flex items-center gap-1.5 w-full pr-1">
             <span
               className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
-                characterSheetStep.done ? 'bg-brand-500/30 text-brand-300' : 'bg-surface-700 text-gray-500'
+                charactersPickerDone ? 'bg-brand-500/30 text-brand-300' : 'bg-surface-700 text-gray-500'
               }`}
+              aria-hidden="true"
             >
-              {characterSheetStep.done ? '✓' : stepNumber}
+              {charactersPickerDone ? '✓' : 'A'}
             </span>
-            <span className={characterSheetStep.done ? 'text-gray-300' : ''}>
-              {characterSheetStep.label}
-            </span>
-          </div>
-        )}
-
-        {showSheetRows &&
-          subjectSlotIndices.map((slotIndex, index) => {
-            const filled = isSubjectSlotFilled(shot, slotIndex, setup, index);
-            return (
-              <div key={slotIndex} className="flex flex-col gap-1.5">
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
-                      filled ? 'bg-brand-500/30 text-brand-300' : 'bg-surface-700 text-gray-500'
-                    }`}
-                  >
-                    {filled ? '✓' : index + 1}
-                  </span>
-                  <span className={filled ? 'text-gray-300' : ''}>
-                    {getSubjectSlotDisplayLabel(shot, slotIndex, index + 1)}
-                  </span>
+            <span className={charactersPickerDone ? 'text-gray-300' : ''}>Characters</span>
+            <button
+              type="button"
+              onClick={() => navigateToPanel('character-sheet-generator')}
+              className="ml-auto text-brand-400 hover:text-brand-300 transition-colors text-[9px] normal-case tracking-normal font-medium"
+            >
+              Manage →
+            </button>
+          </legend>
+          <div className="flex flex-col gap-1.5 text-[10px] text-gray-400">
+            {subjectSlotIndices.map((slotIndex, index) => {
+              const filled = isSubjectSlotFilled(shot, slotIndex, setup, index);
+              return (
+                <div key={slotIndex} className="flex flex-col gap-1.5">
+                  {subjectSlotIndices.length > 1 && (
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
+                          filled ? 'bg-brand-500/30 text-brand-300' : 'bg-surface-700 text-gray-500'
+                        }`}
+                      >
+                        {filled ? '✓' : index + 1}
+                      </span>
+                      <span className={filled ? 'text-gray-300' : ''}>
+                        {getSubjectSlotDisplayLabel(shot, slotIndex, index + 1)}
+                      </span>
+                    </div>
+                  )}
+                  <CharacterSlotPicker
+                    slotOrdinal={index}
+                    fallback={renderReferenceSlotRow(slotIndex)}
+                    hideHeader
+                  />
                 </div>
-                {/* Character picker — falls back to raw image slot if no characters in project. */}
-                <CharacterSlotPicker
-                  slotOrdinal={index}
-                  fallback={renderReferenceSlotRow(slotIndex)}
-                />
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+        </fieldset>
+      )}
 
+      <div className="flex flex-col gap-1.5 text-[10px] text-gray-400">
         {showGroupWarning && (
           <p className="text-[10px] text-amber-500/90 leading-snug">
             Group shots work best with Bake Start Frame. Auto-place will blend faces.

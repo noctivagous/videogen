@@ -9,9 +9,13 @@ import { useStudioStore } from '@/store/useStudioStore';
 
 export interface LightingAtmosphereSfxFieldsetProps {
   fieldsetOrder: number;
+  optional?: boolean;
 }
 
-export function LightingAtmosphereSfxFieldset({ fieldsetOrder }: LightingAtmosphereSfxFieldsetProps) {
+export function LightingAtmosphereSfxFieldset({
+  fieldsetOrder,
+  optional = false,
+}: LightingAtmosphereSfxFieldsetProps) {
   const lighting = useStudioStore((s) => s.lighting);
   const shots = useStudioStore((s) => s.shots);
   const currentShot = useStudioStore((s) => s.currentShot);
@@ -46,7 +50,8 @@ export function LightingAtmosphereSfxFieldset({ fieldsetOrder }: LightingAtmosph
         <span className="workflow-step-fieldset__legend-order" aria-hidden="true">
           {fieldsetOrder}
         </span>
-        Lighting, Atmosphere, SFX
+        <span>Lighting, Atmosphere, SFX</span>
+        {optional ? <span className="text-gray-500 normal-case text-[10px]">(optional)</span> : null}
       </legend>
 
       <fieldset className="workflow-step-fieldset workflow-step-fieldset--nested">

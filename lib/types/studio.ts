@@ -341,12 +341,48 @@ export interface BackdropFraming {
 
 export type BackdropCropStatus = 'none' | 'pending' | 'ready' | 'error';
 
+/**
+ * Reusable image classification for project-owned image records.
+ * Used to prevent unrelated image types from leaking into workflow pickers.
+ */
+export type ProjectImageDataType =
+  | 'character-sheet'
+  | 'backdrop-plate'
+  | 'set-prop'
+  | 'character-prop';
+
+export interface ProjectImageRecord {
+  id: string;
+  url: string | null;
+  label?: string;
+  dataType: ProjectImageDataType;
+  createdAt: number;
+}
+
+/** Placeholder data structure for reusable scene lighting recipes. */
+export interface LightingPreset {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: number;
+}
+
+/** Placeholder data structure for reusable color palette collections. */
+export interface ColorPaletteCollection {
+  id: string;
+  name: string;
+  swatches?: string[];
+  createdAt: number;
+}
+
 export interface GeneratedVideo {
   id: string;
   url: string;
   posterUrl?: string | null;
   createdAt: number;
   providerJobId?: string;
+  /** Media library asset id once the video is archived for this shot. */
+  mediaLibraryAssetId?: string;
 }
 
 /** Script-level container — hidden in UI until multi-scene support. */
@@ -361,7 +397,13 @@ export interface CharacterSheet {
   id: string;
   url: string;
   label?: string;
+  dataType: 'character-sheet';
   createdAt: number;
+}
+
+/** Placeholder image type for character-owned props/accessories. */
+export interface CharacterPropImage extends ProjectImageRecord {
+  dataType: 'character-prop';
 }
 
 /** Named character entity that owns one or more reference sheets. */
@@ -370,6 +412,11 @@ export interface Character {
   name: string;
   /** At least one sheet required before a Character can be assigned. */
   sheets: CharacterSheet[];
+  /** Placeholder: optional character-owned prop references. */
+  props?: CharacterPropImage[];
+  /** Placeholder: optional reusable look controls attached to Character. */
+  lightingPresets?: LightingPreset[];
+  colorPalettes?: ColorPaletteCollection[];
   createdAt: number;
 }
 
@@ -377,10 +424,16 @@ export interface LocationBackdropPlate {
   id: string;
   url: string | null;
   label: string;
+  dataType: 'backdrop-plate';
   backdropFramingByAspect?: Partial<Record<AspectRatio, BackdropFraming>>;
   backdropCropsByAspect?: Partial<Record<AspectRatio, string>>;
   backdropCropStatusByAspect?: Partial<Record<AspectRatio, BackdropCropStatus>>;
   createdAt: number;
+}
+
+/** Placeholder image type for location-owned set props. */
+export interface SetPropImage extends ProjectImageRecord {
+  dataType: 'set-prop';
 }
 
 /** Named location entity that owns one or more backdrop plates. */
@@ -389,6 +442,11 @@ export interface Location {
   name: string;
   /** At least one plate required before a Location can be assigned. */
   plates: LocationBackdropPlate[];
+  /** Placeholder: optional set-prop references for this location. */
+  setProps?: SetPropImage[];
+  /** Placeholder: optional reusable look controls attached to Location. */
+  lightingPresets?: LightingPreset[];
+  colorPalettes?: ColorPaletteCollection[];
   createdAt: number;
 }
 

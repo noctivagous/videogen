@@ -15,10 +15,13 @@ const CAMERA_PANEL_LABEL = 'camera-panel-label';
 export interface CharacterSheetCompositionControlsProps {
   /** When true, omits crowd-specific text fields (shown in SubjectsFieldset instead). */
   compactCrowd?: boolean;
+  /** When true, omits the Subject Count label (shown in a parent fieldset legend instead). */
+  hideSubjectCountLabel?: boolean;
 }
 
 export function CharacterSheetCompositionControls({
   compactCrowd = false,
+  hideSubjectCountLabel = false,
 }: CharacterSheetCompositionControlsProps) {
   const camera = useStudioStore((s) => s.camera);
   const handleCameraCompositionChange = useStudioStore((s) => s.handleCameraCompositionChange);
@@ -53,7 +56,7 @@ export function CharacterSheetCompositionControls({
   return (
     <div className="character-sheet-composition-controls camera-param-chain">
       <VisualDropdown
-        label="Subject Count"
+        label={hideSubjectCountLabel ? undefined : 'Subject Count'}
         labelClassName={CAMERA_PANEL_LABEL}
         value={camera.subjectCount}
         onChange={(subjectCount) => handleCameraCompositionChange('subjectCount', { subjectCount })}

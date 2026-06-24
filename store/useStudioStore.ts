@@ -189,6 +189,7 @@ import { DEFAULT_BACKDROP_ID, getSetupBackdrop, resolveShot, setupActiveView } f
 import {
   appendGeneratedVideo,
   deleteGeneratedVideoById,
+  linkGeneratedVideoMediaAsset,
   selectGeneratedVideoIndex,
 } from '@/lib/studio/shot-videos';
 import {
@@ -2935,12 +2936,15 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         throw new Error('Generation completed without a video URL');
       }
 
+      const videoPatch = appendGeneratedVideo(shot, {
+        url: videoUrl,
+        posterUrl: result.posterUrl ?? shot.thumbnail,
+        providerJobId: result.providerJobId,
+      });
+      const newVideo = videoPatch.generatedVideos?.[videoPatch.activeVideoIndex ?? 0];
+
       set((s) => ({
-        ...applyShotPatch(s, appendGeneratedVideo(shot, {
-          url: videoUrl,
-          posterUrl: result.posterUrl ?? shot.thumbnail,
-          providerJobId: result.providerJobId,
-        })),
+        ...applyShotPatch(s, videoPatch),
         isGenerating: false,
         frameView: 'generated',
         showPreviewSuccess: true,
@@ -2951,6 +2955,20 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       }));
       get().showToast('Video generation complete!');
 
+      const linkArchivedAsset = (library: MediaAsset[], assetId: string) => {
+        if (!newVideo) {
+          set({ mediaLibrary: library });
+          return;
+        }
+        set((state) => {
+          const currentShotState = state.shots.find((entry) => entry.id === shot.id) ?? shot;
+          return {
+            mediaLibrary: library,
+            ...applyShotPatch(state, linkGeneratedVideoMediaAsset(currentShotState, newVideo.id, assetId)),
+          };
+        });
+      };
+
       // Archive the video to the media library immediately while the provider
       // URL is still live. Provider URLs (e.g. xAI) expire after ~1 hour.
       archiveGeneratedVideoToLibrary(get().mediaLibrary, videoUrl, {
@@ -2958,9 +2976,34 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         workflowOrigin: shot.workflow ?? 'generated',
         providerJobId: result.providerJobId,
       }).then(({ library, assetId }) => {
-        if (assetId) set({ mediaLibrary: library });
+        if (assetId) linkArchivedAsset(library, assetId);
       }).catch(() => {
-        // Non-fatal — the provider URL is still usable until it expires.
+        // Fallback: keep a shot-linked video record in the library even if
+        // fetching/transcoding the provider URL fails.
+        set((state) => {
+          const existingAsset = state.mediaLibrary.find((asset) => asset.url === videoUrl && asset.type === 'video');
+          if (existingAsset) {
+            linkArchivedAsset(linkAssetToShot(state.mediaLibrary, existingAsset.id, shot.id), existingAsset.id);
+            return {};
+          }
+          const fallbackAssetId = crypto.randomUUID();
+          const fallbackLibrary: MediaAsset[] = [
+            ...state.mediaLibrary,
+            {
+              id: fallbackAssetId,
+              type: 'video',
+              url: videoUrl,
+              createdAt: Date.now(),
+              workflowOrigin: shot.workflow ?? 'generated',
+              metadata: {
+                usedInShots: [shot.id],
+                provider: result.providerJobId ? getVideoProviderName(ai) : undefined,
+              },
+            },
+          ];
+          linkArchivedAsset(fallbackLibrary, fallbackAssetId);
+          return {};
+        });
       });
 
       setTimeout(() => set({ showPreviewSuccess: false }), 5000);
@@ -3255,7 +3298,12 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   createCharacter(name, firstSheetUrl) {
     const now = Date.now();
     const id = Math.random().toString(36).slice(2, 12);
-    const sheet: CharacterSheet = { id: Math.random().toString(36).slice(2, 12), url: firstSheetUrl, createdAt: now };
+    const sheet: CharacterSheet = {
+      id: Math.random().toString(36).slice(2, 12),
+      url: firstSheetUrl,
+      dataType: 'character-sheet',
+      createdAt: now,
+    };
     const character: Character = { id, name, sheets: [sheet], createdAt: now };
     set((s) => ({ characters: [...s.characters, character] }));
     return character;
@@ -3269,7 +3317,13 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 
   addCharacterSheet(characterId, url, label) {
     const now = Date.now();
-    const sheet: CharacterSheet = { id: Math.random().toString(36).slice(2, 12), url, label, createdAt: now };
+    const sheet: CharacterSheet = {
+      id: Math.random().toString(36).slice(2, 12),
+      url,
+      label,
+      dataType: 'character-sheet',
+      createdAt: now,
+    };
     set((s) => ({
       characters: s.characters.map((c) =>
         c.id === characterId ? { ...c, sheets: [...c.sheets, sheet] } : c,
@@ -3358,6 +3412,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       id: Math.random().toString(36).slice(2, 12),
       url: firstPlateUrl,
       label: 'Plate 1',
+      dataType: 'backdrop-plate',
       createdAt: now,
     };
     const location: Location = { id, name, plates: [plate], createdAt: now };
@@ -3377,6 +3432,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       id: Math.random().toString(36).slice(2, 12),
       url,
       label: label ?? `Plate ${Date.now()}`,
+      dataType: 'backdrop-plate',
       createdAt: now,
     };
     set((s) => ({
