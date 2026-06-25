@@ -17,7 +17,7 @@ import {
 const VARIATION_CATEGORIES: HarmonyVariationCategory[] = ['tint', 'tone', 'shade'];
 
 const DISC_SIZE = 240;
-const BRIGHTNESS_MIN = 4;
+const BRIGHTNESS_MIN = 0;
 const BRIGHTNESS_MAX = 92;
 const SLIDER_WIDTH = 28;
 const DEFAULT_HUE_STEPS = 20;
@@ -58,9 +58,33 @@ function quantizeHueToWheelResolution(hue: number, resolution: number): number {
   return normalizeHue(segmentIndex * stepAngle + stepAngle / 2);
 }
 
+const DISC_INSET = 10;
+
+function radialBandInnerRadius(step: number, maxRadius: number): number {
+  return (step / RADIAL_BRIGHTNESS_STEPS) * maxRadius;
+}
+
+function radialBandOuterRadius(step: number, maxRadius: number): number {
+  return ((step + 1) / RADIAL_BRIGHTNESS_STEPS) * maxRadius;
+}
+
+function radialStepFromDistance(distance: number, maxRadius: number): number {
+  if (maxRadius <= 0) return 0;
+  const t = clamp(distance / maxRadius, 0, 1);
+  return clamp(
+    Math.min(RADIAL_BRIGHTNESS_STEPS - 1, Math.floor(t * RADIAL_BRIGHTNESS_STEPS)),
+    0,
+    RADIAL_BRIGHTNESS_STEPS - 1,
+  );
+}
+
 function brightnessToRadialStep(brightness: number): number {
   const t = (brightness - BRIGHTNESS_MIN) / (BRIGHTNESS_MAX - BRIGHTNESS_MIN);
-  return clamp(Math.round(t * (RADIAL_BRIGHTNESS_STEPS - 1)), 0, RADIAL_BRIGHTNESS_STEPS - 1);
+  return clamp(
+    Math.min(RADIAL_BRIGHTNESS_STEPS - 1, Math.floor(t * RADIAL_BRIGHTNESS_STEPS)),
+    0,
+    RADIAL_BRIGHTNESS_STEPS - 1,
+  );
 }
 
 function radialStepToBrightness(step: number): number {
@@ -78,9 +102,18 @@ function brightnessFromPointerDistanceContinuous(distance: number, maxRadius: nu
   return Math.round(BRIGHTNESS_MIN + t * (BRIGHTNESS_MAX - BRIGHTNESS_MIN));
 }
 
-function brightnessToRadius(brightness: number, maxRadius: number): number {
-  const t = (brightness - BRIGHTNESS_MIN) / (BRIGHTNESS_MAX - BRIGHTNESS_MIN);
-  return ((t * 0.85) + 0.15) * maxRadius;
+function discMetricsFromRect(rect: DOMRect) {
+  const scale = rect.width / DISC_SIZE;
+  return {
+    centerX: rect.width / 2,
+    centerY: rect.height / 2,
+    maxRadius: (DISC_SIZE / 2 - DISC_INSET) * scale,
+  };
+}
+
+function wheelBrightnessForMode(brightness: number, isSteppedWheel: boolean): number {
+  if (!isSteppedWheel) return brightness;
+  return radialStepToBrightness(brightnessToRadialStep(brightness));
 }
 
 function ringMaskStyle(innerRadius: number, outerRadius: number): CSSProperties {
@@ -126,8 +159,13 @@ function discPositionFromPolar(
   };
 }
 
+function brightnessToRadiusContinuous(brightness: number, maxRadius: number): number {
+  const t = (brightness - BRIGHTNESS_MIN) / (BRIGHTNESS_MAX - BRIGHTNESS_MIN);
+  return t * maxRadius;
+}
+
 function discPositionSmooth(hue: number, brightness: number, center: number, maxRadius: number) {
-  const radius = brightnessToRadius(brightness, maxRadius);
+  const radius = brightnessToRadiusContinuous(brightness, maxRadius);
   return discPositionFromPolar(hue, radius, center);
 }
 
@@ -151,28 +189,23 @@ function saturationColumnGradient(hue: number, brightness: number): string {
 }
 
 function SteppedDiscBackground({
-  size,
+  maxRadius,
   resolution,
   saturation,
 }: {
-  size: number;
+  maxRadius: number;
   resolution: number;
   saturation: number;
 }) {
-  const center = size / 2;
-  const maxOuter = center - 4;
-  const ringWidth = maxOuter / RADIAL_BRIGHTNESS_STEPS - 1;
-
   return (
     <>
-      {Array.from({ length: RADIAL_BRIGHTNESS_STEPS }, (_, layerIndex) => {
-        const radialStep = RADIAL_BRIGHTNESS_STEPS - 1 - layerIndex;
-        const outerRadius = maxOuter - (ringWidth + 1) * layerIndex;
-        const innerRadius = Math.max(0, outerRadius - ringWidth);
-        const ringBrightness = radialStepToBrightness(radialStep);
+      {Array.from({ length: RADIAL_BRIGHTNESS_STEPS }, (_, step) => {
+        const innerRadius = radialBandInnerRadius(step, maxRadius);
+        const outerRadius = radialBandOuterRadius(step, maxRadius);
+        const ringBrightness = radialStepToBrightness(step);
         return (
           <div
-            key={`radial-${radialStep}`}
+            key={`radial-${step}`}
             className="absolute inset-0 rounded-full pointer-events-none"
             style={{
               background: steppedHueConic(ringBrightness, saturation, resolution),
@@ -208,9 +241,10 @@ export function IntegratedColorPicker({
   const sliderRef = useRef<HTMLDivElement>(null);
   const [wheelResolution, setWheelResolution] = useState(DEFAULT_WHEEL_RESOLUTION);
   const center = DISC_SIZE / 2;
-  const maxRadius = center - 10;
+  const maxRadius = center - DISC_INSET;
   const pickerWidth = DISC_SIZE + 12 + SLIDER_WIDTH;
   const isSteppedWheel = wheelResolution < WHEEL_RESOLUTION_MAX;
+  const wheelBrightness = wheelBrightnessForMode(brightness, isSteppedWheel);
 
   const harmonyHues = useMemo(
     () => harmonyVariationHues(hue, accentHues),
@@ -229,7 +263,7 @@ export function IntegratedColorPicker({
 
   const dominantPosition = dotPositionOnDisc(
     hue,
-    brightness,
+    wheelBrightness,
     wheelResolution,
     center,
     maxRadius,
@@ -243,21 +277,17 @@ export function IntegratedColorPicker({
     const rect = el.getBoundingClientRect();
     const localX = clientX - rect.left;
     const localY = clientY - rect.top;
-    const dx = localX - center;
-    const dy = localY - center;
+    const { centerX, centerY, maxRadius: pointerMaxRadius } = discMetricsFromRect(rect);
+    const dx = localX - centerX;
+    const dy = localY - centerY;
     const distance = Math.hypot(dx, dy);
     const rawAngle = normalizeHue(Math.atan2(dy, dx) * (180 / Math.PI) + 90);
 
     if (isSteppedWheel) {
+      const radialStep = radialStepFromDistance(distance, pointerMaxRadius);
       onChange({
         hue: quantizeHueToWheelResolution(rawAngle, wheelResolution),
-        brightness: radialStepToBrightness(
-          clamp(
-            Math.floor((distance / maxRadius) * RADIAL_BRIGHTNESS_STEPS),
-            0,
-            RADIAL_BRIGHTNESS_STEPS - 1,
-          ),
-        ),
+        brightness: radialStepToBrightness(radialStep),
         accentHue: null,
       });
       return;
@@ -265,7 +295,7 @@ export function IntegratedColorPicker({
 
     onChange({
       hue: rawAngle,
-      brightness: brightnessFromPointerDistanceContinuous(distance, maxRadius),
+      brightness: brightnessFromPointerDistanceContinuous(distance, pointerMaxRadius),
       accentHue: null,
     });
   };
@@ -296,7 +326,7 @@ export function IntegratedColorPicker({
             style={{
               width: DISC_SIZE,
               height: DISC_SIZE,
-              background: isSteppedWheel ? undefined : smoothDiscBackground(brightness, saturation),
+              background: isSteppedWheel ? undefined : smoothDiscBackground(wheelBrightness, saturation),
             }}
             onPointerDown={(event) => {
               event.currentTarget.setPointerCapture(event.pointerId);
@@ -309,7 +339,7 @@ export function IntegratedColorPicker({
           >
             {isSteppedWheel && (
               <SteppedDiscBackground
-                size={DISC_SIZE}
+                maxRadius={maxRadius}
                 resolution={wheelResolution}
                 saturation={saturation}
               />
@@ -319,7 +349,7 @@ export function IntegratedColorPicker({
               const isSelected = selectedAccentHue === accentHue;
               const position = dotPositionOnDisc(
                 accentHue,
-                brightness,
+                wheelBrightness,
                 wheelResolution,
                 center,
                 maxRadius,
@@ -340,7 +370,7 @@ export function IntegratedColorPicker({
                     height: thumbSize,
                     left: position.x - thumbSize / 2,
                     top: position.y - thumbSize / 2,
-                    background: `hsl(${accentDisplayHue}, ${saturation}%, ${brightness}%)`,
+                    background: `hsl(${accentDisplayHue}, ${saturation}%, ${wheelBrightness}%)`,
                   }}
                   onPointerDown={(event) => event.stopPropagation()}
                   onClick={(event) => {
@@ -359,7 +389,7 @@ export function IntegratedColorPicker({
                 height: 16,
                 left: dominantPosition.x - 8,
                 top: dominantPosition.y - 8,
-                background: `hsl(${displayHue}, ${saturation}%, ${brightness}%)`,
+                background: `hsl(${displayHue}, ${saturation}%, ${wheelBrightness}%)`,
               }}
             />
           </div>
@@ -368,7 +398,7 @@ export function IntegratedColorPicker({
             sliderRef={sliderRef}
             hues={harmonyHues}
             saturation={saturation}
-            brightness={brightness}
+            brightness={wheelBrightness}
             thumbTopPercent={saturationThumbTopPercent}
             onPointerDown={(clientY) => updateSaturationFromPointer(clientY)}
             onPointerMove={(clientY) => updateSaturationFromPointer(clientY)}
@@ -394,7 +424,7 @@ export function IntegratedColorPicker({
           <p className="text-xs text-gray-500 uppercase tracking-wider">Dominant</p>
           <p className="text-sm font-medium text-brand-400 capitalize">{hueToColorName(hue)}</p>
           <p className="text-xs text-gray-500">
-            {Math.round(hue)}° · Sat {Math.round(saturation)}% · Bri {Math.round(brightness)}%
+            {Math.round(hue)}° · Sat {Math.round(saturation)}% · Bri {Math.round(wheelBrightness)}%
           </p>
         </div>
       </div>

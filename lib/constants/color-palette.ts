@@ -257,7 +257,7 @@ export function hslToHex(h: number, s: number, l: number): string {
 
 export function paletteSwatchColor(palette: ColorPaletteSettings, hue?: number): string {
   const h = hue ?? palette.dominantHue;
-  return hslToHex(h, palette.saturation, Math.max(20, palette.brightness));
+  return hslToHex(h, palette.saturation, palette.brightness);
 }
 
 export function warmthToKelvin(warmth: number): number {
