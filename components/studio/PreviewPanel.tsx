@@ -41,9 +41,11 @@ import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { isShotDesignerPanel, isStudioAppPanel } from '@/lib/studio/studio-routes';
 import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 import { AppPlaceholderPanel } from '@/components/studio/AppPlaceholderPanel';
+import { AppSummaryPanel } from '@/components/studio/AppSummaryPanel';
 import { ColorPaletteMakerPanel } from '@/components/studio/ColorPaletteMakerPanel';
 import { CharacterManager } from '@/components/studio/character-manager/CharacterManager';
 import { LocationManager } from '@/components/studio/location-manager/LocationManager';
+import { SettingsPanel } from '@/components/studio/SettingsPanel';
 import { formatDuration } from '@/lib/studio/shot-display';
 import { getGeneratedVideoCount, getShotActiveVideoUrl } from '@/lib/studio/shot-videos';
 import { isPreviewFrameSupported } from '@/lib/studio/generation/preview-frame-supported';
@@ -375,6 +377,18 @@ export function PreviewPanel() {
       {frameView === 'prompt' && isShotDesigner && (
         <div className="absolute inset-0 z-10 min-h-0">
           <PromptStackView />
+        </div>
+      )}
+
+      {workspaceView === 'app-summary' && (
+        <div className="absolute inset-0 z-10 min-h-0">
+          <AppSummaryPanel />
+        </div>
+      )}
+
+      {workspaceView === 'settings' && (
+        <div className="absolute inset-0 z-10 min-h-0">
+          <SettingsPanel />
         </div>
       )}
 

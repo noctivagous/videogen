@@ -7,8 +7,8 @@ import {
   derivedLocationColorPaletteGroupAssetId,
   parseDerivedLocationColorPaletteGroupAssetId,
 } from '@/lib/media/color-palette-group';
-import { InspectionManager } from '@/components/studio/inspection-manager/InspectionManager';
 import { CollapsibleManagerCard } from '@/components/studio/manager-cards/CollapsibleManagerCard';
+import { useStudioPanelInspectorStore } from '@/store/useStudioPanelInspectorStore';
 import { useStudioStore } from '@/store/useStudioStore';
 import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 
@@ -335,33 +335,29 @@ export function LocationManager() {
   const removeLocationPlate = useStudioStore((s) => s.removeLocationPlate);
   const deleteLocation = useStudioStore((s) => s.deleteLocation);
   const removeLocationColorPaletteGroup = useStudioStore((s) => s.removeLocationColorPaletteGroup);
-  const selectShot = useStudioStore((s) => s.selectShot);
+  const selectedLocationId = useStudioPanelInspectorStore((s) => s.locationManagerSelectedLocationId);
+  const selectedAssetId = useStudioPanelInspectorStore((s) => s.locationManagerSelectedAssetId);
+  const setLocationManagerSelection = useStudioPanelInspectorStore((s) => s.setLocationManagerSelection);
   const navigateToPanel = useNavigateToStudioPanel();
 
   const [showNewForm, setShowNewForm] = useState(false);
-  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
-  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedLocationId) return;
     const exists = locations.some((location) => location.id === selectedLocationId);
     if (exists) return;
-    setSelectedLocationId(null);
-  }, [locations, selectedLocationId]);
+    setLocationManagerSelection(null, null);
+  }, [locations, selectedLocationId, setLocationManagerSelection]);
 
   const handleSelectPlate = (location: Location, plate: LocationBackdropPlate) => {
-    setSelectedLocationId(location.id);
-    setSelectedAssetId(derivedLocationPlateAssetId(location.id, plate.id));
+    setLocationManagerSelection(location.id, derivedLocationPlateAssetId(location.id, plate.id));
   };
 
   const handleSelectColorPaletteGroup = (location: Location, collection: ColorPaletteCollection) => {
-    setSelectedLocationId(location.id);
-    setSelectedAssetId(derivedLocationColorPaletteGroupAssetId(location.id, collection.id));
-  };
-
-  const handleGoToShot = (shotId: number) => {
-    selectShot(shotId);
-    navigateToPanel('shot-designer');
+    setLocationManagerSelection(
+      location.id,
+      derivedLocationColorPaletteGroupAssetId(location.id, collection.id),
+    );
   };
 
   return (
@@ -397,7 +393,7 @@ export function LocationManager() {
 
       {/* Body */}
       <div className="flex-1 min-h-0 flex">
-        <div className="flex-1 min-w-0 overflow-y-auto p-4 space-y-3 border-r border-surface-700">
+        <div className="flex-1 min-w-0 overflow-y-auto p-4 space-y-3">
           {showNewForm && (
             <NewLocationForm
               onCreated={() => setShowNewForm(false)}
@@ -453,31 +449,6 @@ export function LocationManager() {
             />
           ))}
         </div>
-
-        <aside className="w-72 xl:w-80 shrink-0 min-h-0 bg-surface-900/90">
-          <InspectionManager
-            selectedAssetId={selectedAssetId}
-            onSelectAssetId={setSelectedAssetId}
-            registrations={[
-              {
-                parseAssetId: parseDerivedLocationPlateAssetId,
-                onMatch: (parsed) => {
-                  const match = parsed as { locationId: string };
-                  setSelectedLocationId(match.locationId);
-                },
-              },
-              {
-                parseAssetId: parseDerivedLocationColorPaletteGroupAssetId,
-                onMatch: (parsed) => {
-                  const match = parsed as { locationId: string };
-                  setSelectedLocationId(match.locationId);
-                },
-              },
-            ]}
-            emptyMessage="Select a location asset to inspect details."
-            onGoToShot={handleGoToShot}
-          />
-        </aside>
       </div>
     </div>
   );

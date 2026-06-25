@@ -3,7 +3,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { MediaLibraryGridView } from '@/components/studio/media-library/MediaLibraryGridView';
 import { MediaLibraryImportScopeDialog, importDropHint } from '@/components/studio/media-library/MediaLibraryImportScopeDialog';
-import { MediaLibraryInspector } from '@/components/studio/media-library/MediaLibraryInspector';
 import { snapshotItemId } from '@/lib/media/media-library-query';
 import { MediaLibraryListView } from '@/components/studio/media-library/MediaLibraryListView';
 import {
@@ -18,7 +17,6 @@ import { mergeMediaLibraries, type MediaLibraryCollection } from '@/lib/media/me
 import { searchMediaLibrary } from '@/lib/media/media-library-query';
 import { deriveProjectAssets, mergeWithDerivedAssets } from '@/lib/media/derive-project-assets';
 import type { MediaAssetType } from '@/lib/types/media-library';
-import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 import { useStudioStore } from '@/store/useStudioStore';
 
 interface MediaLibraryViewerProps {
@@ -35,8 +33,6 @@ export function MediaLibraryViewer({ onBack }: MediaLibraryViewerProps) {
   const shots = useStudioStore((s) => s.shots);
   const selectedId = useStudioStore((s) => s.selectedMediaLibraryItemId);
   const selectMediaLibraryItem = useStudioStore((s) => s.selectMediaLibraryItem);
-  const selectShot = useStudioStore((s) => s.selectShot);
-  const navigateToPanel = useNavigateToStudioPanel();
   const importMediaAssets = useStudioStore((s) => s.importMediaAssets);
   const deleteMediaAssets = useStudioStore((s) => s.deleteMediaAssets);
 
@@ -128,11 +124,6 @@ export function MediaLibraryViewer({ onBack }: MediaLibraryViewerProps) {
     selectMediaLibraryItem(snapshotItemId(snapshotId));
   };
 
-  const handleGoToShot = (shotId: number) => {
-    selectShot(shotId);
-    navigateToPanel('shot-designer');
-  };
-
   const handleDeleteSelected = () => {
     const ids = [...selectedIds];
     if (ids.length === 0) return;
@@ -193,7 +184,7 @@ export function MediaLibraryViewer({ onBack }: MediaLibraryViewerProps) {
           />
         )}
         <div
-          className="media-library-viewer__browser flex-1 min-w-0 border-r border-surface-700"
+          className="media-library-viewer__browser flex-1 min-w-0"
           {...uiSectionProps(UI_SECTIONS.studioMediaLibraryBrowser)}
         >
           {layoutMode === 'grid' && <MediaLibraryGridView {...browserProps} setups={setups} characters={characters} locations={locations} />}
@@ -202,20 +193,6 @@ export function MediaLibraryViewer({ onBack }: MediaLibraryViewerProps) {
           )}
           {layoutMode === 'tree' && <MediaLibraryTreeView {...browserProps} shots={shots} />}
         </div>
-
-        <aside
-          className="media-library-viewer__inspector w-72 xl:w-80 shrink-0 min-h-0 bg-surface-900/90"
-          {...uiSectionProps(UI_SECTIONS.studioMediaLibraryInspector)}
-        >
-          <MediaLibraryInspector
-            selectedId={selectedId}
-            assets={scopedAssets}
-            snapshots={shotWorkflowSnapshots}
-            shots={shots}
-            onSelectAsset={(id) => handleSelectAsset(id)}
-            onGoToShot={handleGoToShot}
-          />
-        </aside>
       </div>
     </div>
   );

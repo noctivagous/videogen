@@ -5,7 +5,6 @@ export function launchStudioLauncherItem(
   id: StudioLauncherItemId,
   actions: {
     navigateToPanel: (panel: StudioPanelId) => void;
-    openSettings: () => void;
     showToast: (message: string, type?: 'success' | 'error') => void;
   },
 ): void {
@@ -17,7 +16,7 @@ export function launchStudioLauncherItem(
       actions.navigateToPanel('media-library');
       return;
     case 'settings':
-      actions.openSettings();
+      actions.navigateToPanel('settings');
       return;
     default:
       actions.navigateToPanel(id);

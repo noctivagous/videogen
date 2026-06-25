@@ -16,16 +16,15 @@ export function useAppsLauncher(): {
   selectItem: (id: StudioLauncherItemId, onDone?: () => void) => void;
 } {
   const navigateToPanel = useNavigateToStudioPanel();
-  const openSettings = useStudioStore((s) => s.openSettings);
   const showToast = useStudioStore((s) => s.showToast);
   const workspaceView = useStudioStore((s) => s.workspaceView);
 
   const selectItem = useCallback(
     (id: StudioLauncherItemId, onDone?: () => void) => {
-      launchStudioLauncherItem(id, { navigateToPanel, openSettings, showToast });
+      launchStudioLauncherItem(id, { navigateToPanel, showToast });
       onDone?.();
     },
-    [navigateToPanel, openSettings, showToast],
+    [navigateToPanel, showToast],
   );
 
   return {

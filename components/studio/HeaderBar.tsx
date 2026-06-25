@@ -1,13 +1,15 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Settings } from 'lucide-react';
+import { Video } from 'lucide-react';
 import { AppsLauncherMenu } from '@/components/studio/AppsLauncherMenu';
 import { ProjectSwitcherDropdown } from '@/components/studio/ProjectSwitcherDropdown';
 import { ProviderBadge } from '@/components/studio/ProviderBadge';
+import { StudioLauncherIconBar } from '@/components/studio/StudioLauncherIconBar';
 import { SplitButton } from '@/components/ui/SplitButton';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { getStudioPanelTitle } from '@/lib/constants/studio-launcher';
+import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 import {
   getBuiltInProvider,
   getProviderStatus,
@@ -346,7 +348,7 @@ export function HeaderBar() {
   const saveProjectFolderAs = useStudioStore((s) => s.saveProjectFolderAs);
   const newProject = useStudioStore((s) => s.newProject);
   const exportVideo = useStudioStore((s) => s.exportVideo);
-  const openSettings = useStudioStore((s) => s.openSettings);
+  const navigateToPanel = useNavigateToStudioPanel();
   const workspaceView = useStudioStore((s) => s.workspaceView);
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -376,34 +378,41 @@ export function HeaderBar() {
 
   return (
     <header
-      className="border-b border-surface-700 h-16 flex items-center justify-between px-4 md:px-6 z-50"
+      className="border-b border-surface-700 min-h-16 py-2 flex items-center justify-between px-4 md:px-6 z-50"
       {...uiSectionProps(UI_SECTIONS.studioHeader)}
     >
       <div className="flex items-center gap-4 min-w-0">
-        <div className="flex items-center gap-2 flex-shrink-0" {...uiSectionProps(UI_SECTIONS.studioHeaderBrand)}>
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-            </svg>
+        <div className="flex flex-col gap-1 flex-shrink-0" {...uiSectionProps(UI_SECTIONS.studioHeaderBrand)}>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigateToPanel('app-summary')}
+              className={`flex items-center gap-1.5 rounded-md px-1 py-0.5 -ml-1 transition-colors ${
+                workspaceView === 'app-summary'
+                  ? 'bg-brand-600/15 ring-1 ring-brand-500/30'
+                  : 'hover:bg-surface-800/80'
+              }`}
+              title="VideoGen apps"
+            >
+              <div className="w-5 h-5 rounded-md bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center">
+                <Video className="w-3 h-3 text-white" aria-hidden />
+              </div>
+              <span className="font-semibold text-xs text-gray-200">VideoGen</span>
+            </button>
+            <SplitButton
+              compact
+              label={getStudioPanelTitle(workspaceView)}
+              primaryAction="toggle-menu"
+              menuAction="toggle-menu"
+              renderMenu={(closeMenu) => <AppsLauncherMenu onDismiss={closeMenu} />}
+              primaryUiSection={uiSectionProps(UI_SECTIONS.studioHeaderAppsSplit)}
+              menuUiSection={uiSectionProps(UI_SECTIONS.studioHeaderAppsMenu)}
+            />
           </div>
-          <span className="font-semibold text-lg hidden sm:block">VideoGen</span>
+          <StudioLauncherIconBar />
         </div>
 
-        <div className="h-8 w-px bg-surface-600 hidden md:block flex-shrink-0" />
-
-        <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
-          <label className="text-[10px] uppercase tracking-wider text-gray-500">Studio</label>
-          <SplitButton
-            label={getStudioPanelTitle(workspaceView)}
-            primaryAction="toggle-menu"
-            menuAction="toggle-menu"
-            renderMenu={(closeMenu) => <AppsLauncherMenu onDismiss={closeMenu} />}
-            primaryUiSection={uiSectionProps(UI_SECTIONS.studioHeaderAppsSplit)}
-            menuUiSection={uiSectionProps(UI_SECTIONS.studioHeaderAppsMenu)}
-          />
-        </div>
-
-        <div className="h-8 w-px bg-surface-600 hidden md:block flex-shrink-0" />
+        <div className="h-8 w-px bg-surface-600 hidden md:block flex-shrink-0 self-center" />
 
         <div className="flex items-center gap-2 flex-shrink-0">
           <label className="text-[10px] uppercase tracking-wider text-gray-500 hidden sm:block">Project</label>
@@ -516,17 +525,6 @@ export function HeaderBar() {
             sectionId={UI_SECTIONS.studioHeaderImageProviderBadge.id}
           />
         </div>
-      </div>
-
-      <div className="flex items-center gap-2 flex-shrink-0" {...uiSectionProps(UI_SECTIONS.studioHeaderActions)}>
-        <button
-          type="button"
-          onClick={openSettings}
-          className="p-2 hover:bg-surface-700 rounded-lg transition-all group border border-surface-600 hover:border-surface-500"
-          title="AI Providers, Models & API Keys"
-        >
-          <Settings className="w-5 h-5 text-gray-400 group-hover:text-white" aria-hidden />
-        </button>
       </div>
     </header>
   );

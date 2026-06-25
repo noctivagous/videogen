@@ -25,6 +25,7 @@ export interface SplitButtonProps {
   items?: SplitButtonItem[];
   renderMenu?: (closeMenu: () => void) => ReactNode;
   activeItemId?: string;
+  compact?: boolean;
   className?: string;
   menuClassName?: string;
   menuUiSection?: Record<string, string>;
@@ -50,6 +51,7 @@ export function SplitButton({
   items,
   renderMenu,
   activeItemId,
+  compact = false,
   className = '',
   menuClassName = '',
   menuUiSection,
@@ -87,6 +89,13 @@ export function SplitButton({
     };
   }, [menuOpen]);
 
+  const primaryButtonClass = compact
+    ? 'px-1.5 py-0.5 text-[10px] font-medium bg-surface-800 hover:bg-surface-700 border border-surface-600 border-r-0 rounded-l-md transition-all text-gray-200 max-w-[7rem] truncate'
+    : 'px-3 py-1.5 text-xs font-medium bg-surface-800 hover:bg-surface-700 border border-surface-600 border-r-0 rounded-l-lg transition-all text-gray-200';
+  const menuButtonClass = compact
+    ? 'px-1 py-0.5 text-[10px] bg-surface-800 hover:bg-surface-700 border border-surface-600 rounded-r-md transition-all text-gray-300'
+    : 'px-2 py-1.5 text-xs bg-surface-800 hover:bg-surface-700 border border-surface-600 rounded-r-lg transition-all text-gray-300';
+
   return (
     <div ref={rootRef} className={`relative inline-flex ${className}`.trim()}>
       <button
@@ -95,7 +104,7 @@ export function SplitButton({
         aria-haspopup={primaryOpensMenu && hasMenu ? 'menu' : undefined}
         aria-expanded={primaryOpensMenu && hasMenu ? menuOpen : undefined}
         aria-controls={primaryOpensMenu && hasMenu ? menuId : undefined}
-        className="px-3 py-1.5 text-xs font-medium bg-surface-800 hover:bg-surface-700 border border-surface-600 border-r-0 rounded-l-lg transition-all text-gray-200"
+        className={primaryButtonClass}
         {...primaryUiSection}
       >
         {label}
@@ -106,7 +115,7 @@ export function SplitButton({
         aria-expanded={menuOpensMenu && hasMenu ? menuOpen : undefined}
         aria-controls={menuOpensMenu && hasMenu ? menuId : undefined}
         onClick={() => runSegmentAction(menuAction, toggleMenu)}
-        className="px-2 py-1.5 text-xs bg-surface-800 hover:bg-surface-700 border border-surface-600 rounded-r-lg transition-all text-gray-300"
+        className={menuButtonClass}
         aria-label={`${label} menu`}
       >
         ▾

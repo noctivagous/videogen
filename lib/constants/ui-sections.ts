@@ -13,6 +13,8 @@ export const UI_SECTIONS = {
   studioMobileDrawerBackdrop: { id: 'studio-mobile-drawer-backdrop', name: 'Mobile Drawer Backdrop' },
   studioToast: { id: 'studio-toast', name: 'Toast' },
   studioSettingsModal: { id: 'studio-settings-modal', name: 'Settings Modal' },
+  studioSettingsPanel: { id: 'studio-settings-panel', name: 'Settings Panel' },
+  studioAppSummaryPanel: { id: 'studio-app-summary-panel', name: 'App Summary Panel' },
   studioProviderEditModal: { id: 'studio-provider-edit-modal', name: 'Provider Edit Modal' },
   studioAppsLauncherModal: { id: 'studio-apps-launcher-modal', name: 'Apps Launcher Modal' },
   studioProjectSettingsModal: { id: 'studio-project-settings-modal', name: 'Project Settings Modal' },

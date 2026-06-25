@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { DraggableImageWell, DropWell } from '@/components/studio/character-manager/DragAndDrop';
 import { ColorPaletteGroupChip } from '@/components/studio/ColorPaletteGroupChip';
-import { InspectionManager } from '@/components/studio/inspection-manager/InspectionManager';
 import { CollapsibleManagerCard } from '@/components/studio/manager-cards/CollapsibleManagerCard';
 import { characterSheetLabel } from '@/components/studio/entity-picker/EntityDropdown';
 import type { Character, CharacterSheet, ColorPaletteCollection } from '@/lib/types/studio';
@@ -11,6 +10,7 @@ import {
   derivedCharacterColorPaletteGroupAssetId,
   parseDerivedCharacterColorPaletteGroupAssetId,
 } from '@/lib/media/color-palette-group';
+import { useStudioPanelInspectorStore } from '@/store/useStudioPanelInspectorStore';
 import { useStudioStore } from '@/store/useStudioStore';
 import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 
@@ -667,33 +667,29 @@ export function CharacterManager() {
   const updateCharacterLists = useStudioStore((s) => s.updateCharacterLists);
   const deleteCharacter = useStudioStore((s) => s.deleteCharacter);
   const removeCharacterColorPaletteGroup = useStudioStore((s) => s.removeCharacterColorPaletteGroup);
-  const selectShot = useStudioStore((s) => s.selectShot);
+  const selectedCharacterId = useStudioPanelInspectorStore((s) => s.characterManagerSelectedCharacterId);
+  const selectedAssetId = useStudioPanelInspectorStore((s) => s.characterManagerSelectedAssetId);
+  const setCharacterManagerSelection = useStudioPanelInspectorStore((s) => s.setCharacterManagerSelection);
   const navigateToPanel = useNavigateToStudioPanel();
 
   const [showNewForm, setShowNewForm] = useState(false);
-  const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
-  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedCharacterId) return;
     const exists = characters.some((character) => character.id === selectedCharacterId);
     if (exists) return;
-    setSelectedCharacterId(null);
-  }, [characters, selectedCharacterId]);
+    setCharacterManagerSelection(null, null);
+  }, [characters, selectedCharacterId, setCharacterManagerSelection]);
 
   const handleSelectSheet = (character: Character, sheet: CharacterSheet) => {
-    setSelectedCharacterId(character.id);
-    setSelectedAssetId(derivedCharacterSheetAssetId(character.id, sheet.id));
+    setCharacterManagerSelection(character.id, derivedCharacterSheetAssetId(character.id, sheet.id));
   };
 
   const handleSelectColorPaletteGroup = (character: Character, collection: ColorPaletteCollection) => {
-    setSelectedCharacterId(character.id);
-    setSelectedAssetId(derivedCharacterColorPaletteGroupAssetId(character.id, collection.id));
-  };
-
-  const handleGoToShot = (shotId: number) => {
-    selectShot(shotId);
-    navigateToPanel('shot-designer');
+    setCharacterManagerSelection(
+      character.id,
+      derivedCharacterColorPaletteGroupAssetId(character.id, collection.id),
+    );
   };
 
   return (
@@ -729,7 +725,7 @@ export function CharacterManager() {
 
       {/* Body */}
       <div className="flex-1 min-h-0 flex">
-        <div className="flex-1 min-w-0 overflow-y-auto p-4 space-y-3 border-r border-surface-700">
+        <div className="flex-1 min-w-0 overflow-y-auto p-4 space-y-3">
           {showNewForm && (
             <NewCharacterForm
               onCreated={() => setShowNewForm(false)}
@@ -786,31 +782,6 @@ export function CharacterManager() {
             />
           ))}
         </div>
-
-        <aside className="w-72 xl:w-80 shrink-0 min-h-0 bg-surface-900/90">
-          <InspectionManager
-            selectedAssetId={selectedAssetId}
-            onSelectAssetId={setSelectedAssetId}
-            registrations={[
-              {
-                parseAssetId: parseDerivedCharacterSheetAssetId,
-                onMatch: (parsed) => {
-                  const match = parsed as { characterId: string };
-                  setSelectedCharacterId(match.characterId);
-                },
-              },
-              {
-                parseAssetId: parseDerivedCharacterColorPaletteGroupAssetId,
-                onMatch: (parsed) => {
-                  const match = parsed as { characterId: string };
-                  setSelectedCharacterId(match.characterId);
-                },
-              },
-            ]}
-            emptyMessage="Select a character asset to inspect details."
-            onGoToShot={handleGoToShot}
-          />
-        </aside>
       </div>
     </div>
   );

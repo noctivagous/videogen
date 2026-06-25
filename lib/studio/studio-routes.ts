@@ -1,13 +1,22 @@
 import { STUDIO_APPS, type StudioAppId } from '@/lib/constants/studio-apps';
-export type StudioPanelId = 'shot-designer' | 'media-library' | StudioAppId;
+export type StudioPanelId =
+  | 'app-summary'
+  | 'settings'
+  | 'shot-designer'
+  | 'media-library'
+  | StudioAppId;
 
 export const STUDIO_PANEL_IDS: readonly StudioPanelId[] = [
+  'app-summary',
+  'settings',
   'shot-designer',
   'media-library',
   ...STUDIO_APPS.map((app) => app.id),
 ] as const;
 
 export const IMPLEMENTED_STUDIO_PANELS = new Set<StudioPanelId>([
+  'app-summary',
+  'settings',
   'shot-designer',
   'media-library',
   'character-sheet-generator',

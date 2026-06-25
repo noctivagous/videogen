@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { KeyRound, Search, Settings } from 'lucide-react';
 import { ProviderIcon } from '@/components/studio/ProviderIcon';
+import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 import { isBuiltInProviderEnabled } from '@/lib/constants/providers';
 import {
   getAvailableImageModels,
@@ -146,7 +147,7 @@ export function ProviderBadge({
 }) {
   const modality: ProviderModality = kind === 'Video' ? 'video' : 'image';
   const ai = useStudioStore((s) => s.ai);
-  const openSettings = useStudioStore((s) => s.openSettings);
+  const navigateToPanel = useNavigateToStudioPanel();
   const openProviderEdit = useStudioStore((s) => s.openProviderEdit);
   const setDefaultVideoProvider = useStudioStore((s) => s.setDefaultVideoProvider);
   const setDefaultVideoModel = useStudioStore((s) => s.setDefaultVideoModel);
@@ -390,7 +391,7 @@ export function ProviderBadge({
             role="menuitem"
             onClick={() => {
               setOpen(false);
-              openSettings();
+              navigateToPanel('settings');
             }}
             className="w-full flex items-center gap-2 px-3 py-2 hover:bg-surface-700 text-gray-400 hover:text-gray-200 transition-colors text-xs"
           >

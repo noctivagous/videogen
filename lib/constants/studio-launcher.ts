@@ -39,6 +39,7 @@ export function getStudioLauncherItem(id: StudioLauncherItemId): StudioLauncherI
 }
 
 export function getStudioPanelTitle(panel: StudioPanelId): string {
+  if (panel === 'app-summary') return 'Apps';
   const item = STUDIO_LAUNCHER_ITEMS.find((entry) => entry.id === panel);
   return item?.title ?? 'App';
 }
