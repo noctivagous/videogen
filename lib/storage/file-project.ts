@@ -17,6 +17,7 @@ import {
   clearProjectLocation,
   loadProjectLocation,
   saveProjectLocation,
+  type StoredProjectLocation,
   type StoredProjectLocationKind,
 } from '@/lib/storage/project-handle-store';
 import type { StudioProject } from '@/lib/types/studio';
@@ -337,10 +338,16 @@ export async function saveProjectFileAs(project: StudioProject): Promise<boolean
   return true;
 }
 
-export async function restoreProjectSession(): Promise<OpenProjectBundle | null> {
-  const stored = await loadProjectLocation();
-  if (!stored) return null;
+export function getCurrentStoredLocation(): StoredProjectLocation | null {
+  const handle = activeDirectory ?? activeFile;
+  if (!handle || !locationLabel) return null;
+  const kind: StoredProjectLocationKind = activeDirectory ? 'directory' : 'file';
+  return { kind, name: locationLabel, handle };
+}
 
+export async function openStoredProjectLocation(
+  stored: StoredProjectLocation,
+): Promise<OpenProjectBundle | null> {
   if (!(await ensureWritePermission(stored.handle))) {
     return null;
   }
@@ -352,6 +359,7 @@ export async function restoreProjectSession(): Promise<OpenProjectBundle | null>
     activeFile = null;
     locationLabel = stored.name;
     saveState = 'saved';
+    await saveProjectLocation(stored);
     const project = await readProjectFromDirectory(activeDirectory);
     if (!project) return null;
     const globalMediaLibrary = await readGlobalMediaFromDirectory(activeDirectory);
@@ -362,8 +370,15 @@ export async function restoreProjectSession(): Promise<OpenProjectBundle | null>
   activeDirectory = null;
   locationLabel = stored.name;
   saveState = 'saved';
+  await saveProjectLocation(stored);
   const project = await readProjectFromFileHandle(activeFile);
   return project ? { project, globalMediaLibrary: [] } : null;
+}
+
+export async function restoreProjectSession(): Promise<OpenProjectBundle | null> {
+  const stored = await loadProjectLocation();
+  if (!stored) return null;
+  return openStoredProjectLocation(stored);
 }
 
 export async function flushProjectAutosave(

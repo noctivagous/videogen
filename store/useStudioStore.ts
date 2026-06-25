@@ -215,6 +215,7 @@ import {
 } from '@/lib/storage/ai-settings';
 import {
   clearProjectLocationSession,
+  getCurrentStoredLocation,
   getProjectLocationKind,
   getProjectLocationLabel,
   getProjectSaveState,
@@ -224,6 +225,7 @@ import {
   isNativeFilePickerSupported,
   openProjectFile as openProjectFileFromDisk,
   openProjectFolder as openProjectFolderFromDisk,
+  openStoredProjectLocation,
   restoreProjectSession,
   saveProjectFileAs as saveProjectFileToDisk,
   saveProjectFolderAs as saveProjectFolderToDisk,
@@ -232,6 +234,16 @@ import {
   type ProjectLocationKind,
   type ProjectSaveState,
 } from '@/lib/storage/file-project';
+import {
+  BUILTIN_DEMO_PROJECT_ID,
+  getActiveProjectId,
+  getSavedProject,
+  listSavedProjects,
+  setActiveProjectId,
+  toSavedProjectSummaries,
+  upsertSavedProject,
+  type SavedProjectSummary,
+} from '@/lib/storage/saved-projects-store';
 import { downloadProject, pickAndLoadProject } from '@/lib/storage/project-io';
 import { resolveRefsForApi } from '@/lib/storage/reference-url';
 import {
@@ -281,6 +293,150 @@ function projectFileUiState() {
     projectLocationKind: getProjectLocationKind(),
     projectSaveState: getProjectSaveState(),
   };
+}
+
+async function refreshSavedProjectsState(
+  set: (partial: Partial<StudioStore>) => void,
+): Promise<void> {
+  const records = await listSavedProjects();
+  const activeProjectId = await getActiveProjectId();
+  set({
+    savedProjects: toSavedProjectSummaries(records, activeProjectId),
+    activeProjectId,
+  });
+}
+
+async function syncActiveSavedProject(get: () => StudioStore): Promise<string> {
+  const state = get();
+  const id = state.activeProjectId ?? crypto.randomUUID();
+  const { project, globalMediaLibrary } = projectPersistencePayload(state);
+  const location = getCurrentStoredLocation() ?? undefined;
+  const existing = await getSavedProject(id);
+  await upsertSavedProject({
+    id,
+    name: state.project.name,
+    updatedAt: Date.now(),
+    location,
+    snapshot: location ? existing?.snapshot : { project, globalMediaLibrary },
+  });
+  await setActiveProjectId(id);
+  return id;
+}
+
+async function ensureInitialSavedProject(
+  get: () => StudioStore,
+  set: (partial: Partial<StudioStore>) => void,
+): Promise<void> {
+  await ensureBuiltinDemoProject();
+
+  let activeProjectId = await getActiveProjectId();
+  const records = await listSavedProjects();
+  const location = getCurrentStoredLocation();
+
+  if (!activeProjectId || !records.some((record) => record.id === activeProjectId)) {
+    const match = location
+      ? records.find(
+          (record) =>
+            record.location?.name === location.name && record.location?.kind === location.kind,
+        )
+      : undefined;
+    if (match) {
+      activeProjectId = match.id;
+    } else if (!location && get().project.name === STOCK_PROJECT.name) {
+      activeProjectId = BUILTIN_DEMO_PROJECT_ID;
+    } else {
+      activeProjectId = crypto.randomUUID();
+    }
+  }
+
+  set({ activeProjectId });
+
+  if (activeProjectId === BUILTIN_DEMO_PROJECT_ID) {
+    const { project, globalMediaLibrary } = projectPersistencePayload(get());
+    await upsertSavedProject({
+      id: BUILTIN_DEMO_PROJECT_ID,
+      name: get().project.name,
+      updatedAt: Date.now(),
+      snapshot: { project, globalMediaLibrary },
+    });
+  } else {
+    const { project, globalMediaLibrary } = projectPersistencePayload(get());
+    await upsertSavedProject({
+      id: activeProjectId,
+      name: get().project.name,
+      updatedAt: Date.now(),
+      location: location ?? undefined,
+      snapshot: location ? undefined : { project, globalMediaLibrary },
+    });
+  }
+
+  await setActiveProjectId(activeProjectId);
+  await refreshSavedProjectsState(set);
+}
+
+async function registerActiveProjectAfterLoad(
+  get: () => StudioStore,
+  set: (partial: Partial<StudioStore>) => void,
+): Promise<void> {
+  const location = getCurrentStoredLocation() ?? undefined;
+  const records = await listSavedProjects();
+  let id = get().activeProjectId;
+
+  if (location) {
+    const match = records.find(
+      (record) =>
+        record.location?.name === location.name && record.location?.kind === location.kind,
+    );
+    id = match?.id ?? crypto.randomUUID();
+  } else if (!id) {
+    id = crypto.randomUUID();
+  }
+
+  const { project, globalMediaLibrary } = projectPersistencePayload(get());
+  await upsertSavedProject({
+    id,
+    name: get().project.name,
+    updatedAt: Date.now(),
+    location,
+    snapshot: location ? undefined : { project, globalMediaLibrary },
+  });
+  await setActiveProjectId(id);
+  set({ activeProjectId: id });
+  await refreshSavedProjectsState(set);
+}
+
+function buildStockProjectBundle(): {
+  project: StudioProject;
+  globalMediaLibrary: MediaAsset[];
+} {
+  const demo = getStockDefaults();
+  return {
+    project: buildStudioProject({
+      project: demo.project,
+      scenes: demo.scenes,
+      currentSceneId: demo.currentSceneId,
+      setups: demo.setups,
+      currentSetupId: demo.currentSetupId,
+      currentCoverageShotId: demo.currentCoverageShotId,
+      characters: demo.characters,
+      locations: demo.locations,
+      mediaLibrary: demo.mediaLibrary,
+      shotWorkflowSnapshots: demo.shotWorkflowSnapshots,
+    }),
+    globalMediaLibrary: demo.globalMediaLibrary,
+  };
+}
+
+async function ensureBuiltinDemoProject(): Promise<void> {
+  const existing = await getSavedProject(BUILTIN_DEMO_PROJECT_ID);
+  if (existing) return;
+  const bundle = buildStockProjectBundle();
+  await upsertSavedProject({
+    id: BUILTIN_DEMO_PROJECT_ID,
+    name: bundle.project.project.name,
+    updatedAt: Date.now(),
+    snapshot: bundle,
+  });
 }
 
 function getStockDefaults() {
@@ -602,6 +758,8 @@ interface StudioStore {
   projectLocationKind: ProjectLocationKind;
   projectSaveState: ProjectSaveState;
   fileApiSupported: boolean;
+  savedProjects: SavedProjectSummary[];
+  activeProjectId: string | null;
   workspaceView: StudioPanelId;
   selectedMediaLibraryItemId: string | null;
   /** Draft palette for Color Palette Maker — independent from shot lighting. */
@@ -763,9 +921,11 @@ interface StudioStore {
   openProjectFolder: () => Promise<void>;
   saveProjectFolderAs: () => Promise<void>;
   newProject: () => void;
-  resetToDemo: () => void;
+  resetDemoToDefaults: () => void;
   exportVideo: () => void;
   syncProjectFileUi: () => void;
+  refreshSavedProjects: () => Promise<void>;
+  switchToSavedProject: (id: string) => Promise<void>;
 
   openSettings: () => void;
   closeSettings: () => void;
@@ -862,6 +1022,8 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   projectLocationKind: null,
   projectSaveState: 'none',
   fileApiSupported: false,
+  savedProjects: [],
+  activeProjectId: null,
   backdropSelected: false,
   selectedMannequinIds: [],
   workspaceView: 'shot-designer',
@@ -891,6 +1053,53 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 
   syncProjectFileUi() {
     set(projectFileUiState());
+  },
+
+  async refreshSavedProjects() {
+    await refreshSavedProjectsState(set);
+  },
+
+  async switchToSavedProject(id) {
+    if (id === get().activeProjectId) return;
+
+    const payload = projectPersistencePayload(get());
+    await saveProjectNow(payload.project, payload.globalMediaLibrary);
+    await syncActiveSavedProject(get);
+    await refreshSavedProjectsState(set);
+
+    const record = await getSavedProject(id);
+    if (!record) {
+      get().showToast('Could not open that project', 'error');
+      return;
+    }
+
+    clearProjectLocationSession();
+    void clearServerProjectStorage();
+
+    let applied: ReturnType<typeof applyStudioProject> | null = null;
+    if (record.location) {
+      const bundle = await openStoredProjectLocation(record.location);
+      if (bundle) {
+        applied = applyStudioProject(bundle.project, bundle.globalMediaLibrary);
+      }
+    } else if (record.snapshot) {
+      applied = applyStudioProject(record.snapshot.project, record.snapshot.globalMediaLibrary);
+    }
+
+    if (!applied) {
+      get().showToast('Could not open that project', 'error');
+      return;
+    }
+
+    await setActiveProjectId(id);
+    set({
+      ...applied,
+      showPreviewSuccess: false,
+      activeProjectId: id,
+      ...projectFileUiState(),
+    });
+    await refreshSavedProjectsState(set);
+    get().showToast(`Opened ${record.name}`);
   },
 
   setFrameView(view) {
@@ -1190,6 +1399,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
           ...projectFileUiState(),
         });
       }
+      await ensureInitialSavedProject(get, set);
     })();
   },
 
@@ -1248,6 +1458,16 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       }
       return { project };
     });
+    if (patch.name !== undefined) {
+      void (async () => {
+        const id = get().activeProjectId;
+        if (!id) return;
+        const existing = await getSavedProject(id);
+        if (!existing) return;
+        await upsertSavedProject({ ...existing, name: patch.name!, updatedAt: Date.now() });
+        await refreshSavedProjectsState(set);
+      })();
+    }
   },
 
   setCamera(patch) {
@@ -3088,6 +3308,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       const saved = await saveProjectFileToDisk(project);
       if (saved) {
         get().syncProjectFileUi();
+        await registerActiveProjectAfterLoad(get, set);
         get().showToast('Project saved to file');
         return;
       }
@@ -3132,6 +3353,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
           ...applied,
           ...projectFileUiState(),
         });
+        await registerActiveProjectAfterLoad(get, set);
         get().showToast('Project file opened');
         return;
       } catch {
@@ -3153,6 +3375,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       projectLocationKind: null,
       projectSaveState: 'dirty',
     });
+    await registerActiveProjectAfterLoad(get, set);
     get().showToast('Project loaded — save to a folder to keep it on disk');
   },
 
@@ -3172,6 +3395,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         ...applied,
         ...projectFileUiState(),
       });
+      await registerActiveProjectAfterLoad(get, set);
       get().showToast(`Opened ${getProjectLocationLabel() ?? 'project folder'}`);
     } catch {
       get().showToast('Could not open project folder', 'error');
@@ -3188,6 +3412,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       const saved = await saveProjectFolderToDisk(project, globalMediaLibrary);
       if (!saved) return;
       get().syncProjectFileUi();
+      await registerActiveProjectAfterLoad(get, set);
       get().showToast(`Saved to ${getProjectLocationLabel() ?? 'folder'}`);
     } catch {
       get().showToast('Could not save project folder', 'error');
@@ -3195,32 +3420,65 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   },
 
   newProject() {
-    clearProjectLocationSession();
-    void clearServerProjectStorage();
-    set({
-      ...getEmptyDefaults(),
-      showPreviewSuccess: false,
-      projectLocationLabel: null,
-      projectLocationKind: null,
-      projectSaveState: 'none',
-    });
-    clearStudioDraft();
-    get().showToast('New project — choose a project folder to save on disk');
+    void (async () => {
+      const payload = projectPersistencePayload(get());
+      await saveProjectNow(payload.project, payload.globalMediaLibrary);
+      await syncActiveSavedProject(get);
+
+      clearProjectLocationSession();
+      void clearServerProjectStorage();
+      const defaults = getEmptyDefaults();
+      const newId = crypto.randomUUID();
+      set({
+        ...defaults,
+        showPreviewSuccess: false,
+        projectLocationLabel: null,
+        projectLocationKind: null,
+        projectSaveState: 'none',
+        activeProjectId: newId,
+      });
+      clearStudioDraft();
+      await upsertSavedProject({
+        id: newId,
+        name: defaults.project.name,
+        updatedAt: Date.now(),
+        snapshot: {
+          project: buildStudioProject(get()),
+          globalMediaLibrary: [],
+        },
+      });
+      await setActiveProjectId(newId);
+      await refreshSavedProjectsState(set);
+      get().showToast('New project — choose a project folder to save on disk');
+    })();
   },
 
-  resetToDemo() {
-    clearProjectLocationSession();
-    void clearServerProjectStorage();
-    const demo = getStockDefaults();
-    set({
-      ...demo,
-      showPreviewSuccess: false,
-      projectLocationLabel: null,
-      projectLocationKind: null,
-      projectSaveState: 'none',
-    });
-    clearStudioDraft();
-    get().showToast('Demo project restored');
+  resetDemoToDefaults() {
+    void (async () => {
+      const bundle = buildStockProjectBundle();
+      await upsertSavedProject({
+        id: BUILTIN_DEMO_PROJECT_ID,
+        name: bundle.project.project.name,
+        updatedAt: Date.now(),
+        snapshot: bundle,
+      });
+
+      if (get().activeProjectId === BUILTIN_DEMO_PROJECT_ID) {
+        clearProjectLocationSession();
+        void clearServerProjectStorage();
+        const applied = applyStudioProject(bundle.project, bundle.globalMediaLibrary);
+        set({
+          ...applied,
+          showPreviewSuccess: false,
+          activeProjectId: BUILTIN_DEMO_PROJECT_ID,
+          ...projectFileUiState(),
+        });
+        clearStudioDraft();
+      }
+
+      await refreshSavedProjectsState(set);
+      get().showToast('Demo_Surfer reset to defaults');
+    })();
   },
 
   exportVideo() {
@@ -3679,4 +3937,19 @@ useStudioStore.subscribe((state, prevState) => {
       projectSaveState: saveState,
     });
   }, globalMediaLibrary);
+});
+
+let savedProjectSnapshotTimer: ReturnType<typeof setTimeout> | null = null;
+
+useStudioStore.subscribe((state, prevState) => {
+  if (!state.initialized || !state.activeProjectId) return;
+  if (getCurrentStoredLocation()) return;
+  if (!isPersistedProjectDirty(state, prevState)) return;
+
+  if (savedProjectSnapshotTimer) clearTimeout(savedProjectSnapshotTimer);
+  savedProjectSnapshotTimer = setTimeout(() => {
+    void syncActiveSavedProject(() => useStudioStore.getState()).then(() =>
+      refreshSavedProjectsState(useStudioStore.setState),
+    );
+  }, 1000);
 });

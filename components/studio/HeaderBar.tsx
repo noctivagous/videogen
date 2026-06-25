@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { ProjectSwitcherDropdown } from '@/components/studio/ProjectSwitcherDropdown';
 import { ProviderIcon } from '@/components/studio/ProviderIcon';
 import { SplitButton } from '@/components/ui/SplitButton';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
@@ -392,9 +393,7 @@ function ProviderBadge({
 }
 
 export function HeaderBar() {
-  const project = useStudioStore((s) => s.project);
   const ai = useStudioStore((s) => s.ai);
-  const setProject = useStudioStore((s) => s.setProject);
   const projectLocationLabel = useStudioStore((s) => s.projectLocationLabel);
   const projectLocationKind = useStudioStore((s) => s.projectLocationKind);
   const projectSaveState = useStudioStore((s) => s.projectSaveState);
@@ -407,7 +406,6 @@ export function HeaderBar() {
   const openProjectFolder = useStudioStore((s) => s.openProjectFolder);
   const saveProjectFolderAs = useStudioStore((s) => s.saveProjectFolderAs);
   const newProject = useStudioStore((s) => s.newProject);
-  const resetToDemo = useStudioStore((s) => s.resetToDemo);
   const exportVideo = useStudioStore((s) => s.exportVideo);
   const openSettings = useStudioStore((s) => s.openSettings);
   const openAppsLauncher = useStudioStore((s) => s.openAppsLauncher);
@@ -426,6 +424,19 @@ export function HeaderBar() {
   const imageConnected = isProviderConnected(ai.defaultImageProvider, isCustomImage, ai);
   const videoStatus = getProviderStatus(ai.defaultVideoProvider, isCustomVideo, ai);
   const imageStatus = getProviderStatus(ai.defaultImageProvider, isCustomImage, ai);
+
+  const saveQuickTitle = fileApiSupported
+    ? fileAccess.tier === 'directory'
+      ? projectLocationLabel
+        ? 'Save project to open folder'
+        : 'Save project folder'
+      : 'Save project as JSON'
+    : 'Save project as JSON';
+  const openQuickTitle = fileApiSupported
+    ? fileAccess.tier === 'directory'
+      ? 'Open project folder'
+      : 'Open project JSON file'
+    : 'Load project from JSON';
 
   return (
     <header
@@ -468,14 +479,7 @@ export function HeaderBar() {
 
         <div className="flex items-center gap-2 flex-shrink-0">
           <label className="text-[10px] uppercase tracking-wider text-gray-500 hidden sm:block">Project</label>
-          <input
-            type="text"
-            value={project.name}
-            onChange={(e) => setProject({ name: e.target.value })}
-            className="bg-surface-700 hover:bg-surface-600 focus:bg-surface-600 border-surface-600 rounded-lg px-3 py-1.5 text-sm font-medium outline-none focus:ring-2 focus:ring-brand-500 transition-all w-28 md:w-44"
-            aria-label="Project name"
-            {...uiSectionProps(UI_SECTIONS.studioHeaderProjectName)}
-          />
+          <ProjectSwitcherDropdown />
 
           <div className="relative" ref={menuRef}>
             <button
@@ -490,7 +494,29 @@ export function HeaderBar() {
             {menuOpen && (
               <div className="absolute top-full left-0 mt-1 w-52 bg-surface-800 border border-surface-600 rounded-lg shadow-xl z-50 py-1 text-sm">
                 <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { newProject(); setMenuOpen(false); }}>New project</button>
-                <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { resetToDemo(); setMenuOpen(false); }}>Reset to demo</button>
+                <div className="h-px bg-surface-600 my-1" />
+                <button
+                  type="button"
+                  title={saveQuickTitle}
+                  onClick={() => { void saveProjectQuick().then(() => setMenuOpen(false)); }}
+                  className="w-full text-left px-3 py-2 hover:bg-surface-700 flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                  </svg>
+                  Save
+                </button>
+                <button
+                  type="button"
+                  title={openQuickTitle}
+                  onClick={() => { void openProjectQuick().then(() => setMenuOpen(false)); }}
+                  className="w-full text-left px-3 py-2 hover:bg-surface-700 flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
+                  Open
+                </button>
                 <div className="h-px bg-surface-600 my-1" />
                 {fileApiSupported ? (
                   <>
@@ -510,6 +536,19 @@ export function HeaderBar() {
                     <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { void loadProject().then(() => setMenuOpen(false)); }}>Load project…</button>
                   </>
                 )}
+                <div className="h-px bg-surface-600 my-1" />
+                <button
+                  type="button"
+                  disabled
+                  title="Export coming soon"
+                  onClick={exportVideo}
+                  className="w-full text-left px-3 py-2 flex items-center gap-2 opacity-50 cursor-not-allowed"
+                >
+                  <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Export
+                </button>
               </div>
             )}
           </div>
@@ -568,48 +607,6 @@ export function HeaderBar() {
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0" {...uiSectionProps(UI_SECTIONS.studioHeaderActions)}>
-        <button
-          type="button"
-          onClick={() => void saveProjectQuick()}
-          title={fileApiSupported
-            ? fileAccess.tier === 'directory'
-              ? projectLocationLabel
-                ? 'Save project to open folder'
-                : 'Save project folder'
-              : 'Save project as JSON'
-            : 'Save project as JSON'}
-          className="p-2 hover:bg-surface-700 rounded-lg transition-all group"
-        >
-          <svg className="w-5 h-5 text-gray-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          onClick={() => void openProjectQuick()}
-          title={fileApiSupported
-            ? fileAccess.tier === 'directory'
-              ? 'Open project folder'
-              : 'Open project JSON file'
-            : 'Load project from JSON'}
-          className="p-2 hover:bg-surface-700 rounded-lg transition-all group"
-        >
-          <svg className="w-5 h-5 text-gray-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          onClick={exportVideo}
-          disabled
-          title="Export coming soon"
-          className="bg-surface-700 px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 opacity-50 cursor-not-allowed"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
-          <span className="hidden sm:inline">Export (soon)</span>
-        </button>
         <button
           type="button"
           onClick={openSettings}

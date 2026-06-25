@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { DraggableImageWell, DropWell } from '@/components/studio/character-manager/DragAndDrop';
-import { MediaLibraryInspector } from '@/components/studio/media-library/MediaLibraryInspector';
-import { deriveProjectAssets, mergeWithDerivedAssets } from '@/lib/media/derive-project-assets';
+import { InspectionManager } from '@/components/studio/inspection-manager/InspectionManager';
+import { CollapsibleManagerCard } from '@/components/studio/manager-cards/CollapsibleManagerCard';
 import { characterSheetLabel } from '@/components/studio/entity-picker/EntityDropdown';
-import type { Character, CharacterSheet, Shot } from '@/lib/types/studio';
+import type { Character, CharacterSheet } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
 import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 
@@ -184,24 +184,9 @@ function CharacterCard({
   selectedSheetId,
 }: CharacterCardProps) {
   const [expanded, setExpanded] = useState(false);
-  const [editingName, setEditingName] = useState(false);
-  const [nameValue, setNameValue] = useState(character.name);
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [pendingSheetLabel, setPendingSheetLabel] = useState<string | null>(null);
   const [draggedSheetId, setDraggedSheetId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const toggleExpanded = () => setExpanded((value) => !value);
-
-  function commitName() {
-    setEditingName(false);
-    const trimmed = nameValue.trim();
-    if (trimmed && trimmed !== character.name) {
-      onRename(trimmed);
-    } else {
-      setNameValue(character.name);
-    }
-  }
 
   async function handleAddSheet(files: FileList | null) {
     if (!files?.length) {
@@ -248,25 +233,23 @@ function CharacterCard({
   };
 
   return (
-    <div className="bg-surface-800 border border-surface-600 rounded-xl overflow-hidden">
-      {/* Card header */}
-      <div
-        className={`flex items-center gap-3 p-3 cursor-pointer transition-colors ${
-          expanded
-            ? 'bg-surface-700/50 border-b border-surface-700 hover:bg-surface-700/60'
-            : 'hover:bg-surface-700/20'
-        }`}
-        onClick={toggleExpanded}
-      >
-        {/* Primary sheet thumbnail */}
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            if (primarySheet) onSelectSheet(primarySheet);
-            if (!expanded) setExpanded(true);
-          }}
-          className={`w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden border bg-surface-700 transition-colors hover:ring-1 hover:ring-brand-500/70 ${
+    <CollapsibleManagerCard
+      name={character.name}
+      itemCount={character.sheets.length}
+      itemLabelSingular="sheet"
+      expanded={expanded}
+      onExpandedChange={setExpanded}
+      onRename={onRename}
+      onDelete={onDelete}
+      expandTitle="Expand sheets"
+      collapseTitle="Collapse"
+      deleteTitle="Delete character"
+      onPrimaryClick={() => {
+        if (primarySheet) onSelectSheet(primarySheet);
+      }}
+      primary={
+        <div
+          className={`w-12 h-12 rounded-lg overflow-hidden border bg-surface-700 transition-colors hover:ring-1 hover:ring-brand-500/70 ${
             selectedSheetId === primarySheet?.id
               ? 'border-brand-500 ring-1 ring-brand-500/70'
               : 'border-surface-600 hover:border-brand-500/60'
@@ -285,172 +268,69 @@ function CharacterCard({
               </svg>
             </div>
           )}
-        </button>
-
-        {/* Name */}
-        <div className="flex-1 min-w-0">
-          {editingName ? (
-            <input
-              autoFocus
-              type="text"
-              value={nameValue}
-              onChange={(e) => setNameValue(e.target.value)}
-              onBlur={commitName}
-              onClick={(event) => event.stopPropagation()}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') commitName();
-                if (e.key === 'Escape') { setEditingName(false); setNameValue(character.name); }
-              }}
-              className="w-full bg-surface-700 border border-brand-500 rounded px-2 py-0.5 text-sm text-gray-100 focus:outline-none"
-            />
-          ) : (
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                if (!expanded) {
-                  setExpanded(true);
-                  return;
-                }
-                setEditingName(true);
-              }}
-              className="text-sm font-medium text-gray-100 truncate hover:text-brand-300 transition-colors text-left w-full"
-              title="Click to rename"
-            >
-              {character.name}
-            </button>
-          )}
-          <p className="text-[10px] text-gray-500 mt-0.5">
-            {character.sheets.length} sheet{character.sheets.length !== 1 ? 's' : ''}
-          </p>
         </div>
-
-        {/* Actions */}
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              toggleExpanded();
-            }}
-            className="p-1.5 rounded-lg hover:bg-surface-700 text-gray-400 hover:text-gray-200 transition-colors"
-            title={expanded ? 'Collapse' : 'Expand sheets'}
-          >
-            <svg
-              className={`w-4 h-4 transition-transform ${expanded ? 'rotate-180' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-
-          {confirmDelete ? (
-            <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onDelete();
-                  }}
-                  className="px-2 py-1 text-[10px] bg-red-500/20 text-red-400 rounded hover:bg-red-500/30 transition-colors"
-                >
-                  Confirm
-                </button>
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setConfirmDelete(false);
-                  }}
-                  className="px-2 py-1 text-[10px] bg-surface-700 text-gray-400 rounded hover:bg-surface-600 transition-colors"
-                >
-                  Cancel
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                setConfirmDelete(true);
-              }}
-              className="p-1.5 rounded-lg hover:bg-surface-700 text-gray-500 hover:text-red-400 transition-colors"
-              title="Delete character"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Expanded sheet grid */}
-      {expanded && (
-        <div className="px-3 pb-3">
-          {CHARACTER_VIEW_SECTIONS.map((section) => (
-            <div key={section.title} className="mt-3 first:mt-3">
-              <p className="text-[10px] uppercase tracking-wider font-semibold text-gray-500 mb-2">{section.title}</p>
-              <div className="flex flex-wrap gap-2">
-                {section.views.map((viewLabel) => {
-                  const assignedSheet = viewSheetByLabel.get(normalizeSheetLabel(viewLabel));
-                  if (assignedSheet) {
-                    return (
-                      <div key={viewLabel} className="flex flex-col gap-1">
-                        <DropWell
-                          onDropWell={() => assignDraggedSheetToView(viewLabel, assignedSheet.id)}
-                          disabled={!draggedSheetId}
-                          overlayLabel={`Swap with ${viewLabel}`}
-                        >
-                          <DraggableImageWell
-                            onDragStart={() => setDraggedSheetId(assignedSheet.id)}
-                            onDragEnd={() => setDraggedSheetId(null)}
-                          >
-                            <SheetThumbnail
-                              sheet={assignedSheet}
-                              selected={selectedSheetId === assignedSheet.id}
-                              onSelect={() => onSelectSheet(assignedSheet)}
-                              showRemove={character.sheets.length > 1}
-                              onRemove={() => onRemoveSheet(assignedSheet.id)}
-                            />
-                          </DraggableImageWell>
-                        </DropWell>
-                        <span className="text-[9px] text-gray-400 w-16 text-center leading-tight">{viewLabel}</span>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div key={viewLabel} className="flex flex-col gap-1">
-                      <DropWell
-                        onDropWell={() => assignDraggedSheetToView(viewLabel)}
-                        disabled={!draggedSheetId}
-                        overlayLabel={`Assign to ${viewLabel}`}
+      }
+    >
+      {CHARACTER_VIEW_SECTIONS.map((section) => (
+        <div key={section.title} className="mt-3 first:mt-3">
+          <p className="text-[10px] uppercase tracking-wider font-semibold text-gray-500 mb-2">{section.title}</p>
+          <div className="flex flex-wrap gap-2">
+            {section.views.map((viewLabel) => {
+              const assignedSheet = viewSheetByLabel.get(normalizeSheetLabel(viewLabel));
+              if (assignedSheet) {
+                return (
+                  <div key={viewLabel} className="flex flex-col gap-1">
+                    <DropWell
+                      onDropWell={() => assignDraggedSheetToView(viewLabel, assignedSheet.id)}
+                      disabled={!draggedSheetId}
+                      overlayLabel={`Swap with ${viewLabel}`}
+                    >
+                      <DraggableImageWell
+                        onDragStart={() => setDraggedSheetId(assignedSheet.id)}
+                        onDragEnd={() => setDraggedSheetId(null)}
                       >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setPendingSheetLabel(viewLabel);
-                            fileInputRef.current?.click();
-                          }}
-                          className="w-16 h-16 rounded-lg border border-dashed border-surface-500 hover:border-brand-500 text-gray-500 hover:text-brand-400 flex items-center justify-center transition-colors flex-shrink-0"
-                          title={`Add ${viewLabel} sheet`}
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                          </svg>
-                        </button>
-                      </DropWell>
-                      <span className="text-[9px] text-gray-500 w-16 text-center leading-tight">{viewLabel}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+                        <SheetThumbnail
+                          sheet={assignedSheet}
+                          selected={selectedSheetId === assignedSheet.id}
+                          onSelect={() => onSelectSheet(assignedSheet)}
+                          showRemove={character.sheets.length > 1}
+                          onRemove={() => onRemoveSheet(assignedSheet.id)}
+                        />
+                      </DraggableImageWell>
+                    </DropWell>
+                    <span className="text-[9px] text-gray-400 w-16 text-center leading-tight">{viewLabel}</span>
+                  </div>
+                );
+              }
 
+              return (
+                <div key={viewLabel} className="flex flex-col gap-1">
+                  <DropWell
+                    onDropWell={() => assignDraggedSheetToView(viewLabel)}
+                    disabled={!draggedSheetId}
+                    overlayLabel={`Assign to ${viewLabel}`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPendingSheetLabel(viewLabel);
+                        fileInputRef.current?.click();
+                      }}
+                      className="w-16 h-16 rounded-lg border border-dashed border-surface-500 hover:border-brand-500 text-gray-500 hover:text-brand-400 flex items-center justify-center transition-colors flex-shrink-0"
+                      title={`Add ${viewLabel} sheet`}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                      </svg>
+                    </button>
+                  </DropWell>
+                  <span className="text-[9px] text-gray-500 w-16 text-center leading-tight">{viewLabel}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
           <div className="mt-3">
             <p className="text-[10px] uppercase tracking-wider font-semibold text-gray-500 mb-2">Character Sheet</p>
             <div className="flex flex-wrap gap-2">
@@ -592,17 +472,15 @@ function CharacterCard({
             />
           </div>
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple={pendingSheetLabel == null}
-            className="sr-only"
-            onChange={(e) => handleAddSheet(e.target.files)}
-          />
-        </div>
-      )}
-    </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple={pendingSheetLabel == null}
+        className="sr-only"
+        onChange={(e) => handleAddSheet(e.target.files)}
+      />
+    </CollapsibleManagerCard>
   );
 }
 
@@ -747,52 +625,10 @@ function StringListEditor({
   );
 }
 
-function CharacterManagerInspector({
-  selectedAssetId,
-  assets,
-  shots,
-  onSelectAsset,
-  onGoToShot,
-}: {
-  selectedAssetId: string | null;
-  assets: ReturnType<typeof mergeWithDerivedAssets>;
-  shots: Shot[];
-  onSelectAsset: (id: string) => void;
-  onGoToShot: (shotId: number) => void;
-}) {
-  if (!selectedAssetId) {
-    return (
-      <div className="h-full flex items-center justify-center p-4 text-xs text-gray-500 text-center">
-        Select a character image to inspect details.
-      </div>
-    );
-  }
-
-  return (
-    <div className="h-full flex flex-col min-h-0">
-      <div className="flex-1 min-h-0">
-        <MediaLibraryInspector
-          selectedId={selectedAssetId}
-          assets={assets}
-          snapshots={[]}
-          shots={shots}
-          onSelectAsset={onSelectAsset}
-          onGoToShot={onGoToShot}
-        />
-      </div>
-    </div>
-  );
-}
-
 // ── Main Panel ────────────────────────────────────────────────────────────────
 
 export function CharacterManager() {
   const characters = useStudioStore((s) => s.characters);
-  const setups = useStudioStore((s) => s.setups);
-  const locations = useStudioStore((s) => s.locations);
-  const mediaLibrary = useStudioStore((s) => s.mediaLibrary);
-  const globalMediaLibrary = useStudioStore((s) => s.globalMediaLibrary);
-  const shots = useStudioStore((s) => s.shots);
   const renameCharacter = useStudioStore((s) => s.renameCharacter);
   const addCharacterSheet = useStudioStore((s) => s.addCharacterSheet);
   const removeCharacterSheet = useStudioStore((s) => s.removeCharacterSheet);
@@ -806,26 +642,6 @@ export function CharacterManager() {
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
 
-  const derivedAssets = useMemo(
-    () => deriveProjectAssets(setups, characters, locations),
-    [setups, characters, locations],
-  );
-  const projectAssets = useMemo(
-    () => mergeWithDerivedAssets(mediaLibrary, derivedAssets),
-    [mediaLibrary, derivedAssets],
-  );
-  const inspectorAssets = useMemo(
-    () => [...projectAssets, ...globalMediaLibrary],
-    [projectAssets, globalMediaLibrary],
-  );
-
-  useEffect(() => {
-    if (!selectedAssetId) return;
-    const stillExists = inspectorAssets.some((asset) => asset.id === selectedAssetId);
-    if (stillExists) return;
-    setSelectedAssetId(null);
-  }, [inspectorAssets, selectedAssetId]);
-
   useEffect(() => {
     if (!selectedCharacterId) return;
     const exists = characters.some((character) => character.id === selectedCharacterId);
@@ -836,14 +652,6 @@ export function CharacterManager() {
   const handleSelectSheet = (character: Character, sheet: CharacterSheet) => {
     setSelectedCharacterId(character.id);
     setSelectedAssetId(derivedCharacterSheetAssetId(character.id, sheet.id));
-  };
-
-  const handleSelectAsset = (assetId: string) => {
-    setSelectedAssetId(assetId);
-    const derivedIds = parseDerivedCharacterSheetAssetId(assetId);
-    if (derivedIds) {
-      setSelectedCharacterId(derivedIds.characterId);
-    }
   };
 
   const handleGoToShot = (shotId: number) => {
@@ -934,11 +742,16 @@ export function CharacterManager() {
         </div>
 
         <aside className="w-72 xl:w-80 shrink-0 min-h-0 bg-surface-900/90">
-          <CharacterManagerInspector
+          <InspectionManager
             selectedAssetId={selectedAssetId}
-            assets={inspectorAssets}
-            shots={shots}
-            onSelectAsset={handleSelectAsset}
+            onSelectAssetId={setSelectedAssetId}
+            registrations={[
+              {
+                parseAssetId: parseDerivedCharacterSheetAssetId,
+                onMatch: ({ characterId }) => setSelectedCharacterId(characterId),
+              },
+            ]}
+            emptyMessage="Select a character image to inspect details."
             onGoToShot={handleGoToShot}
           />
         </aside>
