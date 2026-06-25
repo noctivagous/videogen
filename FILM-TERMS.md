@@ -1,7 +1,20 @@
 Film Terms and Concepts
 
+To the right of this DOM Path: div#studio-root > div#studio-bottom-bar > div.p-2.5 .pace-y-2 > div.flex gap-2 item.-.tretch > div#studio-bottom-prompt > div.flex flex-col gap-1.5
+Position: top=657px, left=27px, width=1035px, height=231px
+React Component: BottomBar
+HTML Element: <div class="flex flex-col gap-1.5" data-cursor-element-id="cursor-el-1">REFERENCE IMAGES The subject in the video — face, body, wardrobe, and proportions only — comes from <IMAGE_2> (Character Sheet · Bud) ; ignore any background, floor, or environment in <IMAGE_2> (Cha</div> should be another column and it is for entering dialogue, action, and expression for each character listed in DOM Path: div#studio-root > div#studio-workspace > aside#studio-camera-panel > div.p-4 > div.mb-4 .pace-y-3 > div#studio-bottom-references > div.flex flex-col gap-1.5 > div.image-reference.-header flex flex-col gap-1.5 > div.workflow-checkli.t flex flex-col gap-3 > fieldset.workflow-.tep-field.et[0] > fieldset.workflow-.tep-field.et workflow-.tep-field.et--ne.ted mt-2 > fieldset.workflow-.tep-field.et workflow-.tep-field.et--ne.ted[1]
+Position: top=292px, left=52px, width=178px, height=427px
+React Component: SubjectsFieldset
+HTML Element: <fieldset class="workflow-step-fieldset workflow-step-fieldset--nested" data-cursor-element-id="cursor-el-200">✓ CHARACTERS Manage → ✓ Character 1 CHARACTER Bud ▾ CHARACTER SHEET Character Sheet 1 ▾ MANUAL CHARACTER SHEET ✓ Character 2 CHARACTER Bud ▾ CHARACTER SHEET Character Sheet 1 ▾ MANUAL CHARACTER SHEET</fieldset>. And then for the API payload's prompt what happens is in the app there will be corresponding translation of what each character says and does, as interfaced in this seciton, into what the AI model needs in the AI payload since presumably it .  What needs to be determined is whether this section will be transmitted to the baked image part and probably only the expression part and not dialogue.
+
 
 Blocking, Staging, Framing
+
+Blocking is the  choreography of actor movement and positioning within a scene, 
+while staging is the broader orchestration of all visual elements—including 
+blocking, camera placement, lighting, and set design—to construct the scene’s 
+total visual architecture. 
 
 Blocking: The choreography of actors (where they stand, how they move, and when they cross)
 Blocking focuses on the kinetic relationship between performers and their environment.  

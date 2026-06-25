@@ -17,14 +17,6 @@ import type { ColorPaletteMode, ColorScheme } from '@/lib/types/studio';
 import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 import { useStudioStore } from '@/store/useStudioStore';
 
-function warmthLabel(warmth: number): string {
-  if (warmth > 25) return 'Warm';
-  if (warmth < -25) return 'Cool';
-  if (warmth > 0) return 'Slightly warm';
-  if (warmth < 0) return 'Slightly cool';
-  return 'Neutral';
-}
-
 export function ColorPaletteMakerPanel() {
   const palette = useStudioStore((s) => s.colorPaletteMakerDraft);
   const setPalette = useStudioStore((s) => s.setColorPaletteMakerDraft);
@@ -56,8 +48,8 @@ export function ColorPaletteMakerPanel() {
         {!isOff && (
           <div className="bg-surface-800 border border-surface-600 rounded-xl p-4 space-y-4">
             {palette.mode === 'color' && (
-              <div>
-                <p className="text-xs text-gray-400 mb-2">Harmony</p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-gray-400 shrink-0">Harmony</p>
                 <ColorSchemeButtons
                   value={palette.scheme}
                   onChange={(scheme: ColorScheme) => setPalette({ scheme, accentHue: null })}
@@ -192,18 +184,6 @@ export function ColorPaletteMakerPanel() {
                 max={100}
                 value={palette.brightness}
                 onChange={(e) => setPalette({ brightness: parseInt(e.target.value, 10) })}
-              />
-            )}
-
-            {!isColorPaletteBw(palette) && palette.mode !== 'accent-splash' && (
-              <RangeSlider
-                label="Key Light Warmth"
-                valueLabel={warmthLabel(palette.keyLightWarmth)}
-                className="warmth-slider"
-                min={-100}
-                max={100}
-                value={palette.keyLightWarmth}
-                onChange={(e) => setPalette({ keyLightWarmth: parseInt(e.target.value, 10) })}
               />
             )}
 

@@ -149,8 +149,8 @@ export function ColorPalettePanel() {
             )}
 
             {palette.mode === 'color' && (
-              <div>
-                <p className="text-xs text-gray-400 mb-2">Harmony</p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-gray-400 shrink-0">Harmony</p>
                 <ColorSchemeButtons
                   value={palette.scheme}
                   onChange={(scheme: ColorScheme) => setColorPalette({ scheme, accentHue: null })}
