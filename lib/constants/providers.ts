@@ -4,7 +4,7 @@ import type { BuiltInProvider } from '@/lib/types/studio';
  * Built-in providers users can configure and select in the app today.
  * All other built-in cards remain visible in Settings but are grayed out.
  */
-export const ENABLED_PROVIDER_IDS = ['xai'] as const;
+export const ENABLED_PROVIDER_IDS = ['fal', 'replicate', 'xai'] as const;
 
 export type EnabledProviderId = (typeof ENABLED_PROVIDER_IDS)[number];
 
@@ -13,7 +13,7 @@ export function isBuiltInProviderEnabled(providerId: string): boolean {
 }
 
 export function getDefaultEnabledProviderId(): EnabledProviderId {
-  return ENABLED_PROVIDER_IDS[0];
+  return 'xai';
 }
 
 export const BUILT_IN_PROVIDERS: BuiltInProvider[] = [
@@ -72,6 +72,15 @@ export const BUILT_IN_PROVIDERS: BuiltInProvider[] = [
     modalities: ['video', 'image'],
   },
   {
+    id: 'fal',
+    name: 'Fal.ai',
+    desc: 'Serverless • Instant video & image-to-video APIs',
+    icon: '⚡',
+    hint: 'Fal dashboard → API keys',
+    purposes: ['Text-to-Video', 'Image-to-Video', 'Serverless'],
+    modalities: ['video', 'image'],
+  },
+  {
     id: 'replicate',
     name: 'Replicate',
     desc: 'Community video models • Run any open weights',
@@ -97,15 +106,6 @@ export const BUILT_IN_PROVIDERS: BuiltInProvider[] = [
     hint: 'Together dashboard → API keys',
     purposes: ['Open Models', 'Fast Inference'],
     modalities: ['video', 'image', 'llm'],
-  },
-  {
-    id: 'fal',
-    name: 'Fal.ai',
-    desc: 'Serverless • Instant video & image-to-video APIs',
-    icon: '⚡',
-    hint: 'Fal dashboard → API keys',
-    purposes: ['Text-to-Video', 'Image-to-Video', 'Serverless'],
-    modalities: ['video', 'image'],
   },
   {
     id: 'huggingface',

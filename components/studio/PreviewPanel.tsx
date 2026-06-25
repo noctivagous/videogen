@@ -405,7 +405,7 @@ export function PreviewPanel() {
       <div className="preview-panel-stage-shell p-4 md:p-8">
         <div
           ref={previewStageRef}
-          className="relative w-full h-full max-w-5xl mx-auto flex items-center justify-center min-h-0"
+          className="relative w-full h-full max-w-5xl flex items-center justify-start min-h-0"
         >
           {showBackdropEditStack && shot && backdropSourceUrl && (
             <>
