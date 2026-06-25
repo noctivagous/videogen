@@ -263,7 +263,7 @@ export const EMPTY_SETUPS: Setup[] = [
   createStockSetup(1, 'Setup 01', true, {
     duration: 5,
     placement: 'cell-1-1',
-    withReferences: true,
+    withReferences: false,
     sceneSetup: '',
     shotActivity: '',
   }),
@@ -295,7 +295,7 @@ export const EMPTY_SHOTS: Shot[] = [
   createStockShot(1, 'Shot 01', true, {
     duration: 5,
     placement: 'cell-1-1',
-    withReferences: true,
+    withReferences: false,
     sceneSetup: '',
     shotActivity: '',
   }),
