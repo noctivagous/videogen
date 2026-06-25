@@ -2,6 +2,7 @@ import { normalizeReferenceRole } from '@/lib/constants/camera';
 import { getReferenceSlotCount } from '@/lib/studio/reference-slots';
 import {
   areSubjectSheetsComplete,
+  getSubjectChecklistSlotIndices,
   getSubjectSheetSlotCount,
 } from '@/lib/studio/subject-sheet-slots';
 import { migrateMannequin, migrateMannequins } from '@/lib/studio/migrate-mannequin';
@@ -152,6 +153,16 @@ export function isCharacterAssignmentComplete(shot: Shot, lighting?: LightingSet
 
   const principals = getPrincipalMannequins(shot.mannequins);
   if (principals.length === 0) return false;
+  const checklistSlots = getSubjectChecklistSlotIndices(shot);
+  if (checklistSlots.length > 0) {
+    const allowedSlots = new Set(checklistSlots);
+    return principals.every(
+      (m) =>
+        m.subjectSlotIndex != null &&
+        allowedSlots.has(m.subjectSlotIndex) &&
+        isValidSubjectSlotAssignment(shot, m.subjectSlotIndex, lighting),
+    );
+  }
   const subjectSlots = getSubjectSlotIndices(shot, lighting);
   if (subjectSlots.length === 0) return shot.camera.subjectCount === 'crowd';
   return principals.every((m) => isValidSubjectSlotAssignment(shot, m.subjectSlotIndex, lighting));

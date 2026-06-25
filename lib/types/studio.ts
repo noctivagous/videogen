@@ -114,6 +114,10 @@ export interface Mannequin {
   y: number;
   /** Display scale multiplier (0.1–10). */
   scale: number;
+  /** Optional finer facing in 1/16 turns (0..15), layered over `angle` 1/8 sprites. */
+  yawTurn16?: number;
+  /** Camera-relative vertical observation angle in degrees (bird's-eye / worm's-eye). */
+  pitchDeg?: number;
   rotation: number;
   /** @deprecated Use age — kept for persisted project migration. */
   ageScale?: number;

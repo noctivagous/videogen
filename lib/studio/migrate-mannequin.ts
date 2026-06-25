@@ -1,4 +1,5 @@
 import { DEFAULT_POSEBLOCK_BASE_POSE_ID } from '@/lib/poseblock/posePresets';
+import { normalizeYawTurn16 } from '@/lib/studio/mannequin-rotation';
 import type { Mannequin, MannequinAge } from '@/lib/types/studio';
 
 export function migrateMannequin(raw: Mannequin): Mannequin {
@@ -13,6 +14,8 @@ export function migrateMannequin(raw: Mannequin): Mannequin {
     age,
     pose: raw.pose ?? 'standard',
     poseBlockBasePoseId: raw.poseBlockBasePoseId ?? DEFAULT_POSEBLOCK_BASE_POSE_ID,
+    yawTurn16: normalizeYawTurn16(raw.yawTurn16, raw.angle ?? 'front'),
+    pitchDeg: Number.isFinite(raw.pitchDeg) ? raw.pitchDeg : 0,
   };
   if (
     raw.subjectSlotIndex != null &&

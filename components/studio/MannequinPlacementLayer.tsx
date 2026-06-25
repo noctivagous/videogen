@@ -19,7 +19,12 @@ import {
   rotationFromTiltDrag,
   scaleFromAnchorDrag,
 } from '@/lib/studio/mannequin-layout';
-import { rotateMannequinAngle } from '@/lib/studio/mannequin-rotation';
+import {
+  normalizeYawTurn16,
+  rotateYawTurn16ByEighth,
+  yawTurn16ToAngle,
+  yawTurn16ToVisualYawDeg,
+} from '@/lib/studio/mannequin-rotation';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { useCharacterAssignmentConnectorContext } from '@/components/studio/ThemeTransformConnectorProvider';
 import {
@@ -291,6 +296,9 @@ export function MannequinPlacementLayer({
             ? 'ring-2 ring-amber-400/80'
             : '';
         const isCharacterTarget = characterConnector?.hoverMannequinId === m.id;
+        const yawTurn16 = normalizeYawTurn16(m.yawTurn16, m.angle);
+        const visualYawDeg = yawTurn16ToVisualYawDeg(yawTurn16);
+        const pitchDeg = Number.isFinite(m.pitchDeg) ? (m.pitchDeg as number) : 0;
         return (
           <div
             key={m.id}
@@ -300,7 +308,7 @@ export function MannequinPlacementLayer({
             style={{
               left: `${m.x * 100}%`,
               bottom: `${mannequinFeetBottomPct(m.y)}%`,
-              transform: `translate(${feet.translateX}, 0) rotate(${m.rotation}deg)`,
+              transform: `translate(${feet.translateX}, 0) perspective(900px) rotateX(${pitchDeg}deg) rotateY(${visualYawDeg}deg) rotate(${m.rotation}deg)`,
               opacity: m.opacity ?? 1,
               height: `${heightPct}%`,
               width: 'auto',
@@ -342,16 +350,24 @@ export function MannequinPlacementLayer({
                 <MannequinFacingArrow
                   direction="left"
                   label="Rotate facing left"
-                  onClick={() =>
-                    onUpdate(m.id, { angle: rotateMannequinAngle(m.angle, 'left') })
-                  }
+                  onClick={() => {
+                    const nextYaw = rotateYawTurn16ByEighth(yawTurn16, 'left');
+                    onUpdate(m.id, {
+                      yawTurn16: nextYaw,
+                      angle: yawTurn16ToAngle(nextYaw),
+                    });
+                  }}
                 />
                 <MannequinFacingArrow
                   direction="right"
                   label="Rotate facing right"
-                  onClick={() =>
-                    onUpdate(m.id, { angle: rotateMannequinAngle(m.angle, 'right') })
-                  }
+                  onClick={() => {
+                    const nextYaw = rotateYawTurn16ByEighth(yawTurn16, 'right');
+                    onUpdate(m.id, {
+                      yawTurn16: nextYaw,
+                      angle: yawTurn16ToAngle(nextYaw),
+                    });
+                  }}
                 />
               </div>
             )}

@@ -2,6 +2,7 @@ import { getPrincipalMannequins } from '@/lib/studio/mannequin-character-assignm
 import { defaultFeetAnchorY } from '@/lib/studio/mannequin-layout';
 import { MAX_PRINCIPAL_MANNEQUINS } from '@/lib/studio/subject-count-from-mannequins';
 import { DEFAULT_POSEBLOCK_BASE_POSE_ID } from '@/lib/poseblock/posePresets';
+import { angleToYawTurn16 } from '@/lib/studio/mannequin-rotation';
 import type { Mannequin, MannequinAngle, Shot } from '@/lib/types/studio';
 
 function newMannequinId(): string {
@@ -24,6 +25,8 @@ export function createDefaultMannequin(
     x: partial.x ?? 0.5,
     y: partial.y ?? defaultFeetAnchorY('ms'),
     scale: partial.scale ?? 1,
+    yawTurn16: partial.yawTurn16 ?? angleToYawTurn16(partial.angle ?? 'front'),
+    pitchDeg: partial.pitchDeg ?? 0,
     rotation: partial.rotation ?? 0,
     opacity: partial.opacity ?? 1,
   };

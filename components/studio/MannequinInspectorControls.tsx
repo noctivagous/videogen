@@ -25,8 +25,12 @@ import {
 } from '@/lib/studio/mannequin-bounds-framing';
 import { placementAnchorX } from '@/lib/studio/mannequin-sync';
 import {
+  normalizeYawTurn16,
+  rotateYawTurn16ByEighth,
+  rotateYawTurn16BySixteenth,
+  yawTurn16ToAngle,
+  yawTurn16ToVisualYawDeg,
   mannequinAngleLabel,
-  rotateMannequinAngle,
 } from '@/lib/studio/mannequin-rotation';
 import { normalizeReferenceRole } from '@/lib/constants/camera';
 import {
@@ -61,6 +65,18 @@ const WIDTH_TO_HEIGHT_MIN = 0.02;
 
 function clampBoundsValue(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+function clampPitchDeg(value: number): number {
+  return Math.min(90, Math.max(-90, value));
+}
+
+function pitchLabel(value: number): string {
+  if (value >= 67.5) return "Bird's-eye";
+  if (value >= 22.5) return 'High angle';
+  if (value <= -67.5) return "Worm's-eye";
+  if (value <= -22.5) return 'Low angle';
+  return 'Eye level';
 }
 
 function BoundsField({
@@ -196,6 +212,11 @@ export function MannequinInspectorControls({
     );
   };
 
+  const yawTurn16 = normalizeYawTurn16(mannequin.yawTurn16, mannequin.angle);
+  const faceLabel = mannequinAngleLabel(yawTurn16ToAngle(yawTurn16));
+  const isHalfFaceStep = Math.abs(yawTurn16ToVisualYawDeg(yawTurn16)) > 0.01;
+  const pitchDeg = clampPitchDeg(mannequin.pitchDeg ?? 0);
+
   return (
     <div className="flex flex-col gap-3 text-xs">
       <Select
@@ -216,36 +237,121 @@ export function MannequinInspectorControls({
         })}
       </Select>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-gray-400">Face</span>
-        <button
-          type="button"
-          className="w-7 h-7 rounded bg-surface-700 hover:bg-surface-600 text-gray-200 font-bold"
-          aria-label="Rotate face left"
-          onClick={() =>
-            onUpdate(mannequin.id, {
-              angle: rotateMannequinAngle(mannequin.angle, 'left'),
-            })
-          }
-        >
-          ←
-        </button>
-        <span className="text-gray-200 min-w-[4.5rem] text-center">
-          {mannequinAngleLabel(mannequin.angle)}
-        </span>
-        <button
-          type="button"
-          className="w-7 h-7 rounded bg-surface-700 hover:bg-surface-600 text-gray-200 font-bold"
-          aria-label="Rotate face right"
-          onClick={() =>
-            onUpdate(mannequin.id, {
-              angle: rotateMannequinAngle(mannequin.angle, 'right'),
-            })
-          }
-        >
-          →
-        </button>
-      </div>
+      <fieldset className="workflow-step-fieldset workflow-step-fieldset--nested mt-0">
+        <legend className="workflow-step-fieldset__legend">Orientation</legend>
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Face</span>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-200 min-w-[7rem] text-left text-[11px]">
+                {faceLabel}{isHalfFaceStep ? ' + 1/16' : ''}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[9px] text-gray-500 uppercase tracking-wide">1/8</span>
+              <button
+                type="button"
+                className="w-7 h-7 rounded bg-surface-700 hover:bg-surface-600 text-gray-200 font-bold"
+                aria-label="Rotate face left by 1/8 turn"
+                onClick={() => {
+                  const nextYaw = rotateYawTurn16ByEighth(yawTurn16, 'left');
+                  onUpdate(mannequin.id, {
+                    yawTurn16: nextYaw,
+                    angle: yawTurn16ToAngle(nextYaw),
+                  });
+                }}
+              >
+                ←
+              </button>
+              <button
+                type="button"
+                className="w-7 h-7 rounded bg-surface-700 hover:bg-surface-600 text-gray-200 font-bold"
+                aria-label="Rotate face right by 1/8 turn"
+                onClick={() => {
+                  const nextYaw = rotateYawTurn16ByEighth(yawTurn16, 'right');
+                  onUpdate(mannequin.id, {
+                    yawTurn16: nextYaw,
+                    angle: yawTurn16ToAngle(nextYaw),
+                  });
+                }}
+              >
+                →
+              </button>
+              <span className="text-[9px] text-gray-500 uppercase tracking-wide ml-1">1/16</span>
+              <button
+                type="button"
+                className="w-7 h-7 rounded bg-surface-700 hover:bg-surface-600 text-gray-200 font-bold"
+                aria-label="Rotate face left by 1/16 turn"
+                onClick={() => {
+                  const nextYaw = rotateYawTurn16BySixteenth(yawTurn16, 'left');
+                  onUpdate(mannequin.id, {
+                    yawTurn16: nextYaw,
+                    angle: yawTurn16ToAngle(nextYaw),
+                  });
+                }}
+              >
+                ←
+              </button>
+              <button
+                type="button"
+                className="w-7 h-7 rounded bg-surface-700 hover:bg-surface-600 text-gray-200 font-bold"
+                aria-label="Rotate face right by 1/16 turn"
+                onClick={() => {
+                  const nextYaw = rotateYawTurn16BySixteenth(yawTurn16, 'right');
+                  onUpdate(mannequin.id, {
+                    yawTurn16: nextYaw,
+                    angle: yawTurn16ToAngle(nextYaw),
+                  });
+                }}
+              >
+                →
+              </button>
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Angle</span>
+            <div className="text-gray-200 text-[11px]">
+              {pitchLabel(pitchDeg)} ({pitchDeg.toFixed(1)}deg)
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[9px] text-gray-500 uppercase tracking-wide">1/8</span>
+              <button
+                type="button"
+                className="w-7 h-7 rounded bg-surface-700 hover:bg-surface-600 text-gray-200 font-bold"
+                aria-label="Tilt angle down by 1/8 turn"
+                onClick={() => onUpdate(mannequin.id, { pitchDeg: clampPitchDeg(pitchDeg - 45) })}
+              >
+                ↓
+              </button>
+              <button
+                type="button"
+                className="w-7 h-7 rounded bg-surface-700 hover:bg-surface-600 text-gray-200 font-bold"
+                aria-label="Tilt angle up by 1/8 turn"
+                onClick={() => onUpdate(mannequin.id, { pitchDeg: clampPitchDeg(pitchDeg + 45) })}
+              >
+                ↑
+              </button>
+              <span className="text-[9px] text-gray-500 uppercase tracking-wide ml-1">1/16</span>
+              <button
+                type="button"
+                className="w-7 h-7 rounded bg-surface-700 hover:bg-surface-600 text-gray-200 font-bold"
+                aria-label="Tilt angle down by 1/16 turn"
+                onClick={() => onUpdate(mannequin.id, { pitchDeg: clampPitchDeg(pitchDeg - 22.5) })}
+              >
+                ↓
+              </button>
+              <button
+                type="button"
+                className="w-7 h-7 rounded bg-surface-700 hover:bg-surface-600 text-gray-200 font-bold"
+                aria-label="Tilt angle up by 1/16 turn"
+                onClick={() => onUpdate(mannequin.id, { pitchDeg: clampPitchDeg(pitchDeg + 22.5) })}
+              >
+                ↑
+              </button>
+            </div>
+          </div>
+        </div>
+      </fieldset>
 
       <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 items-end">
         <div className="flex flex-col gap-1">
