@@ -8,7 +8,6 @@ import { ProviderBadge } from '@/components/studio/ProviderBadge';
 import { SplitButton } from '@/components/ui/SplitButton';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { getStudioPanelTitle } from '@/lib/constants/studio-launcher';
-import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 import {
   getBuiltInProvider,
   getProviderStatus,
@@ -349,7 +348,6 @@ export function HeaderBar() {
   const exportVideo = useStudioStore((s) => s.exportVideo);
   const openSettings = useStudioStore((s) => s.openSettings);
   const workspaceView = useStudioStore((s) => s.workspaceView);
-  const navigateToPanel = useNavigateToStudioPanel();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -483,24 +481,6 @@ export function HeaderBar() {
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={() =>
-              navigateToPanel(
-                workspaceView === 'media-library' ? 'shot-designer' : 'media-library',
-              )
-            }
-            className={`px-2.5 py-1.5 text-xs font-medium border rounded-lg transition-all ${
-              workspaceView === 'media-library'
-                ? 'bg-brand-600/20 border-brand-500/50 text-brand-300'
-                : 'bg-surface-800 hover:bg-surface-700 border-surface-600 text-gray-300'
-            }`}
-            title="Browse project media assets"
-            {...uiSectionProps(UI_SECTIONS.studioHeaderMediaLibrary)}
-          >
-            Media Library
-          </button>
-
           <ProjectFolderBadge
             label={projectLocationLabel}
             kind={projectLocationKind}
@@ -511,6 +491,8 @@ export function HeaderBar() {
             onSaveNow={() => void saveProjectQuick()}
           />
         </div>
+
+        <div className="h-8 w-px bg-surface-600 hidden md:block flex-shrink-0" />
 
         <div className="hidden sm:flex items-center gap-2 min-w-0" {...uiSectionProps(UI_SECTIONS.studioHeaderProviderBadge)}>
           <ProviderBadge
