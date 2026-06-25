@@ -402,7 +402,7 @@ export function PreviewPanel() {
       )}
 
       {frameView !== 'prompt' && frameView !== 'bake-prompt' && isShotDesigner && (
-      <div className="preview-panel-stage-shell p-4 md:p-8">
+      <div className="preview-panel-stage-shell">
         <div
           ref={previewStageRef}
           className="relative w-full h-full max-w-5xl flex items-center justify-start min-h-0"

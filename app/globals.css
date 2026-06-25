@@ -847,6 +847,20 @@ input[type="range"]::-moz-range-thumb:hover {
   bottom: 0;
   left: -31px;
   z-index: 0;
+  box-sizing: border-box;
+  /* Align content with #studio-preview-main-chrome (0.5rem) after the -31px bleed. */
+  padding-left: calc(0.5rem + 31px);
+  padding-right: 1rem;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+@media (min-width: 768px) {
+  .preview-panel-stage-shell {
+    padding-right: 2rem;
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+  }
 }
 
 .preview-panel-controls {
