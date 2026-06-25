@@ -18,6 +18,7 @@
 
 ---
 
+
 ## OpenRouter — unified video API (recommended second path)
 
 [OpenRouter](https://openrouter.ai/collections/video-models) hosts a **Video Generation** category (rankings updated June 2026) with async jobs, BYOK, and a normalized request shape across models.

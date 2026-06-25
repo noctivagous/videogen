@@ -427,6 +427,12 @@ export interface Character {
   sheets: CharacterSheet[];
   /** Placeholder: optional character-owned prop references. */
   props?: CharacterPropImage[];
+  /** Character-owned prop names used by Character Manager inspector. */
+  propNames?: string[];
+  /** Character-owned wardrobe item names. */
+  wardrobeItems?: string[];
+  /** Character-owned pose names for quick recall. */
+  storedPoses?: string[];
   /** Placeholder: optional reusable look controls attached to Character. */
   lightingPresets?: LightingPreset[];
   colorPalettes?: ColorPaletteCollection[];

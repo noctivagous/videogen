@@ -1,6 +1,10 @@
 FUTURE FEATURES
 
 
+App will be founded on model workflows for production
+of shots.
+---------
+
 #studio-preview-frame - the preview frame
 
 #studio-bottom-references - image references
@@ -8,10 +12,18 @@ FUTURE FEATURES
 ---------
 
 
+[ ] - When a character is opened in Character Manager,
+at the bottom should be a list of setups and
+shots where the character can be found.
+
+[ ] - For the app, we will want the Lighting Setup
+object data type and the Color Palette and they both
+can be included in Location or Character.
+
 ---------
 
 
-Clicking on an image reference in #studio-bottom-references 
+[x] Clicking on an image reference in #studio-bottom-references 
 should open it in a modal image viewer for viewing.  
 However, it can have a folder icon on hover and that carries out the
 function of opening a file navigation
@@ -38,18 +50,15 @@ Pure text modifiers often give inconsistent or
 subtle results across motion and different models.
 
 
-App will be founded on model workflows for production
-of shots.
-
-Above "Image Reference" floating panel is "Shot Workflow" 
+[-] Above "Image Reference" floating panel is "Shot Workflow" 
 floating panel and beneath the title a dropdown menu
 for different shot workflows.
 
 SHOT WORKFLOWS - workflow dropdown button
-	1)  Manual - no UI driven conveniences, just image
+	[x] 1)  Manual - no UI driven conveniences, just image
 	reference slots, prompt slots.
 	
-	2) Backdrop without Character(s)
+	[x] 2) Backdrop without Character(s)
 		requires: character / subject sheet
 		- Treats Image1 as the backdrop, Image2 as 
 		subject 1.
@@ -57,7 +66,7 @@ SHOT WORKFLOWS - workflow dropdown button
 		drives.
 		
 		
-	3) Place Character(s) into Backdrop
+	[x] 3) Place Character(s) into Backdrop
 		requires: character / subject sheet
 		- Character sheet is used to pre-generate
 		the character in the backdrop in the app 

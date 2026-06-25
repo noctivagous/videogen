@@ -8,11 +8,11 @@ composited on top of the user's provided backdrop plate.
 It is under development.
 
 
-<h2>Pose Mannequins for The Start Frame Instead of Prompt Text</h2>
+<h2>Pose Mannequins</h2>
 
 Being able to use 3D mannequin models to stage the first frame of an AI-generated video 
-has two benefits. First it allows blocking the virtual actors' positions and
-gestures exactly to set the mood and composition of the shot at a level 
+has two benefits. First it allows exact blocking of the virtual actors' positions and
+gestures to set the mood and composition of the shot at a level 
 on par with traditional filmmaking. 
 
 <h3>Different Effects for The Same Frame</h3>

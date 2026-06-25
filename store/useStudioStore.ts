@@ -719,6 +719,11 @@ interface StudioStore {
   renameCharacter: (id: string, name: string) => void;
   addCharacterSheet: (characterId: string, url: string, label?: string) => void;
   removeCharacterSheet: (characterId: string, sheetId: string) => void;
+  updateCharacterSheetLabel: (characterId: string, sheetId: string, label?: string) => void;
+  updateCharacterLists: (
+    id: string,
+    patch: Partial<Pick<Character, 'propNames' | 'wardrobeItems' | 'storedPoses'>>,
+  ) => void;
   deleteCharacter: (id: string) => void;
   assignCharacterToSlot: (
     setupId: number,
@@ -3339,7 +3344,15 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       dataType: 'character-sheet',
       createdAt: now,
     };
-    const character: Character = { id, name, sheets: [sheet], createdAt: now };
+    const character: Character = {
+      id,
+      name,
+      sheets: [sheet],
+      propNames: [],
+      wardrobeItems: [],
+      storedPoses: [],
+      createdAt: now,
+    };
     set((s) => ({ characters: [...s.characters, character] }));
     return character;
   },
@@ -3373,6 +3386,32 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         if (c.sheets.length <= 1) return c; // guard: keep at least one sheet
         return { ...c, sheets: c.sheets.filter((sh) => sh.id !== sheetId) };
       }),
+    }));
+  },
+
+  updateCharacterSheetLabel(characterId, sheetId, label) {
+    const nextLabel = label?.trim();
+    set((s) => ({
+      characters: s.characters.map((c) => {
+        if (c.id !== characterId) return c;
+        return {
+          ...c,
+          sheets: c.sheets.map((sheet) =>
+            sheet.id === sheetId
+              ? {
+                  ...sheet,
+                  label: nextLabel ? nextLabel : undefined,
+                }
+              : sheet,
+          ),
+        };
+      }),
+    }));
+  },
+
+  updateCharacterLists(id, patch) {
+    set((s) => ({
+      characters: s.characters.map((c) => (c.id === id ? { ...c, ...patch } : c)),
     }));
   },
 

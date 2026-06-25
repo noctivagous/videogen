@@ -118,7 +118,10 @@ export function MediaLibraryInspector({
     return <div className="media-library-inspector p-4 text-sm text-gray-500">Asset not found.</div>;
   }
 
+  const isDerivedAsset = asset.id.startsWith('derived:');
+
   const patchMeta = (field: keyof MediaAsset['metadata'], value: string) => {
+    if (isDerivedAsset) return;
     if (field === 'usedInShots') return;
     updateMediaAsset(asset.id, {
       metadata: { [field]: value || undefined } as Partial<MediaAsset['metadata']>,
@@ -140,12 +143,22 @@ export function MediaLibraryInspector({
         </div>
         <button
           type="button"
-          onClick={() => deleteMediaAssets([asset.id])}
-          className="shrink-0 px-2 py-1 text-[10px] rounded border border-red-900/50 text-red-300 hover:bg-red-950/40"
+          disabled={isDerivedAsset}
+          onClick={() => {
+            if (isDerivedAsset) return;
+            deleteMediaAssets([asset.id]);
+          }}
+          className="shrink-0 px-2 py-1 text-[10px] rounded border border-red-900/50 text-red-300 hover:bg-red-950/40 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Delete
         </button>
       </div>
+
+      {isDerivedAsset && (
+        <div className="px-3 py-2 border-b border-surface-700 text-[10px] text-amber-300 bg-amber-950/20">
+          Derived asset: editing and destructive actions are disabled here.
+        </div>
+      )}
 
       <div className="p-3 border-b border-surface-700">
         {asset.type === 'video' ? (
@@ -196,7 +209,8 @@ export function MediaLibraryInspector({
             onChange={(e) =>
               updateMediaAsset(asset.id, { type: e.target.value as MediaAssetType })
             }
-            className="media-library-field w-full"
+            disabled={isDerivedAsset}
+            className="media-library-field w-full disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {MEDIA_ASSET_TYPE_ORDER.map((type) => (
               <option key={type} value={type}>
@@ -214,7 +228,8 @@ export function MediaLibraryInspector({
                 workflowOrigin: (e.target.value || undefined) as MediaWorkflowOrigin | undefined,
               })
             }
-            className="media-library-field w-full"
+            disabled={isDerivedAsset}
+            className="media-library-field w-full disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <option value="">—</option>
             {ORIGIN_OPTIONS.map((opt) => (
@@ -230,7 +245,8 @@ export function MediaLibraryInspector({
             type="text"
             value={asset.metadata.characterId ?? ''}
             onChange={(e) => patchMeta('characterId', e.target.value)}
-            className="media-library-field w-full"
+            disabled={isDerivedAsset}
+            className="media-library-field w-full disabled:opacity-50 disabled:cursor-not-allowed"
           />
         </InspectorField>
 
@@ -239,7 +255,8 @@ export function MediaLibraryInspector({
             value={asset.metadata.prompt ?? ''}
             onChange={(e) => patchMeta('prompt', e.target.value)}
             rows={3}
-            className="media-library-field w-full resize-y min-h-[4rem]"
+            disabled={isDerivedAsset}
+            className="media-library-field w-full resize-y min-h-[4rem] disabled:opacity-50 disabled:cursor-not-allowed"
           />
         </InspectorField>
 
@@ -248,7 +265,8 @@ export function MediaLibraryInspector({
             type="text"
             value={asset.metadata.provider ?? ''}
             onChange={(e) => patchMeta('provider', e.target.value)}
-            className="media-library-field w-full"
+            disabled={isDerivedAsset}
+            className="media-library-field w-full disabled:opacity-50 disabled:cursor-not-allowed"
           />
         </InspectorField>
 
@@ -260,20 +278,26 @@ export function MediaLibraryInspector({
             value={displayUrl}
             onChange={(e) => setUrlDraft(e.target.value)}
             rows={3}
-            className="media-library-field w-full resize-y min-h-[3rem] font-mono text-[10px]"
+            disabled={isDerivedAsset}
+            className="media-library-field w-full resize-y min-h-[3rem] font-mono text-[10px] disabled:opacity-50 disabled:cursor-not-allowed"
           />
           <div className="flex flex-wrap gap-1.5 mt-1">
             <button
               type="button"
-              onClick={() => void replaceMediaAssetUrlValue(asset.id, displayUrl)}
-              className="px-2 py-1 text-[10px] rounded border border-surface-600 hover:bg-surface-700 text-gray-300"
+              disabled={isDerivedAsset}
+              onClick={() => {
+                if (isDerivedAsset) return;
+                void replaceMediaAssetUrlValue(asset.id, displayUrl);
+              }}
+              className="px-2 py-1 text-[10px] rounded border border-surface-600 hover:bg-surface-700 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Apply URL
             </button>
             <button
               type="button"
+              disabled={isDerivedAsset}
               onClick={() => setUrlDraft(null)}
-              className="px-2 py-1 text-[10px] text-gray-500 hover:text-gray-300"
+              className="px-2 py-1 text-[10px] text-gray-500 hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Reset
             </button>
@@ -289,7 +313,9 @@ export function MediaLibraryInspector({
             type="file"
             accept="image/*,video/*"
             className="hidden"
+            disabled={isDerivedAsset}
             onChange={(e) => {
+              if (isDerivedAsset) return;
               const file = e.target.files?.[0];
               e.target.value = '';
               if (!file) return;
@@ -303,7 +329,8 @@ export function MediaLibraryInspector({
           <button
             type="button"
             onClick={() => replaceInputRef.current?.click()}
-            className="px-2 py-1 text-[10px] rounded border border-surface-600 hover:bg-surface-700 text-gray-300"
+            disabled={isDerivedAsset}
+            className="px-2 py-1 text-[10px] rounded border border-surface-600 hover:bg-surface-700 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Upload replacement…
           </button>
@@ -315,7 +342,8 @@ export function MediaLibraryInspector({
               <button
                 type="button"
                 onClick={() => moveMediaAssetsToScope([asset.id], 'global')}
-                className="px-2 py-1 text-[10px] rounded border border-surface-600 hover:bg-surface-700 text-gray-300"
+                disabled={isDerivedAsset}
+                className="px-2 py-1 text-[10px] rounded border border-surface-600 hover:bg-surface-700 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Move to global
               </button>
@@ -324,7 +352,8 @@ export function MediaLibraryInspector({
               <button
                 type="button"
                 onClick={() => moveMediaAssetsToScope([asset.id], 'project')}
-                className="px-2 py-1 text-[10px] rounded border border-surface-600 hover:bg-surface-700 text-gray-300"
+                disabled={isDerivedAsset}
+                className="px-2 py-1 text-[10px] rounded border border-surface-600 hover:bg-surface-700 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Move to project
               </button>
@@ -336,7 +365,8 @@ export function MediaLibraryInspector({
           <button
             type="button"
             onClick={() => indexClipEmbeddings([asset.id])}
-            className="px-2 py-1 text-[10px] rounded border border-brand-600/40 hover:bg-brand-600/10 text-brand-300"
+            disabled={isDerivedAsset}
+            className="px-2 py-1 text-[10px] rounded border border-brand-600/40 hover:bg-brand-600/10 text-brand-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Index embedding
           </button>
