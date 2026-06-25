@@ -1,6 +1,8 @@
 import type { MediaAsset } from '@/lib/types/media-library';
 import type { StudioProject } from '@/lib/types/studio';
 import type { StoredProjectLocation } from '@/lib/storage/project-handle-store';
+import { getSavedProjectThumbnailUrl } from '@/lib/studio/project-thumbnail';
+import { getSavedProjectStats, type ProjectSummaryStats } from '@/lib/studio/project-summary-stats';
 
 const DB_NAME = 'videogen-storage';
 const DB_VERSION = 1;
@@ -26,6 +28,8 @@ export interface SavedProjectSummary {
   id: string;
   name: string;
   locationLabel?: string;
+  thumbnailUrl?: string | null;
+  stats: ProjectSummaryStats;
   isActive: boolean;
 }
 
@@ -86,6 +90,14 @@ export async function upsertSavedProject(record: SavedProjectRecord): Promise<vo
   await writeStoreValue(LIST_KEY, next);
 }
 
+export async function removeSavedProject(id: string): Promise<boolean> {
+  const records = await listSavedProjects();
+  const next = records.filter((entry) => entry.id !== id);
+  if (next.length === records.length) return false;
+  await writeStoreValue(LIST_KEY, next);
+  return true;
+}
+
 export async function getActiveProjectId(): Promise<string | null> {
   if (typeof window === 'undefined') return null;
   return readStoreValue<string>(ACTIVE_KEY);
@@ -103,6 +115,8 @@ export function toSavedProjectSummaries(
     id: record.id,
     name: record.name,
     locationLabel: record.location?.name,
+    thumbnailUrl: getSavedProjectThumbnailUrl(record),
+    stats: getSavedProjectStats(record),
     isActive: record.id === activeProjectId,
   }));
 }

@@ -1,27 +1,13 @@
 'use client';
 
+import { AppsLauncherMenu } from '@/components/studio/AppsLauncherMenu';
 import { ManagedModal } from '@/components/ui/ModalManager';
-import { STUDIO_LAUNCHER_ITEMS } from '@/lib/constants/studio-launcher';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
-import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
-import { launchStudioLauncherItem } from '@/lib/studio/launch-studio-launcher-item';
 import { useStudioStore } from '@/store/useStudioStore';
 
 export function AppsLauncherModal() {
   const appsLauncherOpen = useStudioStore((s) => s.appsLauncherOpen);
   const closeAppsLauncher = useStudioStore((s) => s.closeAppsLauncher);
-  const navigateToPanel = useNavigateToStudioPanel();
-  const openSettings = useStudioStore((s) => s.openSettings);
-  const showToast = useStudioStore((s) => s.showToast);
-
-  const handleSelect = (id: (typeof STUDIO_LAUNCHER_ITEMS)[number]['id']) => {
-    closeAppsLauncher();
-    launchStudioLauncherItem(id, {
-      navigateToPanel,
-      openSettings,
-      showToast,
-    });
-  };
 
   return (
     <ManagedModal
@@ -53,19 +39,7 @@ export function AppsLauncherModal() {
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {STUDIO_LAUNCHER_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => handleSelect(item.id)}
-              className="apps-launcher-card text-left rounded-xl border border-surface-700 bg-surface-800/60 hover:border-brand-500/40 hover:bg-surface-800 p-4 transition-colors"
-            >
-              <div className="text-sm font-semibold text-gray-100">{item.title}</div>
-              <div className="text-xs text-gray-400 mt-1.5 leading-snug">{item.description}</div>
-            </button>
-          ))}
-        </div>
+        <AppsLauncherMenu onDismiss={closeAppsLauncher} />
       </div>
     </ManagedModal>
   );

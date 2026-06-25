@@ -242,6 +242,7 @@ import {
   setActiveProjectId,
   toSavedProjectSummaries,
   upsertSavedProject,
+  removeSavedProject,
   type SavedProjectSummary,
 } from '@/lib/storage/saved-projects-store';
 import { downloadProject, pickAndLoadProject } from '@/lib/storage/project-io';
@@ -742,6 +743,8 @@ interface StudioStore {
   previewSuccessPrompt: string;
   settingsOpen: boolean;
   appsLauncherOpen: boolean;
+  projectSettingsOpen: boolean;
+  projectSettingsProjectId: string | null;
   providerEdit: { id: string; isCustom: boolean } | null;
   mobileDrawerOpen: boolean;
   initialized: boolean;
@@ -926,9 +929,14 @@ interface StudioStore {
   syncProjectFileUi: () => void;
   refreshSavedProjects: () => Promise<void>;
   switchToSavedProject: (id: string) => Promise<void>;
+  renameSavedProject: (id: string, name: string) => Promise<void>;
+  exportSavedProject: (id: string) => Promise<void>;
+  deleteSavedProject: (id: string) => Promise<void>;
 
   openSettings: () => void;
   closeSettings: () => void;
+  openProjectSettings: (projectId: string) => void;
+  closeProjectSettings: () => void;
   openAppsLauncher: () => void;
   closeAppsLauncher: () => void;
   setDefaultVideoProvider: (id: string) => void;
@@ -1006,6 +1014,8 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   previewSuccessPrompt: '',
   settingsOpen: false,
   appsLauncherOpen: false,
+  projectSettingsOpen: false,
+  projectSettingsProjectId: null,
   providerEdit: null,
   mobileDrawerOpen: false,
   initialized: false,
@@ -1100,6 +1110,158 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     });
     await refreshSavedProjectsState(set);
     get().showToast(`Opened ${record.name}`);
+  },
+
+  async renameSavedProject(id, name) {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      get().showToast('Project name cannot be empty', 'error');
+      return;
+    }
+
+    const existing = await getSavedProject(id);
+    if (!existing) {
+      get().showToast('Could not find that project', 'error');
+      return;
+    }
+
+    await upsertSavedProject({
+      ...existing,
+      name: trimmed,
+      snapshot: existing.snapshot
+        ? {
+            ...existing.snapshot,
+            project: {
+              ...existing.snapshot.project,
+              project: {
+                ...existing.snapshot.project.project,
+                name: trimmed,
+              },
+            },
+          }
+        : undefined,
+    });
+
+    if (get().activeProjectId === id) {
+      set({ project: { ...get().project, name: trimmed } });
+    }
+
+    await refreshSavedProjectsState(set);
+    get().showToast('Project renamed');
+  },
+
+  async exportSavedProject(id) {
+    if (id === get().activeProjectId) {
+      downloadProject(buildStudioProject(get()));
+      get().showToast('Project exported');
+      return;
+    }
+
+    const record = await getSavedProject(id);
+    if (!record) {
+      get().showToast('Could not find that project', 'error');
+      return;
+    }
+
+    if (record.snapshot?.project) {
+      downloadProject(record.snapshot.project);
+      get().showToast('Project exported');
+      return;
+    }
+
+    if (record.location) {
+      get().showToast('Open the project first to export from its folder', 'error');
+      return;
+    }
+
+    get().showToast('Nothing to export for this project yet', 'error');
+  },
+
+  async deleteSavedProject(id) {
+    if (id === BUILTIN_DEMO_PROJECT_ID) {
+      get().showToast('The demo project cannot be deleted', 'error');
+      return;
+    }
+
+    const record = await getSavedProject(id);
+    if (!record) {
+      get().showToast('Could not find that project', 'error');
+      return;
+    }
+
+    const wasActive = get().activeProjectId === id;
+    const removed = await removeSavedProject(id);
+    if (!removed) {
+      get().showToast('Could not delete that project', 'error');
+      return;
+    }
+
+    if (wasActive) {
+      clearProjectLocationSession();
+      void clearServerProjectStorage();
+      clearStudioDraft();
+
+      const remaining = await listSavedProjects();
+      const fallback = remaining.find((entry) => entry.id === BUILTIN_DEMO_PROJECT_ID) ?? remaining[0];
+
+      if (fallback) {
+        let applied: ReturnType<typeof applyStudioProject> | null = null;
+        if (fallback.location) {
+          const bundle = await openStoredProjectLocation(fallback.location);
+          if (bundle) {
+            applied = applyStudioProject(bundle.project, bundle.globalMediaLibrary);
+          }
+        } else if (fallback.snapshot) {
+          applied = applyStudioProject(fallback.snapshot.project, fallback.snapshot.globalMediaLibrary);
+        }
+
+        if (applied) {
+          await setActiveProjectId(fallback.id);
+          set({
+            ...applied,
+            showPreviewSuccess: false,
+            activeProjectId: fallback.id,
+            ...projectFileUiState(),
+          });
+        } else {
+          const defaults = getEmptyDefaults();
+          set({
+            ...defaults,
+            showPreviewSuccess: false,
+            projectLocationLabel: null,
+            projectLocationKind: null,
+            projectSaveState: 'none',
+            activeProjectId: fallback.id,
+          });
+          await setActiveProjectId(fallback.id);
+        }
+      } else {
+        const defaults = getEmptyDefaults();
+        const newId = crypto.randomUUID();
+        set({
+          ...defaults,
+          showPreviewSuccess: false,
+          projectLocationLabel: null,
+          projectLocationKind: null,
+          projectSaveState: 'none',
+          activeProjectId: newId,
+        });
+        await upsertSavedProject({
+          id: newId,
+          name: defaults.project.name,
+          updatedAt: Date.now(),
+          snapshot: {
+            project: buildStudioProject(get()),
+            globalMediaLibrary: [],
+          },
+        });
+        await setActiveProjectId(newId);
+      }
+    }
+
+    await refreshSavedProjectsState(set);
+    set({ projectSettingsOpen: false, projectSettingsProjectId: null });
+    get().showToast(`Deleted ${record.name}`);
   },
 
   setFrameView(view) {
@@ -3491,6 +3653,14 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 
   closeSettings() {
     set({ settingsOpen: false });
+  },
+
+  openProjectSettings(projectId) {
+    set({ projectSettingsOpen: true, projectSettingsProjectId: projectId });
+  },
+
+  closeProjectSettings() {
+    set({ projectSettingsOpen: false, projectSettingsProjectId: null });
   },
 
   openAppsLauncher() {

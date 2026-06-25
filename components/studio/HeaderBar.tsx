@@ -1,12 +1,13 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { Settings } from 'lucide-react';
+import { AppsLauncherMenu } from '@/components/studio/AppsLauncherMenu';
 import { ProjectSwitcherDropdown } from '@/components/studio/ProjectSwitcherDropdown';
-import { ProviderIcon } from '@/components/studio/ProviderIcon';
+import { ProviderBadge } from '@/components/studio/ProviderBadge';
 import { SplitButton } from '@/components/ui/SplitButton';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
-import { getStudioPanelTitle, STUDIO_LAUNCHER_ITEMS } from '@/lib/constants/studio-launcher';
-import { launchStudioLauncherItem } from '@/lib/studio/launch-studio-launcher-item';
+import { getStudioPanelTitle } from '@/lib/constants/studio-launcher';
 import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 import {
   getBuiltInProvider,
@@ -331,67 +332,6 @@ function ProjectFolderBadge({
   );
 }
 
-function ProviderBadge({
-  kind,
-  providerId,
-  fallbackIcon,
-  providerName,
-  modelLabel,
-  connected,
-  status,
-  sectionId,
-}: {
-  kind: 'Video' | 'Image';
-  providerId?: string;
-  fallbackIcon: string;
-  providerName: string;
-  modelLabel: string | null;
-  connected: boolean;
-  status: ReturnType<typeof getProviderStatus>;
-  sectionId: string;
-}) {
-  const openSettings = useStudioStore((s) => s.openSettings);
-
-  return (
-    <button
-      type="button"
-      onClick={openSettings}
-      className="flex items-center gap-2 px-3 py-1.5 bg-surface-800 hover:bg-surface-700 border border-surface-600 rounded-lg cursor-pointer transition-all text-xs max-w-[200px] lg:max-w-[220px]"
-      title={`${kind} provider & model — click to manage`}
-      id={sectionId}
-      data-ui-section={sectionId}
-      data-ui-section-name={`${kind} Provider Badge`}
-    >
-      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-        status === 'verified'
-          ? 'bg-emerald-400'
-          : status === 'configured' || status === 'failed'
-            ? 'bg-amber-500'
-            : 'bg-gray-500'
-      }`} />
-      <ProviderIcon
-        providerId={providerId}
-        fallbackIcon={fallbackIcon}
-        size="xs"
-        className="rounded-md"
-      />
-      <div className="min-w-0 text-left leading-tight">
-        <div className="text-[9px] uppercase tracking-wider text-gray-500 font-semibold">{kind}</div>
-        <div className="font-medium text-gray-300 truncate">{providerName}</div>
-        <div className="text-[10px] text-gray-500 truncate">
-          {!connected
-            ? 'Setup required'
-            : modelLabel
-              ? `${modelLabel}${status === 'configured' ? ' · unverified' : ''}`
-              : status === 'configured'
-                ? 'Unverified'
-                : 'No model selected'}
-        </div>
-      </div>
-    </button>
-  );
-}
-
 export function HeaderBar() {
   const ai = useStudioStore((s) => s.ai);
   const projectLocationLabel = useStudioStore((s) => s.projectLocationLabel);
@@ -408,8 +348,6 @@ export function HeaderBar() {
   const newProject = useStudioStore((s) => s.newProject);
   const exportVideo = useStudioStore((s) => s.exportVideo);
   const openSettings = useStudioStore((s) => s.openSettings);
-  const openAppsLauncher = useStudioStore((s) => s.openAppsLauncher);
-  const showToast = useStudioStore((s) => s.showToast);
   const workspaceView = useStudioStore((s) => s.workspaceView);
   const navigateToPanel = useNavigateToStudioPanel();
 
@@ -459,17 +397,9 @@ export function HeaderBar() {
           <label className="text-[10px] uppercase tracking-wider text-gray-500">Studio</label>
           <SplitButton
             label={getStudioPanelTitle(workspaceView)}
-            onPrimaryClick={openAppsLauncher}
-            items={STUDIO_LAUNCHER_ITEMS.map((item) => ({
-              id: item.id,
-              label: item.title,
-              onSelect: () =>
-                launchStudioLauncherItem(item.id, {
-                  navigateToPanel,
-                  openSettings,
-                  showToast,
-                }),
-            }))}
+            primaryAction="toggle-menu"
+            menuAction="toggle-menu"
+            renderMenu={(closeMenu) => <AppsLauncherMenu onDismiss={closeMenu} />}
             primaryUiSection={uiSectionProps(UI_SECTIONS.studioHeaderAppsSplit)}
             menuUiSection={uiSectionProps(UI_SECTIONS.studioHeaderAppsMenu)}
           />
@@ -613,10 +543,7 @@ export function HeaderBar() {
           className="p-2 hover:bg-surface-700 rounded-lg transition-all group border border-surface-600 hover:border-surface-500"
           title="AI Providers, Models & API Keys"
         >
-          <svg className="w-5 h-5 text-gray-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 002.572 1.065c1.755.426 1.755 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-2.572-1.065c-1.755-.426-1.755-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
+          <Settings className="w-5 h-5 text-gray-400 group-hover:text-white" aria-hidden />
         </button>
       </div>
     </header>

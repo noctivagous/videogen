@@ -1,33 +1,70 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 
 export interface SplitButtonItem {
   id: string;
   label: string;
+  description?: string;
   onSelect: () => void;
 }
 
+/** 'toggle-menu' opens the dropdown; pass a function for a custom action (e.g. open modal). */
+export type SplitButtonSegmentAction = 'toggle-menu' | (() => void);
+
 export interface SplitButtonProps {
   label: string;
-  onPrimaryClick: () => void;
-  items: SplitButtonItem[];
+  primaryAction: SplitButtonSegmentAction;
+  menuAction?: SplitButtonSegmentAction;
+  items?: SplitButtonItem[];
+  renderMenu?: (closeMenu: () => void) => ReactNode;
+  activeItemId?: string;
   className?: string;
+  menuClassName?: string;
   menuUiSection?: Record<string, string>;
   primaryUiSection?: Record<string, string>;
 }
 
+function runSegmentAction(
+  action: SplitButtonSegmentAction,
+  toggleMenu: () => void,
+) {
+  if (action === 'toggle-menu') toggleMenu();
+  else action();
+}
+
+function segmentOpensMenu(action: SplitButtonSegmentAction): boolean {
+  return action === 'toggle-menu';
+}
+
 export function SplitButton({
   label,
-  onPrimaryClick,
+  primaryAction,
+  menuAction = 'toggle-menu',
   items,
+  renderMenu,
+  activeItemId,
   className = '',
+  menuClassName = '',
   menuUiSection,
   primaryUiSection,
 }: SplitButtonProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
+
+  const toggleMenu = () => setMenuOpen((open) => !open);
+  const closeMenu = () => setMenuOpen(false);
+
+  const primaryOpensMenu = segmentOpensMenu(primaryAction);
+  const menuOpensMenu = segmentOpensMenu(menuAction);
+  const hasMenu = Boolean(renderMenu || (items && items.length > 0));
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -54,7 +91,10 @@ export function SplitButton({
     <div ref={rootRef} className={`relative inline-flex ${className}`.trim()}>
       <button
         type="button"
-        onClick={onPrimaryClick}
+        onClick={() => runSegmentAction(primaryAction, toggleMenu)}
+        aria-haspopup={primaryOpensMenu && hasMenu ? 'menu' : undefined}
+        aria-expanded={primaryOpensMenu && hasMenu ? menuOpen : undefined}
+        aria-controls={primaryOpensMenu && hasMenu ? menuId : undefined}
         className="px-3 py-1.5 text-xs font-medium bg-surface-800 hover:bg-surface-700 border border-surface-600 border-r-0 rounded-l-lg transition-all text-gray-200"
         {...primaryUiSection}
       >
@@ -62,37 +102,48 @@ export function SplitButton({
       </button>
       <button
         type="button"
-        aria-haspopup="menu"
-        aria-expanded={menuOpen}
-        aria-controls={menuId}
-        onClick={() => setMenuOpen((open) => !open)}
+        aria-haspopup={menuOpensMenu && hasMenu ? 'menu' : undefined}
+        aria-expanded={menuOpensMenu && hasMenu ? menuOpen : undefined}
+        aria-controls={menuOpensMenu && hasMenu ? menuId : undefined}
+        onClick={() => runSegmentAction(menuAction, toggleMenu)}
         className="px-2 py-1.5 text-xs bg-surface-800 hover:bg-surface-700 border border-surface-600 rounded-r-lg transition-all text-gray-300"
         aria-label={`${label} menu`}
       >
         ▾
       </button>
 
-      {menuOpen && (
+      {menuOpen && hasMenu && (
         <div
           id={menuId}
           role="menu"
-          className="absolute top-full left-0 mt-1 min-w-[12rem] bg-surface-800 border border-surface-600 rounded-lg shadow-xl z-50 py-1 text-sm"
+          className={`absolute top-full left-0 mt-1 bg-surface-800 border border-surface-600 rounded-lg shadow-xl z-50 ${
+            renderMenu
+              ? `w-[32rem] max-w-[90vw] max-h-[70vh] overflow-y-auto p-4 ${menuClassName}`.trim()
+              : `min-w-[12rem] py-1 text-sm ${menuClassName}`.trim()
+          }`}
           {...menuUiSection}
         >
-          {items.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              role="menuitem"
-              className="w-full text-left px-3 py-2 hover:bg-surface-700 text-gray-200"
-              onClick={() => {
-                item.onSelect();
-                setMenuOpen(false);
-              }}
-            >
-              {item.label}
-            </button>
-          ))}
+          {renderMenu
+            ? renderMenu(closeMenu)
+            : items?.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  role="menuitem"
+                  className={`w-full text-left px-3 py-2.5 hover:bg-surface-700 transition-colors ${
+                    activeItemId === item.id ? 'bg-brand-600/15' : ''
+                  }`}
+                  onClick={() => {
+                    item.onSelect();
+                    closeMenu();
+                  }}
+                >
+                  <div className="text-sm font-semibold text-gray-100">{item.label}</div>
+                  {item.description ? (
+                    <div className="text-xs text-gray-400 mt-1 leading-snug">{item.description}</div>
+                  ) : null}
+                </button>
+              ))}
         </div>
       )}
     </div>

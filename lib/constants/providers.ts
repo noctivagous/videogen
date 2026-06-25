@@ -92,11 +92,11 @@ export const BUILT_IN_PROVIDERS: BuiltInProvider[] = [
   {
     id: 'xai',
     name: 'xAI',
-    desc: 'Grok Video • Reasoning-powered high quality generation',
+    desc: 'Grok Imagine • Video and image generation',
     icon: '🚀',
-    hint: 'xAI console → API keys (Grok Video access)',
-    purposes: ['Text-to-Video', 'Reasoning Video'],
-    modalities: ['video', 'llm'],
+    hint: 'xAI console → API keys (Grok Imagine access)',
+    purposes: ['Text-to-Video', 'Text-to-Image', 'Reasoning Video'],
+    modalities: ['video', 'image', 'llm'],
   },
   {
     id: 'together',
