@@ -8,7 +8,7 @@ import {
   BW_TONAL_LOOK_LABELS,
   getBwLookPreset,
 } from '@/lib/constants/bw-tonal';
-import type { BwFilmGrain, BwTonalLook } from '@/lib/types/studio';
+import type { BwFilmGrain, BwTonalLook, ColorPaletteSettings } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
 
 function warmthLabel(warmth: number): string {
@@ -19,13 +19,20 @@ function warmthLabel(warmth: number): string {
   return 'Neutral gray';
 }
 
-export function BwTonalRangePanel() {
-  const palette = useStudioStore((s) => s.lighting.colorPalette);
+export interface BwTonalRangePanelProps {
+  palette?: ColorPaletteSettings;
+  onPatch?: (patch: Partial<ColorPaletteSettings>) => void;
+}
+
+export function BwTonalRangePanel({ palette: paletteProp, onPatch }: BwTonalRangePanelProps = {}) {
+  const storePalette = useStudioStore((s) => s.lighting.colorPalette);
   const setColorPalette = useStudioStore((s) => s.setColorPalette);
+  const palette = paletteProp ?? storePalette;
+  const patchPalette = onPatch ?? setColorPalette;
   const bw = palette.bw;
 
   const patchBw = (patch: Partial<typeof bw>) =>
-    setColorPalette({ bw: { ...bw, ...patch } });
+    patchPalette({ bw: { ...bw, ...patch } });
 
   return (
     <div
@@ -48,7 +55,7 @@ export function BwTonalRangePanel() {
           const look = e.target.value as BwTonalLook;
           const preset = getBwLookPreset(look);
           const { midToneExposure, ...bwPreset } = preset;
-          setColorPalette({
+          patchPalette({
             bw: { ...bw, ...bwPreset, look },
             brightness: midToneExposure,
           });
@@ -94,7 +101,7 @@ export function BwTonalRangePanel() {
         min={0}
         max={100}
         value={palette.brightness}
-        onChange={(e) => setColorPalette({ brightness: parseInt(e.target.value) })}
+        onChange={(e) => patchPalette({ brightness: parseInt(e.target.value) })}
       />
 
       <RangeSlider
@@ -104,7 +111,7 @@ export function BwTonalRangePanel() {
         min={-100}
         max={100}
         value={palette.keyLightWarmth}
-        onChange={(e) => setColorPalette({ keyLightWarmth: parseInt(e.target.value) })}
+        onChange={(e) => patchPalette({ keyLightWarmth: parseInt(e.target.value) })}
       />
 
       <Select

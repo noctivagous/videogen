@@ -12,7 +12,12 @@ import {
 } from '@/lib/constants/camera';
 import { getDefaultEnabledProviderId, isBuiltInProviderEnabled } from '@/lib/constants/providers';
 import { apertureForDof, dofFromAperture, snapToApertureStop } from '@/lib/constants/aperture';
-import { kelvinToWarmth, warmthToKelvin } from '@/lib/constants/color-palette';
+import {
+  DEFAULT_COLOR_PALETTE,
+  kelvinToWarmth,
+  normalizeColorPalette,
+  warmthToKelvin,
+} from '@/lib/constants/color-palette';
 import { applyLookRecipeToLighting, getLookRecipe } from '@/lib/constants/look-recipes';
 import { resolveCameraPromptInclusion } from '@/lib/constants/camera-prompt-inclusion';
 import { applyLensCameraPatch } from '@/lib/constants/lens';
@@ -599,6 +604,8 @@ interface StudioStore {
   fileApiSupported: boolean;
   workspaceView: StudioPanelId;
   selectedMediaLibraryItemId: string | null;
+  /** Draft palette for Color Palette Maker — independent from shot lighting. */
+  colorPaletteMakerDraft: ColorPaletteSettings;
 
   init: () => void;
   setWorkspaceView: (view: StudioPanelId) => void;
@@ -643,6 +650,8 @@ interface StudioStore {
   setCamera: (patch: Partial<CameraSettings>) => void;
   setLighting: (patch: Partial<LightingSettings>) => void;
   setColorPalette: (patch: Partial<ColorPaletteSettings>) => void;
+  setColorPaletteMakerDraft: (patch: Partial<ColorPaletteSettings>) => void;
+  applyColorPaletteMakerDraft: () => void;
   applyLookRecipe: (id: string) => void;
   clearLookRecipe: () => void;
   setMotion: (patch: Partial<MotionSettings>) => void;
@@ -857,6 +866,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   selectedMannequinIds: [],
   workspaceView: 'shot-designer',
   selectedMediaLibraryItemId: null,
+  colorPaletteMakerDraft: normalizeColorPalette(DEFAULT_COLOR_PALETTE),
 
   setBackdropSelected(selected) {
     set({ backdropSelected: selected });
@@ -1431,6 +1441,25 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
         }),
       };
     });
+  },
+
+  setColorPaletteMakerDraft(patch) {
+    set((s) => {
+      const merged = { ...s.colorPaletteMakerDraft, ...patch };
+      if (patch.bw) {
+        merged.bw = { ...s.colorPaletteMakerDraft.bw, ...patch.bw };
+      }
+      return { colorPaletteMakerDraft: normalizeColorPalette(merged) };
+    });
+  },
+
+  applyColorPaletteMakerDraft() {
+    const draft = get().colorPaletteMakerDraft;
+    get().setColorPalette({
+      ...draft,
+      bw: { ...draft.bw },
+    });
+    get().showToast('Color palette applied to lighting', 'success');
   },
 
   applyLookRecipe(id) {

@@ -41,6 +41,7 @@ import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { isShotDesignerPanel, isStudioAppPanel } from '@/lib/studio/studio-routes';
 import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 import { AppPlaceholderPanel } from '@/components/studio/AppPlaceholderPanel';
+import { ColorPaletteMakerPanel } from '@/components/studio/ColorPaletteMakerPanel';
 import { CharacterManager } from '@/components/studio/character-manager/CharacterManager';
 import { LocationManager } from '@/components/studio/location-manager/LocationManager';
 import { formatDuration } from '@/lib/studio/shot-display';
@@ -395,7 +396,13 @@ export function PreviewPanel() {
         </div>
       )}
 
-      {isStudioAppPanel(workspaceView) && workspaceView !== 'character-sheet-generator' && workspaceView !== 'location-manager' && (
+      {workspaceView === 'color-palette-maker' && (
+        <div className="absolute inset-0 z-10 min-h-0">
+          <ColorPaletteMakerPanel />
+        </div>
+      )}
+
+      {isStudioAppPanel(workspaceView) && workspaceView !== 'character-sheet-generator' && workspaceView !== 'location-manager' && workspaceView !== 'color-palette-maker' && (
         <div className="absolute inset-0 z-10 min-h-0">
           <AppPlaceholderPanel appId={workspaceView} />
         </div>

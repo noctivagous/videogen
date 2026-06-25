@@ -14,6 +14,7 @@ import { useStudioStore } from '@/store/useStudioStore';
 
 export interface ColorPaletteSwatchesProps {
   palette?: ColorPaletteSettings;
+  onPatch?: (patch: Partial<ColorPaletteSettings>) => void;
   interactive?: boolean;
   variant?: 'inline' | 'overlay';
   className?: string;
@@ -21,6 +22,7 @@ export interface ColorPaletteSwatchesProps {
 
 export function ColorPaletteSwatches({
   palette: paletteProp,
+  onPatch,
   interactive = true,
   variant = 'inline',
   className = '',
@@ -28,6 +30,7 @@ export function ColorPaletteSwatches({
   const storePalette = useStudioStore((s) => s.lighting.colorPalette);
   const setColorPalette = useStudioStore((s) => s.setColorPalette);
   const palette = paletteProp ?? storePalette;
+  const patchPalette = onPatch ?? setColorPalette;
 
   const entries = paletteDisplayEntries(palette);
 
@@ -44,7 +47,7 @@ export function ColorPaletteSwatches({
         <button
           type="button"
           className="text-[10px] uppercase tracking-wider text-gray-500 hover:text-brand-400 transition-colors mr-0.5"
-          onClick={() => setColorPalette({ accentHue: null })}
+          onClick={() => patchPalette({ accentHue: null })}
         >
           Reset
         </button>
@@ -76,7 +79,7 @@ export function ColorPaletteSwatches({
             title={label}
             className={`${swatchClass} p-0 cursor-pointer`}
             style={{ backgroundColor: paletteSwatchCss(palette, entry.value, i) }}
-            onClick={() => setColorPalette({ accentHue: entry.value })}
+            onClick={() => patchPalette({ accentHue: entry.value })}
             aria-label={label}
           />
         );

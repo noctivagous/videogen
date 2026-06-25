@@ -65,6 +65,126 @@ export function schemeHueOffsets(scheme: ColorScheme): number[] {
   return SCHEME_OFFSETS[scheme];
 }
 
+export type HarmonyVariationCategory = 'tint' | 'tone' | 'shade';
+
+export type HarmonyBrightnessBand = 'highlight' | 'light' | 'mid' | 'dark' | 'shadow';
+
+export interface HarmonyVariation {
+  id: string;
+  category: HarmonyVariationCategory;
+  label: string;
+  saturation: number;
+  brightness: number;
+}
+
+export const HARMONY_VARIATION_CATEGORY_LABELS: Record<HarmonyVariationCategory, string> = {
+  tint: 'Tint',
+  tone: 'Tone',
+  shade: 'Shade',
+};
+
+export const HARMONY_BRIGHTNESS_BAND_LABELS: Record<HarmonyBrightnessBand, string> = {
+  highlight: 'Highlight',
+  light: 'Light',
+  mid: 'Mid',
+  dark: 'Dark',
+  shadow: 'Shadow',
+};
+
+export const HARMONY_BRIGHTNESS_BAND_ORDER: HarmonyBrightnessBand[] = [
+  'highlight',
+  'light',
+  'mid',
+  'dark',
+  'shadow',
+];
+
+export const HARMONY_VARIATIONS: HarmonyVariation[] = [
+  { id: 'tint-whisper', category: 'tint', label: 'Whisper', saturation: 8, brightness: 88 },
+  { id: 'tint-feather', category: 'tint', label: 'Feather', saturation: 4, brightness: 84 },
+  { id: 'tint-pastel', category: 'tint', label: 'Pastel', saturation: 24, brightness: 82 },
+  { id: 'tint-soft', category: 'tint', label: 'Soft', saturation: 32, brightness: 74 },
+  { id: 'tint-airy', category: 'tint', label: 'Airy', saturation: 38, brightness: 70 },
+  { id: 'tint-dust', category: 'tint', label: 'Dust', saturation: 12, brightness: 66 },
+  { id: 'tint-luminous', category: 'tint', label: 'Luminous', saturation: 56, brightness: 68 },
+  { id: 'tint-bright', category: 'tint', label: 'Bright', saturation: 48, brightness: 62 },
+  { id: 'tone-faded', category: 'tone', label: 'Faded', saturation: 16, brightness: 48 },
+  { id: 'tone-muted', category: 'tone', label: 'Muted', saturation: 26, brightness: 46 },
+  { id: 'tone-earthy', category: 'tone', label: 'Earthy', saturation: 36, brightness: 44 },
+  { id: 'tone-balanced', category: 'tone', label: 'Balanced', saturation: 42, brightness: 40 },
+  { id: 'tone-ash', category: 'tone', label: 'Ash', saturation: 10, brightness: 42 },
+  { id: 'tone-vintage', category: 'tone', label: 'Vintage', saturation: 30, brightness: 52 },
+  { id: 'tone-cinematic', category: 'tone', label: 'Cinematic', saturation: 50, brightness: 36 },
+  { id: 'shade-velvet', category: 'shade', label: 'Velvet', saturation: 70, brightness: 24 },
+  { id: 'shade-rich', category: 'shade', label: 'Rich', saturation: 68, brightness: 28 },
+  { id: 'shade-noir', category: 'shade', label: 'Noir', saturation: 62, brightness: 22 },
+  { id: 'shade-deep', category: 'shade', label: 'Deep', saturation: 74, brightness: 16 },
+  { id: 'shade-ink', category: 'shade', label: 'Ink', saturation: 80, brightness: 14 },
+  { id: 'shade-charcoal', category: 'shade', label: 'Charcoal', saturation: 12, brightness: 12 },
+  { id: 'shade-void', category: 'shade', label: 'Void', saturation: 6, brightness: 8 },
+  { id: 'shade-abyss', category: 'shade', label: 'Abyss', saturation: 92, brightness: 6 },
+];
+
+export function brightnessBandForValue(brightness: number): HarmonyBrightnessBand {
+  if (brightness >= 70) return 'highlight';
+  if (brightness >= 55) return 'light';
+  if (brightness >= 38) return 'mid';
+  if (brightness >= 20) return 'dark';
+  return 'shadow';
+}
+
+export function variationsInBrightnessBand(band: HarmonyBrightnessBand): HarmonyVariation[] {
+  return HARMONY_VARIATIONS.filter(
+    (variation) => brightnessBandForValue(variation.brightness) === band,
+  );
+}
+
+export function closestVariationInBrightnessBand(
+  band: HarmonyBrightnessBand,
+  saturation: number,
+  brightness: number,
+): HarmonyVariation {
+  const pool = variationsInBrightnessBand(band);
+  const candidates = pool.length > 0 ? pool : HARMONY_VARIATIONS;
+  let closest = candidates[0];
+  let closestDistance = Number.POSITIVE_INFINITY;
+  for (const variation of candidates) {
+    const distance = Math.hypot(variation.saturation - saturation, variation.brightness - brightness);
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closest = variation;
+    }
+  }
+  return closest;
+}
+
+export function harmonyVariationHues(dominantHue: number, accentHues: number[]): number[] {
+  return [normalizeHue(dominantHue), ...accentHues.map(normalizeHue)];
+}
+
+export function harmonyVariationSwatchColors(
+  hues: number[],
+  variation: HarmonyVariation,
+): string[] {
+  return hues.map((hue) => hslToHex(hue, variation.saturation, variation.brightness));
+}
+
+export function findClosestHarmonyVariation(
+  saturation: number,
+  brightness: number,
+): HarmonyVariation {
+  let closest = HARMONY_VARIATIONS[0];
+  let closestDistance = Number.POSITIVE_INFINITY;
+  for (const variation of HARMONY_VARIATIONS) {
+    const distance = Math.hypot(variation.saturation - saturation, variation.brightness - brightness);
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closest = variation;
+    }
+  }
+  return closest;
+}
+
 export function harmonyAccentHues(palette: ColorPaletteSettings): number[] {
   const dominant = normalizeHue(palette.dominantHue);
   return schemeHueOffsets(palette.scheme).map((offset) => normalizeHue(dominant + offset));
