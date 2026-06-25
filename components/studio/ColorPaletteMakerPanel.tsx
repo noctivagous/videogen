@@ -1,8 +1,10 @@
 'use client';
 
+import { useCallback, useState } from 'react';
+
 import { BwTonalRangePanel } from '@/components/studio/BwTonalRangePanel';
 import { ColorPaletteSwatches } from '@/components/studio/ColorPaletteSwatches';
-import { ColorModeSegment } from '@/components/ui/ColorModeSegment';
+import { ColorModeSelect } from '@/components/ui/ColorModeSegment';
 import { ColorSchemeButtons } from '@/components/ui/ColorSchemeButtons';
 import { ColorWheel } from '@/components/ui/ColorWheel';
 import { IntegratedColorPicker } from '@/components/ui/IntegratedColorPicker';
@@ -10,18 +12,89 @@ import { RangeSlider } from '@/components/ui/RangeSlider';
 import {
   FX_MODE_LABELS,
   harmonyAccentHues,
+  isColorPaletteActive,
   isColorPaletteBw,
   isColorPaletteFx,
+  normalizeColorPalette,
 } from '@/lib/constants/color-palette';
-import type { ColorPaletteMode, ColorScheme } from '@/lib/types/studio';
+import { paletteGroupEntryLabel } from '@/lib/media/color-palette-group';
+import type { ColorPaletteMode, ColorPaletteSettings, ColorScheme } from '@/lib/types/studio';
 import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 import { useStudioStore } from '@/store/useStudioStore';
+
+interface SavedPaletteGroup {
+  id: string;
+  palette: ColorPaletteSettings;
+}
+
+function snapshotPalette(palette: ColorPaletteSettings): ColorPaletteSettings {
+  return normalizeColorPalette({
+    ...palette,
+    bw: { ...palette.bw },
+  });
+}
+
+type SaveDestinationType = 'media-library' | 'character' | 'location';
 
 export function ColorPaletteMakerPanel() {
   const palette = useStudioStore((s) => s.colorPaletteMakerDraft);
   const setPalette = useStudioStore((s) => s.setColorPaletteMakerDraft);
   const applyPalette = useStudioStore((s) => s.applyColorPaletteMakerDraft);
+  const saveColorPaletteGroup = useStudioStore((s) => s.saveColorPaletteGroup);
+  const characters = useStudioStore((s) => s.characters);
+  const locations = useStudioStore((s) => s.locations);
   const navigateToPanel = useNavigateToStudioPanel();
+  const [savedPaletteGroups, setSavedPaletteGroups] = useState<SavedPaletteGroup[]>([]);
+  const [collectionName, setCollectionName] = useState('');
+  const [saveDestination, setSaveDestination] = useState<SaveDestinationType>('media-library');
+  const [saveCharacterId, setSaveCharacterId] = useState('');
+  const [saveLocationId, setSaveLocationId] = useState('');
+
+  const addCurrentPaletteGroup = useCallback(() => {
+    setSavedPaletteGroups((groups) => [
+      ...groups,
+      { id: crypto.randomUUID(), palette: snapshotPalette(palette) },
+    ]);
+  }, [palette]);
+
+  const removePaletteGroup = useCallback((id: string) => {
+    setSavedPaletteGroups((groups) => groups.filter((group) => group.id !== id));
+  }, []);
+
+  const handleSaveCollection = useCallback(() => {
+    if (savedPaletteGroups.length === 0) return;
+    const name = collectionName.trim() || 'Untitled Palette';
+    const groups = savedPaletteGroups.map(({ id, palette: groupPalette }) => ({
+      id,
+      palette: groupPalette,
+    }));
+
+    if (saveDestination === 'character') {
+      if (!saveCharacterId) return;
+      saveColorPaletteGroup(name, groups, { type: 'character', characterId: saveCharacterId });
+    } else if (saveDestination === 'location') {
+      if (!saveLocationId) return;
+      saveColorPaletteGroup(name, groups, { type: 'location', locationId: saveLocationId });
+    } else {
+      saveColorPaletteGroup(name, groups, { type: 'media-library' });
+    }
+
+    setSavedPaletteGroups([]);
+    setCollectionName('');
+  }, [
+    collectionName,
+    saveCharacterId,
+    saveColorPaletteGroup,
+    saveDestination,
+    saveLocationId,
+    savedPaletteGroups,
+  ]);
+
+  const canSaveCollection =
+    savedPaletteGroups.length > 0 &&
+    (saveDestination === 'media-library' ||
+      (saveDestination === 'character' && saveCharacterId) ||
+      (saveDestination === 'location' && saveLocationId));
 
   const isOff = palette.mode === 'off';
   const isFx = isColorPaletteFx(palette);
@@ -33,35 +106,47 @@ export function ColorPaletteMakerPanel() {
   return (
     <div className="h-full min-h-0 overflow-y-auto bg-surface-900 p-6">
       <div className="max-w-3xl mx-auto">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-100">Color Palette Maker</h2>
-          <p className="text-xs text-gray-500 mt-1">Create and apply color palettes to image references.</p>
-        </div>
-
-        <div className="mb-4">
-          <ColorModeSegment
-            value={palette.mode}
-            onChange={(mode: ColorPaletteMode) => setPalette({ mode })}
-          />
-        </div>
-
-        {!isOff && (
+        {isOff ? (
+          <div className="mb-4">
+            <ColorModeSelect
+              value={palette.mode}
+              onChange={(mode: ColorPaletteMode) => setPalette({ mode })}
+            />
+          </div>
+        ) : (
           <div className="bg-surface-800 border border-surface-600 rounded-xl p-4 space-y-4">
-            {palette.mode === 'color' && (
-              <div className="flex items-center gap-2">
-                <p className="text-xs text-gray-400 shrink-0">Harmony</p>
-                <ColorSchemeButtons
-                  value={palette.scheme}
-                  onChange={(scheme: ColorScheme) => setPalette({ scheme, accentHue: null })}
-                />
-              </div>
-            )}
+            <div className="flex items-center gap-2 flex-wrap">
+              <ColorModeSelect
+                value={palette.mode}
+                onChange={(mode: ColorPaletteMode) => setPalette({ mode })}
+              />
+              {palette.mode === 'color' && (
+                <>
+                  <p className="text-xs text-gray-400 shrink-0">Harmony</p>
+                  <ColorSchemeButtons
+                    value={palette.scheme}
+                    onChange={(scheme: ColorScheme) => setPalette({ scheme, accentHue: null })}
+                  />
+                </>
+              )}
+            </div>
 
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-sm uppercase tracking-wider text-gray-300">
-                {isFx ? FX_MODE_LABELS[palette.mode as keyof typeof FX_MODE_LABELS] : 'Color Palette'}
-              </h3>
-              <ColorPaletteSwatches palette={palette} onPatch={setPalette} />
+            <div className="rounded-lg border border-surface-600 bg-surface-900/40 px-3 py-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-semibold text-sm uppercase tracking-wider text-gray-300 shrink-0">
+                  {isFx ? FX_MODE_LABELS[palette.mode as keyof typeof FX_MODE_LABELS] : 'Color Palette'}
+                </h3>
+                <ColorPaletteSwatches palette={palette} onPatch={setPalette} />
+                {isColorPaletteActive(palette) && (
+                  <button
+                    type="button"
+                    onClick={addCurrentPaletteGroup}
+                    className="ml-auto shrink-0 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider rounded-md border border-surface-600 bg-surface-700 hover:bg-surface-600 text-gray-300 transition-colors"
+                  >
+                    Add to Palette
+                  </button>
+                )}
+              </div>
             </div>
 
             {showIntegratedPicker && (
@@ -190,10 +275,99 @@ export function ColorPaletteMakerPanel() {
             {isColorPaletteBw(palette) && (
               <BwTonalRangePanel palette={palette} onPatch={setPalette} />
             )}
+
+            {savedPaletteGroups.length > 0 && (
+              <div className="space-y-2 pt-3 border-t border-surface-600">
+                <p className="text-xs text-gray-400 uppercase tracking-wider">Palette Groups</p>
+                <ul className="space-y-2">
+                  {savedPaletteGroups.map((group, index) => (
+                    <li
+                      key={group.id}
+                      className="flex items-center gap-2 flex-wrap rounded-lg border border-surface-600/80 bg-surface-900/40 px-2 py-1.5"
+                    >
+                      <span className="text-[10px] text-gray-500 uppercase tracking-wider shrink-0">
+                        {index + 1}. {paletteGroupEntryLabel(group.palette)}
+                      </span>
+                      <ColorPaletteSwatches palette={group.palette} interactive={false} />
+                      <button
+                        type="button"
+                        onClick={() => removePaletteGroup(group.id)}
+                        className="ml-auto shrink-0 text-[10px] uppercase tracking-wider text-gray-500 hover:text-red-400 transition-colors"
+                        aria-label={`Remove palette group ${index + 1}`}
+                      >
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="space-y-2 pt-2 border-t border-surface-600/60">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider">Save Collection</p>
+                  <input
+                    type="text"
+                    value={collectionName}
+                    onChange={(e) => setCollectionName(e.target.value)}
+                    placeholder="Collection name"
+                    className="w-full bg-surface-900 border border-surface-600 rounded-lg px-2.5 py-1.5 text-xs text-gray-100 placeholder-gray-600 focus:outline-none focus:border-brand-500"
+                  />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      value={saveDestination}
+                      onChange={(e) => setSaveDestination(e.target.value as SaveDestinationType)}
+                      className="bg-surface-900 border border-surface-600 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-brand-500"
+                    >
+                      <option value="media-library">Media Library</option>
+                      <option value="character" disabled={characters.length === 0}>
+                        Character
+                      </option>
+                      <option value="location" disabled={locations.length === 0}>
+                        Location
+                      </option>
+                    </select>
+                    {saveDestination === 'character' && (
+                      <select
+                        value={saveCharacterId}
+                        onChange={(e) => setSaveCharacterId(e.target.value)}
+                        className="min-w-[10rem] flex-1 bg-surface-900 border border-surface-600 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-brand-500"
+                      >
+                        <option value="">Select character…</option>
+                        {characters.map((character) => (
+                          <option key={character.id} value={character.id}>
+                            {character.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {saveDestination === 'location' && (
+                      <select
+                        value={saveLocationId}
+                        onChange={(e) => setSaveLocationId(e.target.value)}
+                        className="min-w-[10rem] flex-1 bg-surface-900 border border-surface-600 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-brand-500"
+                      >
+                        <option value="">Select location…</option>
+                        {locations.map((location) => (
+                          <option key={location.id} value={location.id}>
+                            {location.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleSaveCollection}
+                      disabled={!canSaveCollection}
+                      className="ml-auto shrink-0 px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider rounded-md border border-brand-500/50 bg-brand-500/10 hover:bg-brand-500/20 text-brand-300 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                    >
+                      Save Collection
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className={`${isOff ? '' : 'mt-4'} flex flex-wrap items-center gap-2`}>
           <button
             type="button"
             onClick={() => applyPalette()}

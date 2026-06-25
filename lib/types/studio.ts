@@ -380,12 +380,21 @@ export interface LightingPreset {
   createdAt: number;
 }
 
-/** Placeholder data structure for reusable color palette collections. */
+/** One harmony row saved from Color Palette Maker. */
+export interface ColorPaletteGroupEntry {
+  id: string;
+  label?: string;
+  palette: ColorPaletteSettings;
+}
+
+/** Named collection of palette groups — reusable in Media Library, Characters, Locations. */
 export interface ColorPaletteCollection {
   id: string;
   name: string;
-  swatches?: string[];
+  groups: ColorPaletteGroupEntry[];
   createdAt: number;
+  /** @deprecated legacy placeholder */
+  swatches?: string[];
 }
 
 export interface GeneratedVideo {

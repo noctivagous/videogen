@@ -5,26 +5,26 @@ import { MediaLibraryInspector } from '@/components/studio/media-library/MediaLi
 import { deriveProjectAssets, mergeWithDerivedAssets } from '@/lib/media/derive-project-assets';
 import { useStudioStore } from '@/store/useStudioStore';
 
-export interface InspectorRegistration<T> {
-  parseAssetId: (assetId: string) => T | null;
-  onMatch: (parsed: T) => void;
+export interface InspectorRegistration {
+  parseAssetId: (assetId: string) => unknown;
+  onMatch: (parsed: unknown) => void;
 }
 
-interface InspectionManagerProps<T> {
+interface InspectionManagerProps {
   selectedAssetId: string | null;
   onSelectAssetId: (assetId: string | null) => void;
-  registrations?: InspectorRegistration<T>[];
+  registrations?: InspectorRegistration[];
   emptyMessage: string;
   onGoToShot: (shotId: number) => void;
 }
 
-export function InspectionManager<T>({
+export function InspectionManager({
   selectedAssetId,
   onSelectAssetId,
   registrations = [],
   emptyMessage,
   onGoToShot,
-}: InspectionManagerProps<T>) {
+}: InspectionManagerProps) {
   const setups = useStudioStore((state) => state.setups);
   const characters = useStudioStore((state) => state.characters);
   const locations = useStudioStore((state) => state.locations);

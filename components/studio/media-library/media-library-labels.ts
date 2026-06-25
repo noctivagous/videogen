@@ -1,6 +1,7 @@
 import { getWorkflowLabel } from '@/lib/constants/workflows';
 import { getMediaAssetTypeLabel } from '@/lib/media/media-library-query';
 import type { MediaAsset, MediaWorkflowOrigin } from '@/lib/types/media-library';
+import { formatColorPaletteGroupAssetName } from '@/lib/media/color-palette-group';
 
 export function formatMediaAssetOrigin(origin: MediaWorkflowOrigin | undefined): string {
   if (!origin) return '—';
@@ -11,6 +12,9 @@ export function formatMediaAssetOrigin(origin: MediaWorkflowOrigin | undefined):
 }
 
 export function formatMediaAssetSummary(asset: MediaAsset): string {
+  if (asset.type === 'color-palette-group') {
+    return formatColorPaletteGroupAssetName(asset);
+  }
   return getMediaAssetTypeLabel(asset.type);
 }
 

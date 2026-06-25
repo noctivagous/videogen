@@ -14,6 +14,7 @@ export const MEDIA_ASSET_TYPE_ORDER: MediaAssetType[] = [
   'video',
   'mannequin-layout',
   'shot-workflow',
+  'color-palette-group',
 ];
 
 const TYPE_LABELS: Record<MediaAssetType, string> = {
@@ -27,6 +28,7 @@ const TYPE_LABELS: Record<MediaAssetType, string> = {
   video: 'Videos',
   'mannequin-layout': 'Mannequin Layouts',
   'shot-workflow': 'Shot Workflows',
+  'color-palette-group': 'Color Palette Groups',
 };
 
 export function getMediaAssetTypeLabel(type: MediaAssetType): string {

@@ -11,7 +11,8 @@ export type MediaAssetType =
   | 'video'
   | 'reference'
   | 'mannequin-layout'
-  | 'shot-workflow';
+  | 'shot-workflow'
+  | 'color-palette-group';
 
 export type MediaWorkflowOrigin = Workflow | 'upload' | 'generated';
 
@@ -20,6 +21,7 @@ export type MediaLibraryScope = 'project' | 'global';
 export interface MediaAssetMetadata {
   characterId?: string;
   locationId?: string;
+  colorPaletteGroupId?: string;
   prompt?: string;
   provider?: string;
   usedInShots: number[];

@@ -1,7 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { Location, LocationBackdropPlate } from '@/lib/types/studio';
+import type { Location, LocationBackdropPlate, ColorPaletteCollection } from '@/lib/types/studio';
+import { ColorPaletteGroupChip } from '@/components/studio/ColorPaletteGroupChip';
+import {
+  derivedLocationColorPaletteGroupAssetId,
+  parseDerivedLocationColorPaletteGroupAssetId,
+} from '@/lib/media/color-palette-group';
 import { InspectionManager } from '@/components/studio/inspection-manager/InspectionManager';
 import { CollapsibleManagerCard } from '@/components/studio/manager-cards/CollapsibleManagerCard';
 import { useStudioStore } from '@/store/useStudioStore';
@@ -87,6 +92,9 @@ interface LocationCardProps {
   onDelete: () => void;
   onSelectPlate: (plate: LocationBackdropPlate) => void;
   selectedPlateId: string | null;
+  onSelectColorPaletteGroup: (collection: ColorPaletteCollection) => void;
+  selectedColorPaletteGroupId: string | null;
+  onRemoveColorPaletteGroup: (collectionId: string) => void;
 }
 
 function LocationCard({
@@ -97,6 +105,9 @@ function LocationCard({
   onDelete,
   onSelectPlate,
   selectedPlateId,
+  onSelectColorPaletteGroup,
+  selectedColorPaletteGroupId,
+  onRemoveColorPaletteGroup,
 }: LocationCardProps) {
   const [expanded, setExpanded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -175,6 +186,26 @@ function LocationCard({
           </svg>
         </button>
       </div>
+
+      {(location.colorPalettes?.length ?? 0) > 0 && (
+        <div className="mt-4 pt-3 border-t border-surface-700">
+          <p className="text-[10px] uppercase tracking-wider font-semibold text-gray-500 mb-2">
+            Color Palette Groups
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {(location.colorPalettes ?? []).map((collection) => (
+              <ColorPaletteGroupChip
+                key={collection.id}
+                collection={collection}
+                selected={selectedColorPaletteGroupId === collection.id}
+                onSelect={() => onSelectColorPaletteGroup(collection)}
+                showRemove
+                onRemove={() => onRemoveColorPaletteGroup(collection.id)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       <input
         ref={fileInputRef}
@@ -303,6 +334,7 @@ export function LocationManager() {
   const addLocationPlate = useStudioStore((s) => s.addLocationPlate);
   const removeLocationPlate = useStudioStore((s) => s.removeLocationPlate);
   const deleteLocation = useStudioStore((s) => s.deleteLocation);
+  const removeLocationColorPaletteGroup = useStudioStore((s) => s.removeLocationColorPaletteGroup);
   const selectShot = useStudioStore((s) => s.selectShot);
   const navigateToPanel = useNavigateToStudioPanel();
 
@@ -320,6 +352,11 @@ export function LocationManager() {
   const handleSelectPlate = (location: Location, plate: LocationBackdropPlate) => {
     setSelectedLocationId(location.id);
     setSelectedAssetId(derivedLocationPlateAssetId(location.id, plate.id));
+  };
+
+  const handleSelectColorPaletteGroup = (location: Location, collection: ColorPaletteCollection) => {
+    setSelectedLocationId(location.id);
+    setSelectedAssetId(derivedLocationColorPaletteGroupAssetId(location.id, collection.id));
   };
 
   const handleGoToShot = (shotId: number) => {
@@ -404,6 +441,15 @@ export function LocationManager() {
               onRemovePlate={(plateId) => removeLocationPlate(location.id, plateId)}
               onDelete={() => deleteLocation(location.id)}
               onSelectPlate={(plate) => handleSelectPlate(location, plate)}
+              onSelectColorPaletteGroup={(collection) => handleSelectColorPaletteGroup(location, collection)}
+              selectedColorPaletteGroupId={
+                selectedLocationId === location.id
+                  ? parseDerivedLocationColorPaletteGroupAssetId(selectedAssetId ?? '')?.collectionId ?? null
+                  : null
+              }
+              onRemoveColorPaletteGroup={(collectionId) =>
+                removeLocationColorPaletteGroup(location.id, collectionId)
+              }
             />
           ))}
         </div>
@@ -415,10 +461,20 @@ export function LocationManager() {
             registrations={[
               {
                 parseAssetId: parseDerivedLocationPlateAssetId,
-                onMatch: ({ locationId }) => setSelectedLocationId(locationId),
+                onMatch: (parsed) => {
+                  const match = parsed as { locationId: string };
+                  setSelectedLocationId(match.locationId);
+                },
+              },
+              {
+                parseAssetId: parseDerivedLocationColorPaletteGroupAssetId,
+                onMatch: (parsed) => {
+                  const match = parsed as { locationId: string };
+                  setSelectedLocationId(match.locationId);
+                },
               },
             ]}
-            emptyMessage="Select a location plate to inspect details."
+            emptyMessage="Select a location asset to inspect details."
             onGoToShot={handleGoToShot}
           />
         </aside>

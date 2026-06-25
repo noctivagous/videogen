@@ -12,7 +12,20 @@
  */
 
 import type { MediaAsset, MediaAssetType } from '@/lib/types/media-library';
-import type { Character, Location, ReferenceRole, Setup } from '@/lib/types/studio';
+import type { Character, ColorPaletteCollection, Location, ReferenceRole, Setup } from '@/lib/types/studio';
+import {
+  collectionToDocument,
+  colorPaletteGroupThumbnailDataUrl,
+  encodeColorPaletteGroupDocument,
+} from '@/lib/media/color-palette-group';
+
+function encodeCollectionUrl(collection: ColorPaletteCollection): string {
+  return encodeColorPaletteGroupDocument(collectionToDocument(collection));
+}
+
+function thumbnailForCollection(collection: ColorPaletteCollection): string {
+  return colorPaletteGroupThumbnailDataUrl(collection);
+}
 
 /** Stable derived-asset ID from a source descriptor. Does not require hashing. */
 function derivedId(...parts: (string | number)[]): string {
@@ -64,6 +77,22 @@ export function deriveProjectAssets(
         metadata: { characterId: character.id, usedInShots: [] },
       });
     }
+    for (const collection of character.colorPalettes ?? []) {
+      if (!collection.groups?.length) continue;
+      push({
+        id: derivedId('color-palette-group', 'character', character.id, collection.id),
+        type: 'color-palette-group',
+        url: encodeCollectionUrl(collection),
+        thumbnailUrl: thumbnailForCollection(collection),
+        createdAt: collection.createdAt,
+        workflowOrigin: 'upload',
+        metadata: {
+          characterId: character.id,
+          colorPaletteGroupId: collection.id,
+          usedInShots: [],
+        },
+      });
+    }
   }
 
   // ── Location backdrop plates (project-level objects) ──────────────────────
@@ -82,6 +111,22 @@ export function deriveProjectAssets(
         createdAt: plate.createdAt,
         workflowOrigin: 'upload',
         metadata: { locationId: location.id, usedInShots: shotIds },
+      });
+    }
+    for (const collection of location.colorPalettes ?? []) {
+      if (!collection.groups?.length) continue;
+      push({
+        id: derivedId('color-palette-group', 'location', location.id, collection.id),
+        type: 'color-palette-group',
+        url: encodeCollectionUrl(collection),
+        thumbnailUrl: thumbnailForCollection(collection),
+        createdAt: collection.createdAt,
+        workflowOrigin: 'upload',
+        metadata: {
+          locationId: location.id,
+          colorPaletteGroupId: collection.id,
+          usedInShots: [],
+        },
       });
     }
   }

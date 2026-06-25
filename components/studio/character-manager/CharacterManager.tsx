@@ -2,10 +2,15 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { DraggableImageWell, DropWell } from '@/components/studio/character-manager/DragAndDrop';
+import { ColorPaletteGroupChip } from '@/components/studio/ColorPaletteGroupChip';
 import { InspectionManager } from '@/components/studio/inspection-manager/InspectionManager';
 import { CollapsibleManagerCard } from '@/components/studio/manager-cards/CollapsibleManagerCard';
 import { characterSheetLabel } from '@/components/studio/entity-picker/EntityDropdown';
-import type { Character, CharacterSheet } from '@/lib/types/studio';
+import type { Character, CharacterSheet, ColorPaletteCollection } from '@/lib/types/studio';
+import {
+  derivedCharacterColorPaletteGroupAssetId,
+  parseDerivedCharacterColorPaletteGroupAssetId,
+} from '@/lib/media/color-palette-group';
 import { useStudioStore } from '@/store/useStudioStore';
 import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 
@@ -170,6 +175,9 @@ interface CharacterCardProps {
   onDelete: () => void;
   onSelectSheet: (sheet: CharacterSheet) => void;
   selectedSheetId: string | null;
+  onSelectColorPaletteGroup: (collection: ColorPaletteCollection) => void;
+  selectedColorPaletteGroupId: string | null;
+  onRemoveColorPaletteGroup: (collectionId: string) => void;
 }
 
 function CharacterCard({
@@ -182,6 +190,9 @@ function CharacterCard({
   onDelete,
   onSelectSheet,
   selectedSheetId,
+  onSelectColorPaletteGroup,
+  selectedColorPaletteGroupId,
+  onRemoveColorPaletteGroup,
 }: CharacterCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [pendingSheetLabel, setPendingSheetLabel] = useState<string | null>(null);
@@ -449,6 +460,26 @@ function CharacterCard({
             </div>
           </div>
 
+          {(character.colorPalettes?.length ?? 0) > 0 && (
+            <div className="mt-4 pt-3 border-t border-surface-700">
+              <p className="text-[10px] uppercase tracking-wider font-semibold text-gray-500 mb-2">
+                Color Palette Groups
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {(character.colorPalettes ?? []).map((collection) => (
+                  <ColorPaletteGroupChip
+                    key={collection.id}
+                    collection={collection}
+                    selected={selectedColorPaletteGroupId === collection.id}
+                    onSelect={() => onSelectColorPaletteGroup(collection)}
+                    showRemove
+                    onRemove={() => onRemoveColorPaletteGroup(collection.id)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="mt-4 pt-3 border-t border-surface-700 space-y-3">
             <div>
               <p className="text-xs font-semibold text-gray-200">Character Data</p>
@@ -635,6 +666,7 @@ export function CharacterManager() {
   const updateCharacterSheetLabel = useStudioStore((s) => s.updateCharacterSheetLabel);
   const updateCharacterLists = useStudioStore((s) => s.updateCharacterLists);
   const deleteCharacter = useStudioStore((s) => s.deleteCharacter);
+  const removeCharacterColorPaletteGroup = useStudioStore((s) => s.removeCharacterColorPaletteGroup);
   const selectShot = useStudioStore((s) => s.selectShot);
   const navigateToPanel = useNavigateToStudioPanel();
 
@@ -652,6 +684,11 @@ export function CharacterManager() {
   const handleSelectSheet = (character: Character, sheet: CharacterSheet) => {
     setSelectedCharacterId(character.id);
     setSelectedAssetId(derivedCharacterSheetAssetId(character.id, sheet.id));
+  };
+
+  const handleSelectColorPaletteGroup = (character: Character, collection: ColorPaletteCollection) => {
+    setSelectedCharacterId(character.id);
+    setSelectedAssetId(derivedCharacterColorPaletteGroupAssetId(character.id, collection.id));
   };
 
   const handleGoToShot = (shotId: number) => {
@@ -737,6 +774,15 @@ export function CharacterManager() {
               onUpdateLists={(patch) => updateCharacterLists(character.id, patch)}
               onDelete={() => deleteCharacter(character.id)}
               onSelectSheet={(sheet) => handleSelectSheet(character, sheet)}
+              onSelectColorPaletteGroup={(collection) => handleSelectColorPaletteGroup(character, collection)}
+              selectedColorPaletteGroupId={
+                selectedCharacterId === character.id
+                  ? parseDerivedCharacterColorPaletteGroupAssetId(selectedAssetId ?? '')?.collectionId ?? null
+                  : null
+              }
+              onRemoveColorPaletteGroup={(collectionId) =>
+                removeCharacterColorPaletteGroup(character.id, collectionId)
+              }
             />
           ))}
         </div>
@@ -748,10 +794,20 @@ export function CharacterManager() {
             registrations={[
               {
                 parseAssetId: parseDerivedCharacterSheetAssetId,
-                onMatch: ({ characterId }) => setSelectedCharacterId(characterId),
+                onMatch: (parsed) => {
+                  const match = parsed as { characterId: string };
+                  setSelectedCharacterId(match.characterId);
+                },
+              },
+              {
+                parseAssetId: parseDerivedCharacterColorPaletteGroupAssetId,
+                onMatch: (parsed) => {
+                  const match = parsed as { characterId: string };
+                  setSelectedCharacterId(match.characterId);
+                },
               },
             ]}
-            emptyMessage="Select a character image to inspect details."
+            emptyMessage="Select a character asset to inspect details."
             onGoToShot={handleGoToShot}
           />
         </aside>

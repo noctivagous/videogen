@@ -318,7 +318,7 @@ export function IntegratedColorPicker({
 
   return (
     <div className="flex items-start gap-6">
-      <div className="shrink-0 flex flex-col items-center gap-3">
+      <div className="shrink-0 rounded-lg border border-surface-600 bg-surface-900/40 p-3 flex flex-col items-center gap-3">
         <div className="flex items-stretch gap-3">
           <div
             ref={discRef}
@@ -433,11 +433,14 @@ export function IntegratedColorPicker({
         {VARIATION_CATEGORIES.map((category) => {
           const variations = HARMONY_VARIATIONS.filter((variation) => variation.category === category);
           return (
-            <div key={category} className="min-w-0">
-              <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5 text-center">
+            <div
+              key={category}
+              className="min-w-0 m-0 rounded-lg border border-surface-600 bg-surface-900/40 p-1 flex flex-col gap-1"
+            >
+              <p className="text-[10px] text-gray-500 uppercase tracking-wider m-0 text-center">
                 {HARMONY_VARIATION_CATEGORY_LABELS[category]}
               </p>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1.5 m-0">
                 {variations.map((variation) => (
                   <HarmonyVariationOption
                     key={variation.id}

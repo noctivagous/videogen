@@ -21,6 +21,30 @@ const PRIMARY_MODES: { id: 'color' | 'bw' | 'fx' | 'off'; label: string }[] = [
 
 const DEFAULT_FX_MODE: FxColorMode = 'false-color';
 
+const MODE_SELECT_OPTIONS: { value: ColorPaletteMode; label: string }[] = [
+  { value: 'color', label: 'Color' },
+  { value: 'bw', label: 'B&W' },
+  ...FX_COLOR_MODES.map((mode) => ({ value: mode, label: FX_MODE_LABELS[mode] })),
+  { value: 'off', label: 'Off' },
+];
+
+export function ColorModeSelect({ value, onChange }: ColorModeSegmentProps) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value as ColorPaletteMode)}
+      aria-label="Color palette mode"
+      className="shrink-0 bg-surface-900 border border-surface-600 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-brand-500"
+    >
+      {MODE_SELECT_OPTIONS.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 export function ColorModeSegment({ value, onChange }: ColorModeSegmentProps) {
   const primary = parentColorMode(value);
 

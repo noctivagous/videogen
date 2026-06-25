@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { ReferenceImageViewerModal } from '@/components/studio/ReferenceImageViewerModal';
+import { ColorPaletteGroupInspector } from '@/components/studio/ColorPaletteGroupInspector';
 import {
   formatMediaAssetOrigin,
   formatMediaAssetSummary,
@@ -116,6 +117,15 @@ export function MediaLibraryInspector({
   const asset = selectedAsset;
   if (!asset) {
     return <div className="media-library-inspector p-4 text-sm text-gray-500">Asset not found.</div>;
+  }
+
+  if (asset.type === 'color-palette-group') {
+    return (
+      <ColorPaletteGroupInspector
+        asset={asset}
+        onSelectAsset={onSelectAsset}
+      />
+    );
   }
 
   const isDerivedAsset = asset.id.startsWith('derived:');

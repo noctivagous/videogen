@@ -329,6 +329,13 @@ function AssetGridCard({
               Video
             </span>
           </div>
+        ) : asset.type === 'color-palette-group' ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={resolveAssetDisplayUrl(asset)}
+            alt=""
+            className="w-full aspect-video object-cover bg-surface-900"
+          />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
           <img

@@ -139,7 +139,15 @@ import {
   replaceMediaAssetUrl,
   type MediaLibraryCollection,
 } from '@/lib/media/media-library-mutations';
-import type { MediaAsset, MediaAssetType, ShotWorkflowSnapshot } from '@/lib/types/media-library';
+import {
+  createColorPaletteGroupMediaAsset,
+  documentToCollection,
+  colorPaletteGroupThumbnailDataUrl,
+  encodeColorPaletteGroupDocument,
+  normalizeColorPaletteCollection,
+  parseColorPaletteGroupFromAsset,
+} from '@/lib/media/color-palette-group';
+import type { MediaAsset, MediaAssetType, MediaLibraryScope, ShotWorkflowSnapshot } from '@/lib/types/media-library';
 import { switchShotWorkflow } from '@/lib/studio/shot-workflow-state';
 import {
   canAddMannequin,
@@ -267,6 +275,8 @@ import type {
   CharacterSheet,
   FrameComposition,
   ColorPaletteSettings,
+  ColorPaletteCollection,
+  ColorPaletteGroupEntry,
   LightingSettings,
   Location,
   LocationBackdropPlate,
@@ -813,6 +823,17 @@ interface StudioStore {
   setColorPalette: (patch: Partial<ColorPaletteSettings>) => void;
   setColorPaletteMakerDraft: (patch: Partial<ColorPaletteSettings>) => void;
   applyColorPaletteMakerDraft: () => void;
+  saveColorPaletteGroup: (
+    name: string,
+    groups: ColorPaletteGroupEntry[],
+    destination:
+      | { type: 'media-library'; scope?: MediaLibraryScope }
+      | { type: 'character'; characterId: string }
+      | { type: 'location'; locationId: string },
+  ) => string;
+  renameColorPaletteGroupAsset: (assetId: string, name: string) => void;
+  removeCharacterColorPaletteGroup: (characterId: string, collectionId: string) => void;
+  removeLocationColorPaletteGroup: (locationId: string, collectionId: string) => void;
   applyLookRecipe: (id: string) => void;
   clearLookRecipe: () => void;
   setMotion: (patch: Partial<MotionSettings>) => void;
@@ -1842,6 +1863,114 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       bw: { ...draft.bw },
     });
     get().showToast('Color palette applied to lighting', 'success');
+  },
+
+  saveColorPaletteGroup(name, groups, destination) {
+    const collection = normalizeColorPaletteCollection({
+      name,
+      groups: groups.map((group) => ({
+        ...group,
+        palette: { ...group.palette, bw: { ...group.palette.bw } },
+      })),
+    });
+
+    if (destination.type === 'media-library') {
+      const asset = createColorPaletteGroupMediaAsset(collection, {
+        scope: destination.scope ?? 'project',
+      });
+      set((s) => {
+        const library =
+          (destination.scope ?? 'project') === 'global' ? s.globalMediaLibrary : s.mediaLibrary;
+        const nextLibrary = [...library.filter((entry) => entry.id !== asset.id), asset];
+        return (destination.scope ?? 'project') === 'global'
+          ? { globalMediaLibrary: nextLibrary }
+          : { mediaLibrary: nextLibrary };
+      });
+      get().showToast(`Saved "${collection.name}" to media library`, 'success');
+      return asset.id;
+    }
+
+    if (destination.type === 'character') {
+      set((s) => ({
+        characters: s.characters.map((character) =>
+          character.id === destination.characterId
+            ? {
+                ...character,
+                colorPalettes: [...(character.colorPalettes ?? []), collection],
+              }
+            : character,
+        ),
+      }));
+      get().showToast(`Saved "${collection.name}" to character`, 'success');
+      return collection.id;
+    }
+
+    set((s) => ({
+      locations: s.locations.map((location) =>
+        location.id === destination.locationId
+          ? {
+              ...location,
+              colorPalettes: [...(location.colorPalettes ?? []), collection],
+            }
+          : location,
+      ),
+    }));
+    get().showToast(`Saved "${collection.name}" to location`, 'success');
+    return collection.id;
+  },
+
+  renameColorPaletteGroupAsset(assetId, name) {
+    const state = get();
+    const collection = locateMediaAssetCollection(state, assetId);
+    if (!collection) {
+      get().showToast('Asset not found', 'error');
+      return;
+    }
+    const library = collection === 'global' ? state.globalMediaLibrary : state.mediaLibrary;
+    const asset = library.find((entry) => entry.id === assetId);
+    if (!asset || asset.type !== 'color-palette-group') return;
+
+    const doc = parseColorPaletteGroupFromAsset(asset);
+    if (!doc) return;
+    const nextDoc = { ...doc, name: name.trim() || doc.name };
+    const nextUrl = encodeColorPaletteGroupDocument(nextDoc);
+    const updatedCollection = documentToCollection(nextDoc, asset.id, asset.createdAt);
+    get().updateMediaAsset(assetId, {
+      url: nextUrl,
+      thumbnailUrl: colorPaletteGroupThumbnailDataUrl(updatedCollection),
+    });
+  },
+
+  removeCharacterColorPaletteGroup(characterId, collectionId) {
+    set((s) => ({
+      characters: s.characters.map((character) =>
+        character.id === characterId
+          ? {
+              ...character,
+              colorPalettes: (character.colorPalettes ?? []).filter(
+                (collection) => collection.id !== collectionId,
+              ),
+            }
+          : character,
+      ),
+    }));
+    get().showToast('Removed color palette group from character');
+  },
+
+  removeLocationColorPaletteGroup(locationId, collectionId) {
+    set((s) => ({
+      locations: s.locations.map((location) =>
+        location.id === locationId
+          ? {
+              ...location,
+              colorPalettes: (location.colorPalettes ?? []).filter(
+                (collection) => collection.id !== collectionId,
+              ),
+            }
+          : location,
+      ),
+    }));
+    get().showToast('Removed color palette group from location');
   },
 
   applyLookRecipe(id) {
