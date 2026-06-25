@@ -1,9 +1,32 @@
 <h1>VideoGen</h1>
 
 
+VideoGen is a workflow-based AI video generation app
+centered on shot design. It makes use of 3D mannequins
+placed in an orthographic 3D view. The 3D scene is 
+composited on top of the user's provided backdrop plate.  
+It is under development.
+
 
 <h2>Pose Mannequins for The Start Frame Instead of Prompt Text</h2>
+
+Being able to use 3D mannequin models to stage the first frame of an AI-generated video 
+has two benefits. First it allows blocking the virtual actors' positions and
+gestures exactly to set the mood and composition of the shot at a level 
+on par with traditional filmmaking. 
+
 <h3>Different Effects for The Same Frame</h3>
+
+<p> The user will set up a shot by adding mannequins to the scene
+and selecting a frame from a pose animation from the included 
+database.  That is, the user will scrub through a pose animation
+with a slider and choose the desired frame for the start image. 
+(The database includes animations for sitting, walking,
+running, reclining, etc.)
+
+<p>In addition, the mannequins can be scaled and rotated in all three
+directions. They have controls for adjustments to body parts.</p>
+
 
 <p align="left">
   <em>SOLEMN, FOREGROUND: (Close-up two-shot)</em><br>
@@ -11,6 +34,7 @@
   <br>
   
 </p>
+
 
 <p align="left">
   <em>MORE SOMBER, LOOKING DOWN. Close-up two-shot looking down</em><br>
@@ -32,11 +56,16 @@
   <br>
   
 </p>   
+
+
+Second it accommodates the software architecture 
+of these models. The generative AI video models are essentially next frame predictors
+and they are not simulating physics or built with awareness of geometry
+of the training data.
+
+
 VideoGen
 
-VideoGen is a workflow-based video generation app,
-BYOK (Bring Your Own Keys) multi-provider,
-centered around shot design.  It is under development.
 The plan is for it to provide multiple gated workflows 
 for making shots.
 
