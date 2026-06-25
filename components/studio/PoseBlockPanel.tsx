@@ -74,15 +74,11 @@ export function PoseBlockPanel() {
       }
       return;
     }
-    if (selectedMannequinIds.length === 0) {
-      selectMannequin(mannequins[0].id);
-      return;
-    }
     const valid = selectedMannequinIds.filter((id) => mannequins.some((m) => m.id === id));
     if (valid.length !== selectedMannequinIds.length) {
       useStudioStore.setState({ selectedMannequinIds: valid });
     }
-  }, [mannequins, selectedMannequinIds, clearMannequinSelection, selectMannequin]);
+  }, [mannequins, selectedMannequinIds, clearMannequinSelection]);
 
   return (
     <div

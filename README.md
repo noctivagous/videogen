@@ -1,5 +1,37 @@
-![VideoGen Shot Designer](public/readme/vg-screenshot.png)
+<h1>VideoGen</h1>
 
+
+
+<h2>Pose Mannequins for The Start Frame Instead of Prompt Text</h2>
+<h3>Different Effects for The Same Frame</h3>
+
+<p align="left">
+  <em>SOLEMN, FOREGROUND: (Close-up two-shot)</em><br>
+  <img src="public/readme/posing-1-closeup-twoshot.png" alt="Posing 1" width="500">
+  <br>
+  
+</p>
+
+<p align="left">
+  <em>MORE SOMBER, LOOKING DOWN. Close-up two-shot looking down</em><br>
+  <img src="public/readme/posing-2-closeup-twoshot-lookingdown.png" alt="Posing 2" width="500">
+  
+  
+</p>
+
+<p align="left">
+  <em>BLOCKING CHANGE: Ledge. (Close-up two-shot)</em><br>
+  <img src="public/readme/posing-3-closeup-twoshot-ledge.png" alt="Posing 3" width="500">
+  <br>
+  
+</p>
+
+<p align="left">
+  <em>TENSION: Looking Behind. (Long shot, two-shot)</em><br>
+  <img src="public/readme/posing-4-longshot-twoshot-lookbehind.png" alt="Posing 4" width="500">
+  <br>
+  
+</p>   
 VideoGen
 
 VideoGen is a workflow-based video generation app,
