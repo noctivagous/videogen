@@ -27,6 +27,7 @@ export function createDefaultMannequin(
     scale: partial.scale ?? 1,
     yawTurn16: partial.yawTurn16 ?? angleToYawTurn16(partial.angle ?? 'front'),
     pitchDeg: partial.pitchDeg ?? 0,
+    rollDeg: partial.rollDeg ?? 0,
     rotation: partial.rotation ?? 0,
     opacity: partial.opacity ?? 1,
   };

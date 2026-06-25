@@ -3,8 +3,16 @@
 import dynamic from 'next/dynamic';
 import { useEffect, useMemo } from 'react';
 import { MannequinInspectorControls } from '@/components/studio/MannequinInspectorControls';
+import { normalizeReferenceRole } from '@/lib/constants/camera';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { migrateMannequins } from '@/lib/studio/migrate-mannequin';
+import {
+  getPrincipalMannequins,
+  isValidSubjectSlotAssignment,
+  mannequinSpatialLabel,
+  type MannequinSpatialLabel,
+} from '@/lib/studio/mannequin-character-assignment';
+import { getReferenceSlotLabel } from '@/lib/studio/reference-slots';
 import { canAddMannequin } from '@/lib/studio/workflow';
 import type { AspectRatio } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
@@ -19,6 +27,19 @@ const PoseGizmoModeSegment = dynamic(
   () => import(POSEBLOCK_GIZMO_SEGMENT).then((m) => m.PoseGizmoModeSegment),
   { ssr: false },
 );
+
+function formatSpatialLabel(label: MannequinSpatialLabel): string {
+  switch (label) {
+    case 'leftmost':
+      return 'Left';
+    case 'center':
+      return 'Center';
+    case 'rightmost':
+      return 'Right';
+    case 'sole':
+      return 'Subject';
+  }
+}
 
 export function PoseBlockPanel() {
   const shots = useStudioStore((s) => s.shots);
@@ -41,6 +62,10 @@ export function PoseBlockPanel() {
   const primaryId = selectedMannequinIds[0] ?? null;
   const primary = mannequins.find((m) => m.id === primaryId);
   const canAdd = canAddMannequin(shot);
+  const principalById = useMemo(() => {
+    const principals = [...getPrincipalMannequins(mannequins)].sort((a, b) => a.x - b.x);
+    return new Map(principals.map((m) => [m.id, formatSpatialLabel(mannequinSpatialLabel(m, principals))]));
+  }, [mannequins]);
 
   useEffect(() => {
     if (mannequins.length === 0) {
@@ -107,8 +132,21 @@ export function PoseBlockPanel() {
       )}
 
       <ul className="flex flex-col gap-1 max-h-36 overflow-y-auto">
-        {mannequins.map((m, index) => {
+        {mannequins.map((m) => {
           const selected = selectedMannequinIds.includes(m.id);
+          const spatialLabel = principalById.get(m.id) ?? `Mannequin ${m.id.slice(0, 4).toUpperCase()}`;
+          const assigned =
+            shot != null &&
+            isValidSubjectSlotAssignment(shot, m.subjectSlotIndex, shot.lighting) &&
+            m.subjectSlotIndex != null;
+          const assignmentLabel =
+            assigned && shot
+              ? getReferenceSlotLabel(
+                  shot,
+                  m.subjectSlotIndex!,
+                  normalizeReferenceRole(shot.referenceRoles[m.subjectSlotIndex!] ?? 'Subject'),
+                )
+              : 'Unassigned';
           return (
             <li key={m.id} className="flex items-center gap-1">
               <button
@@ -122,7 +160,7 @@ export function PoseBlockPanel() {
                     : 'bg-surface-800 text-gray-300 hover:bg-surface-700'
                 }`}
               >
-                Mannequin {index + 1}
+                {spatialLabel} — {assignmentLabel}
               </button>
               <button
                 type="button"

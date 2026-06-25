@@ -6,6 +6,11 @@
  */
 
 import { DEFAULT_POSEBLOCK_BASE_POSE_ID } from '@/lib/poseblock/posePresets';
+import {
+  angleToYawTurn16,
+  normalizeYawTurn16,
+  yawTurn16ToAngle,
+} from '@/lib/studio/mannequin-rotation';
 import type { Mannequin, MannequinAngle, MannequinGender, MannequinPose } from '@/lib/types/studio';
 
 // ---------------------------------------------------------------------------
@@ -25,6 +30,7 @@ export interface PoseBlockInstance {
   characterZ?: number;
   characterRotationX?: number;
   characterRotationY?: number;
+  characterRotationZ?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -77,6 +83,21 @@ export function rotationYForAngle(angle: MannequinAngle): number {
   return ANGLE_TO_ROTATION_Y[angle] ?? 0;
 }
 
+function normalizeAngleDeg360(deg: number): number {
+  let value = deg % 360;
+  if (value < 0) value += 360;
+  return value;
+}
+
+function yawTurn16ForRotationY(rotationY: number): number {
+  const normalized = normalizeAngleDeg360(rotationY);
+  return Math.round(normalized / 22.5) % 16;
+}
+
+function rotationYForYawTurn16(yawTurn16: number): number {
+  return normalizeYawTurn16(yawTurn16, 'front') * 22.5;
+}
+
 const ROTATION_Y_TO_ANGLE: Array<[number, MannequinAngle]> = [
   [0, 'front'],
   [45, 'threeQuarterLeft'],
@@ -114,6 +135,7 @@ export function angleForRotationY(rotationY: number): MannequinAngle {
 // ---------------------------------------------------------------------------
 
 export function mannequinToInstance(m: Mannequin): PoseBlockInstance {
+  const yawTurn16 = normalizeYawTurn16(m.yawTurn16, m.angle);
   return {
     id: m.id,
     modelUrl: modelUrlForMannequin(m.gender),
@@ -122,10 +144,12 @@ export function mannequinToInstance(m: Mannequin): PoseBlockInstance {
     x: m.x,
     y: m.y,
     scale: m.scale,
-    rotation: m.rotation,
+    // PoseBlock's `rotation` is yaw; keep it in sync with characterRotationY.
+    rotation: rotationYForYawTurn16(yawTurn16),
     characterZ: 0,
-    characterRotationX: 0,
-    characterRotationY: rotationYForAngle(m.angle),
+    characterRotationX: m.pitchDeg ?? 0,
+    characterRotationY: rotationYForYawTurn16(yawTurn16),
+    characterRotationZ: m.rollDeg ?? 0,
   };
 }
 
@@ -145,10 +169,20 @@ export function instancePatchToMannequinPatch(
   if (patch.x !== undefined) result.x = patch.x;
   if (patch.y !== undefined) result.y = patch.y;
   if (patch.scale !== undefined) result.scale = patch.scale;
-  if (patch.rotation !== undefined) result.rotation = patch.rotation;
+  const yawSource =
+    patch.characterRotationY !== undefined ? patch.characterRotationY : patch.rotation;
+  if (yawSource !== undefined) {
+    const nextYawTurn16 = yawTurn16ForRotationY(yawSource);
+    result.yawTurn16 = nextYawTurn16;
+    result.angle = yawTurn16ToAngle(nextYawTurn16);
+  }
 
-  if (patch.characterRotationY !== undefined) {
-    result.angle = angleForRotationY(patch.characterRotationY);
+  if (patch.characterRotationX !== undefined) {
+    result.pitchDeg = patch.characterRotationX;
+  }
+
+  if (patch.characterRotationZ !== undefined) {
+    result.rollDeg = patch.characterRotationZ;
   }
 
   if (patch.basePoseId !== undefined) {

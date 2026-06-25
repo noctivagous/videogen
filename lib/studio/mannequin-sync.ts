@@ -4,6 +4,7 @@ import { getFigureCount } from '@/lib/studio/blocking-layout';
 import { getShotFrameComposition } from '@/lib/studio/composition';
 import { migrateMannequins } from '@/lib/studio/migrate-mannequin';
 import { getMannequinLimit } from '@/lib/studio/mannequin-factory';
+import { angleToYawTurn16 } from '@/lib/studio/mannequin-rotation';
 import { layoutFromCamera } from '@/lib/studio/mannequin-layouts';
 import {
   sanitizeMannequinSubjectSlots,
@@ -154,6 +155,11 @@ function smartResyncMannequins(
       scale: prev.scale,
       rotation: prev.rotation,
       angle: prev.angle,
+      yawTurn16: prev.yawTurn16,
+      pitchDeg: prev.pitchDeg,
+      rollDeg: prev.rollDeg,
+      poseBlockBasePoseId: prev.poseBlockBasePoseId ?? def.poseBlockBasePoseId,
+      poseBlockPoseAdjustments: prev.poseBlockPoseAdjustments,
     };
 
     if (countChanged || layoutChanged) {
@@ -165,6 +171,13 @@ function smartResyncMannequins(
           gender: prev.gender,
           age: prev.age,
           pose: prev.pose,
+          angle: prev.angle,
+          yawTurn16: prev.yawTurn16,
+          pitchDeg: prev.pitchDeg,
+          rollDeg: prev.rollDeg,
+          rotation: prev.rotation,
+          poseBlockBasePoseId: prev.poseBlockBasePoseId ?? def.poseBlockBasePoseId,
+          poseBlockPoseAdjustments: prev.poseBlockPoseAdjustments,
         };
       } else if (fieldSizeChanged) {
         const variantAnchor = mannequinFieldSizeAnchor(shot, prev, aspectRatio);
@@ -185,6 +198,9 @@ function smartResyncMannequins(
       next.y = def.y;
       next.rotation = def.rotation;
       next.angle = def.angle;
+      next.yawTurn16 = angleToYawTurn16(def.angle);
+      next.pitchDeg = 0;
+      next.rollDeg = 0;
       if (reason === 'placement') {
         next.scale = def.scale;
       }

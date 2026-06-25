@@ -16,6 +16,7 @@ export function migrateMannequin(raw: Mannequin): Mannequin {
     poseBlockBasePoseId: raw.poseBlockBasePoseId ?? DEFAULT_POSEBLOCK_BASE_POSE_ID,
     yawTurn16: normalizeYawTurn16(raw.yawTurn16, raw.angle ?? 'front'),
     pitchDeg: Number.isFinite(raw.pitchDeg) ? raw.pitchDeg : 0,
+    rollDeg: Number.isFinite(raw.rollDeg) ? raw.rollDeg : 0,
   };
   if (
     raw.subjectSlotIndex != null &&

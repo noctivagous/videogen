@@ -118,6 +118,8 @@ export interface Mannequin {
   yawTurn16?: number;
   /** Camera-relative vertical observation angle in degrees (bird's-eye / worm's-eye). */
   pitchDeg?: number;
+  /** PoseBlock roll/tilt around camera forward axis in degrees. */
+  rollDeg?: number;
   rotation: number;
   /** @deprecated Use age — kept for persisted project migration. */
   ageScale?: number;
