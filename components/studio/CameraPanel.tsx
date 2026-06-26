@@ -278,20 +278,22 @@ export function CameraPanel() {
           Snaps to retail focal lengths (8–200mm). Crossing a lens zone updates the Lens dropdown automatically.
         </p>
 
-        <VisualDropdown
-          label="Angle"
-          labelClassName={CAMERA_PANEL_LABEL}
-          value={camera.angle}
-          onChange={(angle) => setCamera({ angle })}
-          options={ANGLE_OPTIONS}
-          triggerVariant="thumbnailRight"
-          menuVariant="grid"
-          size="md"
-          menuColumns={2}
-          cellWidth={96}
-          cellHeight={88}
-          uiSection={uiSectionProps(UI_SECTIONS.studioCameraAngle)}
-        />
+        {!blockingInWorkflowRefs && (
+          <VisualDropdown
+            label="Angle"
+            labelClassName={CAMERA_PANEL_LABEL}
+            value={camera.angle}
+            onChange={(angle) => setCamera({ angle })}
+            options={ANGLE_OPTIONS}
+            triggerVariant="thumbnailRight"
+            menuVariant="grid"
+            size="md"
+            menuColumns={2}
+            cellWidth={96}
+            cellHeight={88}
+            uiSection={uiSectionProps(UI_SECTIONS.studioCameraAngle)}
+          />
+        )}
 
         <VisualDropdown
           label="Movement"

@@ -1,6 +1,7 @@
 'use client';
 
 import { VisualDropdown } from '@/components/ui/VisualDropdown';
+import { ANGLE_OPTIONS } from '@/lib/constants/angle-options';
 import { FIELD_SIZE_OPTIONS } from '@/lib/constants/field-size-options';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { useStudioStore } from '@/store/useStudioStore';
@@ -26,6 +27,21 @@ export function MannequinPlacementControls() {
         cellWidth={96}
         cellHeight={88}
         uiSection={uiSectionProps(UI_SECTIONS.studioCameraFieldSize)}
+      />
+
+      <VisualDropdown
+        label="Angle"
+        labelClassName={CAMERA_PANEL_LABEL}
+        value={camera.angle}
+        onChange={(angle) => setCamera({ angle })}
+        options={ANGLE_OPTIONS}
+        triggerVariant="thumbnailRight"
+        menuVariant="grid"
+        size="md"
+        menuColumns={2}
+        cellWidth={96}
+        cellHeight={88}
+        uiSection={uiSectionProps(UI_SECTIONS.studioCameraAngle)}
       />
     </div>
   );

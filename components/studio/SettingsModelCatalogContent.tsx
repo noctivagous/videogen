@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { AppFeatureChecklistSection } from '@/components/studio/AppFeatureChecklistSection';
 import {
   DEFAULT_MODEL_SLOTS,
-  FEATURE_CHECKLIST_ITEMS,
   MODEL_CATEGORY_DEFINITIONS,
   PROVIDER_SUPPORTED_CATEGORIES,
   providerSettingsPath,
@@ -59,47 +59,7 @@ export function SettingsModelCatalogContent({
 
   return (
     <div className="space-y-8">
-      <div className="glass rounded-3xl p-6 border border-surface-700">
-        <div className="mb-4">
-          <h2 className="font-semibold text-lg">App feature checklist</h2>
-          <p className="text-sm text-gray-400">Bake Start Frame is listed first and linked to provider detail pages.</p>
-        </div>
-        <ul className="space-y-2">
-          {FEATURE_CHECKLIST_ITEMS.map((item) => (
-            <li key={item.id} className="rounded-2xl border border-surface-700 bg-surface-900/40 px-3 py-2.5">
-              <div className="text-sm font-medium text-gray-100">{item.title}</div>
-              <div className="text-xs text-gray-400 mt-1">
-                Categories:{' '}
-                {item.categories.map((categoryId, index) => (
-                  <button
-                    key={categoryId}
-                    type="button"
-                    onClick={() => setActiveCategory(categoryId)}
-                    className="text-brand-300 hover:text-brand-200 underline decoration-dotted underline-offset-2"
-                  >
-                    {MODEL_CATEGORY_DEFINITIONS.find((entry) => entry.id === categoryId)?.label ?? categoryId}
-                    {index < item.categories.length - 1 ? ', ' : ''}
-                  </button>
-                ))}
-              </div>
-              <div className="text-xs text-gray-400 mt-1">
-                Providers:{' '}
-                {item.providers.map((provider, index) => (
-                  <span key={provider.id}>
-                    <Link
-                      href={providerSettingsPath(provider.id)}
-                      className="text-brand-300 hover:text-brand-200 underline decoration-dotted underline-offset-2"
-                    >
-                      {provider.label}
-                    </Link>
-                    {index < item.providers.length - 1 ? ', ' : ''}
-                  </span>
-                ))}
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
+      <AppFeatureChecklistSection />
 
       <div className="glass rounded-3xl p-6 border border-surface-700">
         <div className="mb-4">

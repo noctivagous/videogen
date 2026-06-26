@@ -20,6 +20,43 @@ type ProjectEntry = SavedProjectSummary & {
   thumbnailUrl?: string | null;
 };
 
+function ProjectThumbnail({
+  thumbnailUrl,
+  stats,
+  size = 'sm',
+}: {
+  thumbnailUrl?: string | null;
+  stats?: ProjectEntry['stats'];
+  size?: 'sm' | 'trigger' | 'md';
+}) {
+  const sizeClass = size === 'trigger'
+    ? 'self-stretch aspect-video w-auto h-auto rounded-none border-0 border-r border-surface-600'
+    : size === 'sm'
+      ? 'w-9 h-5 rounded border border-surface-600'
+      : 'aspect-video w-full rounded border border-surface-600';
+
+  return (
+    <div
+      className={`${sizeClass} overflow-hidden bg-surface-900 relative flex-shrink-0`}
+    >
+      {thumbnailUrl ? (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={thumbnailUrl}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        </>
+      ) : size === 'sm' || size === 'trigger' ? (
+        <div className="absolute inset-0 bg-surface-800" aria-hidden />
+      ) : stats ? (
+        <ProjectThumbnailPlaceholder stats={stats} />
+      ) : null}
+    </div>
+  );
+}
+
 function ProjectMenuItem({
   entry,
   active,
@@ -33,15 +70,18 @@ function ProjectMenuItem({
     <button
       type="button"
       role="menuitem"
-      className={`w-full text-left px-3 py-2 hover:bg-surface-700 transition-colors ${
+      className={`w-full text-left px-3 py-2 hover:bg-surface-700 transition-colors flex items-center gap-2.5 ${
         active ? 'bg-surface-700/70 text-white' : 'text-gray-200'
       }`}
       onClick={onSelect}
     >
-      <div className="truncate font-medium">{entry.name}</div>
-      {entry.locationLabel ? (
-        <div className="truncate text-[10px] text-gray-500 mt-0.5">{entry.locationLabel}</div>
-      ) : null}
+      <ProjectThumbnail thumbnailUrl={entry.thumbnailUrl} stats={entry.stats} />
+      <div className="min-w-0 flex-1">
+        <div className="truncate font-medium">{entry.name}</div>
+        {entry.locationLabel ? (
+          <div className="truncate text-[10px] text-gray-500 mt-0.5">{entry.locationLabel}</div>
+        ) : null}
+      </div>
     </button>
   );
 }
@@ -388,6 +428,10 @@ export function ProjectSwitcherDropdown({
     .find((entry) => entry.id === BUILTIN_DEMO_PROJECT_ID);
   const demoProjectEntry = demoProject ? withLiveData(demoProject) : undefined;
 
+  const activeThumbnailUrl = liveThumbnail
+    ?? savedProjects.find((entry) => entry.id === activeProjectId)?.thumbnailUrl
+    ?? null;
+
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
@@ -459,12 +503,13 @@ export function ProjectSwitcherDropdown({
         aria-expanded={open}
         aria-controls={menuId}
         onClick={() => setOpen((value) => !value)}
-        className="flex items-center gap-1.5 bg-surface-700 hover:bg-surface-600 focus:bg-surface-600 border border-surface-600 rounded-lg px-3 py-1.5 text-sm font-medium outline-none focus:ring-2 focus:ring-brand-500 transition-all w-28 md:w-44 text-left"
+        className="flex items-stretch gap-2 bg-surface-700 hover:bg-surface-600 focus:bg-surface-600 border border-surface-600 rounded-lg pl-0 pr-2.5 py-0 text-sm font-medium outline-none focus:ring-2 focus:ring-brand-500 transition-all w-36 md:w-52 text-left overflow-hidden"
         title="Switch project"
         {...uiSectionProps(UI_SECTIONS.studioHeaderProjectName)}
       >
-        <span className="truncate flex-1">{projectName}</span>
-        <span className="text-gray-500 text-[10px] flex-shrink-0" aria-hidden>▾</span>
+        <ProjectThumbnail thumbnailUrl={activeThumbnailUrl} stats={liveStats} size="trigger" />
+        <span className="truncate flex-1 min-w-0 self-center py-1.5">{projectName}</span>
+        <span className="text-gray-500 text-[10px] flex-shrink-0 self-center py-1.5 pr-0" aria-hidden>▾</span>
       </button>
 
       {open && (

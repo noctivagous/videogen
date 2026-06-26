@@ -539,7 +539,7 @@ function HarmonyVariationOption({
     <button
       type="button"
       onClick={onSelect}
-      className={`group flex w-full flex-col gap-1 rounded-lg border p-1.5 transition-colors ${
+      className={`group flex w-full flex-col items-center gap-1 rounded-lg border p-1.5 transition-colors ${
         selected
           ? 'border-brand-400 bg-brand-500/10'
           : 'border-surface-600 bg-surface-900/50 hover:border-surface-500'
