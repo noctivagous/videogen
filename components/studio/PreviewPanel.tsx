@@ -569,7 +569,7 @@ export function PreviewPanel() {
                       Drop an image on this preview frame to set the manual Backdrop slot
                     </div>
                     <div className="rounded-lg border border-surface-600 px-3 py-2.5 text-xs text-gray-400">
-                      Add one in the checklist Backdrop step.
+                      Add a backdrop in the checklist Backdrop step.
                     </div>
                   </div>
                 </div>

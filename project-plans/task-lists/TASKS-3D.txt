@@ -1,0 +1,5 @@
+
+- Drop any .GLB or .FBX model onto the scene
+pre-posed.  app will scale it down to fit in
+frame and place it in the center. e.g. animals,
+objects.

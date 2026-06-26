@@ -2,11 +2,11 @@
 
 **Status:** Not started
 
-**Goal:** Generate a cohesive image set for Settings / header / App Summary / apps launcher / Color Palette Maker UI — same visual language as cinematography `VisualDropdown` thumbnails (`public/stock/prompts.json`, served under `public/stock/`). Replace placeholder squares in feature-checklist chips, workflow-group picker cards, header `ProviderBadge` strips, text-only apps launcher cards, and CSS-gradient stubs in the color-mode toolbar.
+**Goal:** Generate a cohesive image set for Settings / header / App Summary / apps launcher / Color Palette Maker / Shot Workflow dropdown UI — same visual language as cinematography `VisualDropdown` thumbnails (`public/stock/prompts.json`, served under `public/stock/`). Replace placeholder squares in feature-checklist chips, workflow-group picker cards, header `ProviderBadge` strips, text-only apps launcher cards, CSS-gradient stubs in the color-mode toolbar, and text-only shot workflow picker options in the camera panel.
 
 **Style reference:** `public/stock/prompts.json` → `conventions` (charcoal palette, film-school clarity, no text) and existing dropdown assets such as `public/stock/subject-counts/2s.jpg`, `public/stock/shot-types/ms.jpg`.
 
-**Catalog source of truth:** `lib/constants/model-catalog.ts` (`MODEL_CATEGORY_DEFINITIONS`) and `project-plans/MODEL-CATALOG.md`. Workflow groups: `MODEL_UX_GROUPS` in `components/studio/HeaderBar.tsx`. Studio apps: `STUDIO_LAUNCHER_ITEMS` in `lib/constants/studio-launcher.ts`. Color palette modes: `ColorPaletteMode` + `FX_MODE_LABELS` in `lib/constants/color-palette.ts`.
+**Catalog source of truth:** `lib/constants/model-catalog.ts` (`MODEL_CATEGORY_DEFINITIONS`) and `project-plans/MODEL-CATALOG.md`. Workflow groups: `MODEL_UX_GROUPS` in `components/studio/HeaderBar.tsx`. Shot workflows: `video-generation-workflows.json` (loaded via `lib/constants/video-generation-workflows.ts`; rendered in `components/studio/WorkflowDropdown.tsx` → `#studio-shot-workflow`). Studio apps: `STUDIO_LAUNCHER_ITEMS` in `lib/constants/studio-launcher.ts`. Color palette modes: `ColorPaletteMode` + `FX_MODE_LABELS` in `lib/constants/color-palette.ts`.
 
 **UI targets:**
 
@@ -17,6 +17,7 @@
 | Header → model category badges | `ProviderBadge` (`w-[12.25rem]` × `h-[53px]`) | Solid `surface-800` fill |
 | Header apps menu + App Summary → Apps | `AppsLauncherGrid` cards (`~233×93`, `p-4`) | Text only, no background art |
 | Color Palette Maker → mode toolbar | `ColorModeIconBar` (`54×54` buttons, ~40×40 preview) | CSS gradients in `ColorModeIconPreview` |
+| Camera panel → Shot Workflow dropdown | `WorkflowDropdown` (`#studio-shot-workflow`, `VisualDropdown` md trigger ~212×56) | Text only, no `imageUrl` on options |
 
 ---
 
@@ -40,6 +41,7 @@ Inherit from `prompts.json` `conventions` unless a section below overrides.
 | Provider badge background | 640×360 | 196×53 badge, cover right zone | JPG |
 | Studio / app launcher card background | 640×280 | ~233×93 card, cover right ~45% or full-bleed under gradient | JPG |
 | Color palette mode preview | 128×128 | ~40×40 in `3.375rem` toolbar button | JPG |
+| Shot workflow dropdown thumbnail | 640×360 | ~89×56 right crop in md trigger (~42%) | JPG |
 
 ---
 
@@ -64,6 +66,9 @@ public/stock/
     color-palette-modes/            ← JPG mode previews for ColorModeIconBar
       color.jpg
       …
+    shot-workflows/                 ← JPG thumbnails for WorkflowDropdown (camera panel)
+      bake-start-frame.jpg
+      …
 ```
 
 **App wiring (follow-up tasks, not image gen):**
@@ -74,6 +79,7 @@ public/stock/
 - [ ] Add optional `backgroundImage` per category badge card in `ProviderBadge` / `HeaderBar`
 - [ ] Add `backgroundImage` to `StudioLauncherItem` in `lib/constants/studio-launcher.ts`; render in `AppsLauncherGrid` (right thumbnail + left gradient shade, same pattern as `VisualDropdown`)
 - [ ] Register mode preview URLs in `lib/constants/color-palette.ts`; replace `ColorModeIconPreview` gradients in `components/ui/ColorModeSegment.tsx` with `<img>` / `background-image`
+- [ ] Add `imageUrl` per workflow in `lib/constants/video-generation-workflows.ts` (or helper `workflowThumbnail(id)`); pass through `WorkflowDropdown` → `VisualDropdown` options
 
 ---
 
@@ -271,16 +277,57 @@ These use the same badge chrome but are **default** video/image picks, not catal
 
 ---
 
-## 6. `prompts.json` integration
+## 6. Shot workflow dropdown thumbnails (raster)
+
+**Purpose:** Right-zone thumbnail for every option in the **Shot Workflow** picker (`WorkflowDropdown` in camera panel → `#studio-shot-workflow`). Trigger is `VisualDropdown` md (`visual-dropdown__trigger--md`, `thumbnailRight`) — same layout as field size / lens dropdowns: label on left, image on right ~42% with left-to-right gradient shade.
+
+**Inherits:** Global raster conventions + `prompts.json` mannequin identity (`shot-types/ms.jpg` / `mannequin-identity.jpg`) wherever a character appears. Concept must read in ~89×56px crop at trigger size and in list-menu rows.
+
+**Output:** `public/stock/app-styling/shot-workflows/{id}.jpg` — 640×360 master.
+
+**Source IDs:** `video-generation-workflows.json` → `Workflow` type in `lib/types/studio.ts`. Groups match JSON sections below.
+
+**Consistency:** Generate `bake-start-frame.jpg` first (canonical mannequin-on-backdrop bake metaphor). Reuse as `image_paths` reference for other character-centric workflows where the same gray mannequin + studio identity applies.
+
+### Character Workflows
+
+- [ ] `bake-start-frame` — **Bake Start Frame** — MS gray mannequin blocking on backdrop plate; baked photoreal face region emerging inside mannequin silhouette (locked first frame before motion). *Mannequins block framing; bake composites character(s); video adds motion only.*
+- [ ] `auto-place` — **Auto-place Character** — MS mannequin faint on backdrop with character sheet print floating beside frame; motion-blur streak exiting right (no bake step — model infers placement). *Fast iteration; optional mannequin blocking.*
+
+### Environment Workflows
+
+- [ ] `pure-broll` — **Pure B-roll (no character)** — Empty gray studio / landscape backdrop only; slow crane-up fog or atmosphere, no figure. *Backdrop or T2V; field size / lens / angle drive generation; no character sheet.*
+- [ ] `start-end` — **Start & End Frame** — Two MS keyframes at opposite ends of a bridge / arrow blur between them (opening and closing look). *Product reveals, logo landings; model interpolates between baked endpoints.*
+
+### Motion Workflows
+
+- [ ] `motion-transfer` — **Motion Transfer / Performance** — MS mannequin mirroring pose from small reference video screen on studio floor; motion path arrow copied body-to-body. *Upload reference video, apply to character; framing follows motion.*
+- [ ] `multi-shot` — **Multi-shot Sequence** — Three adjacent MS panels, same mannequin, slight angle / coverage change per panel (shot-list triptych). *One prompt → 3–6 connected shots; subject count becomes shot list.*
+
+### Camera Workflows
+
+- [ ] `camera-control` — **Camera Control** — Static MS mannequin scene with dolly track / crane arc and camera glyph implied on charcoal studio floor; no body animation. *Crane, dolly, pan, tilt, orbit on static scene or first frame.*
+
+### Edit Workflows
+
+- [ ] `video-inpaint` — **Video Inpaint / Object Removal** — Film-strip MS frame with masked object region mid-fill / healing; temporally consistent background showing through. *Remove objects, people, blemishes from existing footage.*
+
+### Utility Workflows
+
+- [ ] `restyle-lipsync` — **Re-style / Lip-sync** — MCU mannequin profile on existing footage plate; half frame warm re-grade, mouth slightly open with waveform beside. *Restyle existing footage or add speech; backdrop is the video itself.*
+
+---
+
+## 7. `prompts.json` integration
 
 - [ ] Add `appStyling` section to `public/stock/prompts.json` (or `public/stock/app-styling/prompts.json`) mirroring `sectionConventions` structure.
 - [ ] Document `outputSpec` overrides for 128×128 SVG vs 640×360 JPG families.
-- [ ] Add `appWiring` notes per section (which React component consumes which path).
+- [ ] Add `appWiring` notes per section (which React component consumes which path), including `shot-workflows/` → `WorkflowDropdown`.
 - [ ] Generate anchor image for `advanced` group first; use as `image_paths` reference for other group cards in same family if needed.
 
 ---
 
-## 7. QA checklist (before merge)
+## 8. QA checklist (before merge)
 
 - [ ] All assets pass `noText` grep / visual inspection.
 - [ ] Icons readable at 24×24 and 32×32.
@@ -288,8 +335,10 @@ These use the same badge chrome but are **default** video/image picks, not catal
 - [ ] Workflow group backgrounds readable at card thumbnail size in 3-column grid.
 - [ ] Studio launcher backgrounds readable at ~100×93 right crop and under left gradient at 233×93 card size.
 - [ ] Color mode previews distinguishable at ~40×40; same mannequin framing across `color`–`accent-splash` set.
+- [ ] Shot workflow thumbnails readable at ~89×56 right crop in md `VisualDropdown` trigger and in list-menu rows.
+- [ ] All nine `Workflow` IDs from `video-generation-workflows.json` have matching JPG assets.
 - [ ] Palette matches existing `public/stock/shot-types/ms.jpg` / `subject-counts` set (side-by-side in UI).
-- [ ] File names match `ModelCategoryId`, `StudioLauncherItemId`, and `ColorPaletteMode` slugs exactly.
+- [ ] File names match `ModelCategoryId`, `StudioLauncherItemId`, `ColorPaletteMode`, and `Workflow` slugs exactly.
 - [ ] SVGs optimized (svgo); JPGs ≤ 80 KB where possible at 640×360 / 640×280 / 128×128.
 
 ---
@@ -307,3 +356,7 @@ These use the same badge chrome but are **default** video/image picks, not catal
 - `components/studio/ColorPaletteMakerPanel.tsx` — hosts the mode toolbar
 - `lib/constants/color-palette.ts` — `FX_COLOR_MODES`, `FX_MODE_LABELS`
 - `components/ui/VisualDropdown.tsx` — dropdown thumbnail layout reference
+- `video-generation-workflows.json` — shot workflow IDs, labels, groups (source of truth)
+- `lib/constants/video-generation-workflows.ts` — workflow loader + `IMPLEMENTED_WORKFLOWS`
+- `components/studio/WorkflowDropdown.tsx` — `#studio-shot-workflow` picker
+- `components/studio/CameraPanel.tsx` — hosts `WorkflowSection` / workflow dropdown
