@@ -3,35 +3,57 @@
 <h2>Introduction</h2>
 
  <p>
-VideoGen intends to make precise filmmaking moves with AI video 
+VideoGen intends to make precise AI filmmaking moves
 possible, in constrast with the experience of text prompts. 
 Platforms like Runway and Higgsfield are built text-prompt-first.
 Both optimize for "describe a shot, get a clip" rather than 
 "place the camera, block the actors, describe the action and 
 conditions." The text-prompt-first workflow will nudge the user towards
-outcomes that are common-looking and AI because the user will
-follow a path that provides less custom image and placement information.
-Any gaps will be filled in from the mean of AI training data
-("the dataset centroid").
+outcomes that are common-looking for AI video. The user will
+follow a path that provides the AI less custom image and placement information.
+Because of how today's AI works, any gaps will be filled 
+in from the mean ("the dataset centroid") of AI training data.
 
 <p>
-The more that a user can provide
-specific information to the AI model in accordance with its
+The more that a user can provide specific information to the AI model in accordance with its
 technical demands, the more that the output will reflect his or her 
-own work, rather than leaning on the training data built into the AI
-that pulls in so many details. 
+own work, rather than unintentionally leaning
+on the training data built into the model
+that pulls in so many details.  Whenever possible, the filmmaker
+should use the AI only for following a detailed 
+package of images and instructions.
+ 
 <p> 
 If you can provide the AI video model exactly what you want, it will
-for the most part make that. That is usually
-difficult to achieve without making use of separate
-programs (that address different aspects of the AI models' needs) and so AI filmmaking
-is either a burdensome, technical software activity or it involves
-common-looking, uncontrolled output.  To solve this,
+for the most part make that. That is 
+currently difficult to achieve without making use of separate
+programs (that address different aspects of the AI models' quirks) 
+and so AI filmmaking is either a burdensome, technical software activity or it 
+involves producing uncontrolled output.  To solve this,
 VideoGen plans to make a variety of conveniences. 
-In short, those who are interested in 
-handcrafting everything about their films rather than letting AI fill
+In short, those who are interested in handcrafting everything 
+about their films rather than letting AI fill
 in any details, which will make the films feel 
 authentic in the end, would use VideoGen.
+
+<p>It is worth noting that in real life filmmaking
+there are two alternations occurring during production: 
+the inherited resources of the situation and that which has been
+purchased, planned, and arranged by design, with the bigger the budget corresponding
+to more that has been planned, arranged, and designed.  In other words,
+on a no-budget short film the actors show up in their own clothes
+(conditions given to the filmmaker), the small crew uses borrowed, available locations 
+whereas in a big budget film there is everything from location scouts,
+custom studio sets, wardrobe, set dressers and hair stylists.
+The spectrum of detail rises in physical filmmaking
+according to budget.  The situation is different
+in AI in that it brings in big budget conditions according
+to the mean.  That is what is so confusing about AI video,
+that it brings in big budget production quality but will
+result in common-looking output if not given specific resources.
+What is important then is that the software assists 
+the user in making many custom resources and delivering
+them to the AI model.
 
 <p>
 Why text-prompt-first goes generic:
