@@ -111,7 +111,7 @@ export const LEGACY_FIELD_SIZE_MIGRATION: Record<string, Partial<{
 };
 
 export const DEFAULT_FRAME_COMPOSITION: FrameComposition = {
-  guide: 'grid-3x3',
+  guide: 'none',
   placement: DEFAULT_GRID_PLACEMENT,
   headroom: 'normal',
   showOverlay: true,

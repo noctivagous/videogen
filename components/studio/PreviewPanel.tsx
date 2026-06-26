@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { BakedImageVariantSegment } from '@/components/studio/BakedImageVariantSegment';
 import { BackdropFramingEditStack, BackdropFramingLayer } from '@/components/studio/BackdropFramingLayer';
 import {
@@ -33,6 +33,7 @@ import {
 import { migrateMannequins } from '@/lib/studio/migrate-mannequin';
 import { previewFramingFingerprint } from '@/lib/constants/subject-cutouts';
 import {
+  getBackdropSlotIndex,
   getEffectiveBackdropSourceUrl,
   isBackdropCropCommitted,
 } from '@/lib/studio/backdrop-framing';
@@ -85,6 +86,37 @@ function fitPreviewFrame(
 /** Set NEXT_PUBLIC_POSEBLOCK_COMPOSITOR=1 to enable 3D compositor in framing mode. */
 const COMPOSITOR_ENABLED = process.env.NEXT_PUBLIC_POSEBLOCK_COMPOSITOR === '1';
 
+function isImageDrag(e: DragEvent): boolean {
+  const types = Array.from(e.dataTransfer.types);
+  return (
+    types.includes('Files') ||
+    types.includes('text/uri-list') ||
+    types.includes('text/html') ||
+    types.includes('application/x-moz-file')
+  );
+}
+
+function applyImageDropToReferenceSlot(
+  dataTransfer: DataTransfer,
+  setReference: (index: number, dataUrl: string | null) => void,
+  slotIndex: number,
+): void {
+  const file = dataTransfer.files[0];
+  if (file?.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = (event) => setReference(slotIndex, event.target?.result as string);
+    reader.readAsDataURL(file);
+    return;
+  }
+  const uri = dataTransfer.getData('text/uri-list').split('\n').find((line) => {
+    const trimmed = line.trim();
+    return trimmed && !trimmed.startsWith('#');
+  });
+  if (uri && (uri.startsWith('data:image/') || uri.startsWith('blob:') || /^https?:\/\//.test(uri))) {
+    setReference(slotIndex, uri);
+  }
+}
+
 export function PreviewPanel() {
   const previewStageRef = useRef<HTMLDivElement>(null);
   const previewFrameRef = useRef<HTMLDivElement>(null);
@@ -107,6 +139,7 @@ export function PreviewPanel() {
   const previewSuccessProvider = useStudioStore((s) => s.previewSuccessProvider);
   const previewSuccessPrompt = useStudioStore((s) => s.previewSuccessPrompt);
   const toggleCompositionOverlay = useStudioStore((s) => s.toggleCompositionOverlay);
+  const setReference = useStudioStore((s) => s.setReference);
   const shots = useStudioStore((s) => s.shots);
   const currentShot = useStudioStore((s) => s.currentShot);
   const previewSubMode = useStudioStore((s) => s.previewSubMode);
@@ -128,6 +161,7 @@ export function PreviewPanel() {
   const compositorProps = usePoseBlockCompositorProps();
   const [bakedImageVariant, setBakedImageVariant] = useState<BakedImageVariant>('final');
   const [loadAssetOpen, setLoadAssetOpen] = useState(false);
+  const [backdropDragOver, setBackdropDragOver] = useState(false);
 
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
   const mannequins = useMemo(
@@ -246,9 +280,27 @@ export function PreviewPanel() {
 
   const aspectRatio = (project.aspectRatio || '16:9') as AspectRatio;
   const backdropSourceUrl = shot ? getEffectiveBackdropSourceUrl(shot, shot.lighting) : null;
+  const hasBackdrop = Boolean(backdropSourceUrl);
   const backdropCropCommitted = shot ? isBackdropCropCommitted(shot, aspectRatio) : false;
-  const showFramingBackdrop = showFramingGuides && Boolean(backdropSourceUrl);
+  const showFramingBackdrop = showFramingGuides && hasBackdrop;
   const showBackdropEditStack = showFramingBackdrop && !backdropCropCommitted;
+  const showNoBackdropHint =
+    frameView === 'preview' &&
+    !showModelPreview &&
+    !hasBackdrop;
+  const backdropSlotIndex = shot ? getBackdropSlotIndex(shot) : -1;
+  const canDropBackdropOnPreview =
+    showNoBackdropHint && backdropSlotIndex >= 0;
+
+  useEffect(() => {
+    const clearDrag = () => setBackdropDragOver(false);
+    window.addEventListener('dragend', clearDrag);
+    window.addEventListener('drop', clearDrag);
+    return () => {
+      window.removeEventListener('dragend', clearDrag);
+      window.removeEventListener('drop', clearDrag);
+    };
+  }, []);
 
   const renderPreviewContent = () => {
     if (showBakedEmptyState && shot) {
@@ -454,10 +506,34 @@ export function PreviewPanel() {
             </div>
             <div
               ref={previewFrameRef}
-              className={`preview-frame-stage__frame preview-frame relative rounded-xl border-2 border-surface-700 overflow-hidden shadow-2xl group ${
-                showFramingBackdrop ? 'bg-transparent' : 'bg-surface-800'
-              }`}
+              className={`preview-frame-stage__frame preview-frame relative rounded-xl border-2 overflow-hidden shadow-2xl group ${
+                backdropDragOver
+                  ? 'border-brand-500 ring-2 ring-brand-500/40'
+                  : 'border-surface-700'
+              } ${showFramingBackdrop ? 'bg-transparent' : 'bg-surface-800'}`}
               {...uiSectionProps(UI_SECTIONS.studioPreviewFrame)}
+              onDragEnter={(e) => {
+                if (!canDropBackdropOnPreview || !isImageDrag(e)) return;
+                e.preventDefault();
+                setBackdropDragOver(true);
+              }}
+              onDragOver={(e) => {
+                if (!canDropBackdropOnPreview || !isImageDrag(e)) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+                setBackdropDragOver(true);
+              }}
+              onDragLeave={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                  setBackdropDragOver(false);
+                }
+              }}
+              onDrop={(e) => {
+                if (!canDropBackdropOnPreview) return;
+                e.preventDefault();
+                setBackdropDragOver(false);
+                applyImageDropToReferenceSlot(e.dataTransfer, setReference, backdropSlotIndex);
+              }}
             >
           <div
             className={`preview-frame-clip absolute inset-0 ${showFramingBackdrop ? 'bg-transparent' : 'bg-surface-900'} ${showBackdropEditStack ? 'pointer-events-none' : ''}`}
@@ -483,6 +559,22 @@ export function PreviewPanel() {
               />
             )}
             {renderMainContent()}
+            {showNoBackdropHint && (
+              <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center p-6">
+                <div className="max-w-2xl text-center rounded-xl border border-surface-600/80 bg-surface-900/80 backdrop-blur-sm px-4 py-3">
+                  <p className="text-md font-semibold text-gray-200">Backdrop Empty.</p>
+                  
+                  <div className="mt-3 grid grid-cols-2 gap-3 text-left">
+                    <div className="rounded-lg border border-surface-600 px-3 py-2.5 text-xs text-gray-400">
+                      Drop an image on this preview frame to set the manual Backdrop slot
+                    </div>
+                    <div className="rounded-lg border border-surface-600 px-3 py-2.5 text-xs text-gray-400">
+                      Add one in the checklist Backdrop step.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {showPreviewSuccess && (
               <div

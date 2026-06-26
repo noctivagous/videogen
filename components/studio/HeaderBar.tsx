@@ -570,7 +570,7 @@ export function HeaderBar() {
               {groupMenuOpen && (
                 <div
                   role="menu"
-                  className="absolute top-full left-0 mt-1 bg-surface-800 border border-surface-600 rounded-lg shadow-xl z-[60] w-[32rem] max-w-[90vw] max-h-[70vh] overflow-y-auto p-4"
+                  className="absolute top-full left-0 mt-1 bg-surface-800 border border-surface-600 rounded-lg shadow-xl z-[60] w-[42rem] max-w-[90vw] max-h-[70vh] overflow-y-auto p-4"
                 >
                   <div className="mb-3">
                     <div className="text-[10px] uppercase tracking-wider text-gray-500">Model workflow groups</div>

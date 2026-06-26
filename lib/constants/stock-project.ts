@@ -81,7 +81,7 @@ export const STOCK_MOTION: MotionSettings = {
 export const STOCK_PROMPT = STOCK_MS_PROMPT;
 
 export const STOCK_SHOT_COMPOSITION: FrameComposition = {
-  guide: 'grid-3x3',
+  guide: 'none',
   placement: 'ix-mid-r',
   headroom: 'normal',
   showOverlay: true,

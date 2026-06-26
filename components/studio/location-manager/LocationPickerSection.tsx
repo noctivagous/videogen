@@ -137,7 +137,17 @@ export function LocationPickerSection({
                 ))}
                 {locations.length === 0 && (
                   <div className="px-2.5 py-2 text-[11px] text-gray-500">
-                    No locations yet. Create one in Location Manager.
+                    No locations yet. Create one in Location Manager.{' '}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLocationOpen(false);
+                        navigateToPanel('location-manager');
+                      }}
+                      className="text-brand-400 hover:text-brand-300 transition-colors border border-surface-600 text-[9px] normal-case tracking-normal font-medium"
+                    >
+                      Go →
+                    </button>
                   </div>
                 )}
               </div>

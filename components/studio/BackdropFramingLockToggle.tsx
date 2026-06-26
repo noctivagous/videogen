@@ -1,7 +1,7 @@
 'use client';
 
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
-import { getBackdropCropStatus, getBackdropSlotIndex } from '@/lib/studio/backdrop-framing';
+import { getBackdropCropStatus, getEffectiveBackdropSourceUrl } from '@/lib/studio/backdrop-framing';
 import type { AspectRatio } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
 
@@ -40,8 +40,19 @@ export function BackdropFramingLockToggle() {
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
   if (!shot) return null;
 
-  const backdropSlotIndex = getBackdropSlotIndex(shot);
-  if (backdropSlotIndex < 0 || !shot.references[backdropSlotIndex]) return null;
+  const hasBackdrop = Boolean(getEffectiveBackdropSourceUrl(shot, shot.lighting));
+  if (!hasBackdrop) {
+    return (
+      <div
+        className="backdrop-framing-lock-toggle-wrap"
+        {...uiSectionProps(UI_SECTIONS.studioPreviewBackdropLockToggle)}
+      >
+        <span className="backdrop-framing-lock-toggle-wrap__label text-sm whitespace-nowrap text-gray-400">
+          No Backdrop
+        </span>
+      </div>
+    );
+  }
 
   const aspectRatio = (project.aspectRatio || '16:9') as AspectRatio;
   const backdropFramingLocked = Boolean(shot.backdropFramingByAspect?.[aspectRatio]?.locked);
