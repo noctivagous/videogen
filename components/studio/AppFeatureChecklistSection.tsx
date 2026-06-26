@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useMemo } from 'react';
 import { ArrowRight, CheckCircle2, Circle } from 'lucide-react';
+import { ModelCategoryThumbnail } from '@/components/studio/ModelCategoryThumbnail';
 import { ProviderIcon } from '@/components/studio/ProviderIcon';
 import { SummarySection } from '@/components/studio/SummarySection';
 import {
@@ -196,10 +197,9 @@ export function AppFeatureChecklistSection() {
                                 }`}
                               >
                                 <span aria-hidden>{category.ready ? '✓' : '○'}</span>
-                                <span
-                                  aria-hidden
-                                  className="w-6 h-6 flex items-center justify-center flex-shrink-0 ring-1 ring-inset ring-white/5 overflow-hidden rounded-sm border border-surface-500/80 bg-surface-800/80"
-                                  title="Category thumbnail placeholder"
+                                <ModelCategoryThumbnail
+                                  categoryId={category.categoryId}
+                                  title={category.label}
                                 />
                                 <span>{category.label}</span>
                               </Link>

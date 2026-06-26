@@ -106,7 +106,7 @@ function renderPromptTextWithImageTags(
   return parts.length > 0 ? parts : [text];
 }
 
-export function BottomBar() {
+export function ShotDesignerBottomBarContent() {
   const sceneSetup = useStudioStore((s) => s.sceneSetup);
   const shotActivity = useStudioStore((s) => s.shotActivity);
   const setSceneSetup = useStudioStore((s) => s.setSceneSetup);
@@ -247,9 +247,7 @@ export function BottomBar() {
     'w-full bg-surface-700/70 hover:bg-surface-600/80 focus:bg-surface-600/80 border border-surface-600 rounded-md px-2.5 py-2 text-xs outline-none focus:ring-1 focus:ring-brand-500 transition-all resize-none h-[44px]';
 
   return (
-    <div className="border-t border-surface-700" {...uiSectionProps(UI_SECTIONS.studioBottomBar)}>
-      <div className="p-2.5 space-y-2">
-        <div className="flex gap-2 items-stretch">
+    <div className="flex gap-2 items-stretch">
           <div
             className="studio-bottom-panel flex-1 flex flex-col min-w-0"
             {...uiSectionProps(UI_SECTIONS.studioBottomPrompt)}
@@ -390,9 +388,6 @@ export function BottomBar() {
               </button>
             )}
           </div>
-        </div>
-
-      </div>
     </div>
   );
 }

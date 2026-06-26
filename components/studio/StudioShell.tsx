@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect } from 'react';
-import { BottomBar } from '@/components/studio/BottomBar';
 import { CameraPanel } from '@/components/studio/CameraPanel';
 import { HeaderBar } from '@/components/studio/HeaderBar';
-import { StudioWorkspaceRightPanel } from '@/components/studio/StudioWorkspaceRightPanel';
+import { BottomPanelSlot } from '@/components/studio/StudioBottomBar';
+import { LeftPanelSlot } from '@/components/studio/LeftPanelSlot';
 import { PreviewPanel } from '@/components/studio/PreviewPanel';
+import { RightPanelSlot } from '@/components/studio/RightPanelSlot';
+import { RightPanelContent } from '@/components/studio/StudioWorkspaceRightPanel';
 import { ContextMenuManager } from '@/components/ui/ContextMenuManager';
 import { ModalManager } from '@/components/ui/ModalManager';
 import { ThemeTransformConnectorProvider } from '@/components/studio/ThemeTransformConnectorProvider';
@@ -38,12 +40,7 @@ export function StudioShell() {
       <HeaderBar />
 
       <ThemeTransformConnectorProvider>
-        <aside
-          className="hidden lg:block w-72 glass border-r border-surface-700 overflow-y-auto control-panel"
-          {...uiSectionProps(UI_SECTIONS.studioCameraPanel)}
-        >
-          <CameraPanel />
-        </aside>
+        <LeftPanelSlot />
 
         <main
           className="flex-1 flex flex-col bg-surface-900 min-h-0"
@@ -52,17 +49,10 @@ export function StudioShell() {
           <PreviewPanel />
         </main>
 
-        {usesStudioRightSidebar(workspaceView) ? (
-          <aside
-            className="hidden lg:block w-72 glass border-l border-surface-700 overflow-y-auto control-panel"
-            {...uiSectionProps(UI_SECTIONS.studioLightingPanel)}
-          >
-            <StudioWorkspaceRightPanel panel={workspaceView} />
-          </aside>
-        ) : null}
+        <RightPanelSlot />
       </ThemeTransformConnectorProvider>
 
-      <BottomBar />
+      <BottomPanelSlot />
 
       <div className="lg:hidden fixed bottom-4 right-4 z-50" {...uiSectionProps(UI_SECTIONS.studioMobileFab)}>
         <button
@@ -96,7 +86,7 @@ export function StudioShell() {
               <CameraPanel />
               {usesStudioRightSidebar(workspaceView) ? (
                 <div className="mt-6 border-t border-surface-700 pt-4">
-                  <StudioWorkspaceRightPanel panel={workspaceView} />
+                  <RightPanelContent panel={workspaceView} />
                 </div>
               ) : null}
             </div>

@@ -6,7 +6,7 @@ import { LocationManagerInspectorPanel } from '@/components/studio/location-mana
 import { MediaLibraryRightInspectorPanel } from '@/components/studio/media-library/MediaLibraryRightInspectorPanel';
 import type { StudioPanelId } from '@/lib/studio/studio-routes';
 
-export function StudioWorkspaceRightPanel({ panel }: { panel: StudioPanelId }) {
+export function RightPanelContent({ panel }: { panel: StudioPanelId }) {
   if (panel === 'shot-designer') {
     return <StudioRightPanel />;
   }
@@ -25,3 +25,5 @@ export function StudioWorkspaceRightPanel({ panel }: { panel: StudioPanelId }) {
 
   return null;
 }
+
+export const StudioWorkspaceRightPanel = RightPanelContent;

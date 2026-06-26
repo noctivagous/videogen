@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { AppFeatureChecklistSection } from '@/components/studio/AppFeatureChecklistSection';
+import { ModelCategoryThumbnail } from '@/components/studio/ModelCategoryThumbnail';
 import {
   DEFAULT_MODEL_SLOTS,
   MODEL_CATEGORY_DEFINITIONS,
@@ -101,12 +102,14 @@ export function SettingsModelCatalogContent({
               key={category.id}
               type="button"
               onClick={() => setActiveCategory(category.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs border transition-colors ${
+              title={category.description}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs border transition-colors ${
                 activeCategory === category.id
                   ? 'bg-brand-500/20 border-brand-500/50 text-brand-200'
                   : 'bg-surface-800 border-surface-600 text-gray-300 hover:bg-surface-700'
               }`}
             >
+              <ModelCategoryThumbnail categoryId={category.id} title={category.label} />
               {category.id}
             </button>
           ))}
