@@ -548,7 +548,7 @@ export function PreviewPanel() {
             />
           )}
 
-          {showFramingGuides && <CompositionOverlay allowBackdropPan={showFramingBackdrop} />}
+          {showFramingGuides && <CompositionOverlay />}
 
           {frameView === 'preview' && (
             <div className="absolute top-3 left-3 z-30 pointer-events-auto flex flex-col gap-1.5">
