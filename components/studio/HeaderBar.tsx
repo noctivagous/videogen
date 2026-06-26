@@ -548,7 +548,7 @@ export function HeaderBar() {
           className="hidden sm:flex items-center min-w-0 ml-1"
           {...uiSectionProps(UI_SECTIONS.studioHeaderProviderBadge)}
         >
-          <HeaderLegendContainer legend="Models" className="pl-7">
+          <HeaderLegendContainer legend="Models">
             <div ref={groupMenuRef} className="relative min-w-[15rem] self-stretch">
               <button
                 type="button"

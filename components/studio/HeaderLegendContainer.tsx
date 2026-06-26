@@ -13,17 +13,18 @@ export function HeaderLegendContainer({
   className?: string;
   children: ReactNode;
 }) {
+  const legendClasses =
+    'px-1 py-0.5 rounded-sm border border-surface-600 bg-surface-900 text-[9px] tracking-wider text-gray-400 uppercase';
+
   return (
-    <div className={`relative self-stretch flex items-stretch gap-2 border border-surface-600 rounded-md pl-5 pr-2 py-0.5 ${className}`.trim()}>
-      <span
-        className={`absolute top-1/2 -translate-y-1/2 px-1 py-0.5 rounded-sm border border-surface-600 bg-surface-900 text-[9px] tracking-wider text-gray-400 uppercase ${
-          rotateLegend
-            ? '-left-5 -rotate-90'
-            : 'left-2'
-        }`}
-      >
-        {legend}
-      </span>
+    <div className={`self-stretch flex items-stretch gap-2 border border-surface-600 rounded-md px-2 py-0.5 ${className}`.trim()}>
+      {rotateLegend ? (
+        <div className="flex w-5 flex-shrink-0 items-center justify-center self-stretch">
+          <span className={`${legendClasses} -rotate-90 whitespace-nowrap`}>{legend}</span>
+        </div>
+      ) : (
+        <span className={`${legendClasses} self-center flex-shrink-0`}>{legend}</span>
+      )}
       {children}
     </div>
   );
