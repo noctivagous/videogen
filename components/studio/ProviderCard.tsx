@@ -1,7 +1,9 @@
 'use client';
 
+import Link from 'next/link';
 import { ModalityChips } from '@/components/studio/ModalityChips';
 import { ProviderIcon } from '@/components/studio/ProviderIcon';
+import { providerSettingsPath } from '@/lib/constants/model-catalog';
 import { isBuiltInProviderEnabled } from '@/lib/constants/providers';
 import { hasGenerationAdapter } from '@/lib/studio/generation/capabilities';
 import {
@@ -92,7 +94,13 @@ export function ProviderCard({ provider, isCustom }: ProviderCardProps) {
           />
           <div className="min-w-0">
             <div className="font-semibold text-[15px] leading-tight">
-              {isCustom ? custom!.name : builtIn!.name}
+              {!isCustom ? (
+                <Link href={providerSettingsPath(id)} className="hover:text-brand-200 transition-colors">
+                  {builtIn!.name}
+                </Link>
+              ) : (
+                custom!.name
+              )}
               {isCustom && (
                 <span className="text-[9px] px-1.5 py-px rounded bg-surface-600 text-gray-400 font-mono ml-1">CUSTOM</span>
               )}

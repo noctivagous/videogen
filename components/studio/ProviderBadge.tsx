@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { KeyRound, Search, Settings } from 'lucide-react';
 import { ProviderIcon } from '@/components/studio/ProviderIcon';
 import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 import { isBuiltInProviderEnabled } from '@/lib/constants/providers';
 import {
   getAvailableImageModels,
+  getAvailableModelsForModality,
   getAvailableVideoModels,
   getBuiltInProvider,
   getEffectiveModelId,
@@ -20,11 +22,11 @@ import {
   sortCustomProviders,
 } from '@/lib/studio/provider-modalities';
 import { isCustomProvider, isProviderConnected } from '@/lib/storage/ai-settings';
-import type { AIState } from '@/lib/types/studio';
+import type { AIState, Modality } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
 
-type ProviderBadgeKind = 'Video' | 'Image';
-type ProviderModality = 'video' | 'image';
+type ProviderBadgeKind = 'Video' | 'Image' | 'Audio' | 'LLM';
+type ProviderModality = 'video' | 'image' | 'tts' | 'llm';
 
 function providerSupportsModality(
   providerId: string,
@@ -37,6 +39,7 @@ function providerSupportsModality(
 
   if (modality === 'video' && hasVerifiedVideoModels(providerId, isCustom, ai)) return true;
   if (modality === 'image' && hasVerifiedImageModels(providerId, isCustom, ai)) return true;
+  if ((modality === 'tts' || modality === 'llm') && getAvailableModelsForModality(providerId, isCustom, ai, modality).length > 0) return true;
 
   if (isCustom) {
     return isProviderConnected(providerId, true, ai);
@@ -135,6 +138,13 @@ export function ProviderBadge({
   connected,
   status,
   sectionId,
+  fill = false,
+  modalityOverride,
+  label,
+  selectedProviderId: selectedProviderIdProp,
+  selectedModelId: selectedModelIdProp,
+  onProviderSelect,
+  onModelSelect,
 }: {
   kind: ProviderBadgeKind;
   providerId?: string;
@@ -144,8 +154,17 @@ export function ProviderBadge({
   connected: boolean;
   status: ReturnType<typeof getProviderStatus>;
   sectionId: string;
+  fill?: boolean;
+  modalityOverride?: ProviderModality;
+  label?: string;
+  selectedProviderId?: string;
+  selectedModelId?: string;
+  onProviderSelect?: (providerId: string) => void;
+  onModelSelect?: (modelId: string) => void;
 }) {
-  const modality: ProviderModality = kind === 'Video' ? 'video' : 'image';
+  const modality: ProviderModality = modalityOverride ?? (
+    kind === 'Video' ? 'video' : kind === 'Image' ? 'image' : kind === 'Audio' ? 'tts' : 'llm'
+  );
   const ai = useStudioStore((s) => s.ai);
   const navigateToPanel = useNavigateToStudioPanel();
   const openProviderEdit = useStudioStore((s) => s.openProviderEdit);
@@ -154,14 +173,22 @@ export function ProviderBadge({
   const setDefaultImageProvider = useStudioStore((s) => s.setDefaultImageProvider);
   const setDefaultImageModel = useStudioStore((s) => s.setDefaultImageModel);
 
-  const selectedProviderId = modality === 'video' ? ai.defaultVideoProvider : ai.defaultImageProvider;
+  const selectedProviderId = selectedProviderIdProp ?? (
+    modality === 'video' ? ai.defaultVideoProvider : ai.defaultImageProvider
+  );
   const selectedIsCustom = isCustomProvider(selectedProviderId, ai);
   const models = modality === 'video'
     ? getAvailableVideoModels(selectedProviderId, selectedIsCustom, ai)
-    : getAvailableImageModels(selectedProviderId, selectedIsCustom, ai);
-  const selectedModelId = modality === 'video'
-    ? getEffectiveModelId(ai)
-    : getEffectivePreviewModelId(ai);
+    : modality === 'image'
+      ? getAvailableImageModels(selectedProviderId, selectedIsCustom, ai)
+      : getAvailableModelsForModality(selectedProviderId, selectedIsCustom, ai, modality as Modality);
+  const selectedModelId = selectedModelIdProp ?? (
+    modality === 'video'
+      ? getEffectiveModelId(ai)
+      : modality === 'image'
+        ? getEffectivePreviewModelId(ai)
+        : undefined
+  );
 
   const providers = useMemo(
     () => listProvidersForModality(ai, modality, selectedProviderId),
@@ -172,9 +199,51 @@ export function ProviderBadge({
   const [providerSearch, setProviderSearch] = useState('');
   const [modelSearch, setModelSearch] = useState('');
   const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
   const providerSearchId = useId();
   const modelSearchId = useId();
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const MENU_WIDTH = 288;
+
+  const updateMenuPosition = () => {
+    if (!buttonRef.current || typeof window === 'undefined') return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    const viewportPadding = 8;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const menuHeight = menuRef.current?.offsetHeight ?? 320;
+
+    const rightAlignedLeft = rect.right - MENU_WIDTH;
+    const leftAlignedLeft = rect.left;
+    const horizontalPenalty = (left: number) => {
+      const overflowLeft = Math.max(0, viewportPadding - left);
+      const overflowRight = Math.max(0, (left + MENU_WIDTH) - (viewportWidth - viewportPadding));
+      return overflowLeft + overflowRight;
+    };
+    const preferredLeft = horizontalPenalty(rightAlignedLeft) <= horizontalPenalty(leftAlignedLeft)
+      ? rightAlignedLeft
+      : leftAlignedLeft;
+    const maxLeft = Math.max(viewportPadding, viewportWidth - MENU_WIDTH - viewportPadding);
+    const left = Math.min(maxLeft, Math.max(viewportPadding, preferredLeft));
+
+    const belowTop = rect.bottom + 6;
+    const aboveTop = rect.top - menuHeight - 6;
+    const canFitBelow = belowTop + menuHeight <= viewportHeight - viewportPadding;
+    const canFitAbove = aboveTop >= viewportPadding;
+    const top = (!canFitBelow && canFitAbove)
+      ? aboveTop
+      : Math.min(
+        Math.max(viewportPadding, belowTop),
+        Math.max(viewportPadding, viewportHeight - menuHeight - viewportPadding),
+      );
+
+    setMenuPosition({
+      top,
+      left,
+    });
+  };
 
   const filteredProviders = useMemo(() => {
     const query = providerSearch.trim();
@@ -194,9 +263,11 @@ export function ProviderBadge({
 
   useEffect(() => {
     if (!open) return;
+    updateMenuPosition();
 
     const onPointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (!rootRef.current?.contains(target) && !menuRef.current?.contains(target)) {
         setOpen(false);
       }
     };
@@ -207,11 +278,21 @@ export function ProviderBadge({
 
     document.addEventListener('mousedown', onPointerDown);
     window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('resize', updateMenuPosition);
+    window.addEventListener('scroll', updateMenuPosition, true);
     return () => {
       document.removeEventListener('mousedown', onPointerDown);
       window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('resize', updateMenuPosition);
+      window.removeEventListener('scroll', updateMenuPosition, true);
     };
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const frame = requestAnimationFrame(() => updateMenuPosition());
+    return () => cancelAnimationFrame(frame);
+  }, [open, filteredProviders.length, filteredModels.length, providerSearch, modelSearch]);
 
   useEffect(() => {
     if (!open) {
@@ -221,26 +302,38 @@ export function ProviderBadge({
   }, [open]);
 
   const handleProviderSelect = (id: string) => {
+    if (onProviderSelect) {
+      onProviderSelect(id);
+      return;
+    }
     if (modality === 'video') setDefaultVideoProvider(id);
-    else setDefaultImageProvider(id);
+    else if (modality === 'image') setDefaultImageProvider(id);
   };
 
   const handleModelSelect = (modelId: string) => {
-    if (modality === 'video') setDefaultVideoModel(modelId);
-    else setDefaultImageModel(modelId);
+    if (onModelSelect) {
+      onModelSelect(modelId);
+    } else if (modality === 'video') {
+      setDefaultVideoModel(modelId);
+    } else if (modality === 'image') {
+      setDefaultImageModel(modelId);
+    }
     setOpen(false);
   };
 
   return (
     <div ref={rootRef} className="relative min-w-0">
       <button
+        ref={buttonRef}
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={menuId}
         onClick={() => setOpen((value) => !value)}
-        className="flex items-center gap-2 px-3 py-1.5 bg-surface-800 hover:bg-surface-700 border border-surface-600 rounded-lg cursor-pointer transition-all text-xs max-w-[200px] lg:max-w-[220px]"
-        title={`${kind} provider & model — click to choose`}
+        className={`flex items-center gap-2 px-3 py-1.5 bg-surface-800 hover:bg-surface-700 border border-surface-600 rounded-lg cursor-pointer transition-all text-xs ${
+          fill ? 'w-full h-full max-w-none' : 'max-w-[200px] lg:max-w-[220px]'
+        }`}
+        title={`${label ?? kind} provider & model — click to choose`}
         id={sectionId}
         data-ui-section={sectionId}
         data-ui-section-name={`${kind} Provider Badge`}
@@ -259,7 +352,7 @@ export function ProviderBadge({
           className="rounded-md"
         />
         <div className="min-w-0 text-left leading-tight flex-1">
-          <div className="text-[9px] uppercase tracking-wider text-gray-500 font-semibold">{kind}</div>
+          <div className="text-[9px] uppercase tracking-wider text-gray-500 font-semibold truncate">{label ?? kind}</div>
           <div className="font-medium text-gray-300 truncate">{providerName}</div>
           <div className="text-[10px] text-gray-500 truncate">
             {!connected
@@ -274,12 +367,14 @@ export function ProviderBadge({
         <span className="text-gray-500 text-[10px] flex-shrink-0" aria-hidden>▾</span>
       </button>
 
-      {open && (
+      {open && menuPosition && typeof document !== 'undefined' && createPortal(
         <div
+          ref={menuRef}
           id={menuId}
           role="menu"
           aria-label={`${kind} provider and model`}
-          className="absolute top-full right-0 mt-1 w-72 bg-surface-800 border border-surface-600 rounded-lg shadow-xl z-[60] py-1 text-sm"
+          className="fixed w-72 bg-surface-800 border border-surface-600 rounded-lg shadow-xl z-[80] py-1 text-sm"
+          style={{ top: menuPosition.top, left: menuPosition.left }}
         >
           <MenuSectionHeader
             label="Provider"
@@ -398,7 +493,8 @@ export function ProviderBadge({
             <KeyRound className="w-3.5 h-3.5 flex-shrink-0" aria-hidden />
             Manage API keys…
           </button>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

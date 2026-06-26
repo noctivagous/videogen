@@ -1,18 +1,29 @@
 'use client';
 
-import { useRef, useState } from 'react';
-import { Video } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Clapperboard,
+  ImageIcon,
+  Library,
+  Palette,
+  Settings,
+  Users,
+  Video,
+} from 'lucide-react';
 import { AppsLauncherMenu } from '@/components/studio/AppsLauncherMenu';
+import { HeaderLegendContainer } from '@/components/studio/HeaderLegendContainer';
 import { ProjectSwitcherDropdown } from '@/components/studio/ProjectSwitcherDropdown';
 import { ProviderBadge } from '@/components/studio/ProviderBadge';
 import { StudioLauncherIconBar } from '@/components/studio/StudioLauncherIconBar';
 import { SplitButton } from '@/components/ui/SplitButton';
+import { MODEL_CATEGORY_DEFINITIONS, type ModelCategoryId } from '@/lib/constants/model-catalog';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { getStudioPanelTitle } from '@/lib/constants/studio-launcher';
 import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 import {
   getBuiltInProvider,
   getProviderStatus,
+  resolveModelSelectionForProviderModality,
   getSelectedImageModelDisplay,
   getSelectedVideoModelDisplay,
 } from '@/lib/studio/provider-modalities';
@@ -27,7 +38,145 @@ import type {
   ProjectLocationKind,
   ProjectSaveState,
 } from '@/lib/storage/file-project';
+import type { Modality } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
+
+type ModelUxGroupId =
+  | 'image-video'
+  | 'image-editing'
+  | 'video-workflows'
+  | 'finish-audio'
+  | 'quality'
+  | 'advanced';
+
+type HeaderGroupCard =
+  | { id: string; type: 'default-video' | 'default-image' }
+  | { id: string; type: 'category'; categoryId: ModelCategoryId };
+
+const MODEL_CATEGORY_LABELS = new Map(
+  MODEL_CATEGORY_DEFINITIONS.map((category) => [category.id, category.label]),
+);
+
+const MODEL_UX_GROUPS: Array<{
+  id: ModelUxGroupId;
+  label: string;
+  description: string;
+  categories: ModelCategoryId[];
+  cards: HeaderGroupCard[];
+}> = [
+  {
+    id: 'image-video',
+    label: 'Image / video',
+    description: 'Default generation model picks',
+    categories: ['image-to-video', 'text-to-video', 'text-to-image'],
+    cards: [
+      { id: 'default-video', type: 'default-video' },
+      { id: 'default-image', type: 'default-image' },
+    ],
+  },
+  {
+    id: 'image-editing',
+    label: 'Image editing',
+    description: 'Bake and image-manipulation capabilities',
+    categories: ['mask-inpaint', 'image-edit', 'multi-image-identity-edit', 'pose-estimation'],
+    cards: [
+      { id: 'mask-inpaint', type: 'category', categoryId: 'mask-inpaint' },
+      { id: 'image-edit', type: 'category', categoryId: 'image-edit' },
+      { id: 'multi-image-identity-edit', type: 'category', categoryId: 'multi-image-identity-edit' },
+      { id: 'pose-estimation', type: 'category', categoryId: 'pose-estimation' },
+    ],
+  },
+  {
+    id: 'video-workflows',
+    label: 'Video workflows',
+    description: 'Primary generation and sequencing workflows',
+    categories: ['image-to-video', 'text-to-video', 'reference-to-video', 'multi-shot'],
+    cards: [
+      { id: 'image-to-video', type: 'category', categoryId: 'image-to-video' },
+      { id: 'text-to-video', type: 'category', categoryId: 'text-to-video' },
+      { id: 'reference-to-video', type: 'category', categoryId: 'reference-to-video' },
+      { id: 'multi-shot', type: 'category', categoryId: 'multi-shot' },
+    ],
+  },
+  {
+    id: 'finish-audio',
+    label: 'Finish + audio',
+    description: 'Dialogue, voice, and audio finishing tools',
+    categories: ['lip-sync', 'text-to-speech', 'voice-cloning', 'video-to-audio', 'audio-separation'],
+    cards: [
+      { id: 'lip-sync', type: 'category', categoryId: 'lip-sync' },
+      { id: 'text-to-speech', type: 'category', categoryId: 'text-to-speech' },
+      { id: 'voice-cloning', type: 'category', categoryId: 'voice-cloning' },
+      { id: 'video-to-audio', type: 'category', categoryId: 'video-to-audio' },
+      { id: 'audio-separation', type: 'category', categoryId: 'audio-separation' },
+    ],
+  },
+  {
+    id: 'quality',
+    label: 'Quality',
+    description: 'Upscaling and motion smoothing',
+    categories: ['image-upscale', 'video-upscale', 'frame-interpolation'],
+    cards: [
+      { id: 'image-upscale', type: 'category', categoryId: 'image-upscale' },
+      { id: 'video-upscale', type: 'category', categoryId: 'video-upscale' },
+      { id: 'frame-interpolation', type: 'category', categoryId: 'frame-interpolation' },
+    ],
+  },
+  {
+    id: 'advanced',
+    label: 'Advanced',
+    description: 'Compositing, segmentation, control maps, and outpaint',
+    categories: [
+      'video-matting',
+      'video-compositing-inpaint',
+      'video-compositing-generative',
+      'image-segmentation',
+      'video-segmentation',
+      'control-reference',
+      'depth-estimation',
+      'image-outpaint',
+      'image-background-removal',
+    ],
+    cards: [
+      { id: 'video-matting', type: 'category', categoryId: 'video-matting' },
+      { id: 'video-compositing-inpaint', type: 'category', categoryId: 'video-compositing-inpaint' },
+      { id: 'video-compositing-generative', type: 'category', categoryId: 'video-compositing-generative' },
+      { id: 'image-segmentation', type: 'category', categoryId: 'image-segmentation' },
+      { id: 'video-segmentation', type: 'category', categoryId: 'video-segmentation' },
+      { id: 'control-reference', type: 'category', categoryId: 'control-reference' },
+      { id: 'depth-estimation', type: 'category', categoryId: 'depth-estimation' },
+      { id: 'image-outpaint', type: 'category', categoryId: 'image-outpaint' },
+      { id: 'image-background-removal', type: 'category', categoryId: 'image-background-removal' },
+    ],
+  },
+];
+
+function getCategoryModality(categoryId: ModelCategoryId): 'video' | 'image' | 'tts' | 'llm' {
+  if (categoryId === 'llm') return 'llm';
+  if (categoryId === 'text-to-speech' || categoryId === 'speech-to-text' || categoryId === 'voice-cloning' || categoryId === 'audio-separation') {
+    return 'tts';
+  }
+  if (
+    categoryId.includes('video')
+    || categoryId === 'lip-sync'
+    || categoryId === 'camera-control'
+    || categoryId === 'motion-transfer'
+    || categoryId === 'multi-shot'
+    || categoryId === 'reference-to-video'
+    || categoryId === 'frame-interpolation'
+  ) {
+    return 'video';
+  }
+  return 'image';
+}
+
+function getCategoryBadgeKind(categoryId: ModelCategoryId): 'Video' | 'Image' | 'Audio' | 'LLM' {
+  const modality = getCategoryModality(categoryId);
+  if (modality === 'video') return 'Video';
+  if (modality === 'tts') return 'Audio';
+  if (modality === 'llm') return 'LLM';
+  return 'Image';
+}
 
 function fileAccessBlockedCopy(
   status: FileSystemAccessStatus,
@@ -141,198 +290,6 @@ function folderStatusCopy(
   };
 }
 
-function ProjectFolderBadge({
-  label,
-  kind,
-  saveState,
-  fileAccess,
-  onSaveFolder,
-  onOpenFolder,
-  onSaveNow,
-}: {
-  label: string | null;
-  kind: ProjectLocationKind;
-  saveState: ProjectSaveState;
-  fileAccess: FileSystemAccessStatus;
-  onSaveFolder: () => void;
-  onOpenFolder: () => void;
-  onSaveNow: () => void;
-}) {
-  const [panelOpen, setPanelOpen] = useState(false);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const status = folderStatusCopy(kind, saveState, fileAccess);
-  const fileApiSupported = fileAccess.supported;
-  const directoryApiSupported = fileAccess.tier === 'directory';
-  const nativeFileApiSupported = fileAccess.tier === 'directory' || fileAccess.tier === 'file-only';
-  const hasDirectory = kind === 'directory';
-
-  return (
-    <div className="relative flex-shrink-0" ref={panelRef}>
-      <button
-        type="button"
-        onClick={() => setPanelOpen((open) => !open)}
-        onBlur={() => setTimeout(() => setPanelOpen(false), 150)}
-        className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs min-w-0 max-w-[11rem] sm:max-w-[13rem] lg:max-w-[15rem] border transition-all text-left ${
-          status.urgent
-            ? 'bg-amber-500/10 border-amber-500/40 hover:border-amber-500/60 hover:bg-amber-500/15'
-            : 'bg-surface-800 border-surface-600 hover:bg-surface-700 hover:border-surface-500'
-        }`}
-        aria-expanded={panelOpen}
-        aria-haspopup="dialog"
-        title="Project folder on disk — click for details"
-      >
-        <svg className={`w-3.5 h-3.5 flex-shrink-0 ${status.urgent ? 'text-amber-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-        </svg>
-        <div className="min-w-0 leading-tight flex-1">
-          {hasDirectory && label ? (
-            <div className="text-gray-300 truncate font-medium">{label}</div>
-          ) : (
-            <div className={`truncate font-medium ${status.urgent ? 'text-amber-200' : 'text-gray-300'}`}>
-              {status.headline}
-            </div>
-          )}
-          <div className="flex items-center gap-1.5 text-[10px] text-gray-500">
-            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${status.dotClass}`} />
-            <span className="truncate">
-              {hasDirectory && label ? status.headline : status.detail}
-            </span>
-          </div>
-        </div>
-        <span className="text-gray-500 text-[10px] flex-shrink-0" aria-hidden>▾</span>
-      </button>
-
-      {panelOpen && (
-        <div
-          role="dialog"
-          aria-label="Project folder status"
-          className="absolute top-full left-0 mt-1.5 w-72 sm:w-80 bg-surface-800 border border-surface-600 rounded-lg shadow-xl z-[60] p-3 text-sm"
-        >
-          <div className="flex items-start gap-2 mb-2">
-            <span className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${status.dotClass}`} />
-            <div className="min-w-0">
-              <div className="font-medium text-gray-200">{status.headline}</div>
-              {hasDirectory && label ? (
-                <div className="text-xs text-gray-400 truncate mt-0.5">{label}</div>
-              ) : null}
-            </div>
-          </div>
-
-          <p className="text-xs text-gray-400 leading-relaxed mb-3">
-            {!fileApiSupported ? (
-              fileAccess.reason === 'insecure-context' ? (
-                <>
-                  File saving requires a <span className="text-gray-300">secure connection</span>. The File System Access API is only available on HTTPS or <span className="text-gray-300">http://localhost</span> — not on plain HTTP via a network IP or custom hostname.
-                </>
-              ) : fileAccess.reason === 'api-unavailable' ? (
-                <>
-                  This browser does not expose the File System Access API.
-                </>
-              ) : (
-                <>
-                  Detecting whether this browser can save project files…
-                </>
-              )
-            ) : (fileAccess.tier === 'file-only' || fileAccess.tier === 'download') && !hasDirectory && kind !== 'file' ? (
-              <>
-                {fileAccess.reason === 'insecure-context' ? (
-                  <>
-                    Open VideoGen at <span className="text-gray-300">http://localhost</span> or HTTPS to unlock native file and folder pickers. You can still <span className="text-gray-300">download or upload JSON</span> project files from the project menu.
-                  </>
-                ) : fileAccess.tier === 'download' ? (
-                  <>
-                    Native file pickers were not detected in this browser build. Use <span className="text-gray-300">Save JSON</span> or <span className="text-gray-300">Open JSON</span> from the project menu — or try Chrome, Edge, or Safari 15.2+ on localhost for folder autosave.
-                  </>
-                ) : (
-                  <>
-                    This browser supports saving and opening <span className="text-gray-300">JSON project files</span> but not project folders. Use Save JSON or Open JSON from the project menu. For folder autosave with assets, use a browser with directory picker support (Chrome, Edge, or recent Safari).
-                  </>
-                )}
-              </>
-            ) : hasDirectory ? (
-              <>
-                VideoGen has access to a folder on your computer. It autosaves{' '}
-                <span className="text-gray-300">project.json</span>, reference images in{' '}
-                <span className="text-gray-300">assets/</span>, and will store generated videos in{' '}
-                <span className="text-gray-300">generated/</span>.
-              </>
-            ) : kind === 'file' ? (
-              <>
-                This project is linked to a single JSON file. Reference images and generated videos need a project folder. Choose a folder to move to full on-disk saving.
-              </>
-            ) : (
-              <>
-                This project is not linked to a folder yet. Pick or create a folder on your computer so VideoGen can autosave your work — otherwise it only lives in this browser tab.
-              </>
-            )}
-          </p>
-
-          {fileApiSupported && (
-            <div className="flex flex-col gap-1.5">
-              {!hasDirectory ? (
-                <>
-                  {directoryApiSupported ? (
-                    <button
-                      type="button"
-                      className="w-full text-left px-3 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition-colors"
-                      onClick={() => { onSaveFolder(); setPanelOpen(false); }}
-                    >
-                      Choose project folder…
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="w-full text-left px-3 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition-colors"
-                      onClick={() => { onSaveNow(); setPanelOpen(false); }}
-                    >
-                      {nativeFileApiSupported ? 'Save JSON file…' : 'Download project JSON…'}
-                    </button>
-                  )}
-                  {directoryApiSupported ? (
-                    <button
-                      type="button"
-                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-surface-700 text-gray-300 transition-colors"
-                      onClick={() => { onOpenFolder(); setPanelOpen(false); }}
-                    >
-                      Open existing project folder…
-                    </button>
-                  ) : null}
-                </>
-              ) : (
-                <>
-                  {saveState === 'dirty' && (
-                    <button
-                      type="button"
-                      className="w-full text-left px-3 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition-colors"
-                      onClick={() => { onSaveNow(); setPanelOpen(false); }}
-                    >
-                      Save now
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-surface-700 text-gray-300 transition-colors"
-                    onClick={() => { onOpenFolder(); setPanelOpen(false); }}
-                  >
-                    Open different folder…
-                  </button>
-                  <button
-                    type="button"
-                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-surface-700 text-gray-300 transition-colors"
-                    onClick={() => { onSaveFolder(); setPanelOpen(false); }}
-                  >
-                    Save copy to new folder…
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function HeaderBar() {
   const ai = useStudioStore((s) => s.ai);
   const projectLocationLabel = useStudioStore((s) => s.projectLocationLabel);
@@ -340,9 +297,7 @@ export function HeaderBar() {
   const projectSaveState = useStudioStore((s) => s.projectSaveState);
   const fileAccess = useFileSystemAccess();
   const fileApiSupported = fileAccess.supported;
-  const saveProject = useStudioStore((s) => s.saveProject);
   const saveProjectQuick = useStudioStore((s) => s.saveProjectQuick);
-  const loadProject = useStudioStore((s) => s.loadProject);
   const openProjectQuick = useStudioStore((s) => s.openProjectQuick);
   const openProjectFolder = useStudioStore((s) => s.openProjectFolder);
   const saveProjectFolderAs = useStudioStore((s) => s.saveProjectFolderAs);
@@ -350,9 +305,13 @@ export function HeaderBar() {
   const exportVideo = useStudioStore((s) => s.exportVideo);
   const navigateToPanel = useNavigateToStudioPanel();
   const workspaceView = useStudioStore((s) => s.workspaceView);
+  const setModelSlotConfig = useStudioStore((s) => s.setModelSlotConfig);
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [activeModelGroupId, setActiveModelGroupId] = useState<ModelUxGroupId>('image-video');
+  const [groupMenuOpen, setGroupMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const groupMenuRef = useRef<HTMLDivElement>(null);
 
   const videoDisplay = getSelectedVideoModelDisplay(ai);
   const imageDisplay = getSelectedImageModelDisplay(ai);
@@ -362,6 +321,30 @@ export function HeaderBar() {
   const imageConnected = isProviderConnected(ai.defaultImageProvider, isCustomImage, ai);
   const videoStatus = getProviderStatus(ai.defaultVideoProvider, isCustomVideo, ai);
   const imageStatus = getProviderStatus(ai.defaultImageProvider, isCustomImage, ai);
+  const activeModelGroup = MODEL_UX_GROUPS.find((group) => group.id === activeModelGroupId) ?? MODEL_UX_GROUPS[0];
+  const groupCards = activeModelGroup.cards;
+
+  useEffect(() => {
+    if (!groupMenuOpen) return;
+
+    const onPointerDown = (event: MouseEvent) => {
+      if (!groupMenuRef.current?.contains(event.target as Node)) {
+        setGroupMenuOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setGroupMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', onPointerDown);
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [groupMenuOpen]);
 
   const saveQuickTitle = fileApiSupported
     ? fileAccess.tier === 'directory'
@@ -375,6 +358,10 @@ export function HeaderBar() {
       ? 'Open project folder'
       : 'Open project JSON file'
     : 'Load project from JSON';
+  const folderStatus = folderStatusCopy(projectLocationKind, projectSaveState, fileAccess);
+  const hasDirectory = projectLocationKind === 'directory';
+  const directoryApiSupported = fileAccess.tier === 'directory';
+  const nativeFileApiSupported = fileAccess.tier === 'directory' || fileAccess.tier === 'file-only';
 
   return (
     <header
@@ -414,116 +401,323 @@ export function HeaderBar() {
 
         <div className="h-8 w-px bg-surface-600 hidden md:block flex-shrink-0 self-center" />
 
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <label className="text-[10px] uppercase tracking-wider text-gray-500 hidden sm:block">Project</label>
-          <ProjectSwitcherDropdown />
+        <HeaderLegendContainer legend="Project">
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <ProjectSwitcherDropdown />
 
-          <div className="relative" ref={menuRef}>
-            <button
-              type="button"
-              onClick={() => setMenuOpen((o) => !o)}
-              onBlur={() => setTimeout(() => setMenuOpen(false), 150)}
-              className="px-2 py-1.5 text-xs bg-surface-800 hover:bg-surface-700 border border-surface-600 rounded-lg transition-all"
-              title="Project actions"
-            >
-              ▾
-            </button>
-            {menuOpen && (
-              <div className="absolute top-full left-0 mt-1 w-52 bg-surface-800 border border-surface-600 rounded-lg shadow-xl z-50 py-1 text-sm">
-                <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { newProject(); setMenuOpen(false); }}>New project</button>
-                <div className="h-px bg-surface-600 my-1" />
-                <button
-                  type="button"
-                  title={saveQuickTitle}
-                  onClick={() => { void saveProjectQuick().then(() => setMenuOpen(false)); }}
-                  className="w-full text-left px-3 py-2 hover:bg-surface-700 flex items-center gap-2"
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                onClick={() => setMenuOpen((o) => !o)}
+                onBlur={() => setTimeout(() => setMenuOpen(false), 150)}
+                className="px-2 py-1.5 text-xs bg-surface-800 hover:bg-surface-700 border border-surface-600 rounded-lg transition-all"
+                title="Project folder and actions"
+              >
+                <svg
+                  className={`w-3.5 h-3.5 ${folderStatus.urgent ? 'text-amber-400' : 'text-gray-300'}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden
                 >
-                  <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                  </svg>
-                  Save
-                </button>
-                <button
-                  type="button"
-                  title={openQuickTitle}
-                  onClick={() => { void openProjectQuick().then(() => setMenuOpen(false)); }}
-                  className="w-full text-left px-3 py-2 hover:bg-surface-700 flex items-center gap-2"
-                >
-                  <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                  </svg>
-                  Open
-                </button>
-                <div className="h-px bg-surface-600 my-1" />
-                {fileApiSupported ? (
-                  <>
-                    {fileAccess.tier === 'directory' ? (
-                      <>
-                        <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { void openProjectFolder().then(() => setMenuOpen(false)); }}>Open folder…</button>
-                        <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { void saveProjectFolderAs().then(() => setMenuOpen(false)); }}>Save folder as…</button>
-                        <div className="h-px bg-surface-600 my-1" />
-                      </>
-                    ) : null}
-                    <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { void saveProject().then(() => setMenuOpen(false)); }}>Save JSON file…</button>
-                    <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { void loadProject().then(() => setMenuOpen(false)); }}>Open JSON file…</button>
-                  </>
-                ) : (
-                  <>
-                    <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { void saveProject().then(() => setMenuOpen(false)); }}>Save project…</button>
-                    <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { void loadProject().then(() => setMenuOpen(false)); }}>Load project…</button>
-                  </>
-                )}
-                <div className="h-px bg-surface-600 my-1" />
-                <button
-                  type="button"
-                  disabled
-                  title="Export coming soon"
-                  onClick={exportVideo}
-                  className="w-full text-left px-3 py-2 flex items-center gap-2 opacity-50 cursor-not-allowed"
-                >
-                  <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  Export
-                </button>
-              </div>
-            )}
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                </svg>
+              </button>
+              {menuOpen && (
+                <div className="absolute top-full left-0 mt-1 w-72 bg-surface-800 border border-surface-600 rounded-lg shadow-xl z-50 py-2 text-sm">
+                  <div className="px-3 pb-2">
+                    <div className="flex items-start gap-2">
+                      <span className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${folderStatus.dotClass}`} />
+                      <div className="min-w-0">
+                        <div className="font-medium text-gray-200">{folderStatus.headline}</div>
+                        {hasDirectory && projectLocationLabel ? (
+                          <div className="text-xs text-gray-400 truncate mt-0.5">{projectLocationLabel}</div>
+                        ) : (
+                          <div className="text-xs text-gray-500 leading-relaxed mt-0.5">{folderStatus.detail}</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {fileApiSupported && (
+                    <div className="px-3 pb-2 flex flex-col gap-1.5">
+                      {!hasDirectory ? (
+                        <>
+                          {directoryApiSupported ? (
+                            <button
+                              type="button"
+                              className="w-full text-left px-3 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition-colors"
+                              onClick={() => { void saveProjectFolderAs(); setMenuOpen(false); }}
+                            >
+                              Choose project folder…
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="w-full text-left px-3 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition-colors"
+                              onClick={() => { void saveProjectQuick(); setMenuOpen(false); }}
+                            >
+                              {nativeFileApiSupported ? 'Save JSON file…' : 'Download project JSON…'}
+                            </button>
+                          )}
+                          {directoryApiSupported ? (
+                            <button
+                              type="button"
+                              className="w-full text-left px-3 py-2 rounded-lg hover:bg-surface-700 text-gray-300 transition-colors"
+                              onClick={() => { void openProjectFolder(); setMenuOpen(false); }}
+                            >
+                              Open existing project folder…
+                            </button>
+                          ) : null}
+                        </>
+                      ) : (
+                        <>
+                          {projectSaveState === 'dirty' && (
+                            <button
+                              type="button"
+                              className="w-full text-left px-3 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition-colors"
+                              onClick={() => { void saveProjectQuick(); setMenuOpen(false); }}
+                            >
+                              Save now
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="w-full text-left px-3 py-2 rounded-lg hover:bg-surface-700 text-gray-300 transition-colors"
+                            onClick={() => { void openProjectFolder(); setMenuOpen(false); }}
+                          >
+                            Open different folder…
+                          </button>
+                          <button
+                            type="button"
+                            className="w-full text-left px-3 py-2 rounded-lg hover:bg-surface-700 text-gray-300 transition-colors"
+                            onClick={() => { void saveProjectFolderAs(); setMenuOpen(false); }}
+                          >
+                            Save copy to new folder…
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  <div className="h-px bg-surface-600 my-1" />
+                  <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { newProject(); setMenuOpen(false); }}>New project</button>
+                  <div className="h-px bg-surface-600 my-1" />
+                  <button
+                    type="button"
+                    title={saveQuickTitle}
+                    onClick={() => { void saveProjectQuick().then(() => setMenuOpen(false)); }}
+                    className="w-full text-left px-3 py-2 hover:bg-surface-700 flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                    </svg>
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    title={openQuickTitle}
+                    onClick={() => { void openProjectQuick().then(() => setMenuOpen(false)); }}
+                    className="w-full text-left px-3 py-2 hover:bg-surface-700 flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    Open
+                  </button>
+                  <div className="h-px bg-surface-600 my-1" />
+                  <button
+                    type="button"
+                    disabled
+                    title="Export coming soon"
+                    onClick={exportVideo}
+                    className="w-full text-left px-3 py-2 flex items-center gap-2 opacity-50 cursor-not-allowed"
+                  >
+                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Export
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-
-          <ProjectFolderBadge
-            label={projectLocationLabel}
-            kind={projectLocationKind}
-            saveState={projectSaveState}
-            fileAccess={fileAccess}
-            onSaveFolder={() => void saveProjectFolderAs()}
-            onOpenFolder={() => void openProjectFolder()}
-            onSaveNow={() => void saveProjectQuick()}
-          />
-        </div>
+        </HeaderLegendContainer>
 
         <div className="h-8 w-px bg-surface-600 hidden md:block flex-shrink-0" />
 
-        <div className="hidden sm:flex items-center gap-2 min-w-0" {...uiSectionProps(UI_SECTIONS.studioHeaderProviderBadge)}>
-          <ProviderBadge
-            kind="Video"
-            providerId={isCustomVideo ? undefined : ai.defaultVideoProvider}
-            fallbackIcon={isCustomVideo ? '🛠️' : getBuiltInProvider(ai.defaultVideoProvider)?.icon ?? '🔌'}
-            providerName={videoDisplay.providerName}
-            modelLabel={videoDisplay.modelLabel}
-            connected={videoConnected}
-            status={videoStatus}
-            sectionId={UI_SECTIONS.studioHeaderVideoProviderBadge.id}
-          />
-          <ProviderBadge
-            kind="Image"
-            providerId={isCustomImage ? undefined : ai.defaultImageProvider}
-            fallbackIcon={isCustomImage ? '🛠️' : getBuiltInProvider(ai.defaultImageProvider)?.icon ?? '🔌'}
-            providerName={imageDisplay.providerName}
-            modelLabel={imageDisplay.modelLabel}
-            connected={imageConnected}
-            status={imageStatus}
-            sectionId={UI_SECTIONS.studioHeaderImageProviderBadge.id}
-          />
+        <div
+          className="hidden sm:flex items-center min-w-0 ml-1"
+          {...uiSectionProps(UI_SECTIONS.studioHeaderProviderBadge)}
+        >
+          <HeaderLegendContainer legend="Models" className="pl-7">
+            <div ref={groupMenuRef} className="relative min-w-[15rem] self-stretch">
+              <button
+                type="button"
+                aria-haspopup="menu"
+                aria-expanded={groupMenuOpen}
+                onClick={() => setGroupMenuOpen((value) => !value)}
+                className="w-full h-full min-w-0 flex items-center px-2 py-1 rounded-md border border-surface-600 bg-surface-800/60 hover:bg-surface-700/80 transition-colors text-left"
+                title="Choose a model workflow group"
+              >
+                <div className="min-w-0 leading-tight flex-1">
+                  <div className="text-[9px] uppercase tracking-wider text-gray-500">Group</div>
+                  <div className="text-[11px] font-medium text-gray-200 truncate">{activeModelGroup.label}</div>
+                  <div className="text-[10px] text-gray-500 truncate">
+                    {groupCards.length} cards
+                  </div>
+                </div>
+                <span className="text-gray-500 text-[10px] flex-shrink-0 pl-1" aria-hidden>▾</span>
+              </button>
+              {groupMenuOpen && (
+                <div
+                  role="menu"
+                  className="absolute top-full left-0 mt-1 bg-surface-800 border border-surface-600 rounded-lg shadow-xl z-[60] w-[32rem] max-w-[90vw] max-h-[70vh] overflow-y-auto p-4"
+                >
+                  <div className="mb-3">
+                    <div className="text-[10px] uppercase tracking-wider text-gray-500">Model workflow groups</div>
+                    <div className="text-xs text-gray-400 mt-1">Choose the group shown in the header model badges.</div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
+                    {MODEL_UX_GROUPS.map((group) => {
+                      const isActive = group.id === activeModelGroup.id;
+                      const icon = group.id === 'image-editing'
+                        ? ImageIcon
+                        : group.id === 'video-workflows'
+                          ? Clapperboard
+                          : group.id === 'finish-audio'
+                            ? Library
+                            : group.id === 'quality'
+                              ? Palette
+                              : group.id === 'advanced'
+                                ? Settings
+                                : Users;
+                      const Icon = icon;
+                      return (
+                        <button
+                          key={group.id}
+                          type="button"
+                          role="menuitemradio"
+                          aria-checked={isActive}
+                          onClick={() => {
+                            setActiveModelGroupId(group.id);
+                            setGroupMenuOpen(false);
+                          }}
+                          className={`text-left rounded-lg border p-2.5 transition-colors h-full min-h-[9rem] flex flex-col ${
+                            isActive
+                              ? 'border-brand-500/50 bg-brand-500/15'
+                              : 'border-surface-600 bg-surface-900/50 hover:bg-surface-700/70'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <span className={`inline-flex w-5 h-5 rounded-md items-center justify-center ${
+                              isActive ? 'bg-brand-500/30 text-brand-200' : 'bg-surface-700 text-gray-300'
+                            }`}>
+                              <Icon className="w-3 h-3" aria-hidden />
+                            </span>
+                            <span className="text-xs font-medium text-gray-100 truncate flex-1">{group.label}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-surface-600 bg-surface-800 text-gray-300">
+                              {group.cards.length}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-gray-400 leading-snug">{group.description}</div>
+                          <div className="text-[10px] text-gray-500 leading-snug mt-2">
+                            {group.categories.map((categoryId) => MODEL_CATEGORY_LABELS.get(categoryId) ?? categoryId).join(', ')}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="self-stretch w-[39rem] max-w-[39rem] overflow-hidden rounded-md border border-surface-700 bg-surface-900/30 p-1">
+              <div className="flex gap-2 min-h-[53px] overflow-x-auto overflow-y-hidden pr-1 pb-1">
+                {groupCards.map((card, index) => {
+                  if (card.type === 'default-video') {
+                    return (
+                      <div key={card.id} className="w-[12.25rem] h-[53px] flex-shrink-0">
+                        <ProviderBadge
+                          fill
+                          kind="Video"
+                          providerId={isCustomVideo ? undefined : ai.defaultVideoProvider}
+                          fallbackIcon={isCustomVideo ? '🛠️' : getBuiltInProvider(ai.defaultVideoProvider)?.icon ?? '🔌'}
+                          providerName={videoDisplay.providerName}
+                          modelLabel={videoDisplay.modelLabel}
+                          connected={videoConnected}
+                          status={videoStatus}
+                          sectionId={UI_SECTIONS.studioHeaderVideoProviderBadge.id}
+                        />
+                      </div>
+                    );
+                  }
+                  if (card.type === 'default-image') {
+                    return (
+                      <div key={card.id} className="w-[12.25rem] h-[53px] flex-shrink-0">
+                        <ProviderBadge
+                          fill
+                          kind="Image"
+                          providerId={isCustomImage ? undefined : ai.defaultImageProvider}
+                          fallbackIcon={isCustomImage ? '🛠️' : getBuiltInProvider(ai.defaultImageProvider)?.icon ?? '🔌'}
+                          providerName={imageDisplay.providerName}
+                          modelLabel={imageDisplay.modelLabel}
+                          connected={imageConnected}
+                          status={imageStatus}
+                          sectionId={UI_SECTIONS.studioHeaderImageProviderBadge.id}
+                        />
+                      </div>
+                    );
+                  }
+
+                  if (card.type !== 'category') return null;
+                  const slot = ai.modelSlots?.[card.categoryId];
+                  if (!slot) return null;
+
+                  const slotIsCustom = isCustomProvider(slot.providerId, ai);
+                  const slotConnected = isProviderConnected(slot.providerId, slotIsCustom, ai);
+                  const slotStatus = getProviderStatus(slot.providerId, slotIsCustom, ai);
+                  const slotProviderName = getBuiltInProvider(slot.providerId)?.name ?? slot.providerId;
+                  const slotBadgeKind = getCategoryBadgeKind(card.categoryId);
+                  const slotModality = getCategoryModality(card.categoryId);
+
+                  return (
+                    <div key={card.id} className="w-[12.25rem] h-[53px] flex-shrink-0">
+                      <ProviderBadge
+                        fill
+                        kind={slotBadgeKind}
+                        label={MODEL_CATEGORY_LABELS.get(card.categoryId) ?? card.categoryId}
+                        modalityOverride={slotModality}
+                        providerId={slotIsCustom ? undefined : slot.providerId}
+                        fallbackIcon={slotIsCustom ? '🛠️' : getBuiltInProvider(slot.providerId)?.icon ?? '🔌'}
+                        providerName={slotProviderName}
+                        modelLabel={slot.modelId}
+                        connected={slotConnected}
+                        status={slotStatus}
+                        selectedProviderId={slot.providerId}
+                        selectedModelId={slot.modelId}
+                        onProviderSelect={(providerId) => {
+                          const providerIsCustom = isCustomProvider(providerId, ai);
+                          const nextModelId = resolveModelSelectionForProviderModality(
+                            providerId,
+                            providerIsCustom,
+                            ai,
+                            slotModality as Modality,
+                            slot.modelId,
+                          );
+                          setModelSlotConfig(card.categoryId, {
+                            providerId,
+                            ...(nextModelId ? { modelId: nextModelId } : {}),
+                          });
+                        }}
+                        onModelSelect={(modelId) => {
+                          setModelSlotConfig(card.categoryId, { modelId });
+                        }}
+                        sectionId={`${UI_SECTIONS.studioHeaderProviderBadge.id}-${card.categoryId}-${index}`}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </HeaderLegendContainer>
         </div>
       </div>
     </header>

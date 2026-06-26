@@ -57,6 +57,19 @@ export function parseStudioPathname(pathname: string): StudioRouteTarget | null 
   const rest = match[2]?.replace(/\/$/, '');
   if (!rest) return { panel: slug };
 
+  const settingsProviderMatch = rest.match(/^provider\/([^/]+)$/);
+  if (settingsProviderMatch && slug === 'settings') {
+    return { panel: slug };
+  }
+  const settingsCategoryMatch = rest.match(/^category\/([^/]+)$/);
+  if (settingsCategoryMatch && slug === 'settings') {
+    return { panel: slug };
+  }
+  const settingsChecklistMatch = rest.match(/^checklist\/([^/]+)$/);
+  if (settingsChecklistMatch && slug === 'settings') {
+    return { panel: slug };
+  }
+
   const mediaLibraryVideoMatch = rest.match(/^generated\/video\/([^/]+)$/);
   if (mediaLibraryVideoMatch && slug === 'media-library') {
     return {

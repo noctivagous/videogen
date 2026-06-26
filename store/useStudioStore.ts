@@ -964,6 +964,10 @@ interface StudioStore {
   setDefaultVideoModel: (modelId: string) => void;
   setDefaultImageProvider: (id: string) => void;
   setDefaultImageModel: (modelId: string) => void;
+  setModelSlotConfig: (
+    categoryId: string,
+    patch: Partial<import('@/lib/types/studio').ModelSlotConfig>,
+  ) => void;
   openProviderEdit: (id: string, isCustom: boolean) => void;
   closeProviderEdit: () => void;
   saveProviderEdit: (apiKey: string, customFields?: { name: string; desc: string; baseUrl: string }) => void;
@@ -3836,6 +3840,25 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 
   setDefaultImageModel(modelId) {
     const ai = { ...get().ai, defaultImageModelId: modelId };
+    saveAIState(ai);
+    set({ ai });
+  },
+
+  setModelSlotConfig(categoryId, patch) {
+    const current = get().ai;
+    const existing = current.modelSlots?.[categoryId];
+    if (!existing) return;
+    const ai = {
+      ...current,
+      modelSlots: {
+        ...current.modelSlots,
+        [categoryId]: {
+          ...existing,
+          ...patch,
+          categoryId,
+        },
+      },
+    };
     saveAIState(ai);
     set({ ai });
   },

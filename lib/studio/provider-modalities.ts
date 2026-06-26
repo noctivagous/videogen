@@ -189,6 +189,15 @@ export function getAvailableImageModels(
   return getVerifiedModels(id, isCustom, ai).filter((m) => m.modalities.includes('image'));
 }
 
+export function getAvailableModelsForModality(
+  id: string,
+  isCustom: boolean,
+  ai: AIState,
+  modality: Modality,
+): ProviderModel[] {
+  return getVerifiedModels(id, isCustom, ai).filter((m) => m.modalities.includes(modality));
+}
+
 export function hasVerifiedVideoModels(id: string, isCustom: boolean, ai: AIState): boolean {
   return getAvailableVideoModels(id, isCustom, ai).length > 0;
 }
@@ -217,6 +226,20 @@ export function resolveImageModelSelectionForProvider(
   preferredModelId?: string,
 ): string | undefined {
   const models = getAvailableImageModels(id, isCustom, ai);
+  if (models.length === 0) return undefined;
+  const normalized = normalizeLegacyModelId(preferredModelId);
+  if (normalized && models.some((m) => m.id === normalized)) return normalized;
+  return models[0].id;
+}
+
+export function resolveModelSelectionForProviderModality(
+  id: string,
+  isCustom: boolean,
+  ai: AIState,
+  modality: Modality,
+  preferredModelId?: string,
+): string | undefined {
+  const models = getAvailableModelsForModality(id, isCustom, ai, modality);
   if (models.length === 0) return undefined;
   const normalized = normalizeLegacyModelId(preferredModelId);
   if (normalized && models.some((m) => m.id === normalized)) return normalized;

@@ -3,6 +3,7 @@ import {
   getDefaultEnabledProviderId,
   isBuiltInProviderEnabled,
 } from '@/lib/constants/providers';
+import { DEFAULT_MODEL_SLOTS } from '@/lib/constants/model-catalog';
 import type { ProviderTestResult } from '@/lib/studio/generation/types';
 import {
   getProviderStatus,
@@ -22,6 +23,7 @@ export const DEFAULT_AI_STATE: AIState = {
   customProviders: [],
   defaultVideoProvider: DEFAULT_ENABLED_PROVIDER,
   defaultImageProvider: DEFAULT_ENABLED_PROVIDER,
+  modelSlots: { ...DEFAULT_MODEL_SLOTS },
 };
 
 function isKnownBuiltInProvider(providerId: string): boolean {
@@ -51,6 +53,10 @@ function migrateAIState(data: Partial<AIState> & { defaultProvider?: string; def
     defaultVideoModelId: data.defaultVideoModelId ?? legacyModelId,
     defaultImageProvider: coerceDefaultProvider(rawImage),
     defaultImageModelId: data.defaultImageModelId,
+    modelSlots: {
+      ...DEFAULT_MODEL_SLOTS,
+      ...(data.modelSlots ?? {}),
+    },
   };
 }
 

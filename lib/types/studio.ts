@@ -684,6 +684,17 @@ export interface CustomProvider extends ProviderDiscovery {
   connected: boolean;
 }
 
+export interface ModelSlotConfig {
+  categoryId: string;
+  providerId: string;
+  modelId: string;
+  label?: string;
+  nativeAudio?: 'none' | 'prompt' | 'voice-bound';
+  maxRefs?: number;
+  notes?: string;
+  status?: 'implemented' | 'partial' | 'planned' | 'experimental';
+}
+
 export interface AIState {
   configured: Record<string, ProviderConfig>;
   customProviders: CustomProvider[];
@@ -693,6 +704,7 @@ export interface AIState {
   defaultImageProvider: string;
   /** Image model id for quick preview / image generation */
   defaultImageModelId?: string;
+  modelSlots?: Record<string, ModelSlotConfig>;
 }
 
 export interface BuiltInProvider {
