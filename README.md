@@ -4,23 +4,48 @@
 
  <p>
 VideoGen intends to make precise filmmaking moves with AI video 
-possible, in constrast with the experience of text prompts.  The more that a user can provide
+possible, in constrast with the experience of text prompts. 
+Platforms like Runway and Higgsfield are built text-prompt-first.
+Both optimize for "describe a shot, get a clip" rather than 
+"place the camera, block the actors, describe the action and 
+conditions." The text-prompt-first workflow will nudge the user towards
+outcomes that are common-looking and AI because the user will
+follow a path that provides less custom image and placement information.
+Any gaps will be filled in from the mean of AI training data
+("the dataset centroid").
+
+<p>
+The more that a user can provide
 specific information to the AI model in accordance with its
 technical demands, the more that the output will reflect his or her 
 own work, rather than leaning on the training data built into the AI
-that fills in so many details. 
+that pulls in so many details. 
 <p> 
 If you can provide the AI video model exactly what you want, it will
 for the most part make that. That is usually
 difficult to achieve without making use of separate
-programs (that address the different needs of the AI model) and so AI filmmaking
-is either a burdensome technical activity or going to produce
+programs (that address different aspects of the AI models' needs) and so AI filmmaking
+is either a burdensome, technical software activity or it involves
 common-looking, uncontrolled output.  To solve this,
-VideoGen attempts to make a variety of conveniences. 
+VideoGen plans to make a variety of conveniences. 
 In short, those who are interested in 
 handcrafting everything about their films rather than letting AI fill
 in any details, which will make the films feel 
 authentic in the end, would use VideoGen.
+
+<p>
+Why text-prompt-first goes generic:
+A pure text-to-video or text-to-image pipeline starts 
+from the model’s "latent space". The model is trained 
+on billions of images, so when you type “man in cafe,” 
+it regresses to the mean: soft light, centered composition, 
+shallow DOF, medium shot, vaguely European cafe.
+That’s not because the model is doing too little work — it’s because 
+of how this AI architecture works.  “Cafe” in the dataset is 80% that same look. The 
+more abstract the prompt, the stronger the pull 
+toward the dataset centroid. You get common-looking 
+results because the model is doing lossy compression of culture.
+
  
 <p>
 For the posable scene, VideoGen brings in some conventions
@@ -35,12 +60,7 @@ or with a built-in library of pose animations
 slider that capture the desired frame for
 the model's pose.
 
-<h2>Film Is Built From</h2>
 
-Platforms like Runway and Higgsfield are built text-prompt-first.
-Both optimize for "describe a shot, get a clip" rather than 
-"place the camera, block the actors, choose the lens."
-What the AI produces
 
 <h2>Staging And Blocking</h2>
 
