@@ -1,7 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type DragEvent } from 'react';
 import type { Location, LocationBackdropPlate, ColorPaletteCollection } from '@/lib/types/studio';
+import {
+  getManualBackdropPlates,
+  isManualBackdropLocation,
+  parseDerivedLocationPlateAssetId,
+} from '@/lib/studio/manual-backdrop-location';
 import { ColorPaletteGroupChip } from '@/components/studio/ColorPaletteGroupChip';
 import {
   derivedLocationColorPaletteGroupAssetId,
@@ -28,12 +33,6 @@ function readFileAsDataUrl(file: File): Promise<string> {
 
 function derivedLocationPlateAssetId(locationId: string, plateId: string): string {
   return `derived:location-plate:${locationId}:${plateId}`;
-}
-
-function parseDerivedLocationPlateAssetId(assetId: string): { locationId: string; plateId: string } | null {
-  const match = /^derived:location-plate:([^:]+):([^:]+)$/.exec(assetId);
-  if (!match) return null;
-  return { locationId: match[1], plateId: match[2] };
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -287,13 +286,30 @@ function LocationCard({
 interface NewLocationFormProps {
   onCreated: () => void;
   onCancel: () => void;
+  initialPrefill?: {
+    plateUrl: string;
+    existingPlateRef?: { locationId: string; plateId: string };
+  } | null;
 }
 
-function NewLocationForm({ onCreated, onCancel }: NewLocationFormProps) {
+function NewLocationForm({ onCreated, onCancel, initialPrefill }: NewLocationFormProps) {
   const createLocation = useStudioStore((s) => s.createLocation);
+  const locations = useStudioStore((s) => s.locations);
+  const manualPlates = getManualBackdropPlates(locations);
+  const initialManualPlate =
+    initialPrefill?.existingPlateRef != null
+      ? manualPlates.find((plate) => plate.id === initialPrefill.existingPlateRef?.plateId) ?? null
+      : null;
   const [name, setName] = useState('');
-  const [plateUrl, setPlateUrl] = useState<string | null>(null);
-  const [platePreview, setPlatePreview] = useState<string | null>(null);
+  const [plateUrl, setPlateUrl] = useState<string | null>(initialPrefill?.plateUrl ?? null);
+  const [platePreview, setPlatePreview] = useState<string | null>(initialPrefill?.plateUrl ?? null);
+  const [selectedManualPlate, setSelectedManualPlate] = useState<LocationBackdropPlate | null>(
+    initialManualPlate,
+  );
+  const [dragActive, setDragActive] = useState(false);
+  const [existingPlateRef, setExistingPlateRef] = useState<
+    { locationId: string; plateId: string } | undefined
+  >(initialPrefill?.existingPlateRef);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleFileSelect(files: FileList | null) {
@@ -303,11 +319,30 @@ function NewLocationForm({ onCreated, onCancel }: NewLocationFormProps) {
     const url = await readFileAsDataUrl(file);
     setPlateUrl(url);
     setPlatePreview(url);
+    setSelectedManualPlate(null);
+    setExistingPlateRef(undefined);
   }
 
-  function handleCreate() {
+  async function handleDropBackdrop(event: DragEvent<HTMLElement>) {
+    event.preventDefault();
+    setDragActive(false);
+    await handleFileSelect(event.dataTransfer.files);
+  }
+
+  function handleSelectManualPlate(plate: LocationBackdropPlate) {
+    if (!plate.url) return;
+    setSelectedManualPlate(plate);
+    setPlateUrl(plate.url);
+    setPlatePreview(plate.url);
+    const manualLocation = locations.find(isManualBackdropLocation);
+    if (manualLocation) {
+      setExistingPlateRef({ locationId: manualLocation.id, plateId: plate.id });
+    }
+  }
+
+  async function handleCreate() {
     if (!name.trim() || !plateUrl) return;
-    createLocation(name.trim(), plateUrl);
+    await createLocation(name.trim(), plateUrl, existingPlateRef);
     onCreated();
   }
 
@@ -324,7 +359,10 @@ function NewLocationForm({ onCreated, onCancel }: NewLocationFormProps) {
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter' && canCreate) handleCreate(); if (e.key === 'Escape') onCancel(); }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && canCreate) void handleCreate();
+            if (e.key === 'Escape') onCancel();
+          }}
           placeholder="e.g. Beach, City Office, Rooftop"
           className="w-full bg-surface-700 border border-surface-600 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-brand-500"
         />
@@ -339,19 +377,37 @@ function NewLocationForm({ onCreated, onCancel }: NewLocationFormProps) {
               alt="Backdrop plate preview"
               className="h-16 w-28 object-cover rounded-lg border border-surface-600"
             />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="text-xs text-brand-400 hover:text-brand-300 transition-colors"
-            >
-              Change image
-            </button>
+            <div className="flex flex-col gap-1">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="text-xs text-brand-400 hover:text-brand-300 transition-colors text-left"
+              >
+                Upload different image
+              </button>
+              {selectedManualPlate && (
+                <span className="text-[10px] text-gray-500">
+                  From manual plate: {selectedManualPlate.label}
+                </span>
+              )}
+            </div>
           </div>
         ) : (
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="w-full border border-dashed border-surface-500 hover:border-brand-500 rounded-lg py-4 flex flex-col items-center gap-2 text-gray-500 hover:text-brand-400 transition-colors"
+            onDragOver={(event) => {
+              event.preventDefault();
+              setDragActive(true);
+              event.dataTransfer.dropEffect = 'copy';
+            }}
+            onDragLeave={() => setDragActive(false)}
+            onDrop={handleDropBackdrop}
+            className={`w-full border border-dashed rounded-lg py-4 flex flex-col items-center gap-2 transition-colors ${
+              dragActive
+                ? 'border-brand-500 text-brand-300 bg-brand-500/10'
+                : 'border-surface-500 hover:border-brand-500 text-gray-500 hover:text-brand-400'
+            }`}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -366,12 +422,55 @@ function NewLocationForm({ onCreated, onCancel }: NewLocationFormProps) {
           className="sr-only"
           onChange={(e) => handleFileSelect(e.target.files)}
         />
+
+        {manualPlates.length > 0 && (
+          <div className="mt-3 space-y-2">
+            <p className="text-[10px] text-gray-500 uppercase tracking-wider">
+              Or select a manual backdrop plate
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {manualPlates.map((plate) => {
+                const selected = selectedManualPlate?.id === plate.id;
+                return (
+                  <button
+                    key={plate.id}
+                    type="button"
+                    onClick={() => handleSelectManualPlate(plate)}
+                    className={`relative w-24 h-14 flex-shrink-0 rounded-lg overflow-hidden border transition-colors ${
+                      selected
+                        ? 'border-brand-500 ring-1 ring-brand-500/70'
+                        : 'border-surface-600 hover:border-brand-500/60'
+                    }`}
+                    title={plate.label}
+                  >
+                    {plate.url ? (
+                      <img
+                        src={plate.url}
+                        alt={plate.label}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-surface-700 flex items-center justify-center text-gray-600">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    )}
+                    <span className="absolute bottom-0 inset-x-0 text-[9px] text-center bg-black/50 text-gray-300 px-1 truncate py-0.5">
+                      {plate.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-2 pt-1">
         <button
           type="button"
-          onClick={handleCreate}
+          onClick={() => void handleCreate()}
           disabled={!canCreate}
           className="flex-1 py-2 text-sm font-medium rounded-lg bg-brand-500 hover:bg-brand-600 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
@@ -403,15 +502,31 @@ export function LocationManager() {
   const selectedLocationId = useStudioPanelInspectorStore((s) => s.locationManagerSelectedLocationId);
   const selectedAssetId = useStudioPanelInspectorStore((s) => s.locationManagerSelectedAssetId);
   const setLocationManagerSelection = useStudioPanelInspectorStore((s) => s.setLocationManagerSelection);
+  const newLocationPrefill = useStudioPanelInspectorStore((s) => s.locationManagerNewLocationPrefill);
+  const clearLocationManagerNewLocationPrefill = useStudioPanelInspectorStore(
+    (s) => s.clearLocationManagerNewLocationPrefill,
+  );
   const navigateToPanel = useNavigateToStudioPanel();
 
   const [showNewForm, setShowNewForm] = useState(false);
   const [scope, setScope] = useState<ManagerScope>('project');
   const visibleLocations = scope === 'project' ? locations : [];
 
+  useEffect(() => {
+    if (newLocationPrefill && scope === 'project') {
+      setShowNewForm(true);
+    }
+  }, [newLocationPrefill, scope]);
+
+  const handleCloseNewForm = () => {
+    setShowNewForm(false);
+    clearLocationManagerNewLocationPrefill();
+  };
+
   const handleScopeChange = (nextScope: ManagerScope) => {
     setScope(nextScope);
     setShowNewForm(false);
+    clearLocationManagerNewLocationPrefill();
     setLocationManagerSelection(null, null);
   };
 
@@ -470,8 +585,9 @@ export function LocationManager() {
         <div className="flex-1 min-w-0 overflow-y-auto p-4 space-y-3">
           {showNewForm && scope === 'project' && (
             <NewLocationForm
-              onCreated={() => setShowNewForm(false)}
-              onCancel={() => setShowNewForm(false)}
+              initialPrefill={newLocationPrefill}
+              onCreated={handleCloseNewForm}
+              onCancel={handleCloseNewForm}
             />
           )}
 

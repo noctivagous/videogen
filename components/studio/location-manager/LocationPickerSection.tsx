@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   EntityDropdown,
   EntityDropdownPanel,
 } from '@/components/studio/entity-picker/EntityDropdown';
 import { SetupBackdropPanel } from '@/components/studio/SetupBackdropPanel';
 import { WorkflowCollapsibleSection } from '@/components/ui/WorkflowCollapsibleSection';
+import { isManualBackdropLocation } from '@/lib/studio/manual-backdrop-location';
 import { useStudioStore } from '@/store/useStudioStore';
 import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 
@@ -36,6 +37,7 @@ export function LocationPickerSection({
   const setup = setups.find((s) => s.id === currentSetupId);
   const assignedLocationId = setup?.locationId ?? null;
   const assignedLocation = locations.find((l) => l.id === assignedLocationId) ?? null;
+  const assignableLocations = locations.filter((location) => !isManualBackdropLocation(location));
   const selectablePlates = (assignedLocation?.plates ?? []).filter((plate) => {
     const dataType = (plate as { dataType?: string }).dataType;
     return !dataType || dataType === 'backdrop-plate';
@@ -54,6 +56,31 @@ export function LocationPickerSection({
   const assignedLocationPlateIds = new Set(selectablePlates.map((plate) => plate.id));
   const derivedSourceMode: 'location' | 'manual' =
     assignedPlateId && assignedLocationPlateIds.has(assignedPlateId) ? 'location' : 'manual';
+  const plateOwningLocation =
+    assignedPlateId == null
+      ? null
+      : assignableLocations.find((location) =>
+          location.plates.some((plate) => {
+            const dataType = (plate as { dataType?: string }).dataType;
+            return (!dataType || dataType === 'backdrop-plate') && plate.id === assignedPlateId;
+          }),
+        ) ?? null;
+
+  useEffect(() => {
+    if (!setup || !activeCoverage || !assignedPlateId || !plateOwningLocation) return;
+    if (assignedLocationId === plateOwningLocation.id) return;
+    assignLocationToSetup(currentSetupId, plateOwningLocation.id);
+    assignPlateToShot(currentSetupId, activeCoverage.id, assignedPlateId);
+  }, [
+    activeCoverage,
+    assignLocationToSetup,
+    assignPlateToShot,
+    assignedLocationId,
+    assignedPlateId,
+    currentSetupId,
+    plateOwningLocation,
+    setup,
+  ]);
 
   return (
     <fieldset className="workflow-step-fieldset workflow-step-fieldset--nested">
@@ -112,7 +139,7 @@ export function LocationPickerSection({
           >
             <EntityDropdownPanel>
               <div className="p-1 space-y-0.5 max-h-40 overflow-y-auto">
-                {locations.map((loc) => (
+                {assignableLocations.map((loc) => (
                   <button
                     key={loc.id}
                     type="button"
@@ -140,7 +167,7 @@ export function LocationPickerSection({
                     <span className="truncate flex-1">{loc.name}</span>
                   </button>
                 ))}
-                {locations.length === 0 && (
+                {assignableLocations.length === 0 && (
                   <div className="px-2.5 py-2 text-[11px] text-gray-500">
                     No locations yet. Create one in Location Manager.{' '}
                     <button

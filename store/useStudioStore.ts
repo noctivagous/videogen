@@ -293,12 +293,15 @@ import type {
 } from '@/lib/types/studio';
 import type { FrameView } from '@/components/studio/FrameViewSegment';
 import type { StudioPanelId } from '@/lib/studio/studio-routes';
+import {
+  ensureManualLocationFromSetups,
+  MANUAL_BACKDROP_LOCATION_ID,
+  MANUAL_BACKDROP_LOCATION_NAME,
+} from '@/lib/studio/manual-backdrop-location';
 
 export type { StudioPanelId, WorkspaceView } from '@/lib/studio/studio-routes';
 
 const PREVIEW_MODE_KEY = 'videogen_preview_mode';
-const MANUAL_BACKDROP_LOCATION_ID = 'manual-backdrop-plates';
-const MANUAL_BACKDROP_LOCATION_NAME = 'Manual Backdrop Plates';
 
 function projectFileUiState() {
   return {
@@ -592,6 +595,7 @@ function applyStudioProject(data: StudioProject, globalMediaLibrary: MediaAsset[
     aspectRatio: hydrated.project.aspectRatio || '16:9',
   };
   const hierarchy = applyProjectHierarchy(hydrated, projectDefaultsFromStudioData(hydrated));
+  const locations = ensureManualLocationFromSetups(hydrated.locations ?? [], hierarchy.setups);
   return {
     project: ensureResolution(project),
     scenes: hierarchy.scenes,
@@ -602,7 +606,7 @@ function applyStudioProject(data: StudioProject, globalMediaLibrary: MediaAsset[
     shots: getTimelineShots(hierarchy.setups),
     currentShot: hierarchy.currentSetupId,
     characters: hydrated.characters ?? [],
-    locations: hydrated.locations ?? [],
+    locations,
     mediaLibrary: hydrated.mediaLibrary ?? [],
     globalMediaLibrary,
     shotWorkflowSnapshots: hydrated.shotWorkflowSnapshots ?? [],
@@ -647,6 +651,25 @@ function projectPersistencePayload(state: StudioStore) {
     project: buildStudioProject(state),
     globalMediaLibrary: state.globalMediaLibrary,
   };
+}
+
+async function persistProjectImmediately(
+  get: () => StudioStore,
+  set: (partial: Partial<StudioStore>) => void,
+): Promise<void> {
+  const state = get();
+  if (!state.initialized) return;
+  const { project, globalMediaLibrary } = projectPersistencePayload(state);
+  if (getCurrentStoredLocation()) {
+    const ok = await saveProjectNow(project, globalMediaLibrary);
+    if (ok) {
+      useStudioStore.setState(projectFileUiState());
+    }
+    return;
+  }
+  if (!state.activeProjectId) return;
+  await syncActiveSavedProject(get);
+  await refreshSavedProjectsState(set);
 }
 
 function locateMediaAssetCollection(
@@ -720,7 +743,7 @@ async function tryExportPoseBlockComposite(): Promise<string | null> {
   }
 }
 
-const stockState = getStockDefaults();
+const initialState = getEmptyDefaults();
 
 interface StudioStore {
   project: ProjectSettings;
@@ -933,7 +956,11 @@ interface StudioStore {
   ) => void;
 
   // ── Location Manager ─────────────────────────────────────────────────────
-  createLocation: (name: string, firstPlateUrl: string) => Location;
+  createLocation: (
+    name: string,
+    firstPlateUrl: string,
+    existingPlateRef?: { locationId: string; plateId: string },
+  ) => Promise<Location>;
   renameLocation: (id: string, name: string) => void;
   addLocationPlate: (locationId: string, url: string, label?: string) => void;
   removeLocationPlate: (locationId: string, plateId: string) => void;
@@ -1016,24 +1043,24 @@ async function renderShotBackdropCrop(
 }
 
 export const useStudioStore = create<StudioStore>((set, get) => ({
-  project: stockState.project,
-  camera: stockState.camera,
-  lighting: stockState.lighting,
-  motion: stockState.motion,
-  sceneSetup: stockState.sceneSetup,
-  shotActivity: stockState.shotActivity,
-  scenes: stockState.scenes,
-  currentSceneId: stockState.currentSceneId,
-  setups: stockState.setups,
-  currentSetupId: stockState.currentSetupId,
-  currentCoverageShotId: stockState.currentCoverageShotId,
-  shots: stockState.shots,
-  currentShot: stockState.currentShot,
-  characters: stockState.characters,
-  locations: stockState.locations,
-  mediaLibrary: stockState.mediaLibrary,
-  globalMediaLibrary: stockState.globalMediaLibrary,
-  shotWorkflowSnapshots: stockState.shotWorkflowSnapshots,
+  project: initialState.project,
+  camera: initialState.camera,
+  lighting: initialState.lighting,
+  motion: initialState.motion,
+  sceneSetup: initialState.sceneSetup,
+  shotActivity: initialState.shotActivity,
+  scenes: initialState.scenes,
+  currentSceneId: initialState.currentSceneId,
+  setups: initialState.setups,
+  currentSetupId: initialState.currentSetupId,
+  currentCoverageShotId: initialState.currentCoverageShotId,
+  shots: initialState.shots,
+  currentShot: initialState.currentShot,
+  characters: initialState.characters,
+  locations: initialState.locations,
+  mediaLibrary: initialState.mediaLibrary,
+  globalMediaLibrary: initialState.globalMediaLibrary,
+  shotWorkflowSnapshots: initialState.shotWorkflowSnapshots,
   ai: { ...DEFAULT_AI_STATE },
   toast: null,
   isGenerating: false,
@@ -4244,9 +4271,43 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 
   // ── Location Manager actions ─────────────────────────────────────────────
 
-  createLocation(name, firstPlateUrl) {
+  async createLocation(name, firstPlateUrl, existingPlateRef) {
     const now = Date.now();
     const id = Math.random().toString(36).slice(2, 12);
+
+    if (existingPlateRef) {
+      const state = get();
+      const fromLocation = state.locations.find((entry) => entry.id === existingPlateRef.locationId);
+      const plate = fromLocation?.plates.find((candidate) => candidate.id === existingPlateRef.plateId);
+      const canMove =
+        fromLocation &&
+        plate &&
+        (fromLocation.id === MANUAL_BACKDROP_LOCATION_ID || fromLocation.plates.length > 1);
+
+      if (canMove) {
+        const plateForTarget: LocationBackdropPlate = {
+          ...plate,
+          source: 'location',
+        };
+        const location: Location = { id, name, plates: [plateForTarget], createdAt: now };
+        set((s) => ({
+          locations: s.locations
+            .map((entry) => {
+              if (entry.id === existingPlateRef.locationId) {
+                return {
+                  ...entry,
+                  plates: entry.plates.filter((candidate) => candidate.id !== existingPlateRef.plateId),
+                };
+              }
+              return entry;
+            })
+            .concat(location),
+        }));
+        await persistProjectImmediately(get, set);
+        return location;
+      }
+    }
+
     const plate: LocationBackdropPlate = {
       id: Math.random().toString(36).slice(2, 12),
       url: firstPlateUrl,
@@ -4257,6 +4318,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     };
     const location: Location = { id, name, plates: [plate], createdAt: now };
     set((s) => ({ locations: [...s.locations, location] }));
+    await persistProjectImmediately(get, set);
     return location;
   },
 

@@ -4,15 +4,10 @@ import { InspectionManager } from '@/components/studio/inspection-manager/Inspec
 import {
   parseDerivedLocationColorPaletteGroupAssetId,
 } from '@/lib/media/color-palette-group';
+import { parseDerivedLocationPlateAssetId } from '@/lib/studio/manual-backdrop-location';
 import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 import { useStudioPanelInspectorStore } from '@/store/useStudioPanelInspectorStore';
 import { useStudioStore } from '@/store/useStudioStore';
-
-function parseDerivedLocationPlateAssetId(assetId: string): { locationId: string; plateId: string } | null {
-  const match = /^derived:location-plate:([^:]+):([^:]+)$/.exec(assetId);
-  if (!match) return null;
-  return { locationId: match[1], plateId: match[2] };
-}
 
 export function LocationManagerInspectorPanel() {
   const selectedAssetId = useStudioPanelInspectorStore((s) => s.locationManagerSelectedAssetId);

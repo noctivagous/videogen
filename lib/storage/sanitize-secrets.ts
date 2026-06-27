@@ -37,6 +37,8 @@ export function sanitizeProjectForPersistence(project: StudioProject): StudioPro
     setups: clean.setups,
     currentSetupId: clean.currentSetupId,
     currentCoverageShotId: clean.currentCoverageShotId,
+    characters: clean.characters ?? [],
+    locations: clean.locations ?? [],
     ...(clean.mediaLibrary ? { mediaLibrary: clean.mediaLibrary } : {}),
     ...(clean.shotWorkflowSnapshots ? { shotWorkflowSnapshots: clean.shotWorkflowSnapshots } : {}),
   };

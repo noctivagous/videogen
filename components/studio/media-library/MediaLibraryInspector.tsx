@@ -14,6 +14,7 @@ import { getMediaAsset, resolveAssetDisplayUrl } from '@/lib/media/media-library
 import type { MediaAsset, MediaAssetType, MediaWorkflowOrigin, ShotWorkflowSnapshot } from '@/lib/types/media-library';
 import type { Shot } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
+import { BackdropPlateLocationActions } from '@/components/studio/media-library/BackdropPlateLocationActions';
 
 const IMAGE_TYPES = new Set<MediaAssetType>([
   'unclassified', 'character-sheet', 'backdrop-plate', 'backdrop', 'baked-frame', 'intermediate-frame', 'reference',
@@ -213,6 +214,10 @@ export function MediaLibraryInspector({
       )}
 
       <div className="p-3 flex flex-col gap-3">
+        {asset.type === 'backdrop-plate' && (
+          <BackdropPlateLocationActions asset={asset} />
+        )}
+
         <InspectorField label="Type">
           <select
             value={asset.type}
