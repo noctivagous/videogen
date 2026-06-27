@@ -35,7 +35,7 @@ export function StudioPanelHeader({
 
   return (
     <div
-      className={`flex items-center gap-3 px-4 py-3 border-b border-surface-700 flex-shrink-0 bg-surface-900 ${className}`.trim()}
+      className={`flex items-center gap-3 px-4 py-3 h-[62px] border-b border-surface-700 flex-shrink-0 bg-surface-900 ${className}`.trim()}
     >
       {onBack ? (
         <button
@@ -54,12 +54,14 @@ export function StudioPanelHeader({
         <Icon className="w-4 h-4 text-white" aria-hidden />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 flex-wrap">
-          <h1 className="text-sm font-semibold text-gray-100 shrink-0" style={theme?.panelTitleStyle}>{title}</h1>
+        <div className="flex items-center gap-2 min-w-0">
+          <h1 className="text-sm font-semibold text-gray-100 truncate" style={theme?.panelTitleStyle}>{title}</h1>
           {shortcut ? <ShortcutChip>{shortcut}</ShortcutChip> : null}
-          {titleTrailing}
+          {titleTrailing ? <span className="shrink-0">{titleTrailing}</span> : null}
         </div>
-        {description ? <p className="text-[10px] text-gray-500">{description}</p> : null}
+        <p className={`text-[10px] leading-3 truncate ${description ? 'text-gray-500' : 'text-transparent'}`}>
+          {description ?? 'placeholder'}
+        </p>
       </div>
       {actions}
     </div>

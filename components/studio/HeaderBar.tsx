@@ -23,7 +23,7 @@ import { getStudioPanelTitle } from '@/lib/constants/studio-launcher';
 import { launchStudioLauncherItem } from '@/lib/studio/launch-studio-launcher-item';
 import { getAdjacentLauncherItemForPanel } from '@/lib/studio/studio-launcher-keybindings';
 import { getStudioLauncherThemeForPanel } from '@/lib/studio/studio-launcher-theme';
-import { formatAltArrowShortcut, isMacPlatform } from '@/lib/ui/shortcut-label';
+import { formatAltArrowShortcut } from '@/lib/ui/shortcut-label';
 import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 import {
   getBuiltInProvider,
@@ -390,9 +390,8 @@ export function HeaderBar() {
   const activeLauncherTheme = getStudioLauncherThemeForPanel(workspaceView);
   const previousLauncherShortcut = formatAltArrowShortcut('left');
   const nextLauncherShortcut = formatAltArrowShortcut('right');
-  const isMac = isMacPlatform();
-  const previousArrowButtonLabel = isMac ? '⌥←' : 'alt+←';
-  const nextArrowButtonLabel = isMac ? '⌥→' : 'alt+→';
+  const previousArrowButtonLabel = previousLauncherShortcut;
+  const nextArrowButtonLabel = nextLauncherShortcut;
 
   const navigateLauncherByDirection = (direction: 'previous' | 'next') => {
     const itemId = getAdjacentLauncherItemForPanel(workspaceView, direction);
@@ -430,13 +429,14 @@ export function HeaderBar() {
                 primaryAction="toggle-menu"
                 menuAction="toggle-menu"
                 renderMenu={(closeMenu) => <AppsLauncherMenu onDismiss={closeMenu} />}
-                primaryClassName="font-semibold"
+                className="w-[128px]"
+                primaryClassName="font-semibold w-[109px] max-w-none"
                 primaryStyle={activeLauncherTheme?.splitPrimaryStyle}
                 menuButtonStyle={activeLauncherTheme?.splitMenuStyle}
                 primaryUiSection={uiSectionProps(UI_SECTIONS.studioHeaderAppsSplit)}
                 menuUiSection={uiSectionProps(UI_SECTIONS.studioHeaderAppsMenu)}
               />
-              <div className="inline-flex items-center">
+              <div className="ml-auto inline-flex items-center" data-ui-section="studio-header-arrow-nav">
                 <button
                   type="button"
                   onClick={() => navigateLauncherByDirection('previous')}

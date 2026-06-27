@@ -17,7 +17,7 @@ describe('studio-launcher-keybindings', () => {
 
   it('formats platform-native shortcut labels', () => {
     expect(getLauncherShortcutLabelForItem('shot-designer', 'Mozilla/5.0 (Macintosh; Intel Mac OS X)')).toBe('⌥D');
-    expect(getLauncherShortcutLabelForItem('media-library', 'Mozilla/5.0 (Windows NT 10.0)')).toBe('Alt + M');
+    expect(getLauncherShortcutLabelForItem('media-library', 'Mozilla/5.0 (Windows NT 10.0)')).toBe('⎇M');
   });
 
   it('returns null for unknown shortcut strings', () => {

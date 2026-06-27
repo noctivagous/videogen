@@ -4,7 +4,7 @@
   "character-sheet-generator": { "accent": "#14b8a6" },
   "location-manager": { "accent": "#22c55e" },
   "film-look-maker": { "accent": "#a855f7" },
-  "color-palette-maker": { "accent": "#ec4899" },
+  "color-palette-maker": { "accent": "#9ca3af" },
   "image-editor": { "accent": "#eab308" },
-  "settings": { "accent": "#94a3b8" }
+  "settings": { "accent": "#ef4444" }
 }

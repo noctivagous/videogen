@@ -1,8 +1,9 @@
 const MAC_PLATFORM_PATTERN = /mac|iphone|ipad|ipod/i;
+const NON_MAC_ALT_SYMBOL = '⎇';
 
 const ARROW_SHORTCUT_LABELS = {
-  left: { mac: '⌥←', other: 'Alt + Left Arrow' },
-  right: { mac: '⌥→', other: 'Alt + Right Arrow' },
+  left: { mac: '⌥←', other: `${NON_MAC_ALT_SYMBOL}←` },
+  right: { mac: '⌥→', other: `${NON_MAC_ALT_SYMBOL}→` },
 } as const;
 
 export function isMacPlatform(userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : ''): boolean {
@@ -14,7 +15,7 @@ export function formatAltShortcut(key: string, userAgent?: string): string {
   if (isMacPlatform(userAgent)) {
     return `⌥${normalizedKey}`;
   }
-  return `Alt + ${normalizedKey}`;
+  return `${NON_MAC_ALT_SYMBOL}${normalizedKey}`;
 }
 
 export function formatAltArrowShortcut(direction: 'left' | 'right', userAgent?: string): string {
