@@ -3,13 +3,17 @@
 <h2>Introduction</h2>
 
  <p>
-VideoGen has set out to make precise AI-driven filmmaking moves
-possible, in constrast with the experience of text prompts.
-With a text prompt it is hard to achieve a starting frame difference
+VideoGen has set out to make precise AI filmmaking moves
+possible, contrasting sharply with using
+text prompts to make videos.
+<p>
+With a text prompt it is hard to achieve a starting workflow
 like the following.
 
 
 <p align="left">
+  <em>1. The user provides the backdrop plate and sets up
+   a close-up shot with two mannequins.</em><br>
   <em>SOLEMN, FOREGROUND: (Close-up two-shot)</em><br>
   <img src="public/readme/posing-1-closeup-twoshot.png" alt="Posing 1" width="500">
   <br>
@@ -18,12 +22,14 @@ like the following.
 
 
 <p align="left">
+  <em>2. The user moves the head down of one of the mannequins.</em><br>
   <em>MORE SOMBER, LOOKING DOWN. Close-up two-shot looking down</em><br>
   <img src="public/readme/posing-2-closeup-twoshot-lookingdown.png" alt="Posing 2" width="500">
   
 </p>
 
 <p align="left">
+  <em>3. The user changes the pose of the second mannequin and places it on the ledge.</em><br>
   <em>BLOCKING CHANGE: Ledge. (Close-up two-shot)</em><br>
   <img src="public/readme/posing-3-closeup-twoshot-ledge.png" alt="Posing 3" width="500">
   <br>
