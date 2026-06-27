@@ -13,6 +13,7 @@ import { ModalManager } from '@/components/ui/ModalManager';
 import { ThemeTransformConnectorProvider } from '@/components/studio/ThemeTransformConnectorProvider';
 import { ProviderEditModal } from '@/components/studio/ProviderEditModal';
 import { AppsLauncherModal } from '@/components/studio/AppsLauncherModal';
+import { EntityImageAssociateModal } from '@/components/studio/EntityImageAssociateModal';
 import { ProjectSettingsModal } from '@/components/studio/ProjectSettingsModal';
 import { SettingsModal } from '@/components/studio/SettingsModal';
 import { Toast } from '@/components/studio/Toast';
@@ -98,6 +99,7 @@ export function StudioShell() {
       <SettingsModal />
       <ProviderEditModal />
       <AppsLauncherModal />
+      <EntityImageAssociateModal />
       <ProjectSettingsModal />
     </div>
     </ContextMenuManager>

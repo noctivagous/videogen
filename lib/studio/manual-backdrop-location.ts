@@ -27,6 +27,64 @@ export function parseDerivedLocationPlateAssetId(
   return { locationId: match[1], plateId: match[2] };
 }
 
+export function parseDerivedSetupBackdropAssetId(
+  assetId: string,
+): { setupId: number; backdropId: string } | null {
+  const match = /^derived:backdrop:(\d+):([^:]+)$/.exec(assetId);
+  if (!match) return null;
+  return { setupId: Number(match[1]), backdropId: match[2] };
+}
+
+export function clearPlateFromSetupBackdrops(setups: Setup[], plateId: string): Setup[] {
+  return setups.map((setup) => ({
+    ...setup,
+    backdrops: setup.backdrops.map((backdrop) =>
+      backdrop.id === plateId
+        ? {
+            ...backdrop,
+            url: null,
+            backdropFramingByAspect: {},
+            backdropCropsByAspect: {},
+            backdropCropStatusByAspect: {},
+          }
+        : backdrop,
+    ),
+  }));
+}
+
+export function getSetupIdsUsingPlate(setups: Setup[], plateId: string): number[] {
+  return setups
+    .filter(
+      (setup) =>
+        setup.backdrops.some((backdrop) => backdrop.id === plateId && backdrop.url) ||
+        setup.shots.some((shot) => shot.backdropId === plateId),
+    )
+    .map((setup) => setup.id);
+}
+
+export function assignLocationToSetups(
+  setups: Setup[],
+  setupIds: number[],
+  locationId: string,
+): Setup[] {
+  const idSet = new Set(setupIds);
+  return setups.map((setup) => (idSet.has(setup.id) ? { ...setup, locationId } : setup));
+}
+
+/** After a manual plate moves into a named location, drop setup-level copies and wire setups. */
+export function promoteManualPlateToNamedLocation(
+  setups: Setup[],
+  plateId: string,
+  targetLocationId: string,
+): Setup[] {
+  const affectedSetupIds = getSetupIdsUsingPlate(setups, plateId);
+  let next = clearPlateFromSetupBackdrops(setups, plateId);
+  if (affectedSetupIds.length > 0) {
+    next = assignLocationToSetups(next, affectedSetupIds, targetLocationId);
+  }
+  return next;
+}
+
 export function ensureManualLocationFromSetups(
   locations: Location[],
   setups: Setup[],

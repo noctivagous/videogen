@@ -7,10 +7,8 @@ import {
   EntityDropdown,
   EntityDropdownPanel,
 } from '@/components/studio/entity-picker/EntityDropdown';
+import { EntityImageAddButton } from '@/components/studio/entity-picker/EntityImageAddButton';
 import { resolveReferenceDisplayUrl } from '@/lib/storage/reference-url';
-import {
-  getSubjectCharacterSource,
-} from '@/lib/studio/character-sheet-source';
 import {
   getSubjectChecklistSlotIndices,
   getSubjectSheetSlotCount,
@@ -20,8 +18,6 @@ import {
 import type { Shot } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
 import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
-import type { ReactNode } from 'react';
-import { WorkflowCollapsibleSection } from '@/components/ui/WorkflowCollapsibleSection';
 
 interface CharacterSheetWorkflowStep {
   id: string;
@@ -32,7 +28,6 @@ interface CharacterSheetWorkflowStep {
 export interface SubjectsFieldsetProps {
   characterSheetStep: CharacterSheetWorkflowStep | undefined;
   stepNumber: number;
-  renderReferenceSlotRow: (index: number) => ReactNode;
   legendDone?: boolean;
 }
 
@@ -52,22 +47,19 @@ interface CharacterSlotPickerProps {
   slotOrdinal: number;
   refSlotIndex: number;
   shot: Shot;
-  fallback: ReactNode;
   hideHeader?: boolean;
 }
 
 function CharacterSlotPicker({
   slotOrdinal,
-  refSlotIndex,
-  shot,
-  fallback,
+  refSlotIndex: _refSlotIndex,
+  shot: _shot,
   hideHeader = false,
 }: CharacterSlotPickerProps) {
   const characters = useStudioStore((s) => s.characters);
   const setups = useStudioStore((s) => s.setups);
   const currentSetupId = useStudioStore((s) => s.currentSetupId);
   const assignCharacterToSlot = useStudioStore((s) => s.assignCharacterToSlot);
-  const setSubjectSlotSourceMode = useStudioStore((s) => s.setSubjectSlotSourceMode);
   const navigateToPanel = useNavigateToStudioPanel();
 
   const [characterOpen, setCharacterOpen] = useState(false);
@@ -85,7 +77,6 @@ function CharacterSlotPicker({
     selectableSheets.find((s) => s.id === assignedSheetId)
     ?? selectableSheets[0]
     ?? null;
-  const sourceMode = getSubjectCharacterSource(setup, shot, slotOrdinal, refSlotIndex);
 
   return (
     <div className="flex flex-col gap-2">
@@ -102,148 +93,116 @@ function CharacterSlotPicker({
         </div>
       )}
 
-      <div className="grid grid-cols-[14px_minmax(0,1fr)] gap-2">
-        <div className="pt-6 flex justify-center">
-          <input
-            type="radio"
-            name={`subject-source-mode-${slotOrdinal}`}
-            checked={sourceMode === 'manager'}
-            onChange={() => setSubjectSlotSourceMode(currentSetupId, slotOrdinal, 'typed')}
-            className="h-3.5 w-3.5 rounded-full border-surface-500 text-brand-500 focus:ring-brand-500/40"
-            aria-label={`Use character manager source for slot ${slotOrdinal + 1}`}
-          />
-        </div>
-        <div className="flex-1 flex flex-col gap-2">
-          <EntityDropdown
-            label="Character"
-            value={assigned?.name ?? ''}
-            thumbnailUrl={assignedSheet?.url ?? selectableSheets[0]?.url}
-            placeholder="Select character…"
-            open={characterOpen}
-            onToggle={() => {
-              if (sourceMode === 'manual') return;
-              setCharacterOpen((v) => !v);
-              setSheetOpen(false);
-            }}
-            thumbnailAspect="square"
-            emptyIcon={
-              <svg className="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            }
-          >
-            <EntityDropdownPanel>
-              <div className="p-1 space-y-0.5 max-h-48 overflow-y-auto">
-                {characters.map((character) => (
-                  <button
-                    key={character.id}
-                    type="button"
-                    onClick={() => {
-                      assignCharacterToSlot(currentSetupId, slotOrdinal, character.id);
-                      setCharacterOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left hover:bg-surface-700 transition-colors text-[11px]
-                      ${character.id === assignedId ? 'bg-brand-500/10 text-brand-300' : 'text-gray-200'}`}
-                  >
-                    <img
-                      src={character.sheets[0]?.url}
-                      alt={character.name}
-                      className="w-7 h-7 rounded-md object-cover border border-surface-600 flex-shrink-0"
-                    />
-                    <span className="truncate flex-1">{character.name}</span>
-                  </button>
-                ))}
-                {characters.length === 0 && (
-                  <div className="px-2.5 py-2 text-[11px] text-gray-500">
-                    No characters yet. Create one in Character Manager.
-                  </div>
-                )}
+      <EntityDropdown
+        label="Character"
+        value={assigned?.name ?? ''}
+        thumbnailUrl={assignedSheet?.url ?? selectableSheets[0]?.url}
+        placeholder="Select character…"
+        open={characterOpen}
+        onToggle={() => {
+          setCharacterOpen((v) => !v);
+          setSheetOpen(false);
+        }}
+        thumbnailAspect="square"
+        emptyIcon={
+          <svg className="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        }
+      >
+        <EntityDropdownPanel>
+          <div className="p-1 space-y-0.5 max-h-48 overflow-y-auto">
+            {characters.map((character) => (
+              <button
+                key={character.id}
+                type="button"
+                onClick={() => {
+                  assignCharacterToSlot(currentSetupId, slotOrdinal, character.id);
+                  setCharacterOpen(false);
+                }}
+                className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left hover:bg-surface-700 transition-colors text-[11px]
+                  ${character.id === assignedId ? 'bg-brand-500/10 text-brand-300' : 'text-gray-200'}`}
+              >
+                <img
+                  src={character.sheets[0]?.url}
+                  alt={character.name}
+                  className="w-7 h-7 rounded-md object-cover border border-surface-600 flex-shrink-0"
+                />
+                <span className="truncate flex-1">{character.name}</span>
+              </button>
+            ))}
+            {characters.length === 0 && (
+              <div className="px-2.5 py-2 text-[11px] text-gray-500">
+                No characters yet. Add an image below or open Character Manager.
               </div>
-              {assigned && (
-                <div className="border-t border-surface-700 p-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      assignCharacterToSlot(currentSetupId, slotOrdinal, null);
-                      setCharacterOpen(false);
-                    }}
-                    className="w-full px-2.5 py-1.5 rounded-lg text-left text-[11px] text-red-400 hover:bg-surface-700 transition-colors"
-                  >
-                    Remove assignment
-                  </button>
-                </div>
-              )}
-            </EntityDropdownPanel>
-          </EntityDropdown>
-
-          {assigned && assignedSheet && (
-            <EntityDropdown
-              label="Character Sheet"
-              value={characterSheetLabel(
-                assignedSheet.label,
-                Math.max(0, assigned.sheets.findIndex((s) => s.id === assignedSheet.id)),
-              )}
-              thumbnailUrl={assignedSheet.url}
-              placeholder="Select character sheet…"
-              open={sheetOpen}
-              onToggle={() => {
-                if (sourceMode !== 'manager') return;
-                setSheetOpen((v) => !v);
-                setCharacterOpen(false);
-              }}
-              thumbnailAspect="square"
-            >
-              <EntityDropdownPanel>
-                <div className="p-1 space-y-0.5 max-h-48 overflow-y-auto">
-                  {selectableSheets.map((sheet, sheetIndex) => (
-                    <button
-                      key={sheet.id}
-                      type="button"
-                      onClick={() => {
-                        assignCharacterToSlot(currentSetupId, slotOrdinal, assigned.id, sheet.id);
-                        setSheetOpen(false);
-                      }}
-                      className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left hover:bg-surface-700 transition-colors text-[11px]
-                        ${sheet.id === assignedSheet.id ? 'bg-brand-500/10 text-brand-300' : 'text-gray-200'}`}
-                    >
-                      <img
-                        src={sheet.url}
-                        alt={characterSheetLabel(sheet.label, sheetIndex)}
-                        className="w-7 h-7 rounded-md object-cover border border-surface-600 flex-shrink-0"
-                      />
-                      <span className="truncate flex-1">
-                        {characterSheetLabel(sheet.label, sheetIndex)}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </EntityDropdownPanel>
-            </EntityDropdown>
+            )}
+          </div>
+          {assigned && (
+            <div className="border-t border-surface-700 p-1">
+              <button
+                type="button"
+                onClick={() => {
+                  assignCharacterToSlot(currentSetupId, slotOrdinal, null);
+                  setCharacterOpen(false);
+                }}
+                className="w-full px-2.5 py-1.5 rounded-lg text-left text-[11px] text-red-400 hover:bg-surface-700 transition-colors"
+              >
+                Remove assignment
+              </button>
+            </div>
           )}
-        </div>
-      </div>
+        </EntityDropdownPanel>
+      </EntityDropdown>
 
-      <div className="grid grid-cols-[14px_minmax(0,1fr)] gap-2 items-start">
-        <div className="pt-1 flex justify-center">
-          <input
-            type="radio"
-            name={`subject-source-mode-${slotOrdinal}`}
-            checked={sourceMode === 'manual'}
-            onChange={() => {
-              setSubjectSlotSourceMode(currentSetupId, slotOrdinal, 'manual');
-              setCharacterOpen(false);
-              setSheetOpen(false);
-            }}
-            className="h-3.5 w-3.5 rounded-full border-surface-500 text-brand-500 focus:ring-brand-500/40"
-            aria-label={`Use manual character sheet source for slot ${slotOrdinal + 1}`}
-          />
-        </div>
-        <div className="flex-1">
-          <WorkflowCollapsibleSection label="Manual Character Sheet" defaultCollapsed>
-            {fallback}
-          </WorkflowCollapsibleSection>
-        </div>
-      </div>
+      {assigned && assignedSheet && (
+        <EntityDropdown
+          label="Character Sheet"
+          value={characterSheetLabel(
+            assignedSheet.label,
+            Math.max(0, assigned.sheets.findIndex((s) => s.id === assignedSheet.id)),
+          )}
+          thumbnailUrl={assignedSheet.url}
+          placeholder="Select character sheet…"
+          open={sheetOpen}
+          onToggle={() => {
+            setSheetOpen((v) => !v);
+            setCharacterOpen(false);
+          }}
+          thumbnailAspect="square"
+        >
+          <EntityDropdownPanel>
+            <div className="p-1 space-y-0.5 max-h-48 overflow-y-auto">
+              {selectableSheets.map((sheet, sheetIndex) => (
+                <button
+                  key={sheet.id}
+                  type="button"
+                  onClick={() => {
+                    assignCharacterToSlot(currentSetupId, slotOrdinal, assigned.id, sheet.id);
+                    setSheetOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left hover:bg-surface-700 transition-colors text-[11px]
+                    ${sheet.id === assignedSheet.id ? 'bg-brand-500/10 text-brand-300' : 'text-gray-200'}`}
+                >
+                  <img
+                    src={sheet.url}
+                    alt={characterSheetLabel(sheet.label, sheetIndex)}
+                    className="w-7 h-7 rounded-md object-cover border border-surface-600 flex-shrink-0"
+                  />
+                  <span className="truncate flex-1">
+                    {characterSheetLabel(sheet.label, sheetIndex)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </EntityDropdownPanel>
+        </EntityDropdown>
+      )}
+
+      <EntityImageAddButton
+        kind="character"
+        slotOrdinal={slotOrdinal}
+        label="Add character sheet image…"
+      />
     </div>
   );
 }
@@ -251,7 +210,6 @@ function CharacterSlotPicker({
 export function SubjectsFieldset({
   characterSheetStep,
   stepNumber: _stepNumber,
-  renderReferenceSlotRow,
   legendDone = false,
 }: SubjectsFieldsetProps) {
   const shots = useStudioStore((s) => s.shots);
@@ -390,7 +348,6 @@ export function SubjectsFieldset({
                     slotOrdinal={index}
                     refSlotIndex={slotIndex}
                     shot={shot}
-                    fallback={renderReferenceSlotRow(slotIndex)}
                     hideHeader
                   />
                 </div>

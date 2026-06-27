@@ -18,7 +18,9 @@ import { buildBakeStartFramePromptPreview } from '@/lib/studio/bake-start-frame'
 import { getThemeTransformStatus } from '@/lib/studio/theme-transform';
 import { restrictsReferenceSlotsToFirst } from '@/lib/studio/xai-video-models';
 import { getWorkflowReferenceSteps, isBakeStartFrame } from '@/lib/studio/workflow';
+import { readImageFromDataTransfer, readImageFromFile } from '@/lib/studio/read-image-drop';
 import { useCharacterAssignmentConnectorContext } from '@/components/studio/ThemeTransformConnectorProvider';
+import { useEntityImageAssociateStore } from '@/store/useEntityImageAssociateStore';
 import { BackdropFramingLockButton } from '@/components/studio/BackdropFramingLockButton';
 import { GeneratedVideoList } from '@/components/studio/GeneratedVideoList';
 import { SubjectsFieldset } from '@/components/studio/SubjectsFieldset';
@@ -95,7 +97,6 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
   const generate = useStudioStore((s) => s.generate);
   const isGenerating = useStudioStore((s) => s.isGenerating);
   const project = useStudioStore((s) => s.project);
-  const locations = useStudioStore((s) => s.locations);
   const mediaLibrary = useStudioStore((s) => s.mediaLibrary);
   const globalMediaLibrary = useStudioStore((s) => s.globalMediaLibrary);
   const selectMediaLibraryItem = useStudioStore((s) => s.selectMediaLibraryItem);
@@ -107,6 +108,7 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
   const [viewerSlot, setViewerSlot] = useState<ViewerSlot | null>(null);
   const [additionalResourcesExpanded, setAdditionalResourcesExpanded] = useState(false);
   const characterConnector = useCharacterAssignmentConnectorContext();
+  const openEntityImageAssociate = useEntityImageAssociateStore((s) => s.openEntityImageAssociate);
 
   const shot = shots.find((s) => s.id === currentShot) || shots[0];
   const slotCount = getReferenceSlotCount(shot);
@@ -141,15 +143,61 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
     return 1;
   })();
   const aspectRatio = (project.aspectRatio || '16:9') as AspectRatio;
+  const isBakeStartFrameWorkflow = isBakeStartFrame(shot);
+  const checklistSlotIndices = new Set(
+    isBakeStartFrameWorkflow
+      ? [backdropSlotIndex, ...getSubjectChecklistSlotIndices(shot)].filter((index) => index >= 0)
+      : [subjectSlotIndex, backdropSlotIndex].filter((index) => index >= 0),
+  );
+
+  const openChecklistImageAssociate = async (
+    index: number,
+    file: File | undefined,
+    dataTransfer?: DataTransfer,
+  ) => {
+    const image = file
+      ? await readImageFromFile(file)
+      : dataTransfer
+        ? await readImageFromDataTransfer(dataTransfer)
+        : null;
+    if (!image) return;
+
+    if (index === backdropSlotIndex) {
+      openEntityImageAssociate({
+        kind: 'location',
+        imageUrl: image.url,
+        imageLabel: image.label,
+      });
+      return;
+    }
+
+    const slotOrdinal = getSubjectSlotOrdinal(shot, index);
+    if (slotOrdinal != null) {
+      openEntityImageAssociate({
+        kind: 'character',
+        imageUrl: image.url,
+        imageLabel: image.label,
+        slotOrdinal,
+      });
+    }
+  };
 
   const handleFile = (index: number, file: File | undefined) => {
     if (!file || !file.type.startsWith('image/')) return;
+    if (isBakeStartFrameWorkflow && checklistSlotIndices.has(index)) {
+      void openChecklistImageAssociate(index, file);
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (e) => setReference(index, e.target?.result as string);
     reader.readAsDataURL(file);
   };
 
   const handleImageDrop = (index: number, dataTransfer: DataTransfer) => {
+    if (isBakeStartFrameWorkflow && checklistSlotIndices.has(index)) {
+      void openChecklistImageAssociate(index, undefined, dataTransfer);
+      return;
+    }
     const file = dataTransfer.files[0];
     if (file?.type.startsWith('image/')) {
       handleFile(index, file);
@@ -182,7 +230,6 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
   };
 
   const slotIndices = getReferenceSlotIndices(shot);
-  const isBakeStartFrameWorkflow = isBakeStartFrame(shot);
   const workflowSteps = getWorkflowReferenceSteps(shot, shot?.lighting, aspectRatio);
   const checklistTasks = workflowSteps.filter((step) => step.id !== 'bake');
   const checklistTasksDone = checklistTasks.filter((step) => step.done).length;
@@ -190,11 +237,6 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
   const hasInterruptedBake =
     isBakeStartFrameWorkflow && !bakeReady && (shot.savedBakedFrameAssetIds?.length ?? 0) > 0;
   const lastSavedBakeId = shot.savedBakedFrameAssetIds?.[0];
-  const checklistSlotIndices = new Set(
-    isBakeStartFrameWorkflow
-      ? [backdropSlotIndex, ...getSubjectChecklistSlotIndices(shot)].filter((index) => index >= 0)
-      : [subjectSlotIndex, backdropSlotIndex].filter((index) => index >= 0),
-  );
   const stackSlotIndices = isBakeStartFrameWorkflow
     ? slotIndices.filter((index) => !checklistSlotIndices.has(index))
     : slotIndices;
@@ -571,7 +613,6 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
               {renderChecklistDot(backdropDone)}
               <span>Backdrop</span>
             </legend>
-            {backdropSlotIndex >= 0 && locations.length === 0 && renderReferenceSlotRow(backdropSlotIndex)}
             <LocationPickerSection checklistMarker="A" checklistDone={backdropStep.done} />
             {lockBackdropStep && (
               <fieldset className="workflow-step-fieldset workflow-step-fieldset--nested">
@@ -592,7 +633,6 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
           <SubjectsFieldset
             characterSheetStep={characterSheetStep}
             stepNumber={2}
-            renderReferenceSlotRow={renderReferenceSlotRow}
             legendDone={subjectsDone}
           />
         )}

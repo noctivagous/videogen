@@ -20,6 +20,8 @@ import {
 import { ModelPreviewScene } from '@/components/studio/ModelPreviewScene';
 import { PreviewProjectSettingsBar } from '@/components/studio/PreviewProjectSettingsBar';
 import { LoadAssetModal } from '@/components/studio/LoadAssetModal';
+import { readImageFromDataTransfer } from '@/lib/studio/read-image-drop';
+import { useEntityImageAssociateStore } from '@/store/useEntityImageAssociateStore';
 import { MediaLibraryViewer } from '@/components/studio/media-library/MediaLibraryViewer';
 import { PreviewSubModeSegment } from '@/components/studio/PreviewSubModeSegment';
 import { BakePromptStackView } from '@/components/studio/BakePromptStackView';
@@ -96,30 +98,6 @@ function isImageDrag(e: DragEvent): boolean {
   );
 }
 
-function applyImageDropToManualBackdrop(
-  dataTransfer: DataTransfer,
-  addOrSelectManualBackdropForCurrentShot: (url: string, label?: string) => void,
-): void {
-  const file = dataTransfer.files[0];
-  if (file?.type.startsWith('image/')) {
-    const reader = new FileReader();
-    reader.onload = (event) =>
-      addOrSelectManualBackdropForCurrentShot(
-        event.target?.result as string,
-        file.name.replace(/\.[^/.]+$/, '').trim() || undefined,
-      );
-    reader.readAsDataURL(file);
-    return;
-  }
-  const uri = dataTransfer.getData('text/uri-list').split('\n').find((line) => {
-    const trimmed = line.trim();
-    return trimmed && !trimmed.startsWith('#');
-  });
-  if (uri && (uri.startsWith('data:image/') || uri.startsWith('blob:') || /^https?:\/\//.test(uri))) {
-    addOrSelectManualBackdropForCurrentShot(uri);
-  }
-}
-
 export function PreviewPanel() {
   const previewStageRef = useRef<HTMLDivElement>(null);
   const previewFrameRef = useRef<HTMLDivElement>(null);
@@ -142,9 +120,7 @@ export function PreviewPanel() {
   const previewSuccessProvider = useStudioStore((s) => s.previewSuccessProvider);
   const previewSuccessPrompt = useStudioStore((s) => s.previewSuccessPrompt);
   const toggleCompositionOverlay = useStudioStore((s) => s.toggleCompositionOverlay);
-  const addOrSelectManualBackdropForCurrentShot = useStudioStore(
-    (s) => s.addOrSelectManualBackdropForCurrentShot,
-  );
+  const openEntityImageAssociate = useEntityImageAssociateStore((s) => s.openEntityImageAssociate);
   const shots = useStudioStore((s) => s.shots);
   const currentShot = useStudioStore((s) => s.currentShot);
   const previewSubMode = useStudioStore((s) => s.previewSubMode);
@@ -539,10 +515,14 @@ export function PreviewPanel() {
                 if (!canDropBackdropOnPreview) return;
                 e.preventDefault();
                 setBackdropDragOver(false);
-                applyImageDropToManualBackdrop(
-                  e.dataTransfer,
-                  addOrSelectManualBackdropForCurrentShot,
-                );
+                void readImageFromDataTransfer(e.dataTransfer).then((image) => {
+                  if (!image) return;
+                  openEntityImageAssociate({
+                    kind: 'location',
+                    imageUrl: image.url,
+                    imageLabel: image.label,
+                  });
+                });
               }}
             >
           <div
@@ -576,11 +556,11 @@ export function PreviewPanel() {
                   
                   <div className="mt-3 grid grid-cols-2 gap-3 text-left">
                     <div className="rounded-lg border border-surface-600 px-3 py-2.5 text-xs text-gray-400">
-                      A. Drop an image on this preview frame to set the manual Backdrop slot
+                      A. Drop an image on this preview frame to add a backdrop plate
                     </div>
                     
                     <div className="rounded-lg border border-surface-600 px-3 py-2.5 text-xs text-gray-400">
-                      B. Add a backdrop in the checklist Backdrop step.
+                      B. Use Add backdrop image in the Locations checklist step.
                     </div>
                   </div>
                 </div>

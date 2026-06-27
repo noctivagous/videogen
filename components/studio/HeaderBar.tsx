@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { AppsLauncherMenu } from '@/components/studio/AppsLauncherMenu';
 import { HeaderLegendContainer } from '@/components/studio/HeaderLegendContainer';
+import { NewProjectDropdownPrompt } from '@/components/studio/NewProjectDropdownPrompt';
 import { ProjectSwitcherDropdown } from '@/components/studio/ProjectSwitcherDropdown';
 import { ProviderBadge } from '@/components/studio/ProviderBadge';
 import { StudioLauncherIconBar } from '@/components/studio/StudioLauncherIconBar';
@@ -301,7 +302,6 @@ export function HeaderBar() {
   const openProjectQuick = useStudioStore((s) => s.openProjectQuick);
   const openProjectFolder = useStudioStore((s) => s.openProjectFolder);
   const saveProjectFolderAs = useStudioStore((s) => s.saveProjectFolderAs);
-  const newProject = useStudioStore((s) => s.newProject);
   const exportVideo = useStudioStore((s) => s.exportVideo);
   const navigateToPanel = useNavigateToStudioPanel();
   const workspaceView = useStudioStore((s) => s.workspaceView);
@@ -323,6 +323,26 @@ export function HeaderBar() {
   const imageStatus = getProviderStatus(ai.defaultImageProvider, isCustomImage, ai);
   const activeModelGroup = MODEL_UX_GROUPS.find((group) => group.id === activeModelGroupId) ?? MODEL_UX_GROUPS[0];
   const groupCards = activeModelGroup.cards;
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const onPointerDown = (event: MouseEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false);
+    };
+
+    document.addEventListener('mousedown', onPointerDown);
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [menuOpen]);
 
   useEffect(() => {
     if (!groupMenuOpen) return;
@@ -409,9 +429,9 @@ export function HeaderBar() {
               <button
                 type="button"
                 onClick={() => setMenuOpen((o) => !o)}
-                onBlur={() => setTimeout(() => setMenuOpen(false), 150)}
                 className="px-2 py-1.5 text-xs bg-surface-800 hover:bg-surface-700 border border-surface-600 rounded-lg transition-all"
                 title="Project folder and actions"
+                aria-expanded={menuOpen}
               >
                 <svg
                   className={`w-3.5 h-3.5 ${folderStatus.urgent ? 'text-amber-400' : 'text-gray-300'}`}
@@ -424,7 +444,10 @@ export function HeaderBar() {
                 </svg>
               </button>
               {menuOpen && (
-                <div className="absolute top-full left-0 mt-1 w-72 bg-surface-800 border border-surface-600 rounded-lg shadow-xl z-50 py-2 text-sm">
+                <div
+                  className="absolute top-full left-0 mt-1 w-72 bg-surface-800 border border-surface-600 rounded-lg shadow-xl z-50 py-2 text-sm"
+                  onMouseDown={(e) => e.preventDefault()}
+                >
                   <div className="px-3 pb-2">
                     <div className="flex items-start gap-2">
                       <span className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${folderStatus.dotClass}`} />
@@ -499,7 +522,7 @@ export function HeaderBar() {
                     </div>
                   )}
                   <div className="h-px bg-surface-600 my-1" />
-                  <button type="button" className="w-full text-left px-3 py-2 hover:bg-surface-700" onClick={() => { newProject(); setMenuOpen(false); }}>New project</button>
+                  <NewProjectDropdownPrompt onDone={() => setMenuOpen(false)} />
                   <div className="h-px bg-surface-600 my-1" />
                   <button
                     type="button"

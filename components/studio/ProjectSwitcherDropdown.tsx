@@ -13,6 +13,7 @@ import {
   type SavedProjectSummary,
 } from '@/lib/storage/saved-projects-store';
 import { useStudioStore } from '@/store/useStudioStore';
+import { NewProjectDropdownPrompt } from '@/components/studio/NewProjectDropdownPrompt';
 
 export type ProjectSwitcherMenuView = 'grid' | 'list';
 
@@ -204,14 +205,14 @@ function ProjectSwitcherListMenu({
   activeProjectId,
   onSelect,
   onResetDemo,
-  onNewProject,
+  onDismiss,
 }: {
   userProjects: ProjectEntry[];
   demoProject: ProjectEntry | undefined;
   activeProjectId: string | null;
   onSelect: (entry: ProjectEntry) => void;
   onResetDemo: () => void;
-  onNewProject: () => void;
+  onDismiss: () => void;
 }) {
   return (
     <>
@@ -254,14 +255,7 @@ function ProjectSwitcherListMenu({
       ) : null}
 
       <div className="h-px bg-surface-600 my-1" role="separator" />
-      <button
-        type="button"
-        role="menuitem"
-        className="w-full text-left px-3 py-2 hover:bg-surface-700 text-gray-200 transition-colors"
-        onClick={onNewProject}
-      >
-        New Project
-      </button>
+      <NewProjectDropdownPrompt onDone={onDismiss} />
     </>
   );
 }
@@ -274,7 +268,7 @@ function ProjectSwitcherGridMenu({
   onOpenSettings,
   onExport,
   onResetDemo,
-  onNewProject,
+  onDismiss,
 }: {
   userProjects: ProjectEntry[];
   demoProject: ProjectEntry | undefined;
@@ -283,7 +277,7 @@ function ProjectSwitcherGridMenu({
   onOpenSettings: (entry: ProjectEntry) => void;
   onExport: (entry: ProjectEntry) => void;
   onResetDemo: () => void;
-  onNewProject: () => void;
+  onDismiss: () => void;
 }) {
   return (
     <>
@@ -336,14 +330,10 @@ function ProjectSwitcherGridMenu({
       </div>
 
       <div className="border-t border-surface-600 px-4 py-3">
-        <button
-          type="button"
-          role="menuitem"
-          className="w-full text-left px-3 py-2 rounded-lg hover:bg-surface-700 text-gray-200 transition-colors text-sm font-medium"
-          onClick={onNewProject}
-        >
-          New Project
-        </button>
+        <NewProjectDropdownPrompt
+          onDone={onDismiss}
+          buttonClassName="w-full text-left px-3 py-2 rounded-lg hover:bg-surface-700 text-gray-200 transition-colors text-sm font-medium"
+        />
       </div>
     </>
   );
@@ -369,7 +359,6 @@ export function ProjectSwitcherDropdown({
   const currentCoverageShotId = useStudioStore((s) => s.currentCoverageShotId);
   const globalMediaLibrary = useStudioStore((s) => s.globalMediaLibrary);
   const switchToSavedProject = useStudioStore((s) => s.switchToSavedProject);
-  const newProject = useStudioStore((s) => s.newProject);
   const resetDemoToDefaults = useStudioStore((s) => s.resetDemoToDefaults);
   const openProjectSettings = useStudioStore((s) => s.openProjectSettings);
   const exportSavedProject = useStudioStore((s) => s.exportSavedProject);
@@ -465,11 +454,6 @@ export function ProjectSwitcherDropdown({
     void switchToSavedProject(entry.id).finally(() => setOpen(false));
   };
 
-  const handleNewProject = () => {
-    newProject();
-    setOpen(false);
-  };
-
   const handleResetDemo = () => {
     resetDemoToDefaults();
     setOpen(false);
@@ -492,7 +476,7 @@ export function ProjectSwitcherDropdown({
     onOpenSettings: handleOpenSettings,
     onExport: handleExport,
     onResetDemo: handleResetDemo,
-    onNewProject: handleNewProject,
+    onDismiss: () => setOpen(false),
   };
 
   return (
@@ -522,6 +506,7 @@ export function ProjectSwitcherDropdown({
               ? 'w-[32rem] max-w-[90vw] flex flex-col overflow-hidden'
               : 'w-52 md:w-60 max-h-72 overflow-y-auto py-1'
           }`}
+          onMouseDown={(e) => e.preventDefault()}
         >
           {menuView === 'grid' ? (
             <ProjectSwitcherGridMenu {...menuProps} />

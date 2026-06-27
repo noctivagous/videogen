@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   getAssignableLocations,
+  getManualBackdropLocation,
   isManualBackdropLocation,
   parseDerivedLocationPlateAssetId,
+  parseDerivedSetupBackdropAssetId,
 } from '@/lib/studio/manual-backdrop-location';
 import type { MediaAsset } from '@/lib/types/media-library';
-import type { Location } from '@/lib/types/studio';
+import type { Location, Setup } from '@/lib/types/studio';
 import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 import { useStudioPanelInspectorStore } from '@/store/useStudioPanelInspectorStore';
 import { useStudioStore } from '@/store/useStudioStore';
@@ -15,6 +17,7 @@ import { useStudioStore } from '@/store/useStudioStore';
 function resolveBackdropPlateContext(
   asset: MediaAsset,
   locations: Location[],
+  setups: Setup[],
 ): {
   url: string;
   label: string;
@@ -33,6 +36,43 @@ function resolveBackdropPlateContext(
     };
   }
 
+  const setupParsed = parseDerivedSetupBackdropAssetId(asset.id);
+  if (setupParsed) {
+    const manualLocation = getManualBackdropLocation(locations);
+    const manualPlate = manualLocation?.plates.find((plate) => plate.id === setupParsed.backdropId);
+    if (manualPlate?.url) {
+      return {
+        url: manualPlate.url,
+        label: manualPlate.label,
+        locationId: manualLocation!.id,
+        plateId: manualPlate.id,
+      };
+    }
+    const setup = setups.find((entry) => entry.id === setupParsed.setupId);
+    const backdrop = setup?.backdrops.find((entry) => entry.id === setupParsed.backdropId);
+    if (backdrop?.url) {
+      const manualMatch = manualLocation?.plates.find((plate) => plate.url === backdrop.url);
+      return {
+        url: backdrop.url,
+        label: backdrop.label,
+        ...(manualMatch
+          ? { locationId: manualLocation!.id, plateId: manualMatch.id }
+          : {}),
+      };
+    }
+  }
+
+  const manualLocation = getManualBackdropLocation(locations);
+  const manualMatch = manualLocation?.plates.find((plate) => plate.url === asset.url);
+  if (manualMatch?.url) {
+    return {
+      url: manualMatch.url,
+      label: manualMatch.label,
+      locationId: manualLocation!.id,
+      plateId: manualMatch.id,
+    };
+  }
+
   return {
     url: asset.url,
     label: asset.metadata.prompt?.trim() || 'Backdrop plate',
@@ -45,6 +85,7 @@ interface BackdropPlateLocationActionsProps {
 
 export function BackdropPlateLocationActions({ asset }: BackdropPlateLocationActionsProps) {
   const locations = useStudioStore((s) => s.locations);
+  const setups = useStudioStore((s) => s.setups);
   const addLocationPlate = useStudioStore((s) => s.addLocationPlate);
   const moveLocationPlate = useStudioStore((s) => s.moveLocationPlate);
   const requestLocationManagerNewLocation = useStudioPanelInspectorStore(
@@ -54,7 +95,7 @@ export function BackdropPlateLocationActions({ asset }: BackdropPlateLocationAct
   const [associateOpen, setAssociateOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  const plateContext = resolveBackdropPlateContext(asset, locations);
+  const plateContext = resolveBackdropPlateContext(asset, locations, setups);
   const assignableLocations = getAssignableLocations(locations);
   const currentLocation =
     plateContext.locationId != null

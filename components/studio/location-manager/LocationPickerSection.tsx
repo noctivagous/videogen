@@ -5,8 +5,7 @@ import {
   EntityDropdown,
   EntityDropdownPanel,
 } from '@/components/studio/entity-picker/EntityDropdown';
-import { SetupBackdropPanel } from '@/components/studio/SetupBackdropPanel';
-import { WorkflowCollapsibleSection } from '@/components/ui/WorkflowCollapsibleSection';
+import { EntityImageAddButton } from '@/components/studio/entity-picker/EntityImageAddButton';
 import { isManualBackdropLocation } from '@/lib/studio/manual-backdrop-location';
 import { useStudioStore } from '@/store/useStudioStore';
 import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
@@ -53,9 +52,7 @@ export function LocationPickerSection({
   const activeCoverage = setup?.shots.find((s) => s.id === currentCoverageShotId) ?? setup?.shots[0];
   const assignedPlateId = activeCoverage?.backdropId ?? null;
   const assignedPlate = selectablePlates.find((p) => p.id === assignedPlateId) ?? null;
-  const assignedLocationPlateIds = new Set(selectablePlates.map((plate) => plate.id));
-  const derivedSourceMode: 'location' | 'manual' =
-    assignedPlateId && assignedLocationPlateIds.has(assignedPlateId) ? 'location' : 'manual';
+
   const plateOwningLocation =
     assignedPlateId == null
       ? null
@@ -69,11 +66,14 @@ export function LocationPickerSection({
   useEffect(() => {
     if (!setup || !activeCoverage || !assignedPlateId || !plateOwningLocation) return;
     if (assignedLocationId === plateOwningLocation.id) return;
-    assignLocationToSetup(currentSetupId, plateOwningLocation.id);
-    assignPlateToShot(currentSetupId, activeCoverage.id, assignedPlateId);
+    assignPlateToShot(
+      currentSetupId,
+      activeCoverage.id,
+      assignedPlateId,
+      plateOwningLocation.id,
+    );
   }, [
     activeCoverage,
-    assignLocationToSetup,
     assignPlateToShot,
     assignedLocationId,
     assignedPlateId,
@@ -105,167 +105,127 @@ export function LocationPickerSection({
         </button>
       </legend>
       <div className="flex flex-col gap-2 text-[10px] text-gray-400">
-        <div className="grid grid-cols-[14px_minmax(0,1fr)] gap-2">
-          <div className="pt-6 flex justify-center">
-            <input
-              type="radio"
-              name="backdrop-source-mode"
-              checked={derivedSourceMode === 'location'}
-              onChange={() => {
-                if (assignedLocation && activeCoverage && selectablePlates[0]) {
-                  assignPlateToShot(currentSetupId, activeCoverage.id, selectablePlates[0].id);
-                }
-              }}
-              className="h-3.5 w-3.5 rounded-full border-surface-500 text-brand-500 focus:ring-brand-500/40"
-              aria-label="Use location manager backdrop"
-            />
-          </div>
-          <div className="flex-1 flex flex-col gap-2">
-          <EntityDropdown
-            label="Location"
-            value={assignedLocation?.name ?? ''}
-            thumbnailUrl={selectablePlates[0]?.url}
-            placeholder="Select location…"
-            open={locationOpen}
-            onToggle={() => {
-              setLocationOpen((v) => !v);
-              setPlateOpen(false);
-            }}
-            emptyIcon={
-              <svg className="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              </svg>
-            }
-          >
-            <EntityDropdownPanel>
-              <div className="p-1 space-y-0.5 max-h-40 overflow-y-auto">
-                {assignableLocations.map((loc) => (
-                  <button
-                    key={loc.id}
-                    type="button"
+        <EntityDropdown
+          label="Location"
+          value={assignedLocation?.name ?? ''}
+          thumbnailUrl={selectablePlates[0]?.url}
+          placeholder="Select location…"
+          open={locationOpen}
+          onToggle={() => {
+            setLocationOpen((v) => !v);
+            setPlateOpen(false);
+          }}
+          emptyIcon={
+            <svg className="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            </svg>
+          }
+        >
+          <EntityDropdownPanel>
+            <div className="p-1 space-y-0.5 max-h-40 overflow-y-auto">
+              {assignableLocations.map((loc) => (
+                <button
+                  key={loc.id}
+                  type="button"
                     onClick={() => {
-                      assignLocationToSetup(currentSetupId, loc.id);
                       const defaultPlate = loc.plates.find((plate) => {
                         const dataType = (plate as { dataType?: string }).dataType;
                         return !dataType || dataType === 'backdrop-plate';
                       });
                       if (activeCoverage && defaultPlate) {
-                        assignPlateToShot(currentSetupId, activeCoverage.id, defaultPlate.id);
+                        assignPlateToShot(
+                          currentSetupId,
+                          activeCoverage.id,
+                          defaultPlate.id,
+                          loc.id,
+                        );
+                      } else {
+                        assignLocationToSetup(currentSetupId, loc.id);
                       }
                       setLocationOpen(false);
                     }}
+                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left hover:bg-surface-700 transition-colors text-[11px]
+                    ${loc.id === assignedLocationId ? 'bg-brand-500/10 text-brand-300' : 'text-gray-200'}`}
+                >
+                  {firstBackdropPlateUrl(loc.plates) && (
+                    <img
+                      src={firstBackdropPlateUrl(loc.plates)}
+                      alt={loc.name}
+                      className="w-10 h-6 rounded object-cover border border-surface-600 flex-shrink-0"
+                    />
+                  )}
+                  <span className="truncate flex-1">{loc.name}</span>
+                </button>
+              ))}
+              {assignableLocations.length === 0 && (
+                <div className="px-2.5 py-2 text-[11px] text-gray-500">
+                  No locations yet. Add an image below or open Location Manager.
+                </div>
+              )}
+            </div>
+            {assignedLocation && (
+              <div className="border-t border-surface-700 p-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    assignLocationToSetup(currentSetupId, null);
+                    setLocationOpen(false);
+                  }}
+                  className="w-full px-2.5 py-1.5 rounded-lg text-left text-[11px] text-red-400 hover:bg-surface-700 transition-colors"
+                >
+                  Remove assignment
+                </button>
+              </div>
+            )}
+          </EntityDropdownPanel>
+        </EntityDropdown>
+
+        {assignedLocation && activeCoverage && (
+          <EntityDropdown
+            label="Backdrop Plate"
+            value={assignedPlate?.label ?? ''}
+            thumbnailUrl={assignedPlate?.url}
+            placeholder="Select backdrop plate…"
+            open={plateOpen}
+            onToggle={() => {
+              setPlateOpen((v) => !v);
+              setLocationOpen(false);
+            }}
+          >
+            <EntityDropdownPanel>
+              <div className="p-1 space-y-0.5 max-h-40 overflow-y-auto">
+                {selectablePlates.map((plate) => (
+                  <button
+                    key={plate.id}
+                    type="button"
+                      onClick={() => {
+                        assignPlateToShot(
+                          currentSetupId,
+                          activeCoverage.id,
+                          plate.id,
+                          assignedLocationId ?? undefined,
+                        );
+                        setPlateOpen(false);
+                      }}
                     className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left hover:bg-surface-700 transition-colors text-[11px]
-                      ${loc.id === assignedLocationId ? 'bg-brand-500/10 text-brand-300' : 'text-gray-200'}`}
+                      ${plate.id === assignedPlateId ? 'bg-brand-500/10 text-brand-300' : 'text-gray-200'}`}
                   >
-                    {firstBackdropPlateUrl(loc.plates) && (
+                    {plate.url && (
                       <img
-                        src={firstBackdropPlateUrl(loc.plates)}
-                        alt={loc.name}
+                        src={plate.url}
+                        alt={plate.label}
                         className="w-10 h-6 rounded object-cover border border-surface-600 flex-shrink-0"
                       />
                     )}
-                    <span className="truncate flex-1">{loc.name}</span>
+                    <span className="truncate flex-1">{plate.label}</span>
                   </button>
                 ))}
-                {assignableLocations.length === 0 && (
-                  <div className="px-2.5 py-2 text-[11px] text-gray-500">
-                    No locations yet. Create one in Location Manager.{' '}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setLocationOpen(false);
-                        navigateToPanel('location-manager');
-                      }}
-                      className="text-brand-400 hover:text-brand-300 transition-colors border border-surface-600 text-[9px] normal-case tracking-normal font-medium"
-                    >
-                      Go →
-                    </button>
-                  </div>
-                )}
               </div>
-              {assignedLocation && (
-                <div className="border-t border-surface-700 p-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      assignLocationToSetup(currentSetupId, null);
-                      setLocationOpen(false);
-                    }}
-                    className="w-full px-2.5 py-1.5 rounded-lg text-left text-[11px] text-red-400 hover:bg-surface-700 transition-colors"
-                  >
-                    Remove assignment
-                  </button>
-                </div>
-              )}
             </EntityDropdownPanel>
           </EntityDropdown>
+        )}
 
-          {assignedLocation && activeCoverage && (
-            <EntityDropdown
-              label="Backdrop Plate"
-              value={assignedPlate?.label ?? ''}
-              thumbnailUrl={assignedPlate?.url}
-              placeholder="Select backdrop plate…"
-              open={plateOpen}
-              onToggle={() => {
-                setPlateOpen((v) => !v);
-                setLocationOpen(false);
-              }}
-            >
-              <EntityDropdownPanel>
-                <div className="p-1 space-y-0.5 max-h-40 overflow-y-auto">
-              {selectablePlates.map((plate) => (
-                    <button
-                      key={plate.id}
-                      type="button"
-                      onClick={() => {
-                        assignPlateToShot(currentSetupId, activeCoverage.id, plate.id);
-                        setPlateOpen(false);
-                      }}
-                      className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left hover:bg-surface-700 transition-colors text-[11px]
-                        ${plate.id === assignedPlateId ? 'bg-brand-500/10 text-brand-300' : 'text-gray-200'}`}
-                    >
-                      {plate.url && (
-                        <img
-                          src={plate.url}
-                          alt={plate.label}
-                          className="w-10 h-6 rounded object-cover border border-surface-600 flex-shrink-0"
-                        />
-                      )}
-                      <span className="truncate flex-1">{plate.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </EntityDropdownPanel>
-            </EntityDropdown>
-          )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-[14px_minmax(0,1fr)] gap-2 items-start">
-        <div className="pt-1 flex justify-center">
-          <input
-            type="radio"
-            name="backdrop-source-mode"
-            checked={derivedSourceMode === 'manual'}
-            onChange={() => {
-              setLocationOpen(false);
-              setPlateOpen(false);
-            }}
-            className="h-3.5 w-3.5 rounded-full border-surface-500 text-brand-500 focus:ring-brand-500/40"
-            aria-label="Use manual backdrop plate"
-          />
-        </div>
-        <div className="flex-1">
-          <WorkflowCollapsibleSection
-            label="Manual Backdrop Plate"
-            defaultCollapsed
-            forceExpanded={derivedSourceMode === 'manual'}
-          >
-            <SetupBackdropPanel />
-          </WorkflowCollapsibleSection>
-        </div>
-        </div>
+        <EntityImageAddButton kind="location" label="Add backdrop image…" />
       </div>
     </fieldset>
   );
