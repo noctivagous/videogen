@@ -1,4 +1,5 @@
 import { loadMannequinImage } from '@/lib/constants/mannequin-assets';
+import { fetchRemoteMediaAsDataUrl } from '@/lib/media/remote-media';
 import { mannequinDrawLayout } from '@/lib/studio/mannequin-layout';
 import {
   getBackdropFraming,
@@ -54,13 +55,8 @@ export async function persistBakedImageUrl(imageUrl: string): Promise<string> {
     return imageUrl;
   }
 
-  try {
-    const res = await fetch(imageUrl);
-    if (!res.ok) return imageUrl;
-    return blobToDataUrl(await res.blob());
-  } catch {
-    return imageUrl;
-  }
+  const persisted = await fetchRemoteMediaAsDataUrl(imageUrl);
+  return persisted ?? imageUrl;
 }
 
 async function loadImageElement(url: string): Promise<HTMLImageElement> {

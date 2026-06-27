@@ -3727,7 +3727,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       }));
       get().showToast('Video generation complete!');
 
-      const linkArchivedAsset = (library: MediaAsset[], assetId: string) => {
+      const linkArchivedAsset = (library: MediaAsset[], assetId: string, persistedUrl: string) => {
         if (!newVideo) {
           set({ mediaLibrary: library });
           return;
@@ -3736,47 +3736,36 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
           const currentShotState = state.shots.find((entry) => entry.id === shot.id) ?? shot;
           return {
             mediaLibrary: library,
-            ...applyShotPatch(state, linkGeneratedVideoMediaAsset(currentShotState, newVideo.id, assetId)),
+            ...applyShotPatch(
+              state,
+              linkGeneratedVideoMediaAsset(currentShotState, newVideo.id, assetId, persistedUrl),
+            ),
           };
         });
       };
 
       // Archive the video to the media library immediately while the provider
       // URL is still live. Provider URLs (e.g. xAI) expire after ~1 hour.
-      archiveGeneratedVideoToLibrary(get().mediaLibrary, videoUrl, {
-        shotId: shot.id,
-        workflowOrigin: shot.workflow ?? 'generated',
-        providerJobId: result.providerJobId,
-      }).then(({ library, assetId }) => {
-        if (assetId) linkArchivedAsset(library, assetId);
-      }).catch(() => {
-        // Fallback: keep a shot-linked video record in the library even if
-        // fetching/transcoding the provider URL fails.
-        set((state) => {
-          const existingAsset = state.mediaLibrary.find((asset) => asset.url === videoUrl && asset.type === 'video');
-          if (existingAsset) {
-            linkArchivedAsset(linkAssetToShot(state.mediaLibrary, existingAsset.id, shot.id), existingAsset.id);
-            return {};
-          }
-          const fallbackAssetId = crypto.randomUUID();
-          const fallbackLibrary: MediaAsset[] = [
-            ...state.mediaLibrary,
-            {
-              id: fallbackAssetId,
-              type: 'video',
-              url: videoUrl,
-              createdAt: Date.now(),
-              workflowOrigin: shot.workflow ?? 'generated',
-              metadata: {
-                usedInShots: [shot.id],
-                provider: result.providerJobId ? getVideoProviderName(ai) : undefined,
-              },
-            },
-          ];
-          linkArchivedAsset(fallbackLibrary, fallbackAssetId);
-          return {};
+      try {
+        const { library, assetId } = await archiveGeneratedVideoToLibrary(get().mediaLibrary, videoUrl, {
+          shotId: shot.id,
+          workflowOrigin: shot.workflow ?? 'generated',
+          providerJobId: result.providerJobId,
         });
-      });
+        if (assetId) {
+          const archivedAsset = library.find((asset) => asset.id === assetId);
+          if (archivedAsset) {
+            linkArchivedAsset(library, assetId, archivedAsset.url);
+          }
+        } else {
+          get().showToast(
+            'Video generated but could not save to Assets — download it before the link expires',
+            'error',
+          );
+        }
+      } catch {
+        get().showToast('Video generated but could not save to Assets', 'error');
+      }
 
       setTimeout(() => set({ showPreviewSuccess: false }), 5000);
     } catch (e) {

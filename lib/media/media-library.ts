@@ -1,5 +1,6 @@
 import { normalizeWorkflow } from '@/lib/constants/workflows';
 import { getWorkflowReferenceSteps } from '@/lib/studio/workflow';
+import { fetchRemoteMediaBlob } from '@/lib/media/remote-media';
 import type {
   MediaAsset,
   MediaAssetType,
@@ -48,6 +49,9 @@ export async function blobFromDataUrl(dataUrl: string): Promise<Blob | null> {
 export async function blobFromUrl(url: string): Promise<Blob | null> {
   if (url.startsWith('data:') || url.startsWith('blob:')) {
     return blobFromDataUrl(url);
+  }
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return fetchRemoteMediaBlob(url);
   }
   try {
     const res = await fetch(url);
@@ -244,7 +248,7 @@ export async function ingestBakedFramesForShot(
   let shotPatch: Pick<Shot, 'savedBakedFrameAssetIds' | 'linkedAssetIds'> = {};
 
   if (shot.bakedStartFrame) {
-    const baked = await createMediaAssetFromDataUrl(nextLibrary, shot.bakedStartFrame, {
+    const baked = await createMediaAssetFromUrl(nextLibrary, shot.bakedStartFrame, {
       type: 'baked-frame',
       workflowOrigin: opts.workflowOrigin ?? normalizeWorkflow(shot),
     });
@@ -260,7 +264,7 @@ export async function ingestBakedFramesForShot(
     shot.bakedIntermediateFrame &&
     shot.bakedIntermediateFrame !== shot.bakedStartFrame
   ) {
-    const intermediate = await createMediaAssetFromDataUrl(nextLibrary, shot.bakedIntermediateFrame, {
+    const intermediate = await createMediaAssetFromUrl(nextLibrary, shot.bakedIntermediateFrame, {
       type: 'intermediate-frame',
       workflowOrigin: opts.workflowOrigin ?? normalizeWorkflow(shot),
       metadata: bakedFrameId ? { parentAssetId: bakedFrameId } : undefined,
@@ -302,15 +306,8 @@ export async function archiveGeneratedVideoToLibrary(
     providerJobId?: string;
   },
 ): Promise<{ library: MediaAsset[]; assetId: string | null }> {
-  // Download the video blob from the provider URL.
-  let blob: Blob;
-  try {
-    const res = await fetch(videoUrl);
-    if (!res.ok) return { library, assetId: null };
-    blob = await res.blob();
-  } catch {
-    return { library, assetId: null };
-  }
+  const blob = await fetchRemoteMediaBlob(videoUrl);
+  if (!blob) return { library, assetId: null };
 
   const id = await hashBlobContent(blob);
   const existing = library.find((a) => a.id === id);

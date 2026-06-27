@@ -105,16 +105,28 @@ export function linkGeneratedVideoMediaAsset(
   shot: Shot,
   videoId: string,
   mediaLibraryAssetId: string,
+  persistedUrl?: string,
 ): Partial<Shot> {
   const videos = getShotGeneratedVideos(shot);
   const index = videos.findIndex((video) => video.id === videoId);
   if (index < 0) return {};
 
   const nextVideos = videos.map((video) => (
-    video.id === videoId ? { ...video, mediaLibraryAssetId } : video
+    video.id === videoId
+      ? {
+          ...video,
+          mediaLibraryAssetId,
+          ...(persistedUrl ? { url: persistedUrl } : {}),
+        }
+      : video
   ));
 
-  return { generatedVideos: nextVideos };
+  const activeIndex = getActiveVideoIndex(shot);
+  const patch: Partial<Shot> = { generatedVideos: nextVideos };
+  if (videos[activeIndex]?.id === videoId && persistedUrl) {
+    patch.videoUrl = persistedUrl;
+  }
+  return patch;
 }
 
 export function deleteGeneratedVideoById(shot: Shot, id: string): Partial<Shot> {

@@ -51,7 +51,8 @@ import { CharacterManager } from '@/components/studio/character-manager/Characte
 import { LocationManager } from '@/components/studio/location-manager/LocationManager';
 import { SettingsPanel } from '@/components/studio/SettingsPanel';
 import { formatDuration } from '@/lib/studio/shot-display';
-import { getGeneratedVideoCount, getShotActiveVideoUrl } from '@/lib/studio/shot-videos';
+import { resolveGeneratedVideoPlaybackUrl } from '@/lib/media/generated-video-media';
+import { getGeneratedVideoCount } from '@/lib/studio/shot-videos';
 import { isPreviewFrameSupported } from '@/lib/studio/generation/preview-frame-supported';
 
 import { isCustomProvider } from '@/lib/storage/ai-settings';
@@ -123,6 +124,7 @@ export function PreviewPanel() {
   const toggleCompositionOverlay = useStudioStore((s) => s.toggleCompositionOverlay);
   const openEntityImageAssociate = useEntityImageAssociateStore((s) => s.openEntityImageAssociate);
   const shots = useStudioStore((s) => s.shots);
+  const mediaLibrary = useStudioStore((s) => s.mediaLibrary);
   const currentShot = useStudioStore((s) => s.currentShot);
   const previewSubMode = useStudioStore((s) => s.previewSubMode);
   const setPreviewSubMode = useStudioStore((s) => s.setPreviewSubMode);
@@ -151,8 +153,12 @@ export function PreviewPanel() {
     [shot?.mannequins],
   );
   const showOverlay = shot?.frameComposition?.showOverlay ?? true;
-  const generatedVideo = getShotActiveVideoUrl(shot);
+  const generatedVideo = useMemo(
+    () => resolveGeneratedVideoPlaybackUrl(mediaLibrary, shot),
+    [mediaLibrary, shot],
+  );
   const generatedVideoCount = getGeneratedVideoCount(shot);
+  const showPreviewFrameContent = frameView !== 'generated';
   const bakeStartFrame = isBakeStartFrame(shot);
   const bakedPreviewUrl = shot?.bakedStartFrame ?? null;
   const bakedIntermediateUrl = shot?.bakedIntermediateFrame ?? null;
@@ -258,7 +264,7 @@ export function PreviewPanel() {
         : 'Blocking';
 
   const showFramingGuides =
-    frameView === 'preview' && !showModelPreview && previewSubMode === 'framing';
+    showPreviewFrameContent && !showModelPreview && previewSubMode === 'framing';
 
   const aspectRatio = (project.aspectRatio || '16:9') as AspectRatio;
   const backdropSourceUrl = shot ? getEffectiveBackdropSourceUrl(shot, shot.lighting) : null;
@@ -371,7 +377,7 @@ export function PreviewPanel() {
         <video
           key={generatedVideo}
           src={generatedVideo}
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 z-[3] w-full h-full object-cover"
           controls
           playsInline
           loop
@@ -533,7 +539,7 @@ export function PreviewPanel() {
             className={`preview-frame-clip absolute inset-0 ${showFramingBackdrop ? 'bg-transparent' : 'bg-surface-900'} ${showBackdropEditStack ? 'pointer-events-none' : ''}`}
             {...uiSectionProps(UI_SECTIONS.studioPreviewContent)}
           >
-            {backdropCropCommitted && shot && backdropSourceUrl && !showModelPreview && (
+            {showPreviewFrameContent && backdropCropCommitted && shot && backdropSourceUrl && !showModelPreview && (
               <BackdropFramingLayer
                 stageRef={previewStageRef}
                 frameRef={previewFrameRef}

@@ -1,5 +1,9 @@
+import {
+  getActiveGeneratedVideo,
+  getShotActiveVideoUrl,
+} from '@/lib/studio/shot-videos';
 import type { MediaAsset } from '@/lib/types/media-library';
-import type { GeneratedVideo } from '@/lib/types/studio';
+import type { GeneratedVideo, Shot } from '@/lib/types/studio';
 
 const CREATED_AT_MATCH_WINDOW_MS = 5 * 60 * 1000;
 
@@ -35,4 +39,16 @@ export function resolveGeneratedVideoMediaAssetId(
   shotId: number,
 ): string | null {
   return findMediaAssetForGeneratedVideo(mediaLibrary, video, shotId)?.id ?? null;
+}
+
+/** Prefer archived library blob over expiring provider URL for playback. */
+export function resolveGeneratedVideoPlaybackUrl(
+  mediaLibrary: MediaAsset[],
+  shot: Shot | undefined,
+): string | null {
+  const video = getActiveGeneratedVideo(shot);
+  if (!video || !shot) return getShotActiveVideoUrl(shot);
+
+  const asset = findMediaAssetForGeneratedVideo(mediaLibrary, video, shot.id);
+  return asset?.url ?? video.url ?? shot.videoUrl ?? null;
 }

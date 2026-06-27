@@ -13,6 +13,7 @@
 
 import type { MediaAsset, MediaAssetType } from '@/lib/types/media-library';
 import type { Character, ColorPaletteCollection, Location, ReferenceRole, Setup } from '@/lib/types/studio';
+import { isRemoteProviderUrl } from '@/lib/storage/project-media-paths';
 import {
   collectionToDocument,
   colorPaletteGroupThumbnailDataUrl,
@@ -174,7 +175,7 @@ export function deriveProjectAssets(
 
     // ── Per-coverage baked frames and generated videos ─────────────────────
     for (const coverage of setup.shots) {
-      if (coverage.bakedStartFrame) {
+      if (coverage.bakedStartFrame && !isRemoteProviderUrl(coverage.bakedStartFrame)) {
         push({
           id: derivedId('bake', coverage.id),
           type: 'baked-frame',
@@ -187,7 +188,8 @@ export function deriveProjectAssets(
       }
       if (
         coverage.bakedIntermediateFrame &&
-        coverage.bakedIntermediateFrame !== coverage.bakedStartFrame
+        coverage.bakedIntermediateFrame !== coverage.bakedStartFrame &&
+        !isRemoteProviderUrl(coverage.bakedIntermediateFrame)
       ) {
         push({
           id: derivedId('bake-intermediate', coverage.id),
@@ -199,9 +201,9 @@ export function deriveProjectAssets(
           metadata: { usedInShots: [coverage.id] },
         });
       }
-      // Generated videos are NOT derived from project state because the provider
-      // URLs are temporary (e.g. xAI URLs expire after ~1 hour). Videos are
-      // saved to the explicit mediaLibrary as blobs at generation time instead.
+      // Generated videos and temporary provider URLs are NOT derived from project
+      // state — they are archived to the explicit mediaLibrary as data URLs at
+      // generation/bake time instead.
     }
   }
 
