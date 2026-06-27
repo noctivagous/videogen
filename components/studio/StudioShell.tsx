@@ -9,6 +9,7 @@ import { PreviewPanel } from '@/components/studio/PreviewPanel';
 import { RightPanelSlot } from '@/components/studio/RightPanelSlot';
 import { RightPanelContent } from '@/components/studio/StudioWorkspaceRightPanel';
 import { ContextMenuManager } from '@/components/ui/ContextMenuManager';
+import { KeybindingsManager } from '@/components/ui/KeybindingsManager';
 import { ModalManager } from '@/components/ui/ModalManager';
 import { ThemeTransformConnectorProvider } from '@/components/studio/ThemeTransformConnectorProvider';
 import { ProviderEditModal } from '@/components/studio/ProviderEditModal';
@@ -37,6 +38,7 @@ export function StudioShell() {
   return (
     <ModalManager>
     <ContextMenuManager>
+    <KeybindingsManager>
     <div className="h-screen flex flex-col overflow-hidden" {...uiSectionProps(UI_SECTIONS.studioRoot)}>
       <HeaderBar />
 
@@ -102,6 +104,7 @@ export function StudioShell() {
       <EntityImageAssociateModal />
       <ProjectSettingsModal />
     </div>
+    </KeybindingsManager>
     </ContextMenuManager>
     </ModalManager>
   );

@@ -27,6 +27,7 @@ import { useNavigateToStudioPanel } from "@/hooks/use-studio-panel-navigation";
 import { StudioPanelHeader } from "@/components/studio/StudioPanelHeader";
 import { STUDIO_LAUNCHER_ICONS } from "@/components/studio/studio-launcher-icons";
 import { getStudioApp } from "@/lib/constants/studio-apps";
+import { getLauncherShortcutLabelForItem } from "@/lib/studio/studio-launcher-keybindings";
 import { useStudioStore } from "@/store/useStudioStore";
 
 interface SavedPaletteGroup {
@@ -131,6 +132,8 @@ export function ColorPaletteMakerPanel() {
         title={colorPaletteApp.title}
         description={colorPaletteApp.description}
         icon={STUDIO_LAUNCHER_ICONS["color-palette-maker"]}
+        launcherItemId="color-palette-maker"
+        shortcut={getLauncherShortcutLabelForItem("color-palette-maker")}
         onBack={() => navigateToPanel("shot-designer")}
         backTitle="Back to Shot Designer"
       />

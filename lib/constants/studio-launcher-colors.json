@@ -1,0 +1,10 @@
+{
+  "shot-designer": { "accent": "#f97316" },
+  "media-library": { "accent": "#3b82f6" },
+  "character-sheet-generator": { "accent": "#14b8a6" },
+  "location-manager": { "accent": "#22c55e" },
+  "film-look-maker": { "accent": "#a855f7" },
+  "color-palette-maker": { "accent": "#ec4899" },
+  "image-editor": { "accent": "#eab308" },
+  "settings": { "accent": "#94a3b8" }
+}

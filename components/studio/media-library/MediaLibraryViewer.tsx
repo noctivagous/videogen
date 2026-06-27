@@ -17,6 +17,7 @@ import {
 import { MediaLibraryTreeView } from '@/components/studio/media-library/MediaLibraryTreeView';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { getStudioLauncherItem } from '@/lib/constants/studio-launcher';
+import { getLauncherShortcutLabelForItem } from '@/lib/studio/studio-launcher-keybindings';
 import { searchMediaLibrary } from '@/lib/media/media-library-query';
 import { deriveProjectAssets, mergeWithDerivedAssets } from '@/lib/media/derive-project-assets';
 import type { MediaAssetType } from '@/lib/types/media-library';
@@ -154,6 +155,8 @@ export function MediaLibraryViewer({ onBack }: MediaLibraryViewerProps) {
         title={mediaLibraryItem.title}
         description={headerDescription}
         icon={STUDIO_LAUNCHER_ICONS['media-library']}
+        launcherItemId="media-library"
+        shortcut={getLauncherShortcutLabelForItem('media-library')}
         onBack={onBack}
         backTitle="Back to Shot Designer"
         titleTrailing={

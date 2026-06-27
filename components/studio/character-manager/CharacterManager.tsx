@@ -16,6 +16,7 @@ import { STUDIO_LAUNCHER_ICONS } from '@/components/studio/studio-launcher-icons
 import { useStudioPanelInspectorStore } from '@/store/useStudioPanelInspectorStore';
 import { useStudioStore } from '@/store/useStudioStore';
 import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
+import { getLauncherShortcutLabelForItem } from '@/lib/studio/studio-launcher-keybindings';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -711,6 +712,8 @@ export function CharacterManager() {
           scope === 'project' ? 'in this project' : 'in global library'
         }`}
         icon={STUDIO_LAUNCHER_ICONS['character-sheet-generator']}
+        launcherItemId="character-sheet-generator"
+        shortcut={getLauncherShortcutLabelForItem('character-sheet-generator')}
         onBack={() => navigateToPanel('shot-designer')}
         backTitle="Back to Shot Designer"
         titleTrailing={

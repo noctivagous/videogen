@@ -5,6 +5,7 @@ import {
   useId,
   useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
 } from 'react';
 
@@ -27,6 +28,9 @@ export interface SplitButtonProps {
   activeItemId?: string;
   compact?: boolean;
   className?: string;
+  primaryClassName?: string;
+  primaryStyle?: CSSProperties;
+  menuButtonStyle?: CSSProperties;
   menuClassName?: string;
   menuUiSection?: Record<string, string>;
   primaryUiSection?: Record<string, string>;
@@ -53,6 +57,9 @@ export function SplitButton({
   activeItemId,
   compact = false,
   className = '',
+  primaryClassName = '',
+  primaryStyle,
+  menuButtonStyle,
   menuClassName = '',
   menuUiSection,
   primaryUiSection,
@@ -104,7 +111,8 @@ export function SplitButton({
         aria-haspopup={primaryOpensMenu && hasMenu ? 'menu' : undefined}
         aria-expanded={primaryOpensMenu && hasMenu ? menuOpen : undefined}
         aria-controls={primaryOpensMenu && hasMenu ? menuId : undefined}
-        className={primaryButtonClass}
+        className={`${primaryButtonClass} ${primaryClassName}`.trim()}
+        style={primaryStyle}
         {...primaryUiSection}
       >
         {label}
@@ -116,6 +124,7 @@ export function SplitButton({
         aria-controls={menuOpensMenu && hasMenu ? menuId : undefined}
         onClick={() => runSegmentAction(menuAction, toggleMenu)}
         className={menuButtonClass}
+        style={menuButtonStyle}
         aria-label={`${label} menu`}
       >
         ▾

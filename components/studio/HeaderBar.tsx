@@ -20,6 +20,10 @@ import { SplitButton } from '@/components/ui/SplitButton';
 import { MODEL_CATEGORY_DEFINITIONS, type ModelCategoryId } from '@/lib/constants/model-catalog';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { getStudioPanelTitle } from '@/lib/constants/studio-launcher';
+import { launchStudioLauncherItem } from '@/lib/studio/launch-studio-launcher-item';
+import { getAdjacentLauncherItemForPanel } from '@/lib/studio/studio-launcher-keybindings';
+import { getStudioLauncherThemeForPanel } from '@/lib/studio/studio-launcher-theme';
+import { formatAltArrowShortcut, isMacPlatform } from '@/lib/ui/shortcut-label';
 import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 import {
   getBuiltInProvider,
@@ -303,6 +307,7 @@ export function HeaderBar() {
   const openProjectFolder = useStudioStore((s) => s.openProjectFolder);
   const saveProjectFolderAs = useStudioStore((s) => s.saveProjectFolderAs);
   const exportVideo = useStudioStore((s) => s.exportVideo);
+  const showToast = useStudioStore((s) => s.showToast);
   const navigateToPanel = useNavigateToStudioPanel();
   const workspaceView = useStudioStore((s) => s.workspaceView);
   const setModelSlotConfig = useStudioStore((s) => s.setModelSlotConfig);
@@ -382,6 +387,18 @@ export function HeaderBar() {
   const hasDirectory = projectLocationKind === 'directory';
   const directoryApiSupported = fileAccess.tier === 'directory';
   const nativeFileApiSupported = fileAccess.tier === 'directory' || fileAccess.tier === 'file-only';
+  const activeLauncherTheme = getStudioLauncherThemeForPanel(workspaceView);
+  const previousLauncherShortcut = formatAltArrowShortcut('left');
+  const nextLauncherShortcut = formatAltArrowShortcut('right');
+  const isMac = isMacPlatform();
+  const previousArrowButtonLabel = isMac ? '⌥←' : 'alt+←';
+  const nextArrowButtonLabel = isMac ? '⌥→' : 'alt+→';
+
+  const navigateLauncherByDirection = (direction: 'previous' | 'next') => {
+    const itemId = getAdjacentLauncherItemForPanel(workspaceView, direction);
+    if (!itemId) return;
+    launchStudioLauncherItem(itemId, { navigateToPanel, showToast });
+  };
 
   return (
     <header
@@ -394,27 +411,52 @@ export function HeaderBar() {
             <button
               type="button"
               onClick={() => navigateToPanel('app-summary')}
-              className={`flex items-center gap-1.5 rounded-md px-1 py-0.5 -ml-1 transition-colors ${
+              className={`flex items-center gap-1 rounded-md px-0.5 py-0 -ml-1 transition-colors ${
                 workspaceView === 'app-summary'
                   ? 'bg-brand-600/15 ring-1 ring-brand-500/30'
                   : 'hover:bg-surface-800/80'
               }`}
               title="VideoGen apps"
             >
-              <div className="w-5 h-5 rounded-md bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center">
-                <Video className="w-3 h-3 text-white" aria-hidden />
+              <div className="w-[18px] h-[18px] rounded-md bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center">
+                <Video className="w-[10px] h-[10px] text-white" aria-hidden />
               </div>
-              <span className="font-semibold text-xs text-gray-200">VideoGen</span>
+              <span className="font-semibold text-[10px] text-gray-200">VideoGen</span>
             </button>
-            <SplitButton
-              compact
-              label={getStudioPanelTitle(workspaceView)}
-              primaryAction="toggle-menu"
-              menuAction="toggle-menu"
-              renderMenu={(closeMenu) => <AppsLauncherMenu onDismiss={closeMenu} />}
-              primaryUiSection={uiSectionProps(UI_SECTIONS.studioHeaderAppsSplit)}
-              menuUiSection={uiSectionProps(UI_SECTIONS.studioHeaderAppsMenu)}
-            />
+            <div className="flex items-center gap-1 min-w-0">
+              <SplitButton
+                compact
+                label={getStudioPanelTitle(workspaceView)}
+                primaryAction="toggle-menu"
+                menuAction="toggle-menu"
+                renderMenu={(closeMenu) => <AppsLauncherMenu onDismiss={closeMenu} />}
+                primaryClassName="font-semibold"
+                primaryStyle={activeLauncherTheme?.splitPrimaryStyle}
+                menuButtonStyle={activeLauncherTheme?.splitMenuStyle}
+                primaryUiSection={uiSectionProps(UI_SECTIONS.studioHeaderAppsSplit)}
+                menuUiSection={uiSectionProps(UI_SECTIONS.studioHeaderAppsMenu)}
+              />
+              <div className="inline-flex items-center">
+                <button
+                  type="button"
+                  onClick={() => navigateLauncherByDirection('previous')}
+                  className="h-[21px] w-[26.5px] inline-flex items-center justify-center text-[11px] font-semibold bg-surface-800 hover:bg-surface-700 border border-surface-600 border-r-0 rounded-l-md transition-all text-gray-200 leading-none"
+                  title={`Previous launcher item (${previousLauncherShortcut})`}
+                  aria-label={`Previous launcher item (${previousLauncherShortcut})`}
+                >
+                  <span aria-hidden>{previousArrowButtonLabel}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigateLauncherByDirection('next')}
+                  className="h-[21px] w-[26.5px] inline-flex items-center justify-center text-[11px] font-semibold bg-surface-800 hover:bg-surface-700 border border-surface-600 rounded-r-md transition-all text-gray-200 leading-none"
+                  title={`Next launcher item (${nextLauncherShortcut})`}
+                  aria-label={`Next launcher item (${nextLauncherShortcut})`}
+                >
+                  <span aria-hidden>{nextArrowButtonLabel}</span>
+                </button>
+              </div>
+            </div>
           </div>
           <StudioLauncherIconBar />
         </div>

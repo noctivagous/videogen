@@ -3,11 +3,15 @@
 import { useId, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
+import { ShortcutChip } from '@/components/ui/ShortcutChip';
+
 export function InstantTooltip({
   label,
+  shortcut,
   children,
 }: {
   label: string;
+  shortcut?: string | null;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -48,7 +52,10 @@ export function InstantTooltip({
           className="fixed z-[100] -translate-x-1/2 px-2 py-1 text-[10px] rounded-md border border-surface-600 bg-surface-900 text-gray-200 whitespace-nowrap pointer-events-none shadow-lg"
           style={{ top: position.top, left: position.left }}
         >
-          {label}
+          <span className="inline-flex items-center gap-1.5">
+            {label}
+            {shortcut ? <ShortcutChip>{shortcut}</ShortcutChip> : null}
+          </span>
         </span>,
         document.body,
       )}

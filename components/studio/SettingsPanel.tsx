@@ -10,6 +10,7 @@ import { SettingsProvidersContent } from '@/components/studio/SettingsProvidersC
 import { StudioPanelHeader } from '@/components/studio/StudioPanelHeader';
 import { MODEL_CATEGORY_DEFINITIONS, type ModelCategoryId } from '@/lib/constants/model-catalog';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
+import { getLauncherShortcutLabelForItem } from '@/lib/studio/studio-launcher-keybindings';
 import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 import { useStudioStore } from '@/store/useStudioStore';
 
@@ -55,6 +56,8 @@ export function SettingsPanel() {
         title="AI Settings"
         description="Model categories, provider pages, API keys, and defaults"
         icon={Settings}
+        launcherItemId="settings"
+        shortcut={getLauncherShortcutLabelForItem('settings')}
         onBack={() => navigateToPanel('app-summary')}
         backTitle="Back to Apps"
       />

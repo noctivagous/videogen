@@ -4,6 +4,7 @@ import { getStudioApp, type StudioAppId } from '@/lib/constants/studio-apps';
 import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 import { StudioPanelHeader } from '@/components/studio/StudioPanelHeader';
 import { STUDIO_LAUNCHER_ICONS } from '@/components/studio/studio-launcher-icons';
+import { getLauncherShortcutLabelForItem } from '@/lib/studio/studio-launcher-keybindings';
 
 interface AppPlaceholderPanelProps {
   appId: StudioAppId;
@@ -19,6 +20,8 @@ export function AppPlaceholderPanel({ appId }: AppPlaceholderPanelProps) {
         title={app.title}
         description={app.description}
         icon={STUDIO_LAUNCHER_ICONS[appId]}
+        launcherItemId={appId}
+        shortcut={getLauncherShortcutLabelForItem(appId)}
         onBack={() => navigateToPanel('app-summary')}
         backTitle="Back to Apps"
       />
