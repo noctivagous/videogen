@@ -36,6 +36,7 @@ import { migrateMannequins } from '@/lib/studio/migrate-mannequin';
 import { previewFramingFingerprint } from '@/lib/constants/subject-cutouts';
 import {
   getBackdropSlotIndex,
+  getEffectiveBackdropApiUrl,
   getEffectiveBackdropSourceUrl,
   isBackdropCropCommitted,
 } from '@/lib/studio/backdrop-framing';
@@ -261,6 +262,9 @@ export function PreviewPanel() {
 
   const aspectRatio = (project.aspectRatio || '16:9') as AspectRatio;
   const backdropSourceUrl = shot ? getEffectiveBackdropSourceUrl(shot, shot.lighting) : null;
+  const backdropCompositorUrl = shot
+    ? (getEffectiveBackdropApiUrl(shot, aspectRatio, shot.lighting) ?? backdropSourceUrl)
+    : null;
   const hasBackdrop = Boolean(backdropSourceUrl);
   const backdropCropCommitted = shot ? isBackdropCropCommitted(shot, aspectRatio) : false;
   const showFramingBackdrop = showFramingGuides && hasBackdrop;
@@ -323,7 +327,7 @@ export function PreviewPanel() {
         return (
           <PoseBlockCompositorEmbed
             mannequins={mannequins}
-            backdropUrl={backdropSourceUrl}
+            backdropUrl={backdropCompositorUrl}
             aspectRatio={aspectRatio}
             selectedIds={compositorProps.selectedMannequinIds}
             onSelect={compositorProps.onSelect}

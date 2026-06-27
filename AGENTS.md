@@ -17,5 +17,24 @@
 - `public/poseblock-models` is not checked in but exposed via `scripts/link-poseblock-assets.mjs`; keep it linked/copyed while developing instead of duplicating assets. If you remove or refresh the submodule you must re-run the script manually otherwise `next dev` cannot serve the GLBs.
 - The compositing and pose data are defined inside `PoseBlock/`; read `PoseBlock/AGENTS.md` and `PoseBlock/INTEGRATION.md` before editing there.
 
+## Filetree layout
+- `app/` — Next.js App Router pages: `api/` (bake, generate, preview-frame, poseblock, project-storage, providers), `studio/[panel]/` (studio routes), `page.tsx` (root).
+- `components/studio/` — All studio UI panels, managers, overlays, and controls; organized into subdirs (character-manager, entity-picker, location-manager, media-library) plus flat component files.
+- `components/ui/` — Shared/generic UI primitives (ColorWheel, MentionTextarea, RangeSlider, Select, etc.).
+- `lib/constants/` — Every option set/constant used by UI dropdowns and prompts (camera, lens, framing, mannequin, providers, workflows, etc.).
+- `lib/media/` — Media library logic: queries, mutations, clip search, color palette groups.
+- `lib/poseblock/` — Adapter layer between the host app and the PoseBlock submodule.
+- `lib/storage/` — Client + server storage: project I/O, asset paths, provider keys, secrets sanitization.
+- `lib/studio/` — Core studio domain logic: generation adapters (fal, kling, luma, openai, etc.), humanoid figure/pose, bake start frame, mannequin bounds, workflow, prompts, shot settings.
+- `lib/types/` — Shared TypeScript types for media-library and studio.
+- `lib/ui/` — UI utilities: context-menu, modal-stack.
+- `store/` — Zustand stores: useStudioStore, useStudioPanelInspectorStore, useEntityImageAssociateStore.
+- `hooks/` — React hooks (apps-launcher, file-system-access, studio-panel-navigation).
+- `types/` — Ambient type declarations (scene-debug.d.ts).
+- `public/` — Static assets: `mannequins/` (PNG angle renders), `poseblock-models/` (symlink to PoseBlock), `service-provider-logos/`, `stock/`.
+- `scripts/` — Build/data-generation scripts (mannequin angles/cutouts, stock previews, look previews, poseblock asset linking).
+- `project-plans/` — Design docs, task lists, reference materials (FILM-TERMS, BRIDGE-TO-CINEMATOGRAPHY, etc.).
+- `PoseBlock/` — Git submodule: Three.js compositor with pose editing/adjustment, character models, pose presets. Its `public/models/` contains the GLB character files consumed via symlink.
+
 ## Data/layout contracts
 - `video-generation-workflows.json` is the source of truth for every workflow dropdown, availability check, and Bake Start Frame checklist step—edit it if you are adjusting workflows rather than scattering logic around the UI.

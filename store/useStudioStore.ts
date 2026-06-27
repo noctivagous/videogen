@@ -735,10 +735,15 @@ function themeLightingInvalidationPatch(shot: Shot | undefined): Partial<Shot> {
 
 const POSEBLOCK_BAKE_EXPORT_ENABLED = process.env.NEXT_PUBLIC_POSEBLOCK_COMPOSITOR === '1';
 
-async function tryExportPoseBlockComposite(): Promise<string | null> {
+async function tryExportPoseBlockComposite(
+  backdropUrl: string,
+  frameWidth: number,
+  frameHeight: number,
+): Promise<string | null> {
   if (!POSEBLOCK_BAKE_EXPORT_ENABLED) return null;
   try {
     const poseblock = await import('poseblock');
+    poseblock.useStore.getState().set({ backdropUrl, frameWidth, frameHeight });
     return await poseblock.runCompositeExport();
   } catch {
     return null;
@@ -3184,11 +3189,23 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     });
 
     try {
+      await get().ensureBackdropCrop();
+
+      const aspectRatio = project.aspectRatio as AspectRatio;
+      const refreshedShot = getResolvedCurrentShot(
+        get().setups,
+        currentSetupId,
+        currentCoverageShotId,
+      );
+      if (!refreshedShot) throw new Error('No active shot');
+
+      const { width: bakeWidth, height: bakeHeight } = parseResolution(project.resolution);
+
       const bakeOutput = await renderBakeFrames({
-        shot,
-        aspectRatio: project.aspectRatio as AspectRatio,
+        shot: refreshedShot,
+        aspectRatio,
         resolution: project.resolution,
-        mannequins: shot.mannequins ?? [],
+        mannequins: refreshedShot.mannequins ?? [],
       });
       const { imageUrl, compositeUrl: fallbackCompositeUrl } = await bakeBlobsToDataUrls(bakeOutput);
 
@@ -3198,7 +3215,11 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
           bakeProgress: 'Capturing 3D mannequin composite',
           bakeProgressDetail: 'Using PoseBlock overlay for bake input',
         });
-        const poseBlockComposite = await tryExportPoseBlockComposite();
+        const poseBlockComposite = await tryExportPoseBlockComposite(
+          imageUrl,
+          bakeWidth,
+          bakeHeight,
+        );
         if (!poseBlockComposite) {
           throw new Error(
             '3D compositor export is unavailable. Open the Framing view and wait for the PoseBlock scene to load, then try baking again.',

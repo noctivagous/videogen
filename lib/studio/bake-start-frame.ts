@@ -3,7 +3,6 @@ import { mannequinDrawLayout } from '@/lib/studio/mannequin-layout';
 import {
   getBackdropFraming,
   getEffectiveBackdropSourceUrl,
-  isBackdropCropCommitted,
   renderBackdropCropBlob,
 } from '@/lib/studio/backdrop-framing';
 import { parseResolution } from '@/lib/studio/generation/adapters/shared';
@@ -136,34 +135,14 @@ export async function renderBakeFrames(input: {
   const backdropUrl = getEffectiveBackdropSourceUrl(shot, shot.lighting);
   if (!backdropUrl) throw new Error('Backdrop reference is required before baking');
 
-  let backdropBlob: Blob;
   const framing = getBackdropFraming(shot, aspectRatio);
-  const cropCommitted = isBackdropCropCommitted(shot, aspectRatio);
-  const cropUrl = shot.backdropCropsByAspect?.[aspectRatio];
-
-  if (cropCommitted && cropUrl) {
-    const img = await loadImageElement(cropUrl);
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Canvas context unavailable');
-    ctx.drawImage(img, 0, 0, width, height);
-    backdropBlob = await new Promise((resolve, reject) => {
-      canvas.toBlob(
-        (b) => (b ? resolve(b) : reject(new Error('Failed to export backdrop'))),
-        'image/png',
-      );
-    });
-  } else {
-    backdropBlob = await renderBackdropCropBlob({
-      sourceUrl: backdropUrl,
-      framing,
-      outputWidth: width,
-      outputHeight: height,
-      mime: 'image/png',
-    });
-  }
+  const backdropBlob = await renderBackdropCropBlob({
+    sourceUrl: backdropUrl,
+    framing,
+    outputWidth: width,
+    outputHeight: height,
+    mime: 'image/png',
+  });
 
   const backdropObjectUrl = URL.createObjectURL(backdropBlob);
   const backdropImg = await loadImageElement(backdropObjectUrl);
