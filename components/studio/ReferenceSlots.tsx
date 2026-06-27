@@ -35,7 +35,7 @@ import { CollapsiblePromptEditor } from '@/components/ui/CollapsiblePromptEditor
 import { ReferenceImageViewerModal } from '@/components/studio/ReferenceImageViewerModal';
 import { countMannequinsLinkedToSlot } from '@/lib/studio/mannequin-character-assignment';
 import type { AspectRatio, ReferenceMode, ThemeTransformSlotStatus } from '@/lib/types/studio';
-import { useOpenGeneratedVideo } from '@/hooks/use-studio-panel-navigation';
+import { useNavigateToStudioPanel, useOpenGeneratedVideo } from '@/hooks/use-studio-panel-navigation';
 import { useStudioStore } from '@/store/useStudioStore';
 
 interface ViewerSlot {
@@ -96,7 +96,11 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
   const isGenerating = useStudioStore((s) => s.isGenerating);
   const project = useStudioStore((s) => s.project);
   const locations = useStudioStore((s) => s.locations);
+  const mediaLibrary = useStudioStore((s) => s.mediaLibrary);
+  const globalMediaLibrary = useStudioStore((s) => s.globalMediaLibrary);
+  const selectMediaLibraryItem = useStudioStore((s) => s.selectMediaLibraryItem);
   const openGeneratedVideo = useOpenGeneratedVideo();
+  const navigateToPanel = useNavigateToStudioPanel();
   const fileInputs = useRef<(HTMLInputElement | null)[]>([]);
   const localSlotRefs = useRef<(HTMLElement | null)[]>([]);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -243,11 +247,14 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
                   if (
                     target.closest('.reference-label') ||
                     target.closest('.reference-remove') ||
-                    target.closest('.reference-replace')
+                    target.closest('.reference-replace') ||
+                    target.closest('.reference-viewer-btn')
                   ) {
                     return;
                   }
-                  if (!imgData) {
+                  if (imgData) {
+                    setViewerSlot({ index, url: imgData, label });
+                  } else {
                     openFilePicker(index);
                   }
                 }}
@@ -498,6 +505,17 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
 
   const bakePromptPreview = buildBakeStartFramePromptPreview(shot, shot.lighting);
   const bakePromptValue = shot.bakeStartFramePrompt ?? bakePromptPreview;
+  const openViewerItemInMediaLibrary = () => {
+    if (!viewerSlot?.url) return;
+    const match = [...mediaLibrary, ...globalMediaLibrary].find((asset) => (
+      asset.url === viewerSlot.url || resolveReferenceDisplayUrl(asset.url) === viewerSlot.url
+    ));
+    if (match) {
+      selectMediaLibraryItem(match.id);
+    }
+    setViewerSlot(null);
+    navigateToPanel('media-library');
+  };
 
   const renderChecklistDot = (done: boolean) => (
     <span
@@ -814,6 +832,7 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
       imageUrl={viewerSlot?.url ?? ''}
       label={viewerSlot?.label ?? 'Reference'}
       onClose={() => setViewerSlot(null)}
+      onOpenInMediaLibrary={openViewerItemInMediaLibrary}
     />
     </>
   );

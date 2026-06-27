@@ -1,10 +1,13 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
+import { ReferenceImageViewerModal } from '@/components/studio/ReferenceImageViewerModal';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { resolveReferenceDisplayUrl } from '@/lib/storage/reference-url';
 import { getSetupBackdrop } from '@/lib/studio/resolved-shot';
 import { invalidateCoverageForBackdrop } from '@/lib/studio/setup-invalidation';
+import { getTimelineShots } from '@/lib/studio/store-hierarchy';
+import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 import { useStudioStore } from '@/store/useStudioStore';
 
 function readFileAsDataUrl(file: File): Promise<string> {
@@ -22,7 +25,13 @@ export function SetupBackdropPanel() {
   const currentCoverageShotId = useStudioStore((s) => s.currentCoverageShotId);
   const addOrSelectManualBackdropForCurrentShot = useStudioStore((s) => s.addOrSelectManualBackdropForCurrentShot);
   const clearCurrentShotBackdrop = useStudioStore((s) => s.clearCurrentShotBackdrop);
+  const mediaLibrary = useStudioStore((s) => s.mediaLibrary);
+  const globalMediaLibrary = useStudioStore((s) => s.globalMediaLibrary);
+  const selectMediaLibraryItem = useStudioStore((s) => s.selectMediaLibraryItem);
+  const navigateToPanel = useNavigateToStudioPanel();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const replaceFileInputsRef = useRef<Record<string, HTMLInputElement | null>>({});
+  const [viewerBackdrop, setViewerBackdrop] = useState<{ url: string; label: string } | null>(null);
 
   const setup = setups.find((s) => s.id === currentSetupId) ?? setups[0];
   if (!setup) return null;
@@ -77,6 +86,45 @@ export function SetupBackdropPanel() {
     clearCurrentShotBackdrop();
   };
 
+  const replaceBackdropPlate = (backdropId: string, nextUrl: string) => {
+    if (!setup) return;
+    useStudioStore.setState((s) => {
+      const setups = s.setups.map((entry) => {
+        if (entry.id !== setup.id) return entry;
+        const changed = entry.backdrops.some((backdrop) => backdrop.id === backdropId && backdrop.url !== nextUrl);
+        const nextBackdrops = entry.backdrops.map((backdrop) =>
+          backdrop.id === backdropId
+            ? { ...backdrop, url: nextUrl }
+            : backdrop,
+        );
+        const nextEntry = { ...entry, backdrops: nextBackdrops };
+        return changed ? invalidateCoverageForBackdrop([nextEntry], nextEntry.id, backdropId)[0] : nextEntry;
+      });
+      return {
+        setups,
+        shots: getTimelineShots(setups),
+      };
+    });
+  };
+
+  const handleReplaceBackdrop = async (backdropId: string, file: File | undefined) => {
+    if (!file || !file.type.startsWith('image/')) return;
+    const dataUrl = await readFileAsDataUrl(file);
+    replaceBackdropPlate(backdropId, dataUrl);
+  };
+
+  const openViewerItemInMediaLibrary = () => {
+    if (!viewerBackdrop?.url) return;
+    const match = [...mediaLibrary, ...globalMediaLibrary].find((asset) => (
+      asset.url === viewerBackdrop.url || resolveReferenceDisplayUrl(asset.url) === viewerBackdrop.url
+    ));
+    if (match) {
+      selectMediaLibraryItem(match.id);
+    }
+    setViewerBackdrop(null);
+    navigateToPanel('media-library');
+  };
+
   return (
     <div
       className="rounded-lg border border-surface-600/80 bg-surface-800/40 p-3 space-y-2"
@@ -129,7 +177,12 @@ export function SetupBackdropPanel() {
               <button
                 type="button"
                 className="block w-full aspect-video bg-surface-700"
-                onClick={() => selectBackdropForShot(backdrop.id)}
+                onClick={() => {
+                  selectBackdropForShot(backdrop.id);
+                  if (displayUrl) {
+                    setViewerBackdrop({ url: displayUrl, label: backdrop.label });
+                  }
+                }}
                 title={`Use ${backdrop.label} for active shot`}
               >
                 {displayUrl ? (
@@ -141,6 +194,35 @@ export function SetupBackdropPanel() {
                   </div>
                 )}
               </button>
+              <button
+                type="button"
+                className="reference-replace"
+                title={`Replace ${backdrop.label}`}
+                aria-label={`Replace ${backdrop.label}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  replaceFileInputsRef.current[backdrop.id]?.click();
+                }}
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                  />
+                </svg>
+              </button>
+              <input
+                ref={(el) => { replaceFileInputsRef.current[backdrop.id] = el; }}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  void handleReplaceBackdrop(backdrop.id, e.target.files?.[0]);
+                  e.target.value = '';
+                }}
+              />
               <div className="px-1.5 py-1 bg-surface-900/90 text-[9px] text-gray-300 truncate">
                 {backdrop.label}
               </div>
@@ -165,6 +247,13 @@ export function SetupBackdropPanel() {
           Active shot uses {getSetupBackdrop(setup, activeCoverage.backdropId)?.label ?? 'plate'}.
         </p>
       )}
+      <ReferenceImageViewerModal
+        open={viewerBackdrop !== null}
+        imageUrl={viewerBackdrop?.url ?? ''}
+        label={viewerBackdrop?.label ?? 'Backdrop plate'}
+        onClose={() => setViewerBackdrop(null)}
+        onOpenInMediaLibrary={openViewerItemInMediaLibrary}
+      />
     </div>
   );
 }

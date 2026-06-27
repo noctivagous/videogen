@@ -1182,12 +1182,12 @@ input[type="range"]::-moz-range-thumb:hover {
 }
 
 .collapsible-prompt-editor__toggle {
-  @apply inline-flex shrink-0 items-center justify-center w-4 h-4 rounded border border-surface-600 bg-surface-800 text-gray-400 hover:text-gray-200 hover:bg-surface-700;
+  @apply inline-flex shrink-0 items-center justify-center w-8 h-8 rounded border border-surface-600 bg-surface-800 text-gray-400 hover:text-gray-200 hover:bg-surface-700;
 }
 
 .collapsible-prompt-editor__chevron {
-  width: 10px;
-  height: 10px;
+  width: 20px;
+  height: 20px;
   transition: transform 0.15s ease;
 }
 
