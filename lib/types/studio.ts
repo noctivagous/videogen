@@ -453,6 +453,10 @@ export interface LocationBackdropPlate {
   url: string | null;
   label: string;
   dataType: 'backdrop-plate';
+  /** Source context for plate ownership/behavior in pickers. */
+  source?: 'location' | 'manual';
+  /** Setup IDs associated with a manual plate (for filtering/organization). */
+  setupIds?: number[];
   backdropFramingByAspect?: Partial<Record<AspectRatio, BackdropFraming>>;
   backdropCropsByAspect?: Partial<Record<AspectRatio, string>>;
   backdropCropStatusByAspect?: Partial<Record<AspectRatio, BackdropCropStatus>>;

@@ -3,8 +3,34 @@
 <h2>Introduction</h2>
 
  <p>
-VideoGen intends to make precise AI filmmaking moves
-possible, in constrast with the experience of text prompts. 
+VideoGen has set out to make precise AI-driven filmmaking moves
+possible, in constrast with the experience of text prompts.
+With a text prompt it is hard to achieve a starting frame difference
+like the following.
+
+
+<p align="left">
+  <em>SOLEMN, FOREGROUND: (Close-up two-shot)</em><br>
+  <img src="public/readme/posing-1-closeup-twoshot.png" alt="Posing 1" width="500">
+  <br>
+  
+</p>
+
+
+<p align="left">
+  <em>MORE SOMBER, LOOKING DOWN. Close-up two-shot looking down</em><br>
+  <img src="public/readme/posing-2-closeup-twoshot-lookingdown.png" alt="Posing 2" width="500">
+  
+</p>
+
+<p align="left">
+  <em>BLOCKING CHANGE: Ledge. (Close-up two-shot)</em><br>
+  <img src="public/readme/posing-3-closeup-twoshot-ledge.png" alt="Posing 3" width="500">
+  <br>
+
+</p>
+
+<p> 
 Platforms like Runway and Higgsfield are built text-prompt-first.
 Both optimize for "describe a shot, get a clip" rather than 
 "place the camera, block the actors, describe the action and 
@@ -117,28 +143,6 @@ running, reclining, etc.)
 <p>In addition, the mannequins can be scaled and rotated in all three
 directions. They have controls for adjustments to body parts.</p>
 
-
-<p align="left">
-  <em>SOLEMN, FOREGROUND: (Close-up two-shot)</em><br>
-  <img src="public/readme/posing-1-closeup-twoshot.png" alt="Posing 1" width="500">
-  <br>
-  
-</p>
-
-
-<p align="left">
-  <em>MORE SOMBER, LOOKING DOWN. Close-up two-shot looking down</em><br>
-  <img src="public/readme/posing-2-closeup-twoshot-lookingdown.png" alt="Posing 2" width="500">
-  
-  
-</p>
-
-<p align="left">
-  <em>BLOCKING CHANGE: Ledge. (Close-up two-shot)</em><br>
-  <img src="public/readme/posing-3-closeup-twoshot-ledge.png" alt="Posing 3" width="500">
-  <br>
-  
-</p>
 
 <p align="left">
   <em>TENSION: Looking Behind. (Long shot, two-shot)</em><br>

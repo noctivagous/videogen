@@ -1,8 +1,11 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
+import { ManagerScopeSegment } from '@/components/studio/ManagerScopeSegment';
+import { StudioPanelHeader } from '@/components/studio/StudioPanelHeader';
+import { STUDIO_LAUNCHER_ICONS } from '@/components/studio/studio-launcher-icons';
 import { MediaLibraryGridView } from '@/components/studio/media-library/MediaLibraryGridView';
-import { MediaLibraryImportScopeDialog, importDropHint } from '@/components/studio/media-library/MediaLibraryImportScopeDialog';
+import { importDropHint } from '@/components/studio/media-library/MediaLibraryImportScopeDialog';
 import { snapshotItemId } from '@/lib/media/media-library-query';
 import { MediaLibraryListView } from '@/components/studio/media-library/MediaLibraryListView';
 import {
@@ -13,7 +16,7 @@ import {
 } from '@/components/studio/media-library/MediaLibraryToolbar';
 import { MediaLibraryTreeView } from '@/components/studio/media-library/MediaLibraryTreeView';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
-import { mergeMediaLibraries, type MediaLibraryCollection } from '@/lib/media/media-library-mutations';
+import { getStudioLauncherItem } from '@/lib/constants/studio-launcher';
 import { searchMediaLibrary } from '@/lib/media/media-library-query';
 import { deriveProjectAssets, mergeWithDerivedAssets } from '@/lib/media/derive-project-assets';
 import type { MediaAssetType } from '@/lib/types/media-library';
@@ -39,10 +42,9 @@ export function MediaLibraryViewer({ onBack }: MediaLibraryViewerProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState<MediaLibrarySearchMode>('text');
   const [typeFilter, setTypeFilter] = useState<MediaAssetType | 'all'>('all');
-  const [scopeFilter, setScopeFilter] = useState<MediaLibraryScopeFilter>('all');
+  const [scopeFilter, setScopeFilter] = useState<MediaLibraryScopeFilter>('project');
   const [layoutMode, setLayoutMode] = useState<MediaLibraryLayoutMode>('grid');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [pendingImportFiles, setPendingImportFiles] = useState<File[] | null>(null);
 
   // Assets derived directly from the live project state — always up to date,
   // no manual save required.
@@ -59,8 +61,7 @@ export function MediaLibraryViewer({ onBack }: MediaLibraryViewerProps) {
 
   const scopedAssets = useMemo(() => {
     if (scopeFilter === 'project') return projectAssets;
-    if (scopeFilter === 'global') return globalMediaLibrary;
-    return mergeMediaLibraries(projectAssets, globalMediaLibrary);
+    return globalMediaLibrary;
   }, [projectAssets, globalMediaLibrary, scopeFilter]);
 
   const filtered = useMemo(
@@ -79,29 +80,9 @@ export function MediaLibraryViewer({ onBack }: MediaLibraryViewerProps) {
   const handleImport = useCallback(
     (files: FileList | null) => {
       if (!files?.length) return;
-      const fileArray = Array.from(files);
-
-      if (scopeFilter === 'global') {
-        void importMediaAssets(fileArray, 'global');
-        return;
-      }
-      if (scopeFilter === 'project') {
-        void importMediaAssets(fileArray, 'project');
-        return;
-      }
-
-      setPendingImportFiles(fileArray);
+      void importMediaAssets(Array.from(files), scopeFilter);
     },
     [scopeFilter, importMediaAssets],
-  );
-
-  const confirmImportScope = useCallback(
-    (scope: MediaLibraryCollection) => {
-      if (!pendingImportFiles?.length) return;
-      void importMediaAssets(pendingImportFiles, scope);
-      setPendingImportFiles(null);
-    },
-    [pendingImportFiles, importMediaAssets],
   );
 
   const toggleSelected = useCallback((assetId: string, additive: boolean) => {
@@ -147,11 +128,42 @@ export function MediaLibraryViewer({ onBack }: MediaLibraryViewerProps) {
     dropHint: importDropHint(scopeFilter),
   };
 
+  const mediaLibraryItem = getStudioLauncherItem('media-library');
+
+  const headerDescription = useMemo(() => {
+    const parts = [
+      `${filtered.assets.length} asset${filtered.assets.length === 1 ? '' : 's'}`,
+    ];
+    if (filtered.snapshots.length > 0) {
+      parts.push(
+        `${filtered.snapshots.length} snapshot${filtered.snapshots.length === 1 ? '' : 's'}`,
+      );
+    }
+    if (selectedIds.size > 0) {
+      parts.push(`${selectedIds.size} selected`);
+    }
+    return parts.join(' · ');
+  }, [filtered.assets.length, filtered.snapshots.length, selectedIds.size]);
+
   return (
     <div
       className="media-library-viewer flex flex-col h-full min-h-0 bg-surface-900"
       {...uiSectionProps(UI_SECTIONS.studioMediaLibraryViewer)}
     >
+      <StudioPanelHeader
+        title={mediaLibraryItem.title}
+        description={headerDescription}
+        icon={STUDIO_LAUNCHER_ICONS['media-library']}
+        onBack={onBack}
+        backTitle="Back to Shot Designer"
+        titleTrailing={
+          <ManagerScopeSegment
+            value={scopeFilter}
+            onChange={setScopeFilter}
+            ariaLabel="Media library scope"
+          />
+        }
+      />
       <div {...uiSectionProps(UI_SECTIONS.studioMediaLibraryToolbar)}>
         <MediaLibraryToolbar
           searchQuery={searchQuery}
@@ -161,28 +173,18 @@ export function MediaLibraryViewer({ onBack }: MediaLibraryViewerProps) {
           typeFilter={typeFilter}
           onTypeFilterChange={setTypeFilter}
           scopeFilter={scopeFilter}
-          onScopeFilterChange={setScopeFilter}
           layoutMode={layoutMode}
           onLayoutModeChange={setLayoutMode}
           assetCount={filtered.assets.length}
-          snapshotCount={filtered.snapshots.length}
           selectedCount={selectedIds.size}
           onImport={handleImport}
           onDeleteSelected={handleDeleteSelected}
           onSelectAll={handleSelectAll}
           onClearSelection={() => setSelectedIds(new Set())}
-          onBack={onBack}
         />
       </div>
 
       <div className="media-library-viewer__body flex flex-1 min-h-0 relative">
-        {pendingImportFiles && (
-          <MediaLibraryImportScopeDialog
-            fileCount={pendingImportFiles.length}
-            onSelect={confirmImportScope}
-            onCancel={() => setPendingImportFiles(null)}
-          />
-        )}
         <div
           className="media-library-viewer__browser flex-1 min-w-0"
           {...uiSectionProps(UI_SECTIONS.studioMediaLibraryBrowser)}

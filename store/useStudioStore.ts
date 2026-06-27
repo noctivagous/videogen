@@ -197,7 +197,7 @@ import {
   patchResolvedShotInSetups,
   projectDefaultsFromStudioData,
 } from '@/lib/studio/store-hierarchy';
-import { invalidateSetupCoverageBakes } from '@/lib/studio/setup-invalidation';
+import { invalidateCoverageForBackdrop, invalidateSetupCoverageBakes } from '@/lib/studio/setup-invalidation';
 import {
   DEFAULT_SHOT_DEFAULTS,
   migrateCamera,
@@ -297,6 +297,8 @@ import type { StudioPanelId } from '@/lib/studio/studio-routes';
 export type { StudioPanelId, WorkspaceView } from '@/lib/studio/studio-routes';
 
 const PREVIEW_MODE_KEY = 'videogen_preview_mode';
+const MANUAL_BACKDROP_LOCATION_ID = 'manual-backdrop-plates';
+const MANUAL_BACKDROP_LOCATION_NAME = 'Manual Backdrop Plates';
 
 function projectFileUiState() {
   return {
@@ -878,6 +880,8 @@ interface StudioStore {
   selectGeneratedVideo: (index: number) => void;
   deleteGeneratedVideo: (id: string) => void;
   setReference: (index: number, dataUrl: string | null) => void;
+  addOrSelectManualBackdropForCurrentShot: (url: string, label?: string) => void;
+  clearCurrentShotBackdrop: () => void;
   addReferenceSlot: () => void;
   removeReferenceSlot: (index: number) => void;
   backdropSelected: boolean;
@@ -933,6 +937,7 @@ interface StudioStore {
   renameLocation: (id: string, name: string) => void;
   addLocationPlate: (locationId: string, url: string, label?: string) => void;
   removeLocationPlate: (locationId: string, plateId: string) => void;
+  moveLocationPlate: (fromLocationId: string, toLocationId: string, plateId: string) => void;
   deleteLocation: (id: string) => void;
   assignLocationToSetup: (setupId: number, locationId: string | null) => void;
   assignPlateToShot: (setupId: number, coverageShotId: number, plateId: string) => void;
@@ -2487,6 +2492,126 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
     if (archiveSource) {
       void get().archiveBakeFromShot(archiveSource);
     }
+  },
+
+  addOrSelectManualBackdropForCurrentShot(url, label) {
+    const state = get();
+    const { currentSetupId, currentCoverageShotId } = state;
+    const setup = getCurrentSetupFromList(state.setups, currentSetupId);
+    const coverage = getCurrentCoverageFromSetup(setup, currentCoverageShotId);
+    if (!setup || !coverage) return;
+
+    const now = Date.now();
+    const normalizedUrl = url.trim();
+    if (!normalizedUrl) return;
+
+    const manualLocation =
+      state.locations.find((location) => location.id === MANUAL_BACKDROP_LOCATION_ID) ??
+      state.locations.find((location) => location.name === MANUAL_BACKDROP_LOCATION_NAME);
+    const matchingPlate = manualLocation?.plates.find((plate) => plate.url === normalizedUrl);
+    const plateId = matchingPlate?.id ?? Math.random().toString(36).slice(2, 12);
+    const nextLabel = label?.trim() || matchingPlate?.label || `Plate ${now}`;
+    const nextPlate: LocationBackdropPlate = {
+      id: plateId,
+      url: normalizedUrl,
+      label: nextLabel,
+      dataType: 'backdrop-plate',
+      source: 'manual',
+      setupIds: Array.from(new Set([...(matchingPlate?.setupIds ?? []), setup.id])),
+      backdropFramingByAspect: matchingPlate?.backdropFramingByAspect ?? {},
+      backdropCropsByAspect: matchingPlate?.backdropCropsByAspect ?? {},
+      backdropCropStatusByAspect: matchingPlate?.backdropCropStatusByAspect ?? {},
+      createdAt: matchingPlate?.createdAt ?? now,
+    };
+
+    set((s) => {
+      const existingManualLocation =
+        s.locations.find((location) => location.id === MANUAL_BACKDROP_LOCATION_ID) ??
+        s.locations.find((location) => location.name === MANUAL_BACKDROP_LOCATION_NAME);
+      const manualLocationId = existingManualLocation?.id ?? MANUAL_BACKDROP_LOCATION_ID;
+
+      let locations = s.locations;
+      if (!existingManualLocation) {
+        locations = [
+          ...locations,
+          {
+            id: MANUAL_BACKDROP_LOCATION_ID,
+            name: MANUAL_BACKDROP_LOCATION_NAME,
+            plates: [nextPlate],
+            createdAt: now,
+          },
+        ];
+      } else {
+        const hasPlate = existingManualLocation.plates.some((plate) => plate.id === plateId);
+        locations = locations.map((location) => {
+          if (location.id !== manualLocationId) return location;
+          return {
+            ...location,
+            plates: hasPlate
+              ? location.plates.map((plate) => (plate.id === plateId ? nextPlate : plate))
+              : [...location.plates, nextPlate],
+          };
+        });
+      }
+
+      let setups = s.setups.map((entry) => {
+        if (entry.id !== setup.id) return entry;
+        const hasBackdrop = entry.backdrops.some((backdrop) => backdrop.id === plateId);
+        const nextBackdrops = hasBackdrop
+          ? entry.backdrops.map((backdrop) =>
+              backdrop.id === plateId
+                ? {
+                    ...backdrop,
+                    label: nextLabel,
+                    url: normalizedUrl,
+                    backdropFramingByAspect: nextPlate.backdropFramingByAspect,
+                    backdropCropsByAspect: nextPlate.backdropCropsByAspect,
+                    backdropCropStatusByAspect: nextPlate.backdropCropStatusByAspect,
+                  }
+                : backdrop,
+            )
+          : [
+              ...entry.backdrops,
+              {
+                id: plateId,
+                label: nextLabel,
+                url: normalizedUrl,
+                backdropFramingByAspect: nextPlate.backdropFramingByAspect,
+                backdropCropsByAspect: nextPlate.backdropCropsByAspect,
+                backdropCropStatusByAspect: nextPlate.backdropCropStatusByAspect,
+              },
+            ];
+        const shots = entry.shots.map((shot) =>
+          shot.id === coverage.id ? { ...shot, backdropId: plateId } : shot,
+        );
+        return {
+          ...entry,
+          locationId: entry.locationId ?? manualLocationId,
+          shots,
+          backdrops: nextBackdrops,
+        };
+      });
+
+      if (coverage.backdropId !== plateId) {
+        setups = invalidateCoverageForBackdrop(setups, setup.id, plateId);
+      }
+
+      return {
+        locations,
+        setups,
+        shots: getTimelineShots(setups),
+        backdropSelected: false,
+      };
+    });
+  },
+
+  clearCurrentShotBackdrop() {
+    const shot = get().getCurrentShot();
+    if (!shot) return;
+    const backdropSlotIndex = getBackdropSlotIndex(shot);
+    if (backdropSlotIndex < 0) return;
+    get().setReference(backdropSlotIndex, null);
+    get().showToast('Backdrop cleared');
   },
 
   addReferenceSlot() {
@@ -4127,6 +4252,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       url: firstPlateUrl,
       label: 'Plate 1',
       dataType: 'backdrop-plate',
+      source: 'location',
       createdAt: now,
     };
     const location: Location = { id, name, plates: [plate], createdAt: now };
@@ -4147,6 +4273,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       url,
       label: label ?? `Plate ${Date.now()}`,
       dataType: 'backdrop-plate',
+      source: 'location',
       createdAt: now,
     };
     set((s) => ({
@@ -4157,13 +4284,71 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   },
 
   removeLocationPlate(locationId, plateId) {
-    set((s) => ({
-      locations: s.locations.map((loc) => {
+    set((s) => {
+      const locations = s.locations.map((loc) => {
         if (loc.id !== locationId) return loc;
-        if (loc.plates.length <= 1) return loc; // guard: keep at least one plate
+        if (loc.plates.length <= 1 && loc.id !== MANUAL_BACKDROP_LOCATION_ID) return loc; // guard: keep at least one plate
         return { ...loc, plates: loc.plates.filter((p) => p.id !== plateId) };
-      }),
-    }));
+      });
+      const setups = s.setups.map((setup) => ({
+        ...setup,
+        backdrops: setup.backdrops.map((backdrop) =>
+          backdrop.id === plateId
+            ? {
+                ...backdrop,
+                url: null,
+                backdropFramingByAspect: {},
+                backdropCropsByAspect: {},
+                backdropCropStatusByAspect: {},
+              }
+            : backdrop,
+        ),
+      }));
+      return {
+        locations,
+        setups,
+        shots: getTimelineShots(setups),
+      };
+    });
+  },
+
+  moveLocationPlate(fromLocationId, toLocationId, plateId) {
+    if (fromLocationId === toLocationId) return;
+    set((s) => {
+      const fromLocation = s.locations.find((location) => location.id === fromLocationId);
+      const toLocation = s.locations.find((location) => location.id === toLocationId);
+      const plate = fromLocation?.plates.find((candidate) => candidate.id === plateId);
+      if (!fromLocation || !toLocation || !plate) return {};
+      if (fromLocation.plates.length <= 1 && fromLocation.id !== MANUAL_BACKDROP_LOCATION_ID) {
+        return {};
+      }
+
+      const plateForTarget: LocationBackdropPlate = {
+        ...plate,
+        source: toLocation.id === MANUAL_BACKDROP_LOCATION_ID ? 'manual' : 'location',
+      };
+
+      const locations = s.locations.map((location) => {
+        if (location.id === fromLocationId) {
+          return {
+            ...location,
+            plates: location.plates.filter((candidate) => candidate.id !== plateId),
+          };
+        }
+        if (location.id === toLocationId) {
+          const alreadyExists = location.plates.some((candidate) => candidate.id === plateId);
+          return alreadyExists
+            ? location
+            : {
+                ...location,
+                plates: [...location.plates, plateForTarget],
+              };
+        }
+        return location;
+      });
+
+      return { locations };
+    });
   },
 
   deleteLocation(id) {

@@ -64,8 +64,7 @@ export function MediaLibraryImportScopeDialog({
   );
 }
 
-export function importDropHint(scopeFilter: 'all' | MediaLibraryCollection): string {
+export function importDropHint(scopeFilter: 'project' | 'global'): string {
   if (scopeFilter === 'project') return 'Drop to import into Project library';
-  if (scopeFilter === 'global') return 'Drop to import into Global library';
-  return 'Drop to import — choose Project or Global next';
+  return 'Drop to import into Global library';
 }

@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { ChevronLeft, Settings } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import { ChecklistSetupPage } from '@/components/studio/ChecklistSetupPage';
 import { SettingsModelCatalogContent } from '@/components/studio/SettingsModelCatalogContent';
 import { SettingsProviderDetailPage } from '@/components/studio/SettingsProviderDetailPage';
 import { SettingsProvidersContent } from '@/components/studio/SettingsProvidersContent';
+import { StudioPanelHeader } from '@/components/studio/StudioPanelHeader';
 import { MODEL_CATEGORY_DEFINITIONS, type ModelCategoryId } from '@/lib/constants/model-catalog';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
@@ -50,23 +51,13 @@ export function SettingsPanel() {
       className="h-full flex flex-col bg-surface-900 min-h-0"
       {...uiSectionProps(UI_SECTIONS.studioSettingsPanel)}
     >
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-surface-700 flex-shrink-0">
-        <button
-          type="button"
-          onClick={() => navigateToPanel('app-summary')}
-          className="p-1.5 rounded-lg hover:bg-surface-700 text-gray-400 hover:text-gray-200 transition-colors"
-          title="Back to Apps"
-        >
-          <ChevronLeft className="w-4 h-4" aria-hidden />
-        </button>
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center flex-shrink-0">
-          <Settings className="w-4 h-4 text-white" aria-hidden />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-sm font-semibold text-gray-100">AI Settings</h1>
-          <p className="text-[10px] text-gray-500">Model categories, provider pages, API keys, and defaults</p>
-        </div>
-      </div>
+      <StudioPanelHeader
+        title="AI Settings"
+        description="Model categories, provider pages, API keys, and defaults"
+        icon={Settings}
+        onBack={() => navigateToPanel('app-summary')}
+        backTitle="Back to Apps"
+      />
 
       <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6">
         {providerDetailId ? (

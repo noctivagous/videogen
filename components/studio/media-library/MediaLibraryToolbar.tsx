@@ -1,12 +1,12 @@
 'use client';
 
 import { useRef } from 'react';
+import { type ManagerScope } from '@/components/studio/ManagerScopeSegment';
 import { MEDIA_ASSET_TYPE_ORDER, getMediaAssetTypeLabel } from '@/lib/media/media-library-query';
 import type { MediaAssetType } from '@/lib/types/media-library';
-import type { MediaLibraryCollection } from '@/lib/media/media-library-mutations';
 
 export type MediaLibraryLayoutMode = 'grid' | 'list' | 'tree';
-export type MediaLibraryScopeFilter = 'all' | MediaLibraryCollection;
+export type MediaLibraryScopeFilter = ManagerScope;
 export type MediaLibrarySearchMode = 'text' | 'clip';
 
 interface MediaLibraryToolbarProps {
@@ -17,17 +17,14 @@ interface MediaLibraryToolbarProps {
   typeFilter: MediaAssetType | 'all';
   onTypeFilterChange: (type: MediaAssetType | 'all') => void;
   scopeFilter: MediaLibraryScopeFilter;
-  onScopeFilterChange: (scope: MediaLibraryScopeFilter) => void;
   layoutMode: MediaLibraryLayoutMode;
   onLayoutModeChange: (mode: MediaLibraryLayoutMode) => void;
   assetCount: number;
-  snapshotCount: number;
   selectedCount: number;
   onImport: (files: FileList | null) => void;
   onDeleteSelected: () => void;
   onSelectAll: () => void;
   onClearSelection: () => void;
-  onBack: () => void;
 }
 
 export function MediaLibraryToolbar({
@@ -38,41 +35,19 @@ export function MediaLibraryToolbar({
   typeFilter,
   onTypeFilterChange,
   scopeFilter,
-  onScopeFilterChange,
   layoutMode,
   onLayoutModeChange,
   assetCount,
-  snapshotCount,
   selectedCount,
   onImport,
   onDeleteSelected,
   onSelectAll,
   onClearSelection,
-  onBack,
 }: MediaLibraryToolbarProps) {
   const importInputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="media-library-toolbar flex flex-wrap items-center gap-2 border-b border-surface-700 px-3 py-2 bg-surface-900/80">
-      <button
-        type="button"
-        onClick={onBack}
-        className="media-library-toolbar__back px-2.5 py-1.5 text-xs font-medium rounded-lg border border-surface-600 bg-surface-800 hover:bg-surface-700 text-gray-300 transition-colors"
-      >
-        Back to Shot
-      </button>
-
-      <div className="h-6 w-px bg-surface-600 hidden sm:block" />
-
-      <span className="text-xs font-semibold text-gray-200 hidden sm:inline">Media Library</span>
-      <span className="text-[10px] text-gray-500">
-        {assetCount} asset{assetCount === 1 ? '' : 's'}
-        {snapshotCount > 0 ? ` · ${snapshotCount} snapshot${snapshotCount === 1 ? '' : 's'}` : ''}
-        {selectedCount > 0 ? ` · ${selectedCount} selected` : ''}
-      </span>
-
-      <div className="flex-1 min-w-[4rem]" />
-
+    <div className="media-library-toolbar flex flex-wrap items-center gap-2 border-b border-surface-700 px-4 py-2 bg-surface-900/80">
       <input
         ref={importInputRef}
         type="file"
@@ -90,9 +65,7 @@ export function MediaLibraryToolbar({
         title={
           scopeFilter === 'project'
             ? 'Import into Project library'
-            : scopeFilter === 'global'
-              ? 'Import into Global library'
-              : 'Import — choose Project or Global'
+            : 'Import into Global library'
         }
         className="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-brand-600/40 bg-brand-600/10 hover:bg-brand-600/20 text-brand-300 transition-colors"
       >
@@ -149,17 +122,6 @@ export function MediaLibraryToolbar({
       >
         CLIP
       </button>
-
-      <select
-        value={scopeFilter}
-        onChange={(e) => onScopeFilterChange(e.target.value as MediaLibraryScopeFilter)}
-        className="media-library-toolbar__scope bg-surface-800 border border-surface-600 rounded-lg px-2 py-1.5 text-xs text-gray-200"
-        aria-label="Filter by library scope"
-      >
-        <option value="all">All libraries</option>
-        <option value="project">Project</option>
-        <option value="global">Global</option>
-      </select>
 
       <select
         value={typeFilter}

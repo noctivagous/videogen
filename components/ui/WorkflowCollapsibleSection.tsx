@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 interface WorkflowCollapsibleSectionProps {
   label: string;
   defaultCollapsed?: boolean;
+  forceExpanded?: boolean;
   children: ReactNode;
   className?: string;
 }
@@ -13,10 +14,15 @@ interface WorkflowCollapsibleSectionProps {
 export function WorkflowCollapsibleSection({
   label,
   defaultCollapsed = true,
+  forceExpanded = false,
   children,
   className = '',
 }: WorkflowCollapsibleSectionProps) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
+
+  useEffect(() => {
+    if (forceExpanded) setCollapsed(false);
+  }, [forceExpanded]);
 
   return (
     <div className={`collapsible-prompt-editor ${className}`.trim()}>

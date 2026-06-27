@@ -3,10 +3,8 @@
 import { useRef } from 'react';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { resolveReferenceDisplayUrl } from '@/lib/storage/reference-url';
-import { nextBackdropId } from '@/lib/studio/coverage-shot-settings';
 import { getSetupBackdrop } from '@/lib/studio/resolved-shot';
 import { invalidateCoverageForBackdrop } from '@/lib/studio/setup-invalidation';
-import type { SetupBackdrop } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
 
 function readFileAsDataUrl(file: File): Promise<string> {
@@ -22,6 +20,8 @@ export function SetupBackdropPanel() {
   const setups = useStudioStore((s) => s.setups);
   const currentSetupId = useStudioStore((s) => s.currentSetupId);
   const currentCoverageShotId = useStudioStore((s) => s.currentCoverageShotId);
+  const addOrSelectManualBackdropForCurrentShot = useStudioStore((s) => s.addOrSelectManualBackdropForCurrentShot);
+  const clearCurrentShotBackdrop = useStudioStore((s) => s.clearCurrentShotBackdrop);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const setup = setups.find((s) => s.id === currentSetupId) ?? setups[0];
@@ -29,14 +29,6 @@ export function SetupBackdropPanel() {
 
   const activeCoverage = setup.shots.find((s) => s.id === currentCoverageShotId) ?? setup.shots[0];
   const activeBackdropId = activeCoverage?.backdropId;
-
-  const patchSetup = (backdrops: SetupBackdrop[]) => {
-    useStudioStore.setState((s) => ({
-      setups: s.setups.map((item) =>
-        item.id === setup.id ? { ...item, backdrops } : item,
-      ),
-    }));
-  };
 
   const selectBackdropForShot = (backdropId: string) => {
     if (!activeCoverage) return;
@@ -61,39 +53,44 @@ export function SetupBackdropPanel() {
 
   const handleAddPlate = async (file: File) => {
     const dataUrl = await readFileAsDataUrl(file);
-    const id = nextBackdropId(setups);
-    const label = `Plate ${setup.backdrops.length + 1}`;
-    patchSetup([
-      ...setup.backdrops,
-      {
-        id,
-        label,
-        url: dataUrl,
-        backdropFramingByAspect: {},
-        backdropCropsByAspect: {},
-        backdropCropStatusByAspect: {},
-      },
-    ]);
-    selectBackdropForShot(id);
+    const label = file.name.replace(/\.[^/.]+$/, '').trim() || `Plate ${setup.backdrops.length + 1}`;
+    addOrSelectManualBackdropForCurrentShot(dataUrl, label);
+  };
+
+  const handleBackdropDrop = async (dataTransfer: DataTransfer) => {
+    const file = dataTransfer.files[0];
+    if (file?.type.startsWith('image/')) {
+      await handleAddPlate(file);
+      return;
+    }
+    const uri = dataTransfer.getData('text/uri-list').split('\n').find((line) => {
+      const trimmed = line.trim();
+      return trimmed && !trimmed.startsWith('#');
+    });
+    if (uri && (uri.startsWith('data:image/') || uri.startsWith('blob:') || /^https?:\/\//.test(uri))) {
+      addOrSelectManualBackdropForCurrentShot(uri);
+    }
   };
 
   const handleDeletePlate = (backdropId: string) => {
-    const inUse = setup.shots.some((shot) => shot.backdropId === backdropId);
-    if (inUse && setup.backdrops.length <= 1) {
-      useStudioStore.getState().showToast('Cannot delete the only backdrop plate', 'error');
-      return;
-    }
-    if (inUse) {
-      useStudioStore.getState().showToast('Reassign shots before deleting this plate', 'error');
-      return;
-    }
-    patchSetup(setup.backdrops.filter((b) => b.id !== backdropId));
+    selectBackdropForShot(backdropId);
+    clearCurrentShotBackdrop();
   };
 
   return (
     <div
       className="rounded-lg border border-surface-600/80 bg-surface-800/40 p-3 space-y-2"
       {...uiSectionProps(UI_SECTIONS.studioSetupBackdropPanel)}
+      onDragOver={(e) => {
+        const types = Array.from(e.dataTransfer.types);
+        if (!types.includes('Files') && !types.includes('text/uri-list')) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        void handleBackdropDrop(e.dataTransfer);
+      }}
     >
       <div className="flex items-center justify-between gap-2">
         <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-400">
@@ -119,7 +116,7 @@ export function SetupBackdropPanel() {
         />
       </div>
       <div className="flex gap-2 overflow-x-auto pb-1">
-        {setup.backdrops.map((backdrop) => {
+      {setup.backdrops.map((backdrop) => {
           const selected = backdrop.id === activeBackdropId;
           const displayUrl = backdrop.url ? resolveReferenceDisplayUrl(backdrop.url) : null;
           return (
@@ -147,15 +144,15 @@ export function SetupBackdropPanel() {
               <div className="px-1.5 py-1 bg-surface-900/90 text-[9px] text-gray-300 truncate">
                 {backdrop.label}
               </div>
-              {setup.backdrops.length > 1 && (
+              {selected && (
                 <button
                   type="button"
                   onClick={() => handleDeletePlate(backdrop.id)}
-                  className="absolute top-1 right-1 p-0.5 rounded bg-black/60 text-gray-300 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                  title="Delete plate"
+                  className="absolute top-1 right-1 p-0.5 rounded bg-black/65 text-gray-300 hover:text-red-400 opacity-80 hover:opacity-100 transition-opacity"
+                  title="Clear backdrop"
                 >
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m4 0V5a1 1 0 011-1h4a1 1 0 011 1v2m-7 0h8" />
                   </svg>
                 </button>
               )}

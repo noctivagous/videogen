@@ -24,6 +24,9 @@ import type {
   ColorScheme,
 } from "@/lib/types/studio";
 import { useNavigateToStudioPanel } from "@/hooks/use-studio-panel-navigation";
+import { StudioPanelHeader } from "@/components/studio/StudioPanelHeader";
+import { STUDIO_LAUNCHER_ICONS } from "@/components/studio/studio-launcher-icons";
+import { getStudioApp } from "@/lib/constants/studio-apps";
 import { useStudioStore } from "@/store/useStudioStore";
 
 interface SavedPaletteGroup {
@@ -48,6 +51,7 @@ export function ColorPaletteMakerPanel() {
   const characters = useStudioStore((s) => s.characters);
   const locations = useStudioStore((s) => s.locations);
   const navigateToPanel = useNavigateToStudioPanel();
+  const colorPaletteApp = getStudioApp("color-palette-maker");
   const [savedPaletteGroups, setSavedPaletteGroups] = useState<
     SavedPaletteGroup[]
   >([]);
@@ -122,7 +126,15 @@ export function ColorPaletteMakerPanel() {
     palette.mode === "color" || palette.mode === "false-color";
 
   return (
-    <div className="h-full min-h-0 overflow-y-auto bg-surface-900 p-6">
+    <div className="h-full min-h-0 flex flex-col bg-surface-900">
+      <StudioPanelHeader
+        title={colorPaletteApp.title}
+        description={colorPaletteApp.description}
+        icon={STUDIO_LAUNCHER_ICONS["color-palette-maker"]}
+        onBack={() => navigateToPanel("shot-designer")}
+        backTitle="Back to Shot Designer"
+      />
+      <div className="flex-1 min-h-0 overflow-y-auto p-6">
       <div className="max-w-[57.375rem]">
         <div className="flex items-start gap-3">
           <ColorModeIconBar
@@ -452,14 +464,8 @@ export function ColorPaletteMakerPanel() {
           >
             Apply to Lighting
           </button>
-          <button
-            type="button"
-            onClick={() => navigateToPanel("shot-designer")}
-            className="px-4 py-2 text-xs font-medium rounded-lg border border-surface-600 bg-surface-800 hover:bg-surface-700 text-gray-300 transition-colors"
-          >
-            Back to Shot Designer
-          </button>
         </div>
+      </div>
       </div>
     </div>
   );

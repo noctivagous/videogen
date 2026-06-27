@@ -10,6 +10,9 @@ import {
   derivedCharacterColorPaletteGroupAssetId,
   parseDerivedCharacterColorPaletteGroupAssetId,
 } from '@/lib/media/color-palette-group';
+import { ManagerScopeSegment, type ManagerScope } from '@/components/studio/ManagerScopeSegment';
+import { StudioPanelHeader } from '@/components/studio/StudioPanelHeader';
+import { STUDIO_LAUNCHER_ICONS } from '@/components/studio/studio-launcher-icons';
 import { useStudioPanelInspectorStore } from '@/store/useStudioPanelInspectorStore';
 import { useStudioStore } from '@/store/useStudioStore';
 import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
@@ -673,13 +676,21 @@ export function CharacterManager() {
   const navigateToPanel = useNavigateToStudioPanel();
 
   const [showNewForm, setShowNewForm] = useState(false);
+  const [scope, setScope] = useState<ManagerScope>('project');
+  const visibleCharacters = scope === 'project' ? characters : [];
+
+  const handleScopeChange = (nextScope: ManagerScope) => {
+    setScope(nextScope);
+    setShowNewForm(false);
+    setCharacterManagerSelection(null, null);
+  };
 
   useEffect(() => {
     if (!selectedCharacterId) return;
-    const exists = characters.some((character) => character.id === selectedCharacterId);
+    const exists = visibleCharacters.some((character) => character.id === selectedCharacterId);
     if (exists) return;
     setCharacterManagerSelection(null, null);
-  }, [characters, selectedCharacterId, setCharacterManagerSelection]);
+  }, [visibleCharacters, selectedCharacterId, setCharacterManagerSelection]);
 
   const handleSelectSheet = (character: Character, sheet: CharacterSheet) => {
     setCharacterManagerSelection(character.id, derivedCharacterSheetAssetId(character.id, sheet.id));
@@ -694,67 +705,74 @@ export function CharacterManager() {
 
   return (
     <div className="h-full flex flex-col bg-surface-900">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-surface-700 flex-shrink-0">
-        <button
-          type="button"
-          onClick={() => navigateToPanel('shot-designer')}
-          className="p-1.5 rounded-lg hover:bg-surface-700 text-gray-400 hover:text-gray-200 transition-colors"
-          title="Back to Shot Designer"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <div className="flex-1">
-          <h1 className="text-sm font-semibold text-gray-100">Character Manager</h1>
-          <p className="text-[10px] text-gray-500">{characters.length} character{characters.length !== 1 ? 's' : ''} in this project</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowNewForm(true)}
-          disabled={showNewForm}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-brand-500 hover:bg-brand-600 text-white transition-colors disabled:opacity-40"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-          </svg>
-          New Character
-        </button>
-      </div>
+      <StudioPanelHeader
+        title="Character Manager"
+        description={`${visibleCharacters.length} character${visibleCharacters.length !== 1 ? 's' : ''} ${
+          scope === 'project' ? 'in this project' : 'in global library'
+        }`}
+        icon={STUDIO_LAUNCHER_ICONS['character-sheet-generator']}
+        onBack={() => navigateToPanel('shot-designer')}
+        backTitle="Back to Shot Designer"
+        titleTrailing={
+          <ManagerScopeSegment
+            value={scope}
+            onChange={handleScopeChange}
+            ariaLabel="Character library scope"
+          />
+        }
+        actions={
+          <button
+            type="button"
+            onClick={() => setShowNewForm(true)}
+            disabled={showNewForm || scope !== 'project'}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-brand-500 hover:bg-brand-600 text-white transition-colors disabled:opacity-40"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+            </svg>
+            New Character
+          </button>
+        }
+      />
 
       {/* Body */}
       <div className="flex-1 min-h-0 flex">
         <div className="flex-1 min-w-0 overflow-y-auto p-4 space-y-3">
-          {showNewForm && (
+          {showNewForm && scope === 'project' && (
             <NewCharacterForm
               onCreated={() => setShowNewForm(false)}
               onCancel={() => setShowNewForm(false)}
             />
           )}
 
-          {characters.length === 0 && !showNewForm && (
+          {visibleCharacters.length === 0 && !showNewForm && (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <div className="w-14 h-14 rounded-2xl bg-surface-800 border border-surface-600 flex items-center justify-center mb-4">
                 <svg className="w-7 h-7 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
-              <p className="text-sm font-medium text-gray-400">No characters yet</p>
-              <p className="text-xs text-gray-600 mt-1 max-w-xs">
-                Create a character with a name and at least one reference sheet to use in your shots.
+              <p className="text-sm font-medium text-gray-400">
+                {scope === 'project' ? 'No characters yet' : 'No global characters yet'}
               </p>
-              <button
-                type="button"
-                onClick={() => setShowNewForm(true)}
-                className="mt-4 px-4 py-2 text-xs font-medium rounded-lg bg-brand-500 hover:bg-brand-600 text-white transition-colors"
-              >
-                Create First Character
-              </button>
+              <p className="text-xs text-gray-600 mt-1 max-w-xs">
+                {scope === 'project'
+                  ? 'Create a character with a name and at least one reference sheet to use in your shots.'
+                  : 'Global characters will appear here once saved to the shared library.'}
+              </p>
+              {scope === 'project' && (
+                <button
+                  type="button"
+                  onClick={() => setShowNewForm(true)}
+                  className="mt-4 px-4 py-2 text-xs font-medium rounded-lg bg-brand-500 hover:bg-brand-600 text-white transition-colors"
+                >
+                  Create First Character
+                </button>
+              )}
             </div>
           )}
 
-          {characters.map((character) => (
+          {visibleCharacters.map((character) => (
             <CharacterCard
               key={character.id}
               character={character}

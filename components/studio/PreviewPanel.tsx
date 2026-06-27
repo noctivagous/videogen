@@ -96,15 +96,18 @@ function isImageDrag(e: DragEvent): boolean {
   );
 }
 
-function applyImageDropToReferenceSlot(
+function applyImageDropToManualBackdrop(
   dataTransfer: DataTransfer,
-  setReference: (index: number, dataUrl: string | null) => void,
-  slotIndex: number,
+  addOrSelectManualBackdropForCurrentShot: (url: string, label?: string) => void,
 ): void {
   const file = dataTransfer.files[0];
   if (file?.type.startsWith('image/')) {
     const reader = new FileReader();
-    reader.onload = (event) => setReference(slotIndex, event.target?.result as string);
+    reader.onload = (event) =>
+      addOrSelectManualBackdropForCurrentShot(
+        event.target?.result as string,
+        file.name.replace(/\.[^/.]+$/, '').trim() || undefined,
+      );
     reader.readAsDataURL(file);
     return;
   }
@@ -113,7 +116,7 @@ function applyImageDropToReferenceSlot(
     return trimmed && !trimmed.startsWith('#');
   });
   if (uri && (uri.startsWith('data:image/') || uri.startsWith('blob:') || /^https?:\/\//.test(uri))) {
-    setReference(slotIndex, uri);
+    addOrSelectManualBackdropForCurrentShot(uri);
   }
 }
 
@@ -139,7 +142,9 @@ export function PreviewPanel() {
   const previewSuccessProvider = useStudioStore((s) => s.previewSuccessProvider);
   const previewSuccessPrompt = useStudioStore((s) => s.previewSuccessPrompt);
   const toggleCompositionOverlay = useStudioStore((s) => s.toggleCompositionOverlay);
-  const setReference = useStudioStore((s) => s.setReference);
+  const addOrSelectManualBackdropForCurrentShot = useStudioStore(
+    (s) => s.addOrSelectManualBackdropForCurrentShot,
+  );
   const shots = useStudioStore((s) => s.shots);
   const currentShot = useStudioStore((s) => s.currentShot);
   const previewSubMode = useStudioStore((s) => s.previewSubMode);
@@ -283,7 +288,9 @@ export function PreviewPanel() {
   const hasBackdrop = Boolean(backdropSourceUrl);
   const backdropCropCommitted = shot ? isBackdropCropCommitted(shot, aspectRatio) : false;
   const showFramingBackdrop = showFramingGuides && hasBackdrop;
+  const backdropFramingLocked = Boolean(shot?.backdropFramingByAspect?.[aspectRatio]?.locked);
   const showBackdropEditStack = showFramingBackdrop && !backdropCropCommitted;
+  const showBackdropFramingHint = showFramingBackdrop && !backdropFramingLocked;
   const showNoBackdropHint =
     frameView === 'preview' &&
     !showModelPreview &&
@@ -532,7 +539,10 @@ export function PreviewPanel() {
                 if (!canDropBackdropOnPreview) return;
                 e.preventDefault();
                 setBackdropDragOver(false);
-                applyImageDropToReferenceSlot(e.dataTransfer, setReference, backdropSlotIndex);
+                applyImageDropToManualBackdrop(
+                  e.dataTransfer,
+                  addOrSelectManualBackdropForCurrentShot,
+                );
               }}
             >
           <div
@@ -566,10 +576,11 @@ export function PreviewPanel() {
                   
                   <div className="mt-3 grid grid-cols-2 gap-3 text-left">
                     <div className="rounded-lg border border-surface-600 px-3 py-2.5 text-xs text-gray-400">
-                      Drop an image on this preview frame to set the manual Backdrop slot
+                      A. Drop an image on this preview frame to set the manual Backdrop slot
                     </div>
+                    
                     <div className="rounded-lg border border-surface-600 px-3 py-2.5 text-xs text-gray-400">
-                      Add a backdrop in the checklist Backdrop step.
+                      B. Add a backdrop in the checklist Backdrop step.
                     </div>
                   </div>
                 </div>
@@ -641,6 +652,14 @@ export function PreviewPanel() {
           )}
 
           {showFramingGuides && <CompositionOverlay />}
+
+          {showBackdropFramingHint && (
+            <div className="absolute top-3 right-3 z-30 pointer-events-none max-w-[220px]">
+              <div className="rounded-lg bg-white/75 backdrop-blur-sm px-3 py-2 text-xs leading-snug text-gray-800 shadow-sm">
+                Move, scale, and rotate the backdrop image. Then lock it.
+              </div>
+            </div>
+          )}
 
           {frameView === 'preview' && (
             <div className="absolute top-3 left-3 z-30 pointer-events-auto flex flex-col gap-1.5">

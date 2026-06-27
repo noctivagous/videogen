@@ -8,6 +8,9 @@ import {
   parseDerivedLocationColorPaletteGroupAssetId,
 } from '@/lib/media/color-palette-group';
 import { CollapsibleManagerCard } from '@/components/studio/manager-cards/CollapsibleManagerCard';
+import { ManagerScopeSegment, type ManagerScope } from '@/components/studio/ManagerScopeSegment';
+import { StudioPanelHeader } from '@/components/studio/StudioPanelHeader';
+import { STUDIO_LAUNCHER_ICONS } from '@/components/studio/studio-launcher-icons';
 import { useStudioPanelInspectorStore } from '@/store/useStudioPanelInspectorStore';
 import { useStudioStore } from '@/store/useStudioStore';
 import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
@@ -36,17 +39,46 @@ function parseDerivedLocationPlateAssetId(assetId: string): { locationId: string
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 interface PlateThumbnailProps {
+  locationId: string;
   plate: LocationBackdropPlate;
   onRemove?: () => void;
   showRemove?: boolean;
   selected?: boolean;
   onSelect?: () => void;
+  getSetupLabel?: (setupId: number) => string;
 }
 
-function PlateThumbnail({ plate, onRemove, showRemove, selected, onSelect }: PlateThumbnailProps) {
+function PlateThumbnail({
+  locationId,
+  plate,
+  onRemove,
+  showRemove,
+  selected,
+  onSelect,
+  getSetupLabel,
+}: PlateThumbnailProps) {
+  const setupTag =
+    plate.source === 'manual' && (plate.setupIds?.length ?? 0) > 0
+      ? plate.setupIds!.map((setupId) => getSetupLabel?.(setupId) ?? `Setup ${setupId}`).join(', ')
+      : null;
   return (
     <div className="relative group w-24 h-14 flex-shrink-0">
-      <button type="button" onClick={onSelect} className="block w-full h-full">
+      <button
+        type="button"
+        onClick={onSelect}
+        className="block w-full h-full"
+        draggable={Boolean(plate.url)}
+        onDragStart={(e) => {
+          if (!plate.url) return;
+          e.dataTransfer.effectAllowed = 'copy';
+          e.dataTransfer.setData('text/uri-list', plate.url);
+          e.dataTransfer.setData('text/plain', plate.url);
+          e.dataTransfer.setData(
+            'application/x-videogen-location-plate',
+            JSON.stringify({ locationId, plateId: plate.id }),
+          );
+        }}
+      >
         {plate.url ? (
           <img
             src={plate.url}
@@ -70,6 +102,11 @@ function PlateThumbnail({ plate, onRemove, showRemove, selected, onSelect }: Pla
       <p className="absolute bottom-0 inset-x-0 text-[9px] text-center bg-black/50 text-gray-300 rounded-b-lg px-1 truncate py-0.5">
         {plate.label}
       </p>
+      {setupTag && (
+        <p className="absolute top-0 left-0 right-0 text-[8px] text-center bg-surface-900/80 text-gray-300 px-1 truncate py-0.5">
+          {setupTag}
+        </p>
+      )}
       {showRemove && onRemove && (
         <button
           type="button"
@@ -95,6 +132,8 @@ interface LocationCardProps {
   onSelectColorPaletteGroup: (collection: ColorPaletteCollection) => void;
   selectedColorPaletteGroupId: string | null;
   onRemoveColorPaletteGroup: (collectionId: string) => void;
+  getSetupLabel: (setupId: number) => string;
+  onMovePlateHere: (fromLocationId: string, plateId: string) => void;
 }
 
 function LocationCard({
@@ -108,6 +147,8 @@ function LocationCard({
   onSelectColorPaletteGroup,
   selectedColorPaletteGroupId,
   onRemoveColorPaletteGroup,
+  getSetupLabel,
+  onMovePlateHere,
 }: LocationCardProps) {
   const [expanded, setExpanded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -124,7 +165,26 @@ function LocationCard({
   const primaryPlate = location.plates[0];
 
   return (
-    <CollapsibleManagerCard
+    <div
+      onDragOver={(e) => {
+        if (!e.dataTransfer.types.includes('application/x-videogen-location-plate')) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      }}
+      onDrop={(e) => {
+        const payload = e.dataTransfer.getData('application/x-videogen-location-plate');
+        if (!payload) return;
+        e.preventDefault();
+        try {
+          const parsed = JSON.parse(payload) as { locationId?: string; plateId?: string };
+          if (!parsed.locationId || !parsed.plateId) return;
+          onMovePlateHere(parsed.locationId, parsed.plateId);
+        } catch {
+          // Ignore malformed drag payloads.
+        }
+      }}
+    >
+      <CollapsibleManagerCard
       name={location.name}
       itemCount={location.plates.length}
       itemLabelSingular="backdrop plate"
@@ -167,11 +227,13 @@ function LocationCard({
         {location.plates.map((plate) => (
           <PlateThumbnail
             key={plate.id}
+            locationId={location.id}
             plate={plate}
             selected={selectedPlateId === plate.id}
             onSelect={() => onSelectPlate(plate)}
             showRemove={location.plates.length > 1}
             onRemove={() => onRemovePlate(plate.id)}
+            getSetupLabel={getSetupLabel}
           />
         ))}
 
@@ -215,7 +277,8 @@ function LocationCard({
         className="sr-only"
         onChange={(e) => handleAddPlate(e.target.files)}
       />
-    </CollapsibleManagerCard>
+      </CollapsibleManagerCard>
+    </div>
   );
 }
 
@@ -330,9 +393,11 @@ function NewLocationForm({ onCreated, onCancel }: NewLocationFormProps) {
 
 export function LocationManager() {
   const locations = useStudioStore((s) => s.locations);
+  const setups = useStudioStore((s) => s.setups);
   const renameLocation = useStudioStore((s) => s.renameLocation);
   const addLocationPlate = useStudioStore((s) => s.addLocationPlate);
   const removeLocationPlate = useStudioStore((s) => s.removeLocationPlate);
+  const moveLocationPlate = useStudioStore((s) => s.moveLocationPlate);
   const deleteLocation = useStudioStore((s) => s.deleteLocation);
   const removeLocationColorPaletteGroup = useStudioStore((s) => s.removeLocationColorPaletteGroup);
   const selectedLocationId = useStudioPanelInspectorStore((s) => s.locationManagerSelectedLocationId);
@@ -341,13 +406,21 @@ export function LocationManager() {
   const navigateToPanel = useNavigateToStudioPanel();
 
   const [showNewForm, setShowNewForm] = useState(false);
+  const [scope, setScope] = useState<ManagerScope>('project');
+  const visibleLocations = scope === 'project' ? locations : [];
+
+  const handleScopeChange = (nextScope: ManagerScope) => {
+    setScope(nextScope);
+    setShowNewForm(false);
+    setLocationManagerSelection(null, null);
+  };
 
   useEffect(() => {
     if (!selectedLocationId) return;
-    const exists = locations.some((location) => location.id === selectedLocationId);
+    const exists = visibleLocations.some((location) => location.id === selectedLocationId);
     if (exists) return;
     setLocationManagerSelection(null, null);
-  }, [locations, selectedLocationId, setLocationManagerSelection]);
+  }, [visibleLocations, selectedLocationId, setLocationManagerSelection]);
 
   const handleSelectPlate = (location: Location, plate: LocationBackdropPlate) => {
     setLocationManagerSelection(location.id, derivedLocationPlateAssetId(location.id, plate.id));
@@ -362,46 +435,47 @@ export function LocationManager() {
 
   return (
     <div className="h-full flex flex-col bg-surface-900">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-surface-700 flex-shrink-0">
-        <button
-          type="button"
-          onClick={() => navigateToPanel('shot-designer')}
-          className="p-1.5 rounded-lg hover:bg-surface-700 text-gray-400 hover:text-gray-200 transition-colors"
-          title="Back to Shot Designer"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <div className="flex-1">
-          <h1 className="text-sm font-semibold text-gray-100">Location Manager</h1>
-          <p className="text-[10px] text-gray-500">{locations.length} location{locations.length !== 1 ? 's' : ''} in this project</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowNewForm(true)}
-          disabled={showNewForm}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-brand-500 hover:bg-brand-600 text-white transition-colors disabled:opacity-40"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-          </svg>
-          New Location
-        </button>
-      </div>
+      <StudioPanelHeader
+        title="Location Manager"
+        description={`${visibleLocations.length} location${visibleLocations.length !== 1 ? 's' : ''} ${
+          scope === 'project' ? 'in this project' : 'in global library'
+        }`}
+        icon={STUDIO_LAUNCHER_ICONS['location-manager']}
+        onBack={() => navigateToPanel('shot-designer')}
+        backTitle="Back to Shot Designer"
+        titleTrailing={
+          <ManagerScopeSegment
+            value={scope}
+            onChange={handleScopeChange}
+            ariaLabel="Location library scope"
+          />
+        }
+        actions={
+          <button
+            type="button"
+            onClick={() => setShowNewForm(true)}
+            disabled={showNewForm || scope !== 'project'}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-brand-500 hover:bg-brand-600 text-white transition-colors disabled:opacity-40"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+            </svg>
+            New Location
+          </button>
+        }
+      />
 
       {/* Body */}
       <div className="flex-1 min-h-0 flex">
         <div className="flex-1 min-w-0 overflow-y-auto p-4 space-y-3">
-          {showNewForm && (
+          {showNewForm && scope === 'project' && (
             <NewLocationForm
               onCreated={() => setShowNewForm(false)}
               onCancel={() => setShowNewForm(false)}
             />
           )}
 
-          {locations.length === 0 && !showNewForm && (
+          {visibleLocations.length === 0 && !showNewForm && (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <div className="w-14 h-14 rounded-2xl bg-surface-800 border border-surface-600 flex items-center justify-center mb-4">
                 <svg className="w-7 h-7 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -409,21 +483,27 @@ export function LocationManager() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </div>
-              <p className="text-sm font-medium text-gray-400">No locations yet</p>
-              <p className="text-xs text-gray-600 mt-1 max-w-xs">
-                Create a location with a name and at least one backdrop plate to use as a background in your shots.
+              <p className="text-sm font-medium text-gray-400">
+                {scope === 'project' ? 'No locations yet' : 'No global locations yet'}
               </p>
-              <button
-                type="button"
-                onClick={() => setShowNewForm(true)}
-                className="mt-4 px-4 py-2 text-xs font-medium rounded-lg bg-brand-500 hover:bg-brand-600 text-white transition-colors"
-              >
-                Create First Location
-              </button>
+              <p className="text-xs text-gray-600 mt-1 max-w-xs">
+                {scope === 'project'
+                  ? 'Create a location with a name and at least one backdrop plate to use as a background in your shots.'
+                  : 'Global locations will appear here once saved to the shared library.'}
+              </p>
+              {scope === 'project' && (
+                <button
+                  type="button"
+                  onClick={() => setShowNewForm(true)}
+                  className="mt-4 px-4 py-2 text-xs font-medium rounded-lg bg-brand-500 hover:bg-brand-600 text-white transition-colors"
+                >
+                  Create First Location
+                </button>
+              )}
             </div>
           )}
 
-          {locations.map((location) => (
+          {visibleLocations.map((location) => (
             <LocationCard
               key={location.id}
               location={location}
@@ -445,6 +525,12 @@ export function LocationManager() {
               }
               onRemoveColorPaletteGroup={(collectionId) =>
                 removeLocationColorPaletteGroup(location.id, collectionId)
+              }
+              getSetupLabel={(setupId) =>
+                setups.find((setup) => setup.id === setupId)?.name ?? `Setup ${setupId}`
+              }
+              onMovePlateHere={(fromLocationId, plateId) =>
+                moveLocationPlate(fromLocationId, location.id, plateId)
               }
             />
           ))}

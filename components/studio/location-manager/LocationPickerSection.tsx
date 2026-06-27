@@ -32,7 +32,6 @@ export function LocationPickerSection({
 
   const [locationOpen, setLocationOpen] = useState(false);
   const [plateOpen, setPlateOpen] = useState(false);
-  const [sourceMode, setSourceMode] = useState<'location' | 'manual'>('location');
 
   const setup = setups.find((s) => s.id === currentSetupId);
   const assignedLocationId = setup?.locationId ?? null;
@@ -52,6 +51,9 @@ export function LocationPickerSection({
   const activeCoverage = setup?.shots.find((s) => s.id === currentCoverageShotId) ?? setup?.shots[0];
   const assignedPlateId = activeCoverage?.backdropId ?? null;
   const assignedPlate = selectablePlates.find((p) => p.id === assignedPlateId) ?? null;
+  const assignedLocationPlateIds = new Set(selectablePlates.map((plate) => plate.id));
+  const derivedSourceMode: 'location' | 'manual' =
+    assignedPlateId && assignedLocationPlateIds.has(assignedPlateId) ? 'location' : 'manual';
 
   return (
     <fieldset className="workflow-step-fieldset workflow-step-fieldset--nested">
@@ -81,8 +83,12 @@ export function LocationPickerSection({
             <input
               type="radio"
               name="backdrop-source-mode"
-              checked={sourceMode === 'location'}
-              onChange={() => setSourceMode('location')}
+              checked={derivedSourceMode === 'location'}
+              onChange={() => {
+                if (assignedLocation && activeCoverage && selectablePlates[0]) {
+                  assignPlateToShot(currentSetupId, activeCoverage.id, selectablePlates[0].id);
+                }
+              }}
               className="h-3.5 w-3.5 rounded-full border-surface-500 text-brand-500 focus:ring-brand-500/40"
               aria-label="Use location manager backdrop"
             />
@@ -95,7 +101,6 @@ export function LocationPickerSection({
             placeholder="Select location…"
             open={locationOpen}
             onToggle={() => {
-              if (sourceMode !== 'location') return;
               setLocationOpen((v) => !v);
               setPlateOpen(false);
             }}
@@ -176,7 +181,6 @@ export function LocationPickerSection({
               placeholder="Select backdrop plate…"
               open={plateOpen}
               onToggle={() => {
-                if (sourceMode !== 'location') return;
                 setPlateOpen((v) => !v);
                 setLocationOpen(false);
               }}
@@ -216,9 +220,8 @@ export function LocationPickerSection({
           <input
             type="radio"
             name="backdrop-source-mode"
-            checked={sourceMode === 'manual'}
+            checked={derivedSourceMode === 'manual'}
             onChange={() => {
-              setSourceMode('manual');
               setLocationOpen(false);
               setPlateOpen(false);
             }}
@@ -227,7 +230,11 @@ export function LocationPickerSection({
           />
         </div>
         <div className="flex-1">
-          <WorkflowCollapsibleSection label="Manual Backdrop Plate" defaultCollapsed>
+          <WorkflowCollapsibleSection
+            label="Manual Backdrop Plate"
+            defaultCollapsed
+            forceExpanded={derivedSourceMode === 'manual'}
+          >
             <SetupBackdropPanel />
           </WorkflowCollapsibleSection>
         </div>
