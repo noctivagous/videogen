@@ -34,6 +34,7 @@ import { LocationPickerSection } from '@/components/studio/location-manager/Loca
 import { MannequinAssignmentTable } from '@/components/studio/MannequinAssignmentTable';
 import { MannequinPlacementControls } from '@/components/studio/MannequinPlacementControls';
 import { CollapsiblePromptEditor } from '@/components/ui/CollapsiblePromptEditor';
+import { ProPane } from '@/components/ui/ProPane';
 import { ReferenceImageViewerModal } from '@/components/studio/ReferenceImageViewerModal';
 import { countMannequinsLinkedToSlot } from '@/lib/studio/mannequin-character-assignment';
 import type { AspectRatio, ReferenceMode, ThemeTransformSlotStatus } from '@/lib/types/studio';
@@ -682,20 +683,33 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
     );
   };
 
+  const checklistIcon = (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+      />
+    </svg>
+  );
+
   return (
     <>
     <div className="flex flex-col gap-1.5">
-      <div className="image-references-header flex flex-col gap-1.5">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-300">
-            Checklist
-          </span>
-          {isBakeStartFrameWorkflow && checklistTasks.length > 0 && (
-            <span className="text-[10px] text-gray-400">
+      <ProPane
+        title="Checklist"
+        icon={checklistIcon}
+        className="image-references-header"
+        titleTrailing={
+          isBakeStartFrameWorkflow && checklistTasks.length > 0 ? (
+            <span className="text-[10px] text-gray-400 normal-case tracking-normal">
               ({checklistTasksDone} / {checklistTasks.length} tasks completed)
             </span>
-          )}
-        </div>
+          ) : undefined
+        }
+        bodyClassName="flex flex-col gap-1.5"
+      >
         {!isBakeStartFrameWorkflow && (
           <select
             value={referenceMode}
@@ -723,7 +737,7 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
             )}
           </div>
         )}
-      </div>
+      </ProPane>
 
       <fieldset className="workflow-step-fieldset">
         <legend className="workflow-step-fieldset__legend flex items-center gap-1.5">

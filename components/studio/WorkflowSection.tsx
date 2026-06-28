@@ -8,6 +8,7 @@ import { WorkflowHierarchyNode } from '@/components/studio/WorkflowHierarchyNode
 import { useThemeTransformConnectorContext } from '@/components/studio/ThemeTransformConnectorProvider';
 import { getWorkflowDefinition } from '@/lib/constants/video-generation-workflows';
 import { normalizeWorkflow } from '@/lib/constants/workflows';
+import { PRO_ENCLOSURE } from '@/lib/constants/prosumer-surfaces';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { getWorkflowModelAvailability } from '@/lib/studio/workflow-capabilities';
 import type { Shot, Workflow } from '@/lib/types/studio';
@@ -43,7 +44,7 @@ export function WorkflowSection({ shot, onChange }: WorkflowSectionProps) {
       />
 
       <div
-        className="camera-panel-workflow-refs"
+        className={`camera-panel-workflow-refs ${PRO_ENCLOSURE.reliefBoxDark}`}
         {...uiSectionProps(UI_SECTIONS.studioBottomReferences)}
       >
         <ReferenceSlots slotRefs={slotRefs} hoverSlot={hoverSlot} />

@@ -45,6 +45,10 @@ export const PRO_ENCLOSURE = {
   group: 'pro-group',
   groupLabel: 'pro-group-label',
   insetBox: 'pro-inset-box',
+  /** Raised section enclosure — non-inset relief */
+  reliefBox: 'pro-relief-box',
+  /** Panel-tone raised enclosure for side-panel sections */
+  reliefBoxDark: 'pro-relief-box pro-relief-box--dark',
   field: 'pro-field',
   fieldRelief: 'pro-field-relief',
   label: 'pro-label',
