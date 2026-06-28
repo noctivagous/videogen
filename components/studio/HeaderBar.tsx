@@ -434,7 +434,7 @@ export function HeaderBar() {
                 renderMenu={(closeMenu) => <AppsLauncherMenu onDismiss={closeMenu} />}
                 menuClassName="!w-[40rem]"
                 className="w-[128px]"
-                primaryClassName="font-semibold w-[109px] max-w-none"
+                primaryClassName="pro-btn--tint font-semibold w-[109px] max-w-none"
                 primaryStyle={activeLauncherTheme?.splitPrimaryStyle}
                 menuButtonStyle={activeLauncherTheme?.splitMenuStyle}
                 primaryUiSection={uiSectionProps(UI_SECTIONS.studioHeaderAppsSplit)}
@@ -491,7 +491,7 @@ export function HeaderBar() {
               </button>
               {menuOpen && (
                 <div
-                  className="absolute top-full left-0 mt-1 w-72 bg-surface-800 border border-surface-600 rounded-lg shadow-xl z-50 py-2 text-sm"
+                  className="absolute top-full left-0 mt-1 pro-menu w-72 z-50 py-2 text-sm"
                   onMouseDown={(e) => e.preventDefault()}
                 >
                   <div className="px-3 pb-2">
@@ -514,7 +514,7 @@ export function HeaderBar() {
                           {directoryApiSupported ? (
                             <button
                               type="button"
-                              className="w-full text-left px-3 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition-colors"
+                              className="pro-btn pro-btn--brand w-full text-left text-sm normal-case"
                               onClick={() => { void saveProjectFolderAs(); setMenuOpen(false); }}
                             >
                               Choose project folder…
@@ -522,7 +522,7 @@ export function HeaderBar() {
                           ) : (
                             <button
                               type="button"
-                              className="w-full text-left px-3 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition-colors"
+                              className="pro-btn pro-btn--brand w-full text-left text-sm normal-case"
                               onClick={() => { void saveProjectQuick(); setMenuOpen(false); }}
                             >
                               {nativeFileApiSupported ? 'Save JSON file…' : 'Download project JSON…'}
@@ -531,7 +531,7 @@ export function HeaderBar() {
                           {directoryApiSupported ? (
                             <button
                               type="button"
-                              className="w-full text-left px-3 py-2 rounded-lg hover:bg-surface-700 text-gray-300 transition-colors"
+                              className="pro-menu-item"
                               onClick={() => { void openProjectFolder(); setMenuOpen(false); }}
                             >
                               Open existing project folder…
@@ -543,7 +543,7 @@ export function HeaderBar() {
                           {projectSaveState === 'dirty' && (
                             <button
                               type="button"
-                              className="w-full text-left px-3 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition-colors"
+                              className="pro-btn pro-btn--brand w-full text-left text-sm normal-case"
                               onClick={() => { void saveProjectQuick(); setMenuOpen(false); }}
                             >
                               Save now
@@ -551,14 +551,14 @@ export function HeaderBar() {
                           )}
                           <button
                             type="button"
-                            className="w-full text-left px-3 py-2 rounded-lg hover:bg-surface-700 text-gray-300 transition-colors"
+                            className="pro-menu-item"
                             onClick={() => { void openProjectFolder(); setMenuOpen(false); }}
                           >
                             Open different folder…
                           </button>
                           <button
                             type="button"
-                            className="w-full text-left px-3 py-2 rounded-lg hover:bg-surface-700 text-gray-300 transition-colors"
+                            className="pro-menu-item"
                             onClick={() => { void saveProjectFolderAs(); setMenuOpen(false); }}
                           >
                             Save copy to new folder…
@@ -574,7 +574,7 @@ export function HeaderBar() {
                     type="button"
                     title={saveQuickTitle}
                     onClick={() => { void saveProjectQuick().then(() => setMenuOpen(false)); }}
-                    className="w-full text-left px-3 py-2 hover:bg-surface-700 flex items-center gap-2"
+                    className="pro-menu-item flex items-center gap-2"
                   >
                     <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
@@ -585,7 +585,7 @@ export function HeaderBar() {
                     type="button"
                     title={openQuickTitle}
                     onClick={() => { void openProjectQuick().then(() => setMenuOpen(false)); }}
-                    className="w-full text-left px-3 py-2 hover:bg-surface-700 flex items-center gap-2"
+                    className="pro-menu-item flex items-center gap-2"
                   >
                     <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -624,7 +624,7 @@ export function HeaderBar() {
                 aria-haspopup="menu"
                 aria-expanded={groupMenuOpen}
                 onClick={() => setGroupMenuOpen((value) => !value)}
-                className="w-full h-full min-w-0 flex items-center px-2 py-1 rounded-md border border-surface-600 bg-surface-800/60 hover:bg-surface-700/80 transition-colors text-left"
+                className="pro-matte-glass flex w-full h-full min-w-0 px-2 py-1 text-left"
                 title="Choose a model workflow group"
               >
                 <div className="min-w-0 leading-tight flex-1">
@@ -639,7 +639,7 @@ export function HeaderBar() {
               {groupMenuOpen && (
                 <div
                   role="menu"
-                  className="absolute top-full left-0 mt-1 bg-surface-800 border border-surface-600 rounded-lg shadow-xl z-[60] w-[42rem] max-w-[90vw] max-h-[70vh] overflow-y-auto p-4"
+                  className="absolute top-full left-0 mt-1 pro-menu z-[60] w-[42rem] max-w-[90vw] max-h-[70vh] overflow-y-auto p-4"
                 >
                   <div className="mb-3">
                     <div className="text-[10px] uppercase tracking-wider text-gray-500">Model workflow groups</div>
@@ -698,7 +698,7 @@ export function HeaderBar() {
                 </div>
               )}
             </div>
-            <div className="self-stretch w-[39rem] max-w-[39rem] overflow-hidden rounded-md border border-surface-700 bg-surface-900/30 p-1">
+            <div className="pro-header-badge-tray self-stretch w-[39rem] max-w-[39rem] overflow-hidden">
               <div className="flex gap-2 min-h-[53px] overflow-x-auto overflow-y-hidden pr-1 pb-1">
                 {groupCards.map((card, index) => {
                   if (card.type === 'default-video') {

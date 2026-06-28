@@ -9,6 +9,7 @@ import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { resolveThemeTransformLightingInclusion } from '@/lib/constants/theme-transform-lighting';
 import { needsThemeTransformer } from '@/lib/studio/theme-transform';
 import type { ThemeTransformLightingInclusion } from '@/lib/types/studio';
+import { ProPane } from '@/components/ui/ProPane';
 import { RangeSlider } from '@/components/ui/RangeSlider';
 import { Select } from '@/components/ui/Select';
 import { useStudioStore } from '@/store/useStudioStore';
@@ -52,31 +53,38 @@ export function LightingPanel() {
     });
   };
 
-  return (
-    <div className="p-4" {...uiSectionProps(UI_SECTIONS.studioLightingControls, { id: false })}>
-      <div className="flex items-center gap-2 mb-1">
-        <svg className="w-5 h-5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
-          />
-        </svg>
-        <h3 className="font-semibold text-sm uppercase tracking-wider text-gray-300">Theme Transformer</h3>
-      </div>
-      <p className="text-[10px] text-gray-500 mb-3">Applied to image references</p>
-      {needsThemeTransformer(lighting) && <ThemeTransformerOutlet />}
-      <ColorPalettePanel />
+  const themeIcon = (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
+      />
+    </svg>
+  );
 
-      <div className="flex items-center gap-2 mb-4 mt-6">
-        <svg className="w-5 h-5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-        </svg>
-        <h3 className="font-semibold text-sm uppercase tracking-wider text-gray-300">Lighting</h3>
-        <span className="ml-auto text-[9px] uppercase tracking-wider text-gray-500">TT = image refs</span>
-      </div>
-      <p className="text-[10px] text-gray-500 mb-4 -mt-2">Opt-in for Theme Transformer prompts only</p>
+  const lightingIcon = (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+    </svg>
+  );
+
+  return (
+    <div className="flex flex-col pro-pane-stack" {...uiSectionProps(UI_SECTIONS.studioLightingControls, { id: false })}>
+      <ProPane title="Theme Transformer" icon={themeIcon} bodyClassName="flex flex-col gap-3">
+        <p className="text-[10px] text-gray-500">Applied to image references</p>
+        {needsThemeTransformer(lighting) && <ThemeTransformerOutlet />}
+        <ColorPalettePanel />
+      </ProPane>
+
+      <ProPane
+        title="Lighting"
+        icon={lightingIcon}
+        titleTrailing={<span className="pro-label normal-case tracking-normal">TT = image refs</span>}
+        bodyClassName="space-y-4"
+      >
+        <p className="text-[10px] text-gray-500 -mt-1">Opt-in for Theme Transformer prompts only</p>
 
       <div className="space-y-4">
         <div>
@@ -178,8 +186,9 @@ export function LightingPanel() {
         </div>
       </div>
 
-      <VideoLightingTechniquesPanel />
-      <AtmosphereEnvironmentPanel />
+        <VideoLightingTechniquesPanel />
+        <AtmosphereEnvironmentPanel />
+      </ProPane>
     </div>
   );
 }

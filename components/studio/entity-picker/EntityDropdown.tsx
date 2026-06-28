@@ -84,7 +84,7 @@ export function EntityDropdown({
 
 export function EntityDropdownPanel({ children }: { children: ReactNode }) {
   return (
-    <div className="absolute z-30 left-0 right-0 top-full mt-1 bg-surface-800 border border-surface-600 rounded-xl shadow-xl overflow-hidden">
+    <div className="pro-menu absolute z-30 left-0 right-0 top-full mt-1 overflow-hidden">
       {children}
     </div>
   );

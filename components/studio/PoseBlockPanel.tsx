@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useEffect, useMemo } from 'react';
 import { MannequinInspectorControls } from '@/components/studio/MannequinInspectorControls';
+import { ProPane } from '@/components/ui/ProPane';
 import { normalizeReferenceRole } from '@/lib/constants/camera';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { migrateMannequins } from '@/lib/studio/migrate-mannequin';
@@ -80,25 +81,23 @@ export function PoseBlockPanel() {
     }
   }, [mannequins, selectedMannequinIds, clearMannequinSelection]);
 
+  const mannequinIcon = (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+      />
+    </svg>
+  );
+
   return (
     <div
-      className="p-4 flex flex-col gap-4"
+      className="flex flex-col pro-pane-stack"
       {...uiSectionProps(UI_SECTIONS.studioPoseBlockPanel, { id: false })}
     >
-      <div className="flex items-center gap-2">
-        <svg className="w-5 h-5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-          />
-        </svg>
-        <h3 className="font-semibold text-sm uppercase tracking-wider text-gray-300">
-          Mannequins
-        </h3>
-      </div>
-
+      <ProPane title="Mannequins" icon={mannequinIcon} bodyClassName="flex flex-col gap-3">
       <PoseGizmoModeSegment />
 
       <div className="flex items-center gap-2">
@@ -184,10 +183,11 @@ export function PoseBlockPanel() {
           onAssignSubjectSlot={assignMannequinSubjectSlot}
         />
       )}
+      </ProPane>
 
-      <div className="border-t border-surface-700 pt-3">
+      <ProPane title="Pose Adjust">
         <PoseBlockPoseSection />
-      </div>
+      </ProPane>
     </div>
   );
 }

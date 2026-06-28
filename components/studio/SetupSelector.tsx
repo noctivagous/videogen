@@ -35,6 +35,7 @@ export function SetupSelector() {
   return (
     <Select
       label="Setup"
+      fieldVariant="relief"
       labelClassName="text-[10px] uppercase tracking-wider font-semibold text-gray-400 mb-1"
       value={String(currentSetupId)}
       onChange={(e) => handleChange(e.target.value)}

@@ -24,12 +24,11 @@ export function PoseBlockPoseSection() {
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-[10px] uppercase tracking-wide text-gray-400">3D pose adjust</p>
       <p className="text-[10px] text-gray-500 leading-snug">
         Fine-tune pose ops numerically while the canvas gizmo mode is controlled above.
       </p>
 
-      <div className="poseblock-embed rounded-lg border border-surface-700 bg-surface-900/80 p-1">
+      <div className="poseblock-embed pro-inset-box p-1">
         {ready ? <PoseAdjustToolbar /> : (
           <p className="px-2 py-3 text-[10px] text-gray-500">Loading pose controls…</p>
         )}

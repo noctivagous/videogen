@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "conventions": {
+    "purpose": "Seamless tileable GUI surface textures for VideoGen prosumer chrome.",
+    "promptPrefix": "Seamless tileable texture swatch, perfectly uniform edge-to-edge with no focal point, macro orthographic flat fill only. Professional broadcast hardware surface material. Zero typography, zero objects, zero logos, zero buttons, zero seams visible at edges. Dark desaturated blue-gray charcoal palette compatible with #1a1d23 UI.",
+    "outputSpec": {
+      "grokModel": "grok-imagine-image-quality",
+      "grokAspectRatio": "1:1",
+      "grokResolution": "1k",
+      "targetSize": 512,
+      "format": "jpg"
+    },
+    "outputDir": "textures/gui"
+  },
+  "samples": [
+    {
+      "id": "toolbar-matte",
+      "file": "textures/gui/toolbar-matte.jpg",
+      "prompt": "Seamless tileable texture swatch, perfectly uniform edge-to-edge, macro orthographic flat fill only. Dark matte anodized aluminum with ultra-fine horizontal brush grain, color #2a2f38 blue-gray, subtle satin sheen, pro audio mixer top panel material. Zero typography, zero objects, zero logos. Dark desaturated charcoal palette."
+    },
+    {
+      "id": "panel-matte",
+      "file": "textures/gui/panel-matte.jpg",
+      "prompt": "Seamless tileable texture swatch, perfectly uniform edge-to-edge, macro orthographic flat fill only. Dark polymer side-panel material with fine isotropic noise grain, color #1f232b blue-gray charcoal, soft matte, cinema equipment rack side texture. Zero typography, zero objects, zero logos."
+    },
+    {
+      "id": "matte-glass",
+      "file": "textures/gui/matte-glass.jpg",
+      "prompt": "Seamless tileable texture swatch, perfectly uniform edge-to-edge, macro orthographic flat fill only. Lifted satin matte glass-smooth polymer face, #2c313a blue-gray, very subtle specular dust and micro-scratches, pro camera LCD bezel material. Zero typography, zero objects, zero logos."
+    },
+    {
+      "id": "relief-button",
+      "file": "textures/gui/relief-button.jpg",
+      "prompt": "Seamless tileable texture swatch, perfectly uniform edge-to-edge, macro orthographic flat fill only. Brushed gunmetal push-button cap surface, #4a525f to #2e343f tonal range, fine directional brush strokes, tactile hardware button material. Zero typography, zero objects, zero logos."
+    },
+    {
+      "id": "pane-titlebar",
+      "file": "textures/gui/pane-titlebar.jpg",
+      "prompt": "Seamless tileable texture swatch, perfectly uniform edge-to-edge, macro orthographic flat fill only. Narrow matte title-strip material, #2a2f38 with tighter fine grain than toolbar, broadcast rack section label band texture. Zero typography, zero objects, zero logos."
+    },
+    {
+      "id": "workspace-bg",
+      "file": "textures/gui/workspace-bg.jpg",
+      "prompt": "Seamless tileable texture swatch, perfectly uniform edge-to-edge, macro orthographic flat fill only. Very subtle dark workspace canvas, #1a1d23 blue-gray with minimal fine film grain, almost flat with whisper of texture for editing timeline background. Zero typography, zero objects, zero logos."
+    }
+  ]
+}

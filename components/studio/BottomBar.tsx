@@ -61,7 +61,7 @@ function PromptImageTag({ tag, meta }: PromptImageTagProps) {
         anchorRect={anchorRect}
         className="pointer-events-none -translate-x-1/2 -translate-y-full"
       >
-        <div className="w-40 rounded-md border border-surface-500 bg-surface-900/95 p-1 shadow-xl">
+        <div className="pro-popover w-40 p-1">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={meta.url}

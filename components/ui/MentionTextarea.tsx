@@ -142,7 +142,7 @@ export function MentionTextarea({
       {mention?.open && (
         <div
           role="listbox"
-          className="absolute left-0 top-full z-50 mt-1 w-full min-w-[200px] max-w-sm overflow-hidden rounded-lg border border-surface-600 bg-surface-800 shadow-xl"
+          className="pro-popover absolute left-0 top-full z-50 mt-1 w-full min-w-[200px] max-w-sm overflow-hidden"
         >
           {filtered.length === 0 ? (
             <div className="px-3 py-2 text-xs text-gray-500">

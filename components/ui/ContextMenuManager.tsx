@@ -64,7 +64,7 @@ export function ContextMenuManager({ children }: ContextMenuManagerProps) {
             />
             <div
               role="menu"
-              className="studio-context-menu fixed z-[201] min-w-[9rem] py-1 rounded-lg border border-surface-600 bg-surface-900/95 shadow-xl backdrop-blur-sm"
+              className="studio-context-menu pro-menu fixed z-[201] min-w-[9rem] py-1"
               style={{ left: menu.x, top: menu.y }}
             >
               {menu.items.map((item) => (
@@ -73,10 +73,8 @@ export function ContextMenuManager({ children }: ContextMenuManagerProps) {
                   type="button"
                   role="menuitem"
                   disabled={item.disabled}
-                  className={`studio-context-menu-item w-full text-left px-3 py-1.5 text-sm ${
-                    item.destructive
-                      ? 'text-red-400 hover:bg-red-500/15 disabled:text-red-400/40'
-                      : 'text-gray-200 hover:bg-surface-700 disabled:text-gray-500'
+                  className={`pro-menu-item text-sm ${
+                    item.destructive ? 'pro-menu-item--destructive' : ''
                   } disabled:cursor-not-allowed`}
                   onClick={() => {
                     if (item.disabled) return;

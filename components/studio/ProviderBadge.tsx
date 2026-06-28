@@ -330,7 +330,7 @@ export function ProviderBadge({
         aria-expanded={open}
         aria-controls={menuId}
         onClick={() => setOpen((value) => !value)}
-        className={`flex items-center gap-2 px-3 py-1.5 bg-surface-800 hover:bg-surface-700 border border-surface-600 rounded-lg cursor-pointer transition-all text-xs ${
+        className={`pro-matte-glass flex items-center gap-2 px-3 py-1.5 text-xs ${
           fill ? 'w-full h-full max-w-none' : 'max-w-[200px] lg:max-w-[220px]'
         }`}
         title={`${label ?? kind} provider & model — click to choose`}
@@ -373,7 +373,7 @@ export function ProviderBadge({
           id={menuId}
           role="menu"
           aria-label={`${kind} provider and model`}
-          className="fixed w-72 bg-surface-800 border border-surface-600 rounded-lg shadow-xl z-[80] py-1 text-sm"
+          className="pro-menu fixed w-72 z-[80] py-1 text-sm"
           style={{ top: menuPosition.top, left: menuPosition.left }}
         >
           <MenuSectionHeader
@@ -394,8 +394,8 @@ export function ProviderBadge({
                 return (
                   <div
                     key={provider.id}
-                    className={`w-full flex items-center gap-2 px-3 py-2 hover:bg-surface-700 transition-colors ${
-                      isSelected ? 'bg-surface-700/70' : ''
+                    className={`pro-menu-item flex items-center gap-2 ${
+                      isSelected ? 'pro-menu-item--active' : ''
                     }`}
                   >
                     <button
@@ -469,8 +469,8 @@ export function ProviderBadge({
                     role="menuitemradio"
                     aria-checked={isSelected}
                     onClick={() => handleModelSelect(model.id)}
-                    className={`w-full text-left px-3 py-2 hover:bg-surface-700 transition-colors truncate ${
-                      isSelected ? 'bg-brand-600/15 text-brand-200' : 'text-gray-200'
+                    className={`pro-menu-item truncate ${
+                      isSelected ? 'pro-menu-item--active' : ''
                     }`}
                   >
                     {model.name}
@@ -488,7 +488,7 @@ export function ProviderBadge({
               setOpen(false);
               navigateToPanel('settings');
             }}
-            className="w-full flex items-center gap-2 px-3 py-2 hover:bg-surface-700 text-gray-400 hover:text-gray-200 transition-colors text-xs"
+            className="pro-menu-item flex items-center gap-2 text-xs text-gray-400"
           >
             <KeyRound className="w-3.5 h-3.5 flex-shrink-0" aria-hidden />
             Manage API keys…

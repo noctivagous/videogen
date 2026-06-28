@@ -4,7 +4,10 @@ const config: Config = {
   content: [
     './app/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
-    './PoseBlock/**/*.{js,ts,jsx,tsx,mdx}',
+    './PoseBlock/app/**/*.{js,ts,jsx,tsx,mdx}',
+    './PoseBlock/components/**/*.{js,ts,jsx,tsx,mdx}',
+    './PoseBlock/lib/**/*.{js,ts,jsx,tsx,mdx}',
+    './PoseBlock/*.{js,ts,jsx,tsx,mdx}',
     './lib/poseblock/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {

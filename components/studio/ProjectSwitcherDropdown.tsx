@@ -487,7 +487,7 @@ export function ProjectSwitcherDropdown({
         aria-expanded={open}
         aria-controls={menuId}
         onClick={() => setOpen((value) => !value)}
-        className="flex items-stretch gap-2 bg-surface-700 hover:bg-surface-600 focus:bg-surface-600 border border-surface-600 rounded-lg pl-0 pr-2.5 py-0 text-sm font-medium outline-none focus:ring-2 focus:ring-brand-500 transition-all w-36 md:w-52 text-left overflow-hidden"
+        className="pro-trigger flex items-stretch gap-2 pl-0 pr-2.5 py-0 w-36 md:w-52 overflow-hidden"
         title="Switch project"
         {...uiSectionProps(UI_SECTIONS.studioHeaderProjectName)}
       >
@@ -501,7 +501,7 @@ export function ProjectSwitcherDropdown({
           id={menuId}
           role="menu"
           aria-label="Saved projects"
-          className={`absolute top-full left-0 mt-1 bg-surface-800 border border-surface-600 rounded-lg shadow-xl z-50 text-sm ${
+          className={`absolute top-full left-0 mt-1 pro-menu z-50 text-sm ${
             menuView === 'grid'
               ? 'w-[32rem] max-w-[90vw] flex flex-col overflow-hidden'
               : 'w-52 md:w-60 max-h-72 overflow-y-auto py-1'

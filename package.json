@@ -31,7 +31,8 @@
     "stock:regenerate-mannequin-facings": "node scripts/regenerate-mannequin-facings.mjs",
     "stock:previews": "node scripts/generate-stock-previews.mjs",
     "stock:looks": "node scripts/generate-look-previews.mjs",
-    "stock:studio-launcher": "node scripts/generate-studio-launcher.mjs"
+    "stock:studio-launcher": "node scripts/generate-studio-launcher.mjs",
+    "textures:gui": "node scripts/generate-gui-textures.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
