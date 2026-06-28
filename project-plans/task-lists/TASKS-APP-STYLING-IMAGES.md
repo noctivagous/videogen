@@ -76,7 +76,7 @@ public/stock/
 
 - [ ] Register icons in `lib/constants/model-catalog.ts` (or `model-category-icons.ts`) → `getModelCategoryIconUrl(categoryId)`
 - [ ] Use icon URL in `AppSummaryPanel` chip thumbnail
-- [ ] Add optional `backgroundImage` to `MODEL_UX_GROUPS` entries in `HeaderBar.tsx`
+- [x] Add optional `backgroundImage` to `MODEL_UX_GROUPS` entries in `HeaderBar.tsx`
 - [ ] Add optional `backgroundImage` per category badge card in `ProviderBadge` / `HeaderBar`
 - [x] Add `backgroundImage` to `StudioLauncherItem` in `lib/constants/studio-launcher.ts`; render in `AppsLauncherGrid` (right thumbnail + left gradient shade, same pattern as `VisualDropdown`)
 - [ ] Register mode preview URLs in `lib/constants/color-palette.ts`; replace `ColorModeIconPreview` gradients in `components/ui/ColorModeSegment.tsx` with `<img>` / `background-image`
@@ -150,12 +150,12 @@ public/stock/
 
 **Output:** `public/stock/app-styling/model-workflow-groups/{id}.jpg` — 640×360 master.
 
-- [ ] `image-video` — **Image / video** — Default generation picks. Cinema camera on c-stand beside a still-frame print on easel; faint motion streak across the same gray set (generate still + animate).
-- [ ] `image-editing` — **Image editing** — Bake / manipulation. Backdrop roll on stand with visible mask brush edge; reference print and light table at frame edge.
-- [ ] `video-workflows` — **Video workflows** — Primary generation. Clapperboard-gray sculpt, film strip, ARRI-style camera on dolly track, multi-ref thumbnails tucked in corner.
-- [ ] `finish-audio` — **Finish + audio** — Dialogue / voice / Foley. Boom mic and studio microphone sculpt with waveform beside (gray hard-surface, no brand).
-- [ ] `quality` — **Quality** — Upscaling / interpolation. Reference monitor showing same frame sharp vs soft duplicate edge hint (resolution / smooth motion).
-- [ ] `advanced` — **Advanced** — Compositing / segmentation / control. Layered frames, matte fringe, depth primitive map collage in gray studio.
+- [x] `image-video` — **Image / video** — Default generation picks. Cinema camera on c-stand beside a still-frame print on easel; faint motion streak across the same gray set (generate still + animate).
+- [x] `image-editing` — **Image editing** — Bake / manipulation. Backdrop roll on stand with visible mask brush edge; reference print and light table at frame edge.
+- [x] `video-workflows` — **Video workflows** — Primary generation. Clapperboard-gray sculpt, film strip, ARRI-style camera on dolly track, multi-ref thumbnails tucked in corner.
+- [x] `finish-audio` — **Finish + audio** — Dialogue / voice / Foley. Boom mic and studio microphone sculpt with waveform beside (gray hard-surface, no brand).
+- [x] `quality` — **Quality** — Upscaling / interpolation. Reference monitor showing same frame sharp vs soft duplicate edge hint (resolution / smooth motion).
+- [x] `advanced` — **Advanced** — Compositing / segmentation / control. Layered frames, matte fringe, depth primitive map collage in gray studio.
 
 ---
 

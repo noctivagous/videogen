@@ -103,6 +103,7 @@ function isImageDrag(e: DragEvent): boolean {
 
 export function PreviewPanel() {
   const previewStageRef = useRef<HTMLDivElement>(null);
+  const previewFrameAreaRef = useRef<HTMLDivElement>(null);
   const previewFrameRef = useRef<HTMLDivElement>(null);
   const frameView = useStudioStore((s) => s.frameView);
   const setFrameView = useStudioStore((s) => s.setFrameView);
@@ -229,7 +230,7 @@ export function PreviewPanel() {
     if (!isShotDesigner) return;
 
     const frame = previewFrameRef.current;
-    const container = previewStageRef.current;
+    const container = previewFrameAreaRef.current;
     if (!frame || !container) return;
 
     const update = () => fitPreviewFrame(frame, container, project.aspectRatio || '16:9');
@@ -481,7 +482,7 @@ export function PreviewPanel() {
       <div className="preview-panel-stage-shell">
         <div
           ref={previewStageRef}
-          className="relative w-full h-full max-w-5xl flex items-center justify-start min-h-0"
+          className="relative w-full h-full max-w-5xl flex flex-col min-h-0"
         >
           {showBackdropEditStack && shot && backdropSourceUrl && (
             <>
@@ -503,10 +504,11 @@ export function PreviewPanel() {
               />
             </>
           )}
-          <div className="preview-frame-stage shrink-0 relative z-10">
+          <div className="preview-frame-stage relative z-10">
             <div className="preview-frame-stage__settings">
               <PreviewProjectSettingsBar />
             </div>
+            <div ref={previewFrameAreaRef} className="preview-frame-stage__viewport">
             <div
               ref={previewFrameRef}
               className={`preview-frame-stage__frame preview-frame relative rounded-xl border-2 overflow-hidden shadow-2xl group ${
@@ -755,6 +757,7 @@ export function PreviewPanel() {
           </div>
 
           </div>
+            </div>
           </div>
         </div>
       </div>

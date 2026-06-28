@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "conventions": {
+    "purpose": "Model workflow group card backgrounds for HeaderBar group picker — each card has a distinct metaphor for the group's capabilities.",
+    "promptPrefix": "Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays, or readable markings on any object. Neutral gray seamless studio, dark desaturated charcoal-friendly palette, cinematic 35mm lens, soft even lighting, muted tones.",
+    "outputSpec": {
+      "grokModel": "grok-imagine-image-quality",
+      "grokAspectRatio": "16:9",
+      "grokResolution": "1k",
+      "targetWidth": 640,
+      "targetHeight": 360,
+      "format": "jpg"
+    },
+    "composition": "Composition weighted to the right third for UI thumbnail crop on group picker cards."
+  },
+  "samples": [
+    {
+      "id": "model-workflow-group-advanced",
+      "abbr": "Advanced",
+      "file": "app-styling/model-workflow-groups/advanced.jpg",
+      "referenceFile": "lenses/standard.jpg",
+      "isAnchor": true,
+      "prompt": "Use the exact same matte gray hard-surface sculpt material on cinema equipment from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, or readable markings. Neutral gray seamless studio, charcoal backdrop, soft even lighting. Hero subject grouped in the right third of frame: three stacked translucent compositing glass frames with soft alpha matte fringe on the front layer, small easel beside them holding paired grayscale depth-map and edge-map sculpt tiles of a cinema camera setup. Left two-thirds mostly empty muted gray studio for UI overlay. Matte gray hard-surface sculpts only — no people, no mannequins. Clear advanced compositing, segmentation, and control demonstration."
+    },
+    {
+      "id": "model-workflow-group-image-video",
+      "abbr": "Image / video",
+      "file": "app-styling/model-workflow-groups/image-video.jpg",
+      "referenceFile": "app-styling/model-workflow-groups/advanced.jpg",
+      "prompt": "Use the exact same matte gray hard-surface sculpt material, neutral gray seamless studio, and soft even lighting from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, or readable markings. ARRI-style matte gray cinema camera body on c-stand beside a still-frame photographic print on easel, faint horizontal motion blur streak across the gray set suggesting animation from still. No people, no mannequins. Composition weighted to the right third. Clear default image and video generation demonstration."
+    },
+    {
+      "id": "model-workflow-group-image-editing",
+      "abbr": "Image editing",
+      "file": "app-styling/model-workflow-groups/image-editing.jpg",
+      "referenceFile": "lenses/standard.jpg",
+      "prompt": "Use the exact same matte gray hard-surface sculpt material on cinema equipment from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, or readable markings. Neutral gray seamless studio, charcoal backdrop, soft even lighting. Hero subject grouped in the right third of frame: seamless backdrop paper roll on c-stand with irregular mask cutout painted on the paper, subtly brighter inpainted fill inside the mask hole only, flat reference print on a glowing light-table edge beside the roll. Left two-thirds mostly empty muted gray studio for UI overlay. Matte gray hard-surface sculpts only — no people, no mannequins. Clear image editing, mask inpaint, and bake manipulation demonstration."
+    },
+    {
+      "id": "model-workflow-group-video-workflows",
+      "abbr": "Video workflows",
+      "file": "app-styling/model-workflow-groups/video-workflows.jpg",
+      "referenceFile": "app-styling/model-workflow-groups/advanced.jpg",
+      "prompt": "Use the exact same matte gray hard-surface sculpt material, neutral gray seamless studio, and soft even lighting from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, or readable markings. Matte gray clapperboard sculpt, film strip loop, ARRI-style cinema camera on dolly track, two or three small reference print thumbnails tucked in corner. No people, no mannequins. Composition weighted to the right third. Clear video workflow and sequencing demonstration."
+    },
+    {
+      "id": "model-workflow-group-finish-audio",
+      "abbr": "Finish + audio",
+      "file": "app-styling/model-workflow-groups/finish-audio.jpg",
+      "referenceFile": "app-styling/model-workflow-groups/advanced.jpg",
+      "prompt": "Use the exact same matte gray hard-surface sculpt material, neutral gray seamless studio, and soft even lighting from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, or readable markings. Boom mic sculpt on stand and studio condenser microphone sculpt side by side, abstract gray hard-surface waveform ribbon beside microphones — no text, no readable display. No people, no mannequins. Composition weighted to the right third. Clear finish and audio finishing demonstration."
+    },
+    {
+      "id": "model-workflow-group-quality",
+      "abbr": "Quality",
+      "file": "app-styling/model-workflow-groups/quality.jpg",
+      "referenceFile": "app-styling/model-workflow-groups/advanced.jpg",
+      "prompt": "Use the exact same matte gray hard-surface sculpt material, neutral gray seamless studio, and soft even lighting from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, or readable markings. Reference monitor sculpt on floor showing same frame duplicated: left half soft and blurry, right half sharp and crisp with visible resolution edge between halves. No people, no mannequins. Composition weighted to the right third. Clear upscaling and motion smoothing quality demonstration."
+    }
+  ]
+}

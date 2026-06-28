@@ -18,6 +18,10 @@ import { ProviderBadge } from '@/components/studio/ProviderBadge';
 import { StudioLauncherIconBar } from '@/components/studio/StudioLauncherIconBar';
 import { SplitButton } from '@/components/ui/SplitButton';
 import { MODEL_CATEGORY_DEFINITIONS, type ModelCategoryId } from '@/lib/constants/model-catalog';
+import {
+  getModelWorkflowGroupBackgroundUrl,
+  type ModelUxGroupId,
+} from '@/lib/constants/model-workflow-groups';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { getStudioPanelTitle } from '@/lib/constants/studio-launcher';
 import { launchStudioLauncherItem } from '@/lib/studio/launch-studio-launcher-item';
@@ -46,14 +50,6 @@ import type {
 import type { Modality } from '@/lib/types/studio';
 import { useStudioStore } from '@/store/useStudioStore';
 
-type ModelUxGroupId =
-  | 'image-video'
-  | 'image-editing'
-  | 'video-workflows'
-  | 'finish-audio'
-  | 'quality'
-  | 'advanced';
-
 type HeaderGroupCard =
   | { id: string; type: 'default-video' | 'default-image' }
   | { id: string; type: 'category'; categoryId: ModelCategoryId };
@@ -66,6 +62,7 @@ const MODEL_UX_GROUPS: Array<{
   id: ModelUxGroupId;
   label: string;
   description: string;
+  backgroundImage: string;
   categories: ModelCategoryId[];
   cards: HeaderGroupCard[];
 }> = [
@@ -73,6 +70,7 @@ const MODEL_UX_GROUPS: Array<{
     id: 'image-video',
     label: 'Image / video',
     description: 'Default generation model picks',
+    backgroundImage: getModelWorkflowGroupBackgroundUrl('image-video'),
     categories: ['image-to-video', 'text-to-video', 'text-to-image'],
     cards: [
       { id: 'default-video', type: 'default-video' },
@@ -83,6 +81,7 @@ const MODEL_UX_GROUPS: Array<{
     id: 'image-editing',
     label: 'Image editing',
     description: 'Bake and image-manipulation capabilities',
+    backgroundImage: getModelWorkflowGroupBackgroundUrl('image-editing'),
     categories: ['mask-inpaint', 'image-edit', 'multi-image-identity-edit', 'pose-estimation'],
     cards: [
       { id: 'mask-inpaint', type: 'category', categoryId: 'mask-inpaint' },
@@ -95,6 +94,7 @@ const MODEL_UX_GROUPS: Array<{
     id: 'video-workflows',
     label: 'Video workflows',
     description: 'Primary generation and sequencing workflows',
+    backgroundImage: getModelWorkflowGroupBackgroundUrl('video-workflows'),
     categories: ['image-to-video', 'text-to-video', 'reference-to-video', 'multi-shot'],
     cards: [
       { id: 'image-to-video', type: 'category', categoryId: 'image-to-video' },
@@ -107,6 +107,7 @@ const MODEL_UX_GROUPS: Array<{
     id: 'finish-audio',
     label: 'Finish + audio',
     description: 'Dialogue, voice, and audio finishing tools',
+    backgroundImage: getModelWorkflowGroupBackgroundUrl('finish-audio'),
     categories: ['lip-sync', 'text-to-speech', 'voice-cloning', 'video-to-audio', 'audio-separation'],
     cards: [
       { id: 'lip-sync', type: 'category', categoryId: 'lip-sync' },
@@ -120,6 +121,7 @@ const MODEL_UX_GROUPS: Array<{
     id: 'quality',
     label: 'Quality',
     description: 'Upscaling and motion smoothing',
+    backgroundImage: getModelWorkflowGroupBackgroundUrl('quality'),
     categories: ['image-upscale', 'video-upscale', 'frame-interpolation'],
     cards: [
       { id: 'image-upscale', type: 'category', categoryId: 'image-upscale' },
@@ -131,6 +133,7 @@ const MODEL_UX_GROUPS: Array<{
     id: 'advanced',
     label: 'Advanced',
     description: 'Compositing, segmentation, control maps, and outpaint',
+    backgroundImage: getModelWorkflowGroupBackgroundUrl('advanced'),
     categories: [
       'video-matting',
       'video-compositing-inpaint',
@@ -624,28 +627,38 @@ export function HeaderBar() {
                 aria-haspopup="menu"
                 aria-expanded={groupMenuOpen}
                 onClick={() => setGroupMenuOpen((value) => !value)}
-                className="pro-matte-glass flex w-full h-full min-w-0 px-2 py-1 text-left"
+                className={`model-workflow-group-trigger flex w-full h-full min-w-0 text-left ${
+                  groupMenuOpen ? 'model-workflow-group-trigger--open' : ''
+                }`}
                 title="Choose a model workflow group"
               >
-                <div className="min-w-0 leading-tight flex-1">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={activeModelGroup.backgroundImage}
+                  alt=""
+                  className="model-workflow-group-trigger__bg"
+                  aria-hidden
+                />
+                <span className="model-workflow-group-trigger__shade" aria-hidden />
+                <div className="model-workflow-group-trigger__content min-w-0 leading-tight flex-1">
                   <div className="text-[9px] uppercase tracking-wider text-gray-500">Group</div>
                   <div className="text-[11px] font-medium text-gray-200 truncate">{activeModelGroup.label}</div>
                   <div className="text-[10px] text-gray-500 truncate">
                     {groupCards.length} cards
                   </div>
                 </div>
-                <span className="text-gray-500 text-[10px] flex-shrink-0 pl-1" aria-hidden>▾</span>
+                <span className="model-workflow-group-trigger__chevron" aria-hidden>▾</span>
               </button>
               {groupMenuOpen && (
                 <div
                   role="menu"
-                  className="absolute top-full left-0 mt-1 pro-menu z-[60] w-[42rem] max-w-[90vw] max-h-[70vh] overflow-y-auto p-4"
+                  className="absolute top-full left-0 mt-1 pro-menu z-[60] w-[47.125rem] max-w-[90vw] max-h-[70vh] overflow-y-auto p-4"
                 >
                   <div className="mb-3">
                     <div className="text-[10px] uppercase tracking-wider text-gray-500">Model workflow groups</div>
                     <div className="text-xs text-gray-400 mt-1">Choose the group shown in the header model badges.</div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
+                  <div className="model-workflow-group-grid">
                     {MODEL_UX_GROUPS.map((group) => {
                       const isActive = group.id === activeModelGroup.id;
                       const icon = group.id === 'image-editing'
@@ -670,26 +683,34 @@ export function HeaderBar() {
                             setActiveModelGroupId(group.id);
                             setGroupMenuOpen(false);
                           }}
-                          className={`text-left rounded-lg border p-2.5 transition-colors h-full min-h-[9rem] flex flex-col ${
+                          className={`model-workflow-group-card text-left rounded-lg border transition-colors ${
                             isActive
                               ? 'border-brand-500/50 bg-brand-500/15'
                               : 'border-surface-600 bg-surface-900/50 hover:bg-surface-700/70'
                           }`}
                         >
-                          <div className="flex items-center gap-2 mb-1.5">
-                            <span className={`inline-flex w-5 h-5 rounded-md items-center justify-center ${
+                          <span
+                            className="model-workflow-group-card__thumb"
+                            style={{ backgroundImage: `url(${group.backgroundImage})` }}
+                            aria-hidden
+                          />
+                          <span className="model-workflow-group-card__shade" aria-hidden />
+                          <div className="model-workflow-group-card__header">
+                            <span className={`model-workflow-group-card__icon inline-flex w-5 h-5 rounded-md items-center justify-center flex-shrink-0 ${
                               isActive ? 'bg-brand-500/30 text-brand-200' : 'bg-surface-700 text-gray-300'
                             }`}>
                               <Icon className="w-3 h-3" aria-hidden />
                             </span>
-                            <span className="text-xs font-medium text-gray-100 truncate flex-1">{group.label}</span>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-surface-600 bg-surface-800 text-gray-300">
+                            <span className="model-workflow-group-card__title">{group.label}</span>
+                            <span className="model-workflow-group-card__count">
                               {group.cards.length}
                             </span>
                           </div>
-                          <div className="text-[10px] text-gray-400 leading-snug">{group.description}</div>
-                          <div className="text-[10px] text-gray-500 leading-snug mt-2">
-                            {group.categories.map((categoryId) => MODEL_CATEGORY_LABELS.get(categoryId) ?? categoryId).join(', ')}
+                          <div className="model-workflow-group-card__content">
+                            <div className="model-workflow-group-card__description">{group.description}</div>
+                            <div className="model-workflow-group-card__categories">
+                              {group.categories.map((categoryId) => MODEL_CATEGORY_LABELS.get(categoryId) ?? categoryId).join(', ')}
+                            </div>
                           </div>
                         </button>
                       );

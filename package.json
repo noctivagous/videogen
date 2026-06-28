@@ -32,6 +32,7 @@
     "stock:previews": "node scripts/generate-stock-previews.mjs",
     "stock:looks": "node scripts/generate-look-previews.mjs",
     "stock:studio-launcher": "node scripts/generate-studio-launcher.mjs",
+    "stock:model-workflow-groups": "node scripts/generate-model-workflow-groups.mjs",
     "textures:gui": "node scripts/generate-gui-textures.mjs"
   },
   "dependencies": {
