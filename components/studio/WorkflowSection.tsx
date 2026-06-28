@@ -44,7 +44,7 @@ export function WorkflowSection({ shot, onChange }: WorkflowSectionProps) {
       />
 
       <div
-        className={`camera-panel-workflow-refs ${PRO_ENCLOSURE.reliefBoxDark}`}
+        className={`camera-panel-workflow-refs studio-fieldset-hierarchy ${PRO_ENCLOSURE.reliefBoxDark}`}
         {...uiSectionProps(UI_SECTIONS.studioBottomReferences)}
       >
         <ReferenceSlots slotRefs={slotRefs} hoverSlot={hoverSlot} />
