@@ -256,7 +256,7 @@ export const SETTINGS_AI_TAB_LABELS: Record<SettingsAiTab, string> = {
 };
 
 export const SETTINGS_SECTION_DESCRIPTIONS: Record<SettingsSection, string> = {
-  app: 'Studio preferences and global defaults',
+  app: 'Feature readiness checklist and studio-wide preferences',
   project: 'Resolution, timing, and project metadata',
   ai: 'Model categories, provider pages, API keys, and defaults',
 };

@@ -30,7 +30,8 @@
     "stock:process-mannequin-mode": "node scripts/process-mannequin-angles.mjs",
     "stock:regenerate-mannequin-facings": "node scripts/regenerate-mannequin-facings.mjs",
     "stock:previews": "node scripts/generate-stock-previews.mjs",
-    "stock:looks": "node scripts/generate-look-previews.mjs"
+    "stock:looks": "node scripts/generate-look-previews.mjs",
+    "stock:studio-launcher": "node scripts/generate-studio-launcher.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",

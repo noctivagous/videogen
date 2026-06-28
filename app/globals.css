@@ -2772,6 +2772,40 @@ input[type="range"]::-moz-range-thumb:hover {
   overflow: hidden;
 }
 
+.apps-launcher-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.apps-launcher-card__thumb {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 45%;
+  background-size: cover;
+  background-position: center top;
+  pointer-events: none;
+}
+
+.apps-launcher-card__shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    #27272d 52%,
+    rgba(39, 39, 45, 0.72) 72%,
+    rgba(39, 39, 45, 0.2) 100%
+  );
+  pointer-events: none;
+}
+
+.apps-launcher-card__content {
+  position: relative;
+  z-index: 1;
+  max-width: 58%;
+}
+
 .camera-param-chain {
   display: flex;
   flex-direction: column;

@@ -6,6 +6,7 @@ import {
   EntityDropdownPanel,
 } from '@/components/studio/entity-picker/EntityDropdown';
 import { EntityImageAddButton } from '@/components/studio/entity-picker/EntityImageAddButton';
+import { STOCK_LOCATIONS } from '@/lib/constants/stock-project';
 import { isManualBackdropLocation } from '@/lib/studio/manual-backdrop-location';
 import { useStudioStore } from '@/store/useStudioStore';
 import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
@@ -16,6 +17,11 @@ import { useNavigateToStudioPanel } from '@/hooks/use-studio-panel-navigation';
 interface LocationPickerSectionProps {
   checklistMarker?: string;
   checklistDone?: boolean;
+}
+
+function isBackdropPlate(plate: { dataType?: string }) {
+  const dataType = plate.dataType;
+  return !dataType || dataType === 'backdrop-plate';
 }
 
 export function LocationPickerSection({
@@ -37,15 +43,9 @@ export function LocationPickerSection({
   const assignedLocationId = setup?.locationId ?? null;
   const assignedLocation = locations.find((l) => l.id === assignedLocationId) ?? null;
   const assignableLocations = locations.filter((location) => !isManualBackdropLocation(location));
-  const selectablePlates = (assignedLocation?.plates ?? []).filter((plate) => {
-    const dataType = (plate as { dataType?: string }).dataType;
-    return !dataType || dataType === 'backdrop-plate';
-  });
+  const selectablePlates = (assignedLocation?.plates ?? []).filter(isBackdropPlate);
   const firstBackdropPlateUrl = (plates: typeof locations[number]['plates']): string | undefined => {
-    const candidate = plates.find((plate) => {
-      const dataType = (plate as { dataType?: string }).dataType;
-      return (!dataType || dataType === 'backdrop-plate') && Boolean(plate.url);
-    });
+    const candidate = plates.find((plate) => isBackdropPlate(plate) && Boolean(plate.url));
     return candidate?.url ?? undefined;
   };
 
@@ -57,29 +57,43 @@ export function LocationPickerSection({
     assignedPlateId == null
       ? null
       : assignableLocations.find((location) =>
-          location.plates.some((plate) => {
-            const dataType = (plate as { dataType?: string }).dataType;
-            return (!dataType || dataType === 'backdrop-plate') && plate.id === assignedPlateId;
-          }),
-        ) ?? null;
+          location.plates.some((plate) => isBackdropPlate(plate) && plate.id === assignedPlateId),
+        ) ??
+        STOCK_LOCATIONS.find((location) =>
+          location.plates.some((plate) => isBackdropPlate(plate) && plate.id === assignedPlateId),
+        ) ??
+        null;
+  const plateOwningLocationId = plateOwningLocation?.id ?? null;
+  const catalogPlateUrl =
+    plateOwningLocation?.plates.find((plate) => isBackdropPlate(plate) && plate.id === assignedPlateId)
+      ?.url ?? null;
+  const setupBackdropUrl =
+    assignedPlateId == null
+      ? null
+      : (setup?.backdrops.find((backdrop) => backdrop.id === assignedPlateId)?.url ?? null);
 
   useEffect(() => {
-    if (!setup || !activeCoverage || !assignedPlateId || !plateOwningLocation) return;
-    if (assignedLocationId === plateOwningLocation.id) return;
+    if (!currentSetupId || !currentCoverageShotId || !assignedPlateId || !plateOwningLocationId) return;
+
+    const isLocationOutOfSync = assignedLocationId !== plateOwningLocationId;
+    const isBackdropUrlOutOfSync = Boolean(catalogPlateUrl) && setupBackdropUrl !== catalogPlateUrl;
+    if (!isLocationOutOfSync && !isBackdropUrlOutOfSync) return;
+
     assignPlateToShot(
       currentSetupId,
-      activeCoverage.id,
+      currentCoverageShotId,
       assignedPlateId,
-      plateOwningLocation.id,
+      plateOwningLocationId,
     );
   }, [
-    activeCoverage,
     assignPlateToShot,
     assignedLocationId,
     assignedPlateId,
+    catalogPlateUrl,
+    currentCoverageShotId,
     currentSetupId,
-    plateOwningLocation,
-    setup,
+    plateOwningLocationId,
+    setupBackdropUrl,
   ]);
 
   return (
@@ -128,10 +142,7 @@ export function LocationPickerSection({
                   key={loc.id}
                   type="button"
                     onClick={() => {
-                      const defaultPlate = loc.plates.find((plate) => {
-                        const dataType = (plate as { dataType?: string }).dataType;
-                        return !dataType || dataType === 'backdrop-plate';
-                      });
+                      const defaultPlate = loc.plates.find(isBackdropPlate);
                       if (activeCoverage && defaultPlate) {
                         assignPlateToShot(
                           currentSetupId,

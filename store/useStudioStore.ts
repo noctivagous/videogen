@@ -4482,14 +4482,59 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
       if (!setup) return s;
 
       const resolvedLocationId = locationId ?? setup.locationId;
-      if (!resolvedLocationId) return s;
+      const locationCatalog: Location[] = [];
+      const seenLocationIds = new Set<string>();
+      for (const entry of [...s.locations, ...STOCK_LOCATIONS]) {
+        if (seenLocationIds.has(entry.id)) continue;
+        seenLocationIds.add(entry.id);
+        locationCatalog.push(entry);
+      }
 
-      const location = s.locations.find((entry) => entry.id === resolvedLocationId);
-      const plate = location?.plates.find((entry) => entry.id === plateId);
+      const preferredLocation = resolvedLocationId
+        ? locationCatalog.find((entry) => entry.id === resolvedLocationId)
+        : undefined;
+      const preferredPlate = preferredLocation?.plates.find((entry) => entry.id === plateId);
+      const owningLocation =
+        preferredPlate
+          ? preferredLocation
+          : locationCatalog.find((entry) =>
+              entry.plates.some((plateEntry) => plateEntry.id === plateId),
+            );
+      const plate = preferredPlate ?? owningLocation?.plates.find((entry) => entry.id === plateId);
       if (!plate) return s;
 
+      const targetLocationId = owningLocation?.id ?? resolvedLocationId;
+      if (!targetLocationId) return s;
+
       const coverage = setup.shots.find((shot) => shot.id === coverageShotId);
-      const prevBackdropId = coverage?.backdropId;
+      if (!coverage) return s;
+
+      const prevBackdropId = coverage.backdropId;
+      const priorSetupBackdrop = setup.backdrops.find((entry) => entry.id === plateId);
+      const hasBackdrop = setup.backdrops.some((entry) => entry.id === plateId);
+      const urlChanged = priorSetupBackdrop?.url !== plate.url;
+
+      if (
+        setup.locationId === targetLocationId &&
+        prevBackdropId === plateId &&
+        hasBackdrop &&
+        priorSetupBackdrop?.url === plate.url &&
+        priorSetupBackdrop?.label === plate.label
+      ) {
+        return s;
+      }
+
+      const nextPlateFields = urlChanged
+        ? {
+            backdropFramingByAspect: plate.backdropFramingByAspect ?? {},
+            backdropCropsByAspect: {},
+            backdropCropStatusByAspect: {},
+          }
+        : {
+            backdropFramingByAspect: plate.backdropFramingByAspect,
+            backdropCropsByAspect: plate.backdropCropsByAspect,
+            backdropCropStatusByAspect: plate.backdropCropStatusByAspect,
+          };
 
       let setups = s.setups.map((su) => {
         if (su.id !== setupId) return su;
@@ -4497,7 +4542,16 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
           sh.id === coverageShotId ? { ...sh, backdropId: plateId } : sh,
         );
         const backdrops = su.backdrops.map((b) =>
-          b.id === plateId ? { ...b, url: plate.url } : b,
+          b.id === plateId
+            ? urlChanged
+              ? {
+                  ...b,
+                  label: plate.label,
+                  url: plate.url,
+                  ...nextPlateFields,
+                }
+              : { ...b, label: plate.label, url: plate.url }
+            : b,
         );
         const hasBackdrop = su.backdrops.some((b) => b.id === plateId);
         const nextBackdrops = hasBackdrop
@@ -4508,14 +4562,12 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
                 id: plateId,
                 label: plate.label,
                 url: plate.url,
-                backdropFramingByAspect: plate.backdropFramingByAspect,
-                backdropCropsByAspect: plate.backdropCropsByAspect,
-                backdropCropStatusByAspect: plate.backdropCropStatusByAspect,
+                ...nextPlateFields,
               },
             ];
         return {
           ...su,
-          locationId: resolvedLocationId,
+          locationId: targetLocationId,
           shots,
           backdrops: nextBackdrops,
         };

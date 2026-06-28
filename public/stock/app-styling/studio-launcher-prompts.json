@@ -1,0 +1,76 @@
+{
+  "version": 2,
+  "conventions": {
+    "purpose": "App launcher card backgrounds for AppsLauncherGrid — each card has a distinct metaphor for the studio's job.",
+    "promptPrefix": "Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays, or readable markings on any object. Neutral gray seamless studio or appropriate environment, dark desaturated charcoal-friendly palette, cinematic 35mm lens, soft even lighting, muted tones.",
+    "outputSpec": {
+      "grokModel": "grok-imagine-image-quality",
+      "grokAspectRatio": "16:9",
+      "grokResolution": "1k",
+      "targetWidth": 640,
+      "targetHeight": 280,
+      "format": "jpg"
+    },
+    "composition": "Composition weighted to the right third for UI thumbnail crop on launcher cards."
+  },
+  "samples": [
+    {
+      "id": "studio-launcher-shot-designer",
+      "abbr": "Shot Designer",
+      "file": "app-styling/studio-launcher/shot-designer.jpg",
+      "referenceFile": "shot-types/ms.jpg",
+      "isAnchor": true,
+      "prompt": "Use the exact same matte gray male display mannequin identity from the reference — sculpted gray dress shirt, belt, standardPose facing camera. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, or readable markings. Wide establishing view of an active studio set: ARRI-style cinema camera on matte gray dolly track in foreground right, two matte gray male display mannequins blocking on charcoal floor with colored tape marks, Fresnel key light on c-stand, neutral gray seamless backdrop. Mannequins in standardPose, arms at sides. Composition weighted to the right third. Clear shot design, blocking, and camera placement demonstration."
+    },
+    {
+      "id": "studio-launcher-media-library",
+      "abbr": "Media Library",
+      "file": "app-styling/studio-launcher/media-library.jpg",
+      "referenceFile": null,
+      "prompt": "Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, or readable markings. Elegant glass display case with multiple shelves, each holding a different media-type object: film reel, framed still print, clapperboard sculpt, small monitor slab, audio waveform sculpt, reference contact sheet — all matte gray hard-surface sculpts in unified material. Charcoal studio backdrop visible through glass. Soft museum lighting, dark desaturated palette. No people, no mannequins. Composition weighted to the right third. Clear media archive and asset library demonstration."
+    },
+    {
+      "id": "studio-launcher-character-sheet-generator",
+      "abbr": "Character Manager",
+      "file": "app-styling/studio-launcher/character-sheet-generator.jpg",
+      "referenceFile": null,
+      "prompt": "Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, or readable markings. Only small matte gray character figurines — no backdrop, no papercut scenery, no props, no environment. Three to five distinct figurines in full shot head-to-toe, collectible scale, varied poses and silhouettes, standing on plain charcoal studio floor. Neutral gray seamless studio, soft even lighting, dark desaturated palette. Composition weighted to the right third. Clear character figurine collection demonstration."
+    },
+    {
+      "id": "studio-launcher-location-manager",
+      "abbr": "Location Manager",
+      "file": "app-styling/studio-launcher/location-manager.jpg",
+      "referenceFile": null,
+      "prompt": "Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, or readable markings. Close view of cube-shaped snow-globe dioramas on a dark studio floor — camera moved close so nearest cubes are large in frame and dominate the composition. Each translucent cube contains a sealed miniature scene inside like a snow globe but square: forest clearing, city street, interior room, rocky coastline, desert plain — tiny sculpted environments visible through cube walls, desaturated gray tones, no loose snow unless subtle atmosphere. Camera angle just above ground level, low eye-height, close to foreground cubes with only two or three cubes fully visible and any others softly out of focus behind. Soft studio lighting, shallow depth of field. No people, no mannequins outside cubes. Composition weighted to the right third. Clear location library demonstration."
+    },
+    {
+      "id": "studio-launcher-film-look-maker",
+      "abbr": "Film Look Maker",
+      "file": "app-styling/studio-launcher/film-look-maker.jpg",
+      "referenceFile": null,
+      "isAnchor": true,
+      "prompt": "Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, or readable markings. Close-up CU of matte gray hard-surface c-stand grip head and boom arm. All physical film-grade objects arranged in an orderly stacked layout on the stand — neat vertical stack or tiered shelf on the grip head: gel frames in matte holder on top, film strip loop aligned below, split warm-amber and cool-cyan graded sample strips side-by-side in a row, photochemical look chips in a tidy fan or stack, small reference print at the bottom with visible grade contrast (no text on print). Objects aligned, squared, and evenly spaced — organized toolkit arrangement, not scattered or haphazardly hanging. Tight crop: stacked objects and stand hardware fill the frame. Neutral gray seamless studio, dark desaturated palette, soft even lighting. No people, no mannequins, no camera, no monitors. Composition weighted to the right third. Clear film look and grade reference demonstration."
+    },
+    {
+      "id": "studio-launcher-color-palette-maker",
+      "abbr": "Color Palette Maker",
+      "file": "app-styling/studio-launcher/color-palette-maker.jpg",
+      "referenceFile": "app-styling/studio-launcher/film-look-maker.jpg",
+      "prompt": "Use the exact same matte gray c-stand sculpt material, grip head, clamp hardware, neutral gray studio, and soft even lighting from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, or readable markings. Close-up CU of the same c-stand hardware — mounted objects are exclusively a physical color palette arranged in an orderly stacked layout: rectangular swatch board with grid of desaturated gray-violet tonal chips (no labels) centered on the grip head, gel frames in a neat vertical stack or aligned row in a side holder on the stand. Objects squared, aligned, and evenly spaced — organized toolkit arrangement, not scattered or haphazard. Tight crop: swatch board, gel frames, and grip head fill the frame. Absolutely no film strips, no negatives, no slide cases, no grade strips, no reference prints, no mannequins, no camera. Composition weighted to the right third. Clear color palette reference demonstration."
+    },
+    {
+      "id": "studio-launcher-image-editor",
+      "abbr": "Image Editor",
+      "file": "app-styling/studio-launcher/image-editor.jpg",
+      "referenceFile": null,
+      "prompt": "Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, or readable markings. Darkroom retouching station: photographic print in developer tray under dim red safelight glow, airbrush pen and retouching tools on matte gray work surface, spotting brush and magnifying loupe sculpt nearby. Wet print with subtle hand-retouch zone visible. Deep charcoal room, warm red safelight accent only. No people, no mannequins, no digital screens. Composition weighted to the right third. Clear darkroom touchup and image editing demonstration."
+    },
+    {
+      "id": "studio-launcher-settings",
+      "abbr": "Settings",
+      "file": "app-styling/studio-launcher/settings.jpg",
+      "referenceFile": null,
+      "prompt": "Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, brand names, or readable markings on any dial or switch. Dense physical configuration control panel: many matte gray knobs, toggle switches, slider faders, rotary dials, and push buttons on a charcoal rack — hardware studio config metaphor, no screens, no logos. Soft even lighting, dark desaturated palette. Composition weighted to the right third. Clear settings and configuration demonstration."
+    }
+  ]
+}

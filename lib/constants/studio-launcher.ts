@@ -7,9 +7,16 @@ export interface StudioLauncherItem {
   id: StudioLauncherItemId;
   title: string;
   description: string;
+  backgroundImage: string;
 }
 
-export const STUDIO_LAUNCHER_ITEMS: readonly StudioLauncherItem[] = [
+const STUDIO_LAUNCHER_BACKGROUND_BASE = '/stock/app-styling/studio-launcher';
+
+export function getStudioLauncherBackgroundUrl(id: StudioLauncherItemId): string {
+  return `${STUDIO_LAUNCHER_BACKGROUND_BASE}/${id}.jpg`;
+}
+
+const STUDIO_LAUNCHER_ITEM_DEFINITIONS = [
   {
     id: 'shot-designer',
     title: 'Shot Designer',
@@ -30,7 +37,14 @@ export const STUDIO_LAUNCHER_ITEMS: readonly StudioLauncherItem[] = [
     title: 'Settings',
     description: 'AI providers, models, and API keys',
   },
-] as const;
+] as const satisfies readonly Omit<StudioLauncherItem, 'backgroundImage'>[];
+
+export const STUDIO_LAUNCHER_ITEMS: readonly StudioLauncherItem[] = STUDIO_LAUNCHER_ITEM_DEFINITIONS.map(
+  (item) => ({
+    ...item,
+    backgroundImage: getStudioLauncherBackgroundUrl(item.id),
+  }),
+);
 
 export function getStudioLauncherItem(id: StudioLauncherItemId): StudioLauncherItem {
   const item = STUDIO_LAUNCHER_ITEMS.find((entry) => entry.id === id);

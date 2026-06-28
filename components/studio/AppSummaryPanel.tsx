@@ -2,7 +2,6 @@
 
 import { useEffect, useId, useMemo, useState } from 'react';
 import { CheckCircle2, KeyRound, Video } from 'lucide-react';
-import { AppFeatureChecklistSection } from '@/components/studio/AppFeatureChecklistSection';
 import { AppsLauncherGrid } from '@/components/studio/AppsLauncherGrid';
 import { ProviderIcon } from '@/components/studio/ProviderIcon';
 import { SummarySection } from '@/components/studio/SummarySection';
@@ -247,8 +246,6 @@ export function AppSummaryPanel() {
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-6">
-        <AppFeatureChecklistSection />
-
         <SummarySection title="Apps" summary="Open a studio tool or workspace">
           <AppsLauncherGrid
             items={items}

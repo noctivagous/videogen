@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { AppFeatureChecklistSection } from '@/components/studio/AppFeatureChecklistSection';
 import { ModelCategoryThumbnail } from '@/components/studio/ModelCategoryThumbnail';
 import {
   DEFAULT_MODEL_SLOTS,
@@ -60,8 +59,6 @@ export function SettingsModelCatalogContent({
 
   return (
     <div className="space-y-8">
-      <AppFeatureChecklistSection />
-
       <div className="glass rounded-3xl p-6 border border-surface-700">
         <div className="mb-4">
           <h2 className="font-semibold text-lg">Model categories</h2>
