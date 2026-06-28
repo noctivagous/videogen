@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mediabunny Pro — Grid Timeline</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    background:#1a1d23;
+    color:#d0d6e0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Helvetica,Arial,sans-serif;
+    overflow:hidden;
+    user-select:none;
+    -webkit-font-smoothing:antialiased;
+  }
+  #app{display:flex;flex-direction:column;height:100%}
+
+  /* Toolbar */
+  .toolbar{
+    height:56px;flex:0 0 56px;
+    background:
+      linear-gradient(to bottom, rgba(255,255,255,.18), rgba(255,255,255,0) 12%),
+      linear-gradient(to bottom, #6b717c 0%, #525864 46%, #3a404b 47%, #2c313a 100%);
+    border-bottom:1px solid #0a0c0f;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.15),inset 0 -1px 0 rgba(0,0,0,.6),0 2px 6px rgba(0,0,0,.55);
+    display:flex;align-items:center;justify-content:space-between;padding:0 14px;position:relative;z-index:100
+  }
+  .logo{display:flex;align-items:center;gap:10px;font-size:18px;letter-spacing:.3px;color:#e9edf4;text-shadow:0 1px 0 #000,0 -1px 0 rgba(255,255,255,.08);font-weight:500}
+  .logo b{color:#ffd166;font-weight:800;margin-left:2px;letter-spacing:1px}
+  .logo-mark{
+    width:26px;height:26px;border-radius:6px;
+    background:radial-gradient(circle at 30% 25%,#fff8,transparent 40%),linear-gradient(to bottom,#3a4250,#1e222b);
+    border:1px solid #0b0d11;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 1px 2px rgba(0,0,0,.6);
+    position:relative;
+  }
+  .logo-mark:before,.logo-mark:after{content:"";position:absolute;background:#ffd166;border-radius:2px;box-shadow:0 0 6px rgba(255,209,102,.3)}
+  .logo-mark:before{width:3px;height:10px;left:7px;top:4px;transform:rotate(-12deg)}
+  .logo-mark:after{width:3px;height:10px;right:7px;top:4px;transform:rotate(12deg)}
+
+  .status-lights{display:flex;align-items:center;gap:10px}
+  .light{width:10px;height:10px;border-radius:50%;background:#1a1e24;box-shadow:inset 0 1px 2px #000,0 0 0 1px #000,0 1px 0 rgba(255,255,255,.05);position:relative}
+  .light.green{background:radial-gradient(circle at 30% 30%,#b7ffc4,#1ed760 55%,#0a5c28 100%);box-shadow:0 0 8px rgba(30,215,96,.55),inset 0 1px 1px rgba(255,255,255,.5),0 0 0 1px #062}
+  .light.amber{background:radial-gradient(circle at 30% 30%,#ffe8a6,#ffb020 55%,#7a4e00);box-shadow:0 0 6px rgba(255,176,32,.4),inset 0 1px 1px rgba(255,255,255,.45),0 0 0 1px #5a3c00}
+  .light.red{background:radial-gradient(circle at 30% 30%,#ffb8b8,#ff3b3b 55%,#7a0000);box-shadow:0 0 6px rgba(255,59,59,.35),inset 0 1px 1px rgba(255,255,255,.4),0 0 0 1px #5a0000}
+  .status-text{font-size:10px;color:#9aa3b2;letter-spacing:1px;margin-left:4px}
+
+  /* Control Panel */
+  .control-panel{
+    flex:0 0 auto;
+    background:#1f232b;
+    border-bottom:1px solid #0e1116;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.03),0 1px 0 rgba(0,0,0,.5);
+    padding:10px 12px 12px;
+    display:flex;gap:12px;flex-wrap:wrap;
+  }
+  .group{
+    background:#2a2f38;
+    border:1px solid #14171c;
+    border-radius:6px;
+    padding:12px 12px 10px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06),inset 0 -1px 0 rgba(0,0,0,.45),0 2px 3px rgba(0,0,0,.45);
+    position:relative;min-width:210px;
+  }
+  .group-label{
+    position:absolute;top:-7px;left:10px;background:#2a2f38;padding:0 6px;
+    font-size:10px;letter-spacing:1px;color:#9aa3b2;text-transform:uppercase;
+    text-shadow:0 1px 0 #000;
+  }
+  button.pro{
+    background:linear-gradient(to bottom,#4a525f,#2e343f);
+    border:1px solid #0c0e12;border-top-color:#5b626e;border-bottom-color:#14171c;
+    color:#dbe2ec;font-size:11px;font-weight:700;letter-spacing:.5px;
+    padding:6px 10px;border-radius:4px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 1px 2px rgba(0,0,0,.5);
+    text-shadow:0 -1px 0 #000;cursor:pointer;text-transform:uppercase;
+  }
+  button.pro:active{background:linear-gradient(to bottom,#2e343f,#4a525f);box-shadow:inset 0 2px 3px rgba(0,0,0,.6)}
+  button.pro.active{
+    background:linear-gradient(to bottom,#6aa3ff,#2a56c7);
+    border-top-color:#8fb8ff;color:#fff;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 0 10px rgba(90,140,245,.45);
+  }
+  .toggle-group{display:flex;gap:4px}
+  .slider-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+  .slider-label{font-size:10px;color:#9aa3b2;letter-spacing:1px;min-width:44px;text-transform:uppercase}
+  .value-pill{min-width:28px;text-align:right;font-family:"SF Mono",Consolas,monospace;font-size:11px;color:#c7d0dd;background:#1b1f25;border:1px solid #0c0e12;border-radius3px;padding2px 4px;box-shadow:inset 0 1px 2px rgba(0,0,0,.6)}
+
+  input[type=range].pro{-webkit-appearance:none;width:140px;height:18px;background:transparent}
+  input[type=range].pro::-webkit-slider-runnable-track{height:6px;background:linear-gradient(to bottom,#121417,#1e222a);border:1px solid #0a0c0f;border-radius:3px;box-shadow:inset 0 1px 2px #000,0 1px 0 rgba(255,255,255,.05)}
+  input[type=range].pro::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;margin-top:-6px;background:linear-gradient(to bottom,#7a8290,#3f4653);border:1px solid #07090c;border-top-color:#9aa3b2;border-radius:50%;box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 1px 2px rgba(0,0,0,.6);cursor:pointer}
+  input[type=range].pro::-moz-range-track{height:6px;background:#121417;border:1px solid #000;border-radius:3px}
+  input[type=range].pro::-moz-range-thumb{width:14px;height:14px;background:linear-gradient(to bottom,#7a8290,#3f4653);border:1px solid #000;border-radius:50%}
+
+  .checkbox{display:flex;align-items:center;gap:6px;font-size:11px;color:#c5ccd6;text-transform:uppercase;letter-spacing:.3px}
+  .checkbox input{appearance:none;width:14px;height:14px;background:linear-gradient(to bottom,#1a1e24,#0f1216);border:1px solid #060709;border-radius:2px;box-shadow:inset 0 1px 2px #000,0 1px 0 rgba(255,255,255,.05);position:relative}
+  .checkbox input:checked::after{content:'✓';position:absolute;top:-2px;left:2px;color:#7ed957;font-size:12px;text-shadow:0 0 4px rgba(126,217,87,.6)}
+
+  /* Workspace */
+  .workspace{flex:1 1 auto;display:flex;min-height:0}
+  .viewport-wrap{flex:1 1 auto;position:relative;background:#1a1d23;overflow:hidden}
+  #viewport{position:absolute;inset:0;overflow:hidden;cursor:grab}
+  #viewport.panning{cursor:grabbing}
+  #canvas{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+  #grid{
+    position:absolute;left:0;top:0;
+    background-color:#1e2229;
+    background-image:
+      linear-gradient(#262b33 1px,transparent 1px),
+      linear-gradient(90deg,#262b33 1px,transparent 1px),
+      linear-gradient(#1b1f25 1px,transparent 1px),
+      linear-gradient(90deg,#1b1f25 1px,transparent 1px);
+    background-size:140px 72px,140px 72px,14px 14px,14px 14px;
+    box-shadow:inset 0 0 0 1px #0c0f14;
+  }
+  #clips,#overlays{position:absolute;left:0;top:0}
+
+  .clip{
+    position:absolute;box-sizing:border-box;
+    border:2px solid rgba(0,0,0,.72);border-radius:4px;
+    background:#334;overflow:hidden;cursor:pointer;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.14),inset 0 -1px 0 rgba(0,0,0,.55),0 2px 4px rgba(0,0,0,.6);
+    transition:box-shadow .12s,border-color .12s,transform .06s;
+  }
+  .clip:hover{transform:translateY(-1px);box-shadow:inset 0 1px 0 rgba(255,255,255,.18),inset 0 -1px 0 rgba(0,0,0,.55),0 4px 8px rgba(0,0,0,.65)}
+  .clip .thumb{position:absolute;left:2px;right:2px;top:2px;height:60%;background:linear-gradient(135deg,var(--c1),var(--c2));opacity:.92;box-shadow:inset 0 0 20px rgba(0,0,0,.25)}
+  .clip .label{position:absolute;bottom:3px;left:5px;right:5px;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 1px #000,0 0 2px #000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.2px}
+  .clip .tc{position:absolute;top:3px;right:4px;font-family:"SF Mono",Consolas,Menlo,monospace;font-size:9px;color:rgba(255,255,255,.92);background:rgba(0,0,0,.5);padding:1px 4px;border-radius:2px;letter-spacing:.5px;border:1px solid rgba(0,0,0,.6);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+  .clip .wave{position:absolute;bottom:16px;left:5px;right:5px;height:10px;opacity:.7;background:repeating-linear-gradient(90deg,rgba(255,255,255,.85) 0 1px,transparent 1px 3px);mix-blend-mode:screen;filter:drop-shadow(0 1px 0 #000)}
+  .clip .frames{position:absolute;inset:0;pointer-events:none;background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.07) 0 1px,transparent 1px 7px)}
+  .clip .handle{position:absolute;width:4px;top:2px;bottom:2px;background:linear-gradient(to bottom,#ffe08a,#b8871f);border:1px solid #5a410a;border-radius:1px;opacity:.95;box-shadow:0 0 2px rgba(0,0,0,.6)}
+  .clip .handle.l{left:-2px}.clip .handle.r{right:-2px}
+  .clip.row{height:48px}.clip.col{width:48px}
+  .clip.col .label{writing-mode:vertical-rl;transform:rotate(180deg);bottom:auto;top:5px;left:3px;right:auto;height:calc(100% - 10px)}
+  .clip.col .tc{top:auto;bottom:3px;right:3px}
+  .clip.col .wave{transform:rotate(90deg);transform-origin:left bottom;left:16px;bottom:5px;width:calc(100% - 22px)}
+
+  .clip.selected{border-color:#ffd233;box-shadow:0 0 0 1px #ffd233,0 0 16px rgba(255,210,51,.75),inset 0 1px 0 rgba(255,255,255,.3);z-index:20!important}
+
+  .overlay-badge{position:absolute;background:linear-gradient(to bottom,#e05a5a,#911);color:#fff;font-size:9px;font-weight:800;padding2px 5px;border-radius:3px;border:1px solid #600;box-shadow:0 1px 2px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.2);text-transform:uppercase;letter-spacing:.5px;pointer-events:none;z-index:6}
+
+  #side{width:240px;flex:0 0 240px;background:#232730;border-left:1px solid #0e1014;box-shadow:inset 1px 0 0 rgba(255,255,255,.04);padding:12px;overflow-y:auto}
+  .side-box{background:#1b1f25;border:1px solid #0c0e12;border-radius:5px;padding:10px;box-shadow:inset 0 1px 2px rgba(0,0,0,.7),inset 0 -1px 0 rgba(255,255,255,.03);margin-bottom:12px}
+  .side-title{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#9aa3b2;margin-bottom:8px;text-shadow:0 1px 0 #000}
+  .field{display:flex;justify-content:space-between;font-size:11px;margin:5px 0;color:#b7c0ce}
+  .field b{color:#e2e8f2;font-weight:600;font-family:"SF Mono",Consolas,monospace}
+
+  #coords{position:absolute;bottom:8px;left:8px;background:rgba(10,12,15,.9);border:1px solid #000;padding:4px 8px;border-radius:3px;font-family:"SF Mono",monospace;font-size:11px;color:#9fb3c8;box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 2px 4px rgba(0,0,0,.5);pointer-events:none}
+
+  #tooltip{position:fixed;pointer-events:none;background:linear-gradient(to bottom,#323844,#1f232b);border:1px solid #000;padding:7px 9px;border-radius:4px;font-size:11px;color:#e6ecf5;box-shadow:0 6px 18px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.08);z-index:1000;display:none;white-space:nowrap;line-height:1.4}
+  #tooltip b{color:#ffd166}
+
+  @media (max-width:980px){
+    #side{width:200px;flex-basis:200px}
+    .control-panel{gap:8px}
+    .group{min-width:180px}
+  }
+  @media (max-width:760px){
+    .workspace{flex-direction:column}
+    #side{width:100%;flex-basis:auto;height:170px;border-left:none;border-top:1px solid #0e1014}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="toolbar">
+    <div class="logo"><div class="logo-mark"></div>mediabunny <b>PRO</b></div>
+    <div class="status-lights">
+      <div class="light green" title="Engine"></div>
+      <div class="light amber" title="I/O"></div>
+      <div class="light red" title="Rec"></div>
+      <div style="width:1px;height:18px;background:#0a0c0f;box-shadow:1px 0 0 rgba(255,255,255,.06);margin:0 2px"></div>
+      <span class="status-text">GRID TIMELINE • READY</span>
+    </div>
+  </header>
+
+  <div class="control-panel">
+    <div class="group" style="min-width:268px">
+      <div class="group-label">Layout</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <div class="toggle-group">
+          <button id="btn-row" class="pro active">Row-Major</button>
+          <button id="btn-col" class="pro">Column-Major</button>
+        </div>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">H-Dim</span>
+        <input id="hSlider" type="range" class="pro" min="1" max="16" value="8">
+        <span id="hVal" class="value-pill">8</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">V-Dim</span>
+        <input id="vSlider" type="range" class="pro" min="1" max="12" value="6">
+        <span id="vVal" class="value-pill">6</span>
+      </div>
+    </div>
+
+    <div class="group" style="min-width:290px">
+      <div class="group-label">View</div>
+      <div class="slider-row">
+        <span class="slider-label">Zoom</span>
+        <button id="zoomOut" class="pro" style="padding:4px 8px">−</button>
+        <input id="zoomSlider" type="range" class="pro" min="50" max="300" value="100" style="width:120px">
+        <button id="zoomIn" class="pro" style="padding:4px 8px">+</button>
+        <span id="zoomVal" class="value-pill">100%</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Clip LOD</span>
+        <input id="detailSlider" type="range" class="pro" min="1" max="5" value="3">
+        <span id="detailVal" class="value-pill">3</span>
+      </div>
+    </div>
+
+    <div class="group" style="min-width:260px">
+      <div class="group-label">Tracks</div>
+      <div style="display:flex;gap:14px;margin:4px 0 8px">
+        <label class="checkbox"><input id="chkMulti" type="checkbox" checked> Multi-Track: ON</label>
+        <label class="checkbox"><input id="chkOverlay" type="checkbox" checked> Allow Overlays: ON</label>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button id="btnAddTrack" class="pro">Add Track Row</button>
+        <button id="btnAddOverlay" class="pro">Add Overlay Clip</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="workspace">
+    <div class="viewport-wrap">
+      <div id="viewport">
+        <div id="canvas">
+          <div id="grid"></div>
+          <div id="overlays"></div>
+          <div id="clips"></div>
+        </div>
+      </div>
+      <div id="coords">X:0 Y:0 • 100%</div>
+    </div>
+    <aside id="side">
+      <div class="side-box">
+        <div class="side-title">Selected Clip</div>
+        <div id="sel-content"><div style="color:#7a8392;font-size:11px;text-align:center;padding:12px 0">No clip selected</div></div>
+      </div>
+      <div class="side-box">
+        <div class="side-title">Grid Info</div>
+        <div class="field"><span>Layout</span><b id="info-layout">ROW-MAJOR</b></div>
+        <div class="field"><span>Zoom</span><b id="info-zoom">100%</b></div>
+        <div class="field"><span>Cells</span><b id="info-cells">8 × 6</b></div>
+        <div class="field"><span>Clips</span><b id="info-clips">0</b></div>
+      </div>
+      <div class="side-box">
+        <div class="side-title">Tips</div>
+        <div style="font-size:11px;color:#9aa3b2;line-height:1.5">
+          • Drag background to pan<br>
+          • Mouse wheel to zoom<br>
+          • Click clip to select • Drag to move<br>
+          • Double-click canvas to flip layout
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+(() => {
+  const state = {
+    isRowMajor: true,
+    hCells: 8,
+    vCells: 6,
+    zoom: 1,
+    panX: 60,
+    panY: 40,
+    detail: 3,
+    multiTrack: true,
+    allowOverlays: true,
+    clips: [],
+    selectedId: null
+  };
+
+  const CELL_W = 140, CELL_H = 72;
+  const names = ['A001_C003','A002_C001','A002_C002','A003_C001','B-ROLL 01','B-ROLL 02','B-ROLL 03','B-ROLL 04','INTERVIEW A','INTERVIEW B','AUDIO 1','AUDIO 2','AUDIO 3','MUSIC','AMBIENCE','SFX HIT','DRONE 01','DRONE 02','TIMELAPSE','C001_C004','C002_C001','TITLE CARD','LOWER THIRD','COLOR BARS'];
+
+  const viewport = document.getElementById('viewport');
+  const canvas = document.getElementById('canvas');
+  const grid = document.getElementById('grid');
+  const clipsEl = document.getElementById('clips');
+  const overlaysEl = document.getElementById('overlays');
+  const tooltip = document.getElementById('tooltip');
+
+  function framesToTC(f){
+    const fps=24; const ff=f%fps; const s=Math.floor(f/fps)%60; const m=Math.floor(f/(fps*60))%60; const h=Math.floor(f/(fps*3600)); 
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}:${String(ff).padStart(2,'0')}`;
+  }
+  function getColors(name){
+    if(/AUDIO|A0\d/.test(name)) return ['#3a8f5d','#1e4e32'];
+    if(/MUSIC/.test(name)) return ['#c07a2e','#6b3d18'];
+    if(/SFX|AMBIENCE/.test(name)) return ['#7a5fb8','#3d2f5e'];
+    if(/B-ROLL|DRONE|TIMELAPSE/.test(name)) return ['#2d7ab8','#173e5e'];
+    if(/INTERVIEW/.test(name)) return ['#b82d6b','#5e1738'];
+    if(/TITLE|LOWER/.test(name)) return ['#8a8f9c','#3a3f4a'];
+    if(/COLOR/.test(name)) return ['#b8a42d','#5e5317'];
+    return ['#4a6fb8','#23345e'];
+  }
+
+  function initClips(){
+    state.clips = [];
+    for(let i=0;i<24;i++){
+      const name = names[i%names.length];
+      const gridX = i % state.hCells;
+      const gridY = Math.floor(i / state.hCells) % state.vCells;
+      const frames = 48 + Math.floor(Math.random()*336);
+      state.clips.push({
+        id:'c'+i,
+        name,
+        tc: framesToTC(Math.floor(Math.random()*90000)),
+        duration: frames,
+        gridX, gridY, layer:0,
+        w: 100 + Math.floor(Math.random()*6)*20,
+        h: 100 + Math.floor(Math.random()*6)*20,
+      });
+    }
+    // add overlays
+    for(let i=0;i<6;i++){
+      const base = state.clips[i*3+1];
+      state.clips.push({
+        ...base,
+        id:'ov'+i,
+        layer:1,
+        name: base.name + ' • B',
+        w: Math.max(80, base.w-24),
+        h: Math.max(80, base.h-24),
+        tc: framesToTC(Math.floor(Math.random()*90000))
+      });
+    }
+    // triple stack one cell
+    const triple = state.clips[5];
+    state.clips.push({...triple, id:'ovx', layer:2, name:triple.name+' • C', w:triple.w-40, h:triple.h-40});
+  }
+
+  function screenToCanvas(x,y){
+    const rect = viewport.getBoundingClientRect();
+    return { x: (x - rect.left - state.panX)/state.zoom, y: (y - rect.top - state.panY)/state.zoom };
+  }
+
+  function updateTransform(){
+    canvas.style.transform = `translate(${state.panX}px,${state.panY}px) scale(${state.zoom})`;
+    document.getElementById('info-zoom').textContent = Math.round(state.zoom*100)+'%';
+  }
+
+  function render(){
+    grid.style.width = state.hCells*CELL_W + 'px';
+    grid.style.height = state.vCells*CELL_H + 'px';
+    grid.style.backgroundSize = `${CELL_W}px ${CELL_H}px, ${CELL_W}px ${CELL_H}px, 14px 14px, 14px 14px`;
+
+    clipsEl.innerHTML = '';
+    overlaysEl.innerHTML = '';
+
+    const cellCounts = {};
+    const visibleClips = state.clips.filter(c => state.allowOverlays || c.layer===0);
+    visibleClips.forEach(c => {
+      const key = c.gridX+','+c.gridY;
+      cellCounts[key] = (cellCounts[key]||0)+1;
+    });
+
+    visibleClips.sort((a,b)=>a.layer-b.layer).forEach(clip=>{
+      const el = document.createElement('div');
+      el.className = 'clip ' + (state.isRowMajor?'row':'col');
+      el.dataset.id = clip.id;
+      const baseL = clip.gridX*CELL_W;
+      const baseT = clip.gridY*CELL_H;
+      let w,h,l,t;
+      if(state.isRowMajor){
+        w = clip.w; h = 48;
+        l = baseL + 8 + clip.layer*8;
+        t = baseT + 12 + clip.layer*6;
+      }else{
+        w = 48; h = clip.h;
+        l = baseL + 12 + clip.layer*8;
+        t = baseT + 8 + clip.layer*6;
+      }
+      el.style.left = l+'px';
+      el.style.top = t+'px';
+      el.style.width = w+'px';
+      el.style.height = h+'px';
+      const [c1,c2] = getColors(clip.name);
+      el.style.setProperty('--c1',c1);
+      el.style.setProperty('--c2',c2);
+      el.style.opacity = clip.layer>0 ? 0.84 : 1;
+      el.style.zIndex = 10 + clip.layer;
+      if(clip.id===state.selectedId) el.classList.add('selected');
+
+      let html='';
+      if(state.detail>=3) html += `<div class="thumb"></div>`;
+      if(state.detail>=2) html += `<div class="label">${clip.name}</div>`;
+      if(state.detail>=3) html += `<div class="tc">${clip.tc}</div>`;
+      if(state.detail>=4) html += `<div class="wave"></div>`;
+      if(state.detail>=5) html += `<div class="frames"></div><div class="handle l"></div><div class="handle r"></div>`;
+      el.innerHTML = html;
+
+      el.addEventListener('mousedown', e=>{ e.stopPropagation(); startDrag(e,clip,el); selectClip(clip.id); });
+      el.addEventListener('mouseenter', e=> showTooltip(e,clip));
+      el.addEventListener('mouseleave', hideTooltip);
+      el.addEventListener('mousemove', moveTooltip);
+      el.addEventListener('dblclick', e=>{ e.stopPropagation(); toggleLayout(); });
+
+      clipsEl.appendChild(el);
+    });
+
+    Object.entries(cellCounts).forEach(([key,count])=>{
+      if(count>1){
+        const [x,y]=key.split(',').map(Number);
+        const b=document.createElement('div');
+        b.className='overlay-badge';
+        b.textContent=`OVERLAY ×${count}`;
+        b.style.left=(x*CELL_W+6)+'px';
+        b.style.top=(y*CELL_H+6)+'px';
+        overlaysEl.appendChild(b);
+      }
+    });
+
+    document.getElementById('info-layout').textContent = state.isRowMajor?'ROW-MAJOR':'COLUMN-MAJOR';
+    document.getElementById('info-cells').textContent = `${state.hCells} × ${state.vCells}`;
+    document.getElementById('info-clips').textContent = visibleClips.length;
+    updateTransform();
+    updateSide();
+  }
+
+  function selectClip(id){
+    state.selectedId = id;
+    document.querySelectorAll('.clip').forEach(el=> el.classList.toggle('selected', el.dataset.id===id));
+    updateSide();
+  }
+
+  function updateSide(){
+    const sel = document.getElementById('sel-content');
+    const clip = state.clips.find(c=>c.id===state.selectedId);
+    if(clip){
+      sel.innerHTML = `
+        <div class="field"><span>Name</span><b>${clip.name}</b></div>
+        <div class="field"><span>Duration</span><b>${framesToTC(clip.duration)}</b></div>
+        <div class="field"><span>Track</span><b>${state.isRowMajor? 'V'+(clip.gridY+1) : 'H'+(clip.gridX+1)}</b></div>
+        <div class="field"><span>Layer</span><b>${clip.layer+1}</b></div>
+        <div class="field"><span>Cell</span><b>${clip.gridX},${clip.gridY}</b></div>
+        <div class="field"><span>TC Start</span><b>${clip.tc}</b></div>
+      `;
+    }else{
+      sel.innerHTML = `<div style="color:#7a8392;font-size:11px;text-align:center;padding:12px 0">No clip selected</div>`;
+    }
+  }
+
+  function showTooltip(e,clip){
+    tooltip.style.display='block';
+    tooltip.innerHTML = `<b>${clip.name}</b><br>${clip.tc} • ${Math.round(clip.duration/24*10)/10}s<br>Track ${state.isRowMajor?clip.gridY+1:clip.gridX+1} • Layer ${clip.layer+1}`;
+    moveTooltip(e);
+  }
+  function moveTooltip(e){ tooltip.style.left = (e.clientX+14)+'px'; tooltip.style.top = (e.clientY+14)+'px'; }
+  function hideTooltip(){ tooltip.style.display='none'; }
+
+  // Pan
+  let isPanning=false, panStartX=0, panStartY=0, panOrigX=0, panOrigY=0;
+  viewport.addEventListener('mousedown', e=>{
+    if(e.button!==0) return;
+    if(e.target.closest('.clip')) return;
+    isPanning=true;
+    viewport.classList.add('panning');
+    panStartX=e.clientX; panStartY=e.clientY;
+    panOrigX=state.panX; panOrigY=state.panY;
+  });
+  window.addEventListener('mousemove', e=>{
+    if(isPanning){
+      state.panX = panOrigX + (e.clientX - panStartX);
+      state.panY = panOrigY + (e.clientY - panStartY);
+      updateTransform();
+    }
+    const p = screenToCanvas(e.clientX,e.clientY);
+    document.getElementById('coords').textContent = `X:${Math.max(0,Math.round(p.x))} Y:${Math.max(0,Math.round(p.y))} • ${Math.round(state.zoom*100)}%`;
+    if(drag){
+      const pos = screenToCanvas(e.clientX,e.clientY);
+      drag.el.style.left = (pos.x - drag.offX)+'px';
+      drag.el.style.top = (pos.y - drag.offY)+'px';
+    }
+  });
+  window.addEventListener('mouseup', ()=>{
+    if(isPanning){ isPanning=false; viewport.classList.remove('panning'); }
+    if(drag){ endDrag(); }
+  });
+
+  // Zoom
+  viewport.addEventListener('wheel', e=>{
+    e.preventDefault();
+    const delta = e.deltaY;
+    const factor = delta<0 ? 1.1 : 0.9;
+    zoomAt(e.clientX,e.clientY,factor);
+  },{passive:false});
+
+  function setZoom(z){
+    state.zoom = Math.max(0.5, Math.min(3, z));
+    document.getElementById('zoomSlider').value = Math.round(state.zoom*100);
+    document.getElementById('zoomVal').textContent = Math.round(state.zoom*100)+'%';
+    updateTransform();
+  }
+  function zoomAt(cx,cy,factor){
+    const old = state.zoom;
+    const nz = Math.max(0.5, Math.min(3, old*factor));
+    const rect = viewport.getBoundingClientRect();
+    const x = cx - rect.left;
+    const y = cy - rect.top;
+    state.panX = x - (x - state.panX)*(nz/old);
+    state.panY = y - (y - state.panY)*(nz/old);
+    setZoom(nz);
+  }
+
+  // Drag clips
+  let drag=null;
+  function startDrag(e,clip,el){
+    const pos = screenToCanvas(e.clientX,e.clientY);
+    drag = {id:clip.id, el, offX: pos.x - parseFloat(el.style.left), offY: pos.y - parseFloat(el.style.top)};
+    el.style.zIndex=999;
+    document.body.style.cursor='grabbing';
+  }
+  function endDrag(){
+    if(!drag) return;
+    const clip = state.clips.find(c=>c.id===drag.id);
+    const left = parseFloat(drag.el.style.left);
+    const top = parseFloat(drag.el.style.top);
+    if(state.isRowMajor){
+      clip.gridX = Math.max(0,Math.min(state.hCells-1, Math.round((left-8)/CELL_W)));
+      clip.gridY = Math.max(0,Math.min(state.vCells-1, Math.round((top-12)/CELL_H)));
+    }else{
+      clip.gridX = Math.max(0,Math.min(state.hCells-1, Math.round((left-12)/CELL_W)));
+      clip.gridY = Math.max(0,Math.min(state.vCells-1, Math.round((top-8)/CELL_H)));
+    }
+    drag=null;
+    document.body.style.cursor='';
+    render();
+  }
+
+  // Controls
+  const btnRow = document.getElementById('btn-row');
+  const btnCol = document.getElementById('btn-col');
+  function setLayout(row){
+    state.isRowMajor = row;
+    btnRow.classList.toggle('active',row);
+    btnCol.classList.toggle('active',!row);
+    render();
+  }
+  function toggleLayout(){ setLayout(!state.isRowMajor); }
+  btnRow.onclick=()=>setLayout(true);
+  btnCol.onclick=()=>setLayout(false);
+  viewport.addEventListener('dblclick', e=>{ if(!e.target.closest('.clip')) toggleLayout(); });
+
+  const hSlider = document.getElementById('hSlider');
+  const vSlider = document.getElementById('vSlider');
+  hSlider.oninput = e=>{ state.hCells=+e.target.value; document.getElementById('hVal').textContent=e.target.value; render(); };
+  vSlider.oninput = e=>{ state.vCells=+e.target.value; document.getElementById('vVal').textContent=e.target.value; render(); };
+
+  const zoomSlider = document.getElementById('zoomSlider');
+  zoomSlider.oninput = e=> setZoom(+e.target.value/100);
+  document.getElementById('zoomIn').onclick = ()=> setZoom(state.zoom*1.2);
+  document.getElementById('zoomOut').onclick = ()=> setZoom(state.zoom/1.2);
+
+  const detailSlider = document.getElementById('detailSlider');
+  detailSlider.oninput = e=>{ state.detail=+e.target.value; document.getElementById('detailVal').textContent=e.target.value; render(); };
+
+  document.getElementById('chkMulti').onchange = e=>{ state.multiTrack = e.target.checked; };
+  document.getElementById('chkOverlay').onchange = e=>{ state.allowOverlays = e.target.checked; render(); };
+
+  document.getElementById('btnAddTrack').onclick = ()=>{
+    if(state.isRowMajor){
+      state.vCells = Math.min(12, state.vCells+1);
+      vSlider.value = state.vCells; document.getElementById('vVal').textContent = state.vCells;
+    }else{
+      state.hCells = Math.min(16, state.hCells+1);
+      hSlider.value = state.hCells; document.getElementById('hVal').textContent = state.hCells;
+    }
+    render();
+  };
+  document.getElementById('btnAddOverlay').onclick = addOverlay;
+  function addOverlay(){
+    const bases = state.clips.filter(c=>c.layer===0);
+    const base = bases[Math.floor(Math.random()*bases.length)];
+    const count = state.clips.filter(c=>c.gridX===base.gridX && c.gridY===base.gridY).length;
+    if(count>=3) return;
+    state.clips.push({...base, id:'n'+Date.now(), layer:count, name:names[Math.floor(Math.random()*names.length)]+' OV', w:Math.max(80,base.w-20), h:Math.max(80,base.h-20), tc:framesToTC(Math.floor(Math.random()*90000))});
+    render();
+  }
+
+  // Init
+  initClips();
+  render();
+  setZoom(1);
+  // center a bit
+  state.panX = 40; state.panY = 30; updateTransform();
+
+  // Keyboard nudge
+  window.addEventListener('keydown', e=>{
+    if(e.key==='Tab'){ e.preventDefault(); toggleLayout(); }
+    if(e.key==='+'){ setZoom(state.zoom*1.1) }
+    if(e.key==='-'){ setZoom(state.zoom/1.1) }
+  });
+})();
+</script>
+<script>(function(){document.addEventListener("click",function(e){var a=e.target.closest("[data-product-id]");if(!a)return;e.preventDefault();var pid=a.getAttribute("data-product-id");if(pid)parent.postMessage({type:"ecto-artifact-link-click",productId:pid},"*")})})();</script>
+</body>
+</html>
