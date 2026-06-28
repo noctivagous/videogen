@@ -1860,11 +1860,104 @@ input[type="range"].pro-slider::-moz-range-thumb {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
-#studio-preview-main-chrome {
+/* Preview tabbed workspace — tabs sit flush on the stage panel below */
+.preview-panel-tabbed-workspace {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  flex-direction: column;
   box-sizing: border-box;
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
-  padding-top: 0.5rem;
+  padding: 0.5rem 1rem 1rem;
+  padding-left: calc(0.5rem + 31px);
+}
+
+@media (min-width: 768px) {
+  .preview-panel-tabbed-workspace {
+    padding-right: 2rem;
+    padding-bottom: 2rem;
+  }
+}
+
+.preview-panel-tab-bar {
+  display: flex;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
+.preview-panel-tab-panel {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  margin-top: -1px;
+  border: 1px solid var(--pro-border-dark);
+  border-radius: 0 6px 6px 6px;
+  background-color: var(--pro-inset);
+  background-image:
+    linear-gradient(rgba(27, 31, 37, 0.9), rgba(27, 31, 37, 0.96)),
+    var(--pro-tex-panel);
+  background-repeat: repeat, repeat;
+  background-size: auto, var(--pro-tex-tile) var(--pro-tex-tile);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.55),
+    0 1px 0 rgba(255, 255, 255, 0.02);
+  overflow: hidden;
+}
+
+.preview-panel-tab-panel__fill {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.preview-panel-tab-panel .preview-panel-stage-shell {
+  position: relative;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  left: -31px;
+  flex: 1;
+  min-height: 0;
+  padding: 0.75rem 1rem 0;
+  padding-left: calc(31px + 0.5rem);
+  padding-right: 0;
+}
+
+@media (min-width: 768px) {
+  .preview-panel-tab-panel .preview-panel-stage-shell {
+    padding-top: 1rem;
+  }
+}
+
+/* TabControl — active tab merges into tabpanel */
+.tab-control.segmented-control {
+  align-self: flex-start;
+  border: 1px solid var(--pro-border-dark);
+  border-bottom: none;
+  border-radius: 5px 5px 0 0;
+  overflow: hidden;
+  background: transparent;
+  box-shadow: none;
+}
+
+.tab-control .segmented-control-btn.active {
+  background-color: var(--pro-inset);
+  background-image:
+    linear-gradient(rgba(27, 31, 37, 0.92), rgba(27, 31, 37, 0.98)),
+    var(--pro-tex-panel);
+  background-repeat: repeat, repeat;
+  background-size: auto, var(--pro-tex-tile) var(--pro-tex-tile);
+  color: #e8edf4;
+  border-bottom: 1px solid var(--pro-inset);
+  margin-bottom: -1px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.preview-panel-frame-view-row .tab-control.segmented-control,
+.preview-panel-frame-view-row .segmented-control {
+  width: auto;
 }
 
 .preview-panel-stage-shell {
@@ -1875,7 +1968,6 @@ input[type="range"].pro-slider::-moz-range-thumb {
   left: -31px;
   z-index: 0;
   box-sizing: border-box;
-  /* Align content with #studio-preview-main-chrome (0.5rem) after the -31px bleed. */
   padding-left: calc(0.5rem + 31px);
   padding-right: 1rem;
   padding-top: 1rem;
@@ -1888,20 +1980,6 @@ input[type="range"].pro-slider::-moz-range-thumb {
     padding-top: 2rem;
     padding-bottom: 2rem;
   }
-}
-
-.preview-panel-controls {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.5rem;
-  width: max-content;
-  max-width: min(100%, 28rem);
-}
-
-.preview-panel-controls .frame-view-segment,
-.preview-panel-controls .segmented-control {
-  width: auto;
 }
 
 .generated-video-dropdown {

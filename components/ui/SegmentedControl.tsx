@@ -18,6 +18,8 @@ export interface SegmentedControlProps
   buttonClassName?: string;
   fullWidth?: boolean;
   role?: 'tablist' | 'group';
+  /** When set (TabControl), each tab gets aria-controls + a stable id for the tabpanel. */
+  tabPanelId?: string;
 }
 
 export function SegmentedControl({
@@ -29,6 +31,7 @@ export function SegmentedControl({
   buttonClassName = '',
   fullWidth = false,
   role = 'tablist',
+  tabPanelId,
   ...rest
 }: SegmentedControlProps) {
   return (
@@ -50,6 +53,8 @@ export function SegmentedControl({
             aria-pressed={role === 'group' ? selected : undefined}
             disabled={item.disabled}
             title={item.title}
+            id={tabPanelId ? `${tabPanelId}-tab-${item.id}` : undefined}
+            aria-controls={tabPanelId && role === 'tablist' ? tabPanelId : undefined}
             className={`segmented-control-btn ${selected ? 'active' : ''} ${buttonClassName}`.trim()}
             onClick={() => onChange(item.id)}
           >

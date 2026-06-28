@@ -1,11 +1,13 @@
 'use client';
 
-import { SegmentedControl, type SegmentedControlItem } from '@/components/ui/SegmentedControl';
+import { TabControl } from '@/components/ui/TabControl';
+import type { SegmentedControlItem } from '@/components/ui/SegmentedControl';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 
 export type FrameView = 'preview' | 'bake-prompt' | 'prompt' | 'generated';
 
 interface FrameViewSegmentProps {
+  panelId: string;
   value: FrameView;
   onChange: (view: FrameView) => void;
   generatedVideoCount?: number;
@@ -13,6 +15,7 @@ interface FrameViewSegmentProps {
 }
 
 export function FrameViewSegment({
+  panelId,
   value,
   onChange,
   generatedVideoCount = 0,
@@ -43,7 +46,8 @@ export function FrameViewSegment({
   }
 
   return (
-    <SegmentedControl
+    <TabControl
+      panelId={panelId}
       value={value}
       onChange={(id) => onChange(id as FrameView)}
       items={items}

@@ -41,6 +41,8 @@ export const PRO_CONTROL = {
   /** Flush joined segment strip — no gaps between items */
   segmentedControl: 'segmented-control',
   segmentedControlBtn: 'segmented-control-btn',
+  /** Tab strip bound to a tabpanel — active tab merges with panel below */
+  tabControl: 'tab-control',
 } as const;
 
 /** Labeled control enclosures */

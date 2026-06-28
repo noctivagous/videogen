@@ -42,6 +42,7 @@ export const UI_SECTIONS = {
   studioPreviewGeneratingOverlay: { id: 'studio-preview-generating-overlay', name: 'Preview Generating Overlay' },
   studioPreviewCompositionOverlay: { id: 'studio-preview-composition-overlay', name: 'Composition Overlay' },
   studioPreviewFrameViewSegment: { id: 'studio-preview-frame-view-segment', name: 'Frame View Segment' },
+  studioPreviewTabPanel: { id: 'studio-preview-tab-panel', name: 'Preview Tab Panel' },
   studioPreviewGeneratedVideoDropdown: {
     id: 'studio-preview-generated-video-dropdown',
     name: 'Generated Video Dropdown',

@@ -393,39 +393,6 @@ export function PreviewPanel() {
       className="relative flex-1 min-h-0 overflow-hidden"
       {...uiSectionProps(UI_SECTIONS.studioPreviewPanel)}
     >
-      <div
-        className="absolute inset-x-0 top-0 z-30 pointer-events-none flex items-start justify-between gap-3"
-        {...uiSectionProps(UI_SECTIONS.studioPreviewMainChrome)}
-      >
-        {isShotDesigner && (
-        <div className="preview-panel-controls pointer-events-auto shrink-0 flex flex-col gap-1.5">
-          <div className="preview-panel-frame-view-row flex items-center gap-2">
-            <FrameViewSegment
-              value={frameView}
-              onChange={setFrameView}
-              generatedVideoCount={generatedVideoCount}
-              showBakePromptTab={bakeStartFrame}
-            />
-            {frameView === 'generated' && generatedVideoCount > 0 && shot && (
-              <GeneratedVideoDropdown shot={shot} />
-            )}
-          </div>
-        </div>
-        )}
-      </div>
-
-      {frameView === 'bake-prompt' && isShotDesigner && (
-        <div className="absolute inset-0 z-10 min-h-0">
-          <BakePromptStackView />
-        </div>
-      )}
-
-      {frameView === 'prompt' && isShotDesigner && (
-        <div className="absolute inset-0 z-10 min-h-0">
-          <PromptStackView />
-        </div>
-      )}
-
       {workspaceView === 'app-summary' && (
         <div className="absolute inset-0 z-10 min-h-0">
           <AppSummaryPanel />
@@ -474,7 +441,43 @@ export function PreviewPanel() {
         </div>
       )}
 
-      {frameView !== 'prompt' && frameView !== 'bake-prompt' && isShotDesigner && (
+      {isShotDesigner && (
+      <div
+        className="preview-panel-tabbed-workspace"
+        {...uiSectionProps(UI_SECTIONS.studioPreviewMainChrome)}
+      >
+        <div className="preview-panel-tab-bar pointer-events-auto">
+          <div className="preview-panel-frame-view-row flex items-center gap-2">
+            <FrameViewSegment
+              panelId={UI_SECTIONS.studioPreviewTabPanel.id}
+              value={frameView}
+              onChange={setFrameView}
+              generatedVideoCount={generatedVideoCount}
+              showBakePromptTab={bakeStartFrame}
+            />
+            {frameView === 'generated' && generatedVideoCount > 0 && shot && (
+              <GeneratedVideoDropdown shot={shot} />
+            )}
+          </div>
+        </div>
+        <div
+          id={UI_SECTIONS.studioPreviewTabPanel.id}
+          role="tabpanel"
+          aria-labelledby={`${UI_SECTIONS.studioPreviewTabPanel.id}-tab-${frameView}`}
+          className="preview-panel-tab-panel"
+          {...uiSectionProps(UI_SECTIONS.studioPreviewTabPanel)}
+        >
+          {frameView === 'bake-prompt' && (
+            <div className="preview-panel-tab-panel__fill min-h-0">
+              <BakePromptStackView />
+            </div>
+          )}
+          {frameView === 'prompt' && (
+            <div className="preview-panel-tab-panel__fill min-h-0">
+              <PromptStackView />
+            </div>
+          )}
+          {(frameView === 'preview' || frameView === 'generated') && (
       <div className="preview-panel-stage-shell">
         <div
           ref={previewStageRef}
@@ -753,6 +756,9 @@ export function PreviewPanel() {
 
           </div>
           </div>
+        </div>
+      </div>
+          )}
         </div>
       </div>
       )}
