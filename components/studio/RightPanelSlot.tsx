@@ -14,7 +14,7 @@ export function RightPanelSlot() {
 
   return (
     <aside
-      className="hidden lg:block w-72 glass border-l border-surface-700 overflow-y-auto control-panel"
+      className="hidden lg:block w-72 pro-panel glass border-l border-surface-700 overflow-y-auto control-panel"
       {...uiSectionProps(UI_SECTIONS.studioLightingPanel)}
     >
       <RightPanelContent panel={workspaceView} />

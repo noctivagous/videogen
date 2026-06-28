@@ -97,11 +97,11 @@ export function SplitButton({
   }, [menuOpen]);
 
   const primaryButtonClass = compact
-    ? 'px-1.5 py-0.5 text-[10px] font-medium bg-surface-800 hover:bg-surface-700 border border-surface-600 border-r-0 rounded-l-md transition-all text-gray-200 max-w-[7rem] truncate'
-    : 'px-3 py-1.5 text-xs font-medium bg-surface-800 hover:bg-surface-700 border border-surface-600 border-r-0 rounded-l-lg transition-all text-gray-200';
+    ? 'pro-btn pro-btn--compact border-r-0 rounded-l-md rounded-r-none max-w-[7rem] truncate normal-case'
+    : 'pro-btn border-r-0 rounded-l-md rounded-r-none normal-case';
   const menuButtonClass = compact
-    ? 'px-1 py-0.5 text-[10px] bg-surface-800 hover:bg-surface-700 border border-surface-600 rounded-r-md transition-all text-gray-300'
-    : 'px-2 py-1.5 text-xs bg-surface-800 hover:bg-surface-700 border border-surface-600 rounded-r-lg transition-all text-gray-300';
+    ? 'pro-btn pro-btn--compact rounded-l-none rounded-r-md normal-case px-1'
+    : 'pro-btn rounded-l-none rounded-r-md normal-case px-2';
 
   return (
     <div ref={rootRef} className={`relative inline-flex ${className}`.trim()}>
@@ -134,7 +134,7 @@ export function SplitButton({
         <div
           id={menuId}
           role="menu"
-          className={`absolute top-full left-0 mt-1 bg-surface-800 border border-surface-600 rounded-lg shadow-xl z-50 ${
+          className={`absolute top-full left-0 mt-1 pro-inset-box bg-surface-800 border border-surface-600 rounded-md shadow-xl z-50 ${
             renderMenu
               ? `w-[32rem] max-w-[90vw] max-h-[70vh] overflow-y-auto p-4 ${menuClassName}`.trim()
               : `min-w-[12rem] py-1 text-sm ${menuClassName}`.trim()

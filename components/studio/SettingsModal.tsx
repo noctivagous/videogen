@@ -20,7 +20,7 @@ export function SettingsModal() {
     <ManagedModal
       open={settingsOpen}
       onClose={closeSettings}
-      className="glass w-full max-w-6xl max-h-[92vh] rounded-xl border border-surface-700 overflow-hidden flex flex-col modal"
+      className="glass pro-panel w-full max-w-6xl max-h-[92vh] rounded-lg border border-surface-700 overflow-hidden flex flex-col modal"
       {...uiSectionProps(UI_SECTIONS.studioSettingsModal)}
     >
       <div className="px-6 py-5 border-b border-surface-700 flex items-center justify-between flex-shrink-0">

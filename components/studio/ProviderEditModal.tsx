@@ -121,7 +121,7 @@ export function ProviderEditModal() {
     <ManagedModal
       open
       onClose={closeProviderEdit}
-      className="glass w-full max-w-md rounded-xl border border-surface-700 overflow-hidden modal"
+      className="glass pro-panel w-full max-w-md rounded-lg border border-surface-700 overflow-hidden modal"
       {...uiSectionProps(UI_SECTIONS.studioProviderEditModal)}
     >
         <div className="px-6 py-5 border-b border-surface-700 flex items-center justify-between">

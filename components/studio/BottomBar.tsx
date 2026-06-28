@@ -242,9 +242,9 @@ export function ShotDesignerBottomBarContent() {
   }, [shot, lighting, project.aspectRatio, ai, setup, locations, characters]);
 
   const setupTextareaClass =
-    'w-full bg-transparent border-0 px-0 py-0 text-sm outline-none focus:ring-0 transition-all resize-none h-[52px]';
+    'w-full bg-transparent border-0 px-0 py-0 text-sm outline-none focus:ring-0 transition-all resize-none h-[52px] select-text';
   const shotActivityClass =
-    'w-full bg-surface-700/70 hover:bg-surface-600/80 focus:bg-surface-600/80 border border-surface-600 rounded-md px-2.5 py-2 text-xs outline-none focus:ring-1 focus:ring-brand-500 transition-all resize-none h-[44px]';
+    'pro-field w-full px-2.5 py-2 text-xs resize-none h-[44px] select-text';
 
   return (
     <div className="flex gap-2 items-stretch">
@@ -257,7 +257,7 @@ export function ShotDesignerBottomBarContent() {
                 <svg className="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
-                <label className="text-xs uppercase tracking-wider font-semibold text-gray-300">Prompt</label>
+                <label className="pro-label">Prompt</label>
               </div>
               {hasAnyImage && (
                 <div className="text-[10px] text-gray-500 italic max-w-sm text-right leading-tight">
@@ -267,7 +267,7 @@ export function ShotDesignerBottomBarContent() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <div className="rounded-lg border border-surface-600 bg-surface-800/70 px-2.5 py-2">
+              <div className="pro-inset-box px-2.5 py-2">
                 <div className="flex flex-wrap items-start gap-1 mb-2 max-h-[2.75rem] overflow-y-auto pr-1">
                   {promptSettings.length > 0 ? (
                     promptSettings.map((row, index) => (
@@ -291,7 +291,7 @@ export function ShotDesignerBottomBarContent() {
                   )}
                 </div>
                 <div className="border-t border-surface-600 pt-2">
-                  <label className="text-[10px] uppercase tracking-wider font-semibold text-gray-400 block mb-1">
+                  <label className="pro-label block mb-1">
                     Scene Setup
                   </label>
                   <MentionTextarea
@@ -309,7 +309,7 @@ export function ShotDesignerBottomBarContent() {
               </div>
 
               <div className="flex-1 flex flex-col gap-1 min-w-0">
-                <label className="text-[10px] uppercase tracking-wider font-semibold text-gray-400">Shot Activity</label>
+                <label className="pro-label">Shot Activity</label>
                 <MentionTextarea
                   value={shotActivity}
                   onChange={setShotActivity}
@@ -332,7 +332,7 @@ export function ShotDesignerBottomBarContent() {
                     type="button"
                     onClick={() => invalidateBakedFrame()}
                     disabled={isBakingStartFrame}
-                    className="w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-lg bg-surface-700 hover:bg-surface-600 disabled:opacity-40 text-gray-200 border border-surface-600"
+                    className="pro-btn pro-btn--compact w-full disabled:opacity-40"
                   >
                     Invalidate Baked Frame
                   </button>
@@ -342,7 +342,7 @@ export function ShotDesignerBottomBarContent() {
                       type="button"
                       onClick={() => bakeStartFrame()}
                       disabled={isBakingStartFrame || !checklistReadyToBake}
-                      className="w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-lg bg-brand-600 hover:bg-brand-500 disabled:opacity-40 text-white"
+                      className="pro-btn pro-btn--brand pro-btn--compact w-full disabled:opacity-40"
                     >
                       {isBakingStartFrame ? 'Baking…' : 'Bake Start Frame'}
                       {checklistTotal > 0 ? ` (${checklistDone}/${checklistTotal})` : ''}
@@ -366,7 +366,7 @@ export function ShotDesignerBottomBarContent() {
                   type="button"
                   onClick={generate}
                   disabled={disableGenerate}
-                  className="w-full min-w-[8rem] bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-500 disabled:opacity-40 px-4 py-3 rounded-lg font-bold text-sm transition-all shadow-lg shadow-brand-500/30 flex items-center justify-center gap-1 group"
+                  className="pro-btn pro-btn--brand w-full min-w-[8rem] disabled:opacity-40 px-4 py-3 text-sm flex items-center justify-center gap-1 group"
                 >
                   <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -379,7 +379,7 @@ export function ShotDesignerBottomBarContent() {
                 type="button"
                 onClick={generate}
                 disabled={disableGenerate}
-                className="w-full min-w-[5.5rem] bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-500 disabled:opacity-50 px-6 rounded-lg font-bold text-base transition-all shadow-lg shadow-brand-500/30 flex flex-col items-center justify-center gap-1 group"
+                className="pro-btn pro-btn--brand w-full min-w-[5.5rem] disabled:opacity-50 px-6 text-base flex flex-col items-center justify-center gap-1 group"
               >
                 <svg className="w-6 h-6 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />

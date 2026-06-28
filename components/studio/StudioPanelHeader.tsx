@@ -35,20 +35,20 @@ export function StudioPanelHeader({
 
   return (
     <div
-      className={`flex items-center gap-3 px-4 py-3 h-[62px] border-b border-surface-700 flex-shrink-0 bg-surface-900 ${className}`.trim()}
+      className={`flex items-center gap-3 px-4 py-3 h-[62px] border-b border-surface-700 flex-shrink-0 bg-surface-800 ${className}`.trim()}
     >
       {onBack ? (
         <button
           type="button"
           onClick={onBack}
-          className="p-1.5 rounded-lg hover:bg-surface-700 text-gray-400 hover:text-gray-200 transition-colors"
+          className="pro-btn pro-btn--compact p-1.5 normal-case text-gray-300"
           title={backTitle}
         >
           <ChevronLeft className="w-4 h-4" aria-hidden />
         </button>
       ) : null}
       <div
-        className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center flex-shrink-0"
+        className="w-8 h-8 rounded-md bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center flex-shrink-0 border border-black/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_1px_2px_rgba(0,0,0,0.5)]"
         style={theme?.panelIconStyle}
       >
         <Icon className="w-4 h-4 text-white" aria-hidden />

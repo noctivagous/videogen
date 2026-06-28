@@ -309,7 +309,7 @@ export function WelcomeModal() {
       open={welcomeModalOpen}
       onClose={closeWelcomeModal}
       variant="walkthrough"
-      className="glass w-full max-w-4xl rounded-xl border border-surface-700 overflow-hidden flex flex-col modal"
+      className="glass pro-panel w-full max-w-4xl rounded-lg border border-surface-700 overflow-hidden flex flex-col modal"
       {...uiSectionProps(UI_SECTIONS.studioWelcomeModal)}
     >
       <div className="px-8 py-5 border-b border-surface-700 flex items-center justify-between flex-shrink-0">

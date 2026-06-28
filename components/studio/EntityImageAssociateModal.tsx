@@ -140,7 +140,7 @@ export function EntityImageAssociateModal() {
     <ManagedModal
       open={open}
       onClose={handleOpenChange}
-      className="glass w-full max-w-md max-h-[90vh] rounded-lg border border-surface-700 overflow-hidden flex flex-col modal"
+      className="glass pro-panel w-full max-w-md max-h-[90vh] rounded-lg border border-surface-700 overflow-hidden flex flex-col modal"
       role="dialog"
       aria-modal="true"
       aria-label={labels.title}

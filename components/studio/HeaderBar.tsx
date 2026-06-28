@@ -401,12 +401,15 @@ export function HeaderBar() {
 
   return (
     <header
-      className="border-b border-surface-700 min-h-16 py-2 flex items-center justify-between px-[15px] z-50"
+      className="pro-toolbar min-h-16 py-2 flex items-stretch justify-between px-[15px] z-50"
       {...uiSectionProps(UI_SECTIONS.studioHeader)}
     >
-      <div className="flex items-center gap-4 min-w-0">
-        <div className="flex flex-col gap-1 flex-shrink-0" {...uiSectionProps(UI_SECTIONS.studioHeaderBrand)}>
-          <div className="flex items-center gap-2">
+      <div className="flex items-start gap-4 min-w-0 flex-1">
+        <div
+          className="flex flex-col gap-1 flex-shrink-0 py-0.5"
+          {...uiSectionProps(UI_SECTIONS.studioHeaderBrand)}
+        >
+          <div className="flex items-center gap-2 h-[25px]">
             <button
               type="button"
               onClick={() => navigateToPanel('app-summary')}
@@ -441,7 +444,7 @@ export function HeaderBar() {
                 <button
                   type="button"
                   onClick={() => navigateLauncherByDirection('previous')}
-                  className="h-[21px] w-[26.5px] inline-flex items-center justify-center text-[11px] font-semibold bg-surface-800 hover:bg-surface-700 border border-surface-600 border-r-0 rounded-l-md transition-all text-gray-200 leading-none"
+                  className="pro-btn pro-btn--compact h-[21px] w-[26.5px] inline-flex items-center justify-center border-r-0 rounded-l-md rounded-r-none leading-none normal-case"
                   title={`Previous launcher item (${previousLauncherShortcut})`}
                   aria-label={`Previous launcher item (${previousLauncherShortcut})`}
                 >
@@ -450,7 +453,7 @@ export function HeaderBar() {
                 <button
                   type="button"
                   onClick={() => navigateLauncherByDirection('next')}
-                  className="h-[21px] w-[26.5px] inline-flex items-center justify-center text-[11px] font-semibold bg-surface-800 hover:bg-surface-700 border border-surface-600 rounded-r-md transition-all text-gray-200 leading-none"
+                  className="pro-btn pro-btn--compact h-[21px] w-[26.5px] inline-flex items-center justify-center rounded-l-none rounded-r-md leading-none normal-case"
                   title={`Next launcher item (${nextLauncherShortcut})`}
                   aria-label={`Next launcher item (${nextLauncherShortcut})`}
                 >
@@ -462,7 +465,7 @@ export function HeaderBar() {
           <StudioLauncherIconBar />
         </div>
 
-        <div className="h-8 w-px bg-surface-600 hidden md:block flex-shrink-0 self-center" />
+        <div className="w-px bg-surface-600 hidden md:block flex-shrink-0 self-stretch my-1" />
 
         <HeaderLegendContainer legend="Project">
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -472,7 +475,7 @@ export function HeaderBar() {
               <button
                 type="button"
                 onClick={() => setMenuOpen((o) => !o)}
-                className="px-2 py-1.5 text-xs bg-surface-800 hover:bg-surface-700 border border-surface-600 rounded-lg transition-all"
+                className="pro-btn pro-btn--compact px-2 py-1.5 normal-case"
                 title="Project folder and actions"
                 aria-expanded={menuOpen}
               >
@@ -608,10 +611,10 @@ export function HeaderBar() {
           </div>
         </HeaderLegendContainer>
 
-        <div className="h-8 w-px bg-surface-600 hidden md:block flex-shrink-0" />
+        <div className="w-px bg-surface-600 hidden md:block flex-shrink-0 self-stretch my-1" />
 
         <div
-          className="hidden sm:flex items-center min-w-0 ml-1"
+          className="hidden sm:flex items-start min-w-0 ml-1"
           {...uiSectionProps(UI_SECTIONS.studioHeaderProviderBadge)}
         >
           <HeaderLegendContainer legend="Models">

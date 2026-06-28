@@ -62,7 +62,7 @@ export function StudioShell() {
         <button
           type="button"
           onClick={() => setMobileDrawerOpen(true)}
-          className="w-14 h-14 bg-gradient-to-r from-brand-500 to-brand-600 rounded-lg shadow-lg shadow-brand-500/40 flex items-center justify-center"
+          className="pro-btn w-14 h-14 bg-gradient-to-r from-brand-500 to-brand-600 rounded-md shadow-lg shadow-brand-500/40 flex items-center justify-center border-brand-600 normal-case p-0"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
@@ -77,11 +77,11 @@ export function StudioShell() {
             onClick={() => setMobileDrawerOpen(false)}
             {...uiSectionProps(UI_SECTIONS.studioMobileDrawerBackdrop)}
           />
-          <div className="absolute bottom-0 left-0 right-0 bg-surface-800 rounded-t-2xl border-t border-surface-700 max-h-[80vh] overflow-y-auto animate-slide-up">
+          <div className="absolute bottom-0 left-0 right-0 pro-panel bg-surface-800 rounded-t-xl border-t border-surface-700 max-h-[80vh] overflow-y-auto animate-slide-up">
             <div className="p-4">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold">Controls</h3>
-                <button type="button" onClick={() => setMobileDrawerOpen(false)} className="p-2 hover:bg-surface-700 rounded-lg">
+                <button type="button" onClick={() => setMobileDrawerOpen(false)} className="pro-btn pro-btn--compact p-2 normal-case">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>

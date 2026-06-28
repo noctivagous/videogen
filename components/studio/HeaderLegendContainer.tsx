@@ -14,10 +14,10 @@ export function HeaderLegendContainer({
   children: ReactNode;
 }) {
   const legendClasses =
-    'px-1 py-0.5 rounded-sm border border-surface-600 bg-surface-900 text-[9px] tracking-wider text-gray-400 uppercase';
+    'pro-header-legend__tag px-1 py-0.5 rounded-sm text-[9px] tracking-wider uppercase';
 
   return (
-    <div className={`self-stretch flex items-stretch gap-2 border border-surface-600 rounded-md px-2 py-0.5 ${className}`.trim()}>
+    <div className={`pro-header-legend self-stretch flex items-stretch gap-2 rounded-md px-2 py-0.5 ${className}`.trim()}>
       {rotateLegend ? (
         <div className="flex w-5 flex-shrink-0 items-center justify-center self-stretch">
           <span className={`${legendClasses} -rotate-90 whitespace-nowrap`}>{legend}</span>
