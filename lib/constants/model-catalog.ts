@@ -126,13 +126,13 @@ export function getProviderCategoryMatrix(providerId: string): ProviderCategoryM
 }
 
 export function providerSettingsPath(providerId: string): string {
-  return `/studio/settings/provider/${encodeURIComponent(providerId)}`;
+  return `/studio/settings/ai/provider/${encodeURIComponent(providerId)}`;
 }
 
 export function categorySettingsPath(categoryId: ModelCategoryId): string {
-  return `/studio/settings/category/${encodeURIComponent(categoryId)}`;
+  return `/studio/settings/ai/category/${encodeURIComponent(categoryId)}`;
 }
 
 export function checklistSettingsPath(checklistId: string): string {
-  return `/studio/settings/checklist/${encodeURIComponent(checklistId)}`;
+  return `/studio/settings/ai/checklist/${encodeURIComponent(checklistId)}`;
 }

@@ -1,4 +1,7 @@
 import { STUDIO_APPS, type StudioAppId } from '@/lib/constants/studio-apps';
+import { isValidColorPaletteMakerPathname } from '@/lib/studio/color-palette-maker-routes';
+import { isValidImageEditorPathname } from '@/lib/studio/image-editor-routes';
+import { isValidSettingsPathname } from '@/lib/studio/settings-routes';
 export type StudioPanelId =
   | 'app-summary'
   | 'settings'
@@ -30,6 +33,15 @@ export function isStudioPanelId(value: string): value is StudioPanelId {
 }
 
 export function studioPanelRoute(panel: StudioPanelId): string {
+  if (panel === 'settings') {
+    return '/studio/settings/ai';
+  }
+  if (panel === 'image-editor') {
+    return '/studio/image-editor/generate';
+  }
+  if (panel === 'color-palette-maker') {
+    return '/studio/color-palette-maker/maker';
+  }
   return `/studio/${panel}`;
 }
 
@@ -57,16 +69,15 @@ export function parseStudioPathname(pathname: string): StudioRouteTarget | null 
   const rest = match[2]?.replace(/\/$/, '');
   if (!rest) return { panel: slug };
 
-  const settingsProviderMatch = rest.match(/^provider\/([^/]+)$/);
-  if (settingsProviderMatch && slug === 'settings') {
+  if (slug === 'settings' && isValidSettingsPathname(pathname)) {
     return { panel: slug };
   }
-  const settingsCategoryMatch = rest.match(/^category\/([^/]+)$/);
-  if (settingsCategoryMatch && slug === 'settings') {
+
+  if (slug === 'image-editor' && isValidImageEditorPathname(pathname)) {
     return { panel: slug };
   }
-  const settingsChecklistMatch = rest.match(/^checklist\/([^/]+)$/);
-  if (settingsChecklistMatch && slug === 'settings') {
+
+  if (slug === 'color-palette-maker' && isValidColorPaletteMakerPathname(pathname)) {
     return { panel: slug };
   }
 

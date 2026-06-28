@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { ProviderCard } from '@/components/studio/ProviderCard';
 import { BUILT_IN_PROVIDERS } from '@/lib/constants/providers';
 import { getProviderCategoryMatrix, providerSettingsPath } from '@/lib/constants/model-catalog';
+import { settingsSectionRoute } from '@/lib/studio/settings-routes';
 
 export function SettingsProviderDetailPage({ providerId }: { providerId: string }) {
   const provider = BUILT_IN_PROVIDERS.find((item) => item.id === providerId);
@@ -26,7 +27,7 @@ export function SettingsProviderDetailPage({ providerId }: { providerId: string 
       <div className="glass rounded-3xl p-6 border border-surface-700">
         <h2 className="font-semibold text-lg">Provider not found</h2>
         <p className="text-sm text-gray-400 mt-1">No built-in provider matches `{providerId}`.</p>
-        <Link href="/studio/settings" className="inline-flex mt-3 text-sm text-brand-300 hover:text-brand-200">
+        <Link href={settingsSectionRoute('ai')} className="inline-flex mt-3 text-sm text-brand-300 hover:text-brand-200">
           Back to Settings
         </Link>
       </div>
@@ -43,7 +44,7 @@ export function SettingsProviderDetailPage({ providerId }: { providerId: string 
             <h2 className="font-semibold text-lg">{provider.name}</h2>
             <p className="text-sm text-gray-400 mt-1">{provider.desc}</p>
           </div>
-          <Link href="/studio/settings" className="text-sm text-brand-300 hover:text-brand-200">
+          <Link href={settingsSectionRoute('ai')} className="text-sm text-brand-300 hover:text-brand-200">
             Back to all settings
           </Link>
         </div>

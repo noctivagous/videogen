@@ -21,6 +21,7 @@ export function ColorPaletteGroupInspector({ asset }: ColorPaletteGroupInspector
   const characters = useStudioStore((s) => s.characters);
   const locations = useStudioStore((s) => s.locations);
   const renameColorPaletteGroupAsset = useStudioStore((s) => s.renameColorPaletteGroupAsset);
+  const moveMediaAssetsToScope = useStudioStore((s) => s.moveMediaAssetsToScope);
   const deleteMediaAssets = useStudioStore((s) => s.deleteMediaAssets);
   const removeCharacterColorPaletteGroup = useStudioStore((s) => s.removeCharacterColorPaletteGroup);
   const removeLocationColorPaletteGroup = useStudioStore((s) => s.removeLocationColorPaletteGroup);
@@ -136,6 +137,32 @@ export function ColorPaletteGroupInspector({ asset }: ColorPaletteGroupInspector
         )}
         {location && (
           <InspectorReadOnly label="Location">{location.name}</InspectorReadOnly>
+        )}
+
+        {!isDerivedAsset && (
+          <div className="media-library-inspector-field flex flex-col gap-1">
+            <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-500">Library scope</span>
+            <div className="flex flex-wrap gap-1.5">
+              {scope !== 'global' && (
+                <button
+                  type="button"
+                  onClick={() => moveMediaAssetsToScope([asset.id], 'global')}
+                  className="px-2 py-1 text-[10px] rounded border border-surface-600 hover:bg-surface-700 text-gray-300"
+                >
+                  Move to global
+                </button>
+              )}
+              {scope !== 'project' && (
+                <button
+                  type="button"
+                  onClick={() => moveMediaAssetsToScope([asset.id], 'project')}
+                  className="px-2 py-1 text-[10px] rounded border border-surface-600 hover:bg-surface-700 text-gray-300"
+                >
+                  Move to project
+                </button>
+              )}
+            </div>
+          </div>
         )}
 
         <InspectorReadOnly label="Groups">{doc.groups.length}</InspectorReadOnly>
