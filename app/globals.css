@@ -2772,38 +2772,83 @@ input[type="range"]::-moz-range-thumb:hover {
   overflow: hidden;
 }
 
+.apps-launcher-grid {
+  --apps-launcher-card-height: 8.125rem;
+  grid-auto-rows: var(--apps-launcher-card-height);
+}
+
 .apps-launcher-card {
+  --apps-launcher-thumb-size: var(--apps-launcher-card-height);
   position: relative;
   overflow: hidden;
+  width: 100%;
+  height: var(--apps-launcher-card-height);
+  border-radius: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  padding: 0.75rem calc(var(--apps-launcher-thumb-size) + 0.5rem) 0.75rem 1rem;
 }
 
 .apps-launcher-card__thumb {
   position: absolute;
   top: 0;
   right: 0;
-  bottom: 0;
-  width: 45%;
+  z-index: 0;
+  width: var(--apps-launcher-thumb-size);
+  height: var(--apps-launcher-thumb-size);
+  aspect-ratio: 1;
   background-size: cover;
-  background-position: center top;
+  background-position: center;
   pointer-events: none;
 }
 
 .apps-launcher-card__shade {
   position: absolute;
   inset: 0;
+  z-index: 1;
   background: linear-gradient(
     90deg,
+    #27272d 0%,
     #27272d 52%,
-    rgba(39, 39, 45, 0.72) 72%,
-    rgba(39, 39, 45, 0.2) 100%
+    rgba(39, 39, 45, 0.42) 72%,
+    rgba(39, 39, 45, 0.12) 84%,
+    transparent 96%
   );
   pointer-events: none;
 }
 
 .apps-launcher-card__content {
   position: relative;
-  z-index: 1;
-  max-width: 58%;
+  z-index: 2;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.apps-launcher-card__title {
+  width: 100%;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  color: #f3f4f6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.apps-launcher-card__description {
+  margin-top: 0.375rem;
+  width: 100%;
+  font-size: 0.75rem;
+  line-height: 1.125rem;
+  color: #9ca3af;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .camera-param-chain {

@@ -12,8 +12,11 @@ export interface StudioLauncherItem {
 
 const STUDIO_LAUNCHER_BACKGROUND_BASE = '/stock/app-styling/studio-launcher';
 
+const STUDIO_LAUNCHER_ITEMS_WITHOUT_V2_IMAGE = new Set<StudioLauncherItemId>(['film-look-maker']);
+
 export function getStudioLauncherBackgroundUrl(id: StudioLauncherItemId): string {
-  return `${STUDIO_LAUNCHER_BACKGROUND_BASE}/${id}.jpg`;
+  const variant = STUDIO_LAUNCHER_ITEMS_WITHOUT_V2_IMAGE.has(id) ? '' : '-2';
+  return `${STUDIO_LAUNCHER_BACKGROUND_BASE}/${id}${variant}.jpg`;
 }
 
 const STUDIO_LAUNCHER_ITEM_DEFINITIONS = [

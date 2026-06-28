@@ -429,6 +429,7 @@ export function HeaderBar() {
                 primaryAction="toggle-menu"
                 menuAction="toggle-menu"
                 renderMenu={(closeMenu) => <AppsLauncherMenu onDismiss={closeMenu} />}
+                menuClassName="!w-[40rem]"
                 className="w-[128px]"
                 primaryClassName="font-semibold w-[109px] max-w-none"
                 primaryStyle={activeLauncherTheme?.splitPrimaryStyle}
