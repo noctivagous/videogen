@@ -1,16 +1,16 @@
 import { LEGACY_MODEL_ALIASES } from '@/lib/constants/provider-models';
 import { pickImageInput, resolveRefUrl } from '@/lib/studio/generation/adapters/refs.server';
+import { runFalSubscribe, falResultVideoUrl } from '@/lib/studio/generation/adapters/fal-shared';
 import {
   falVideoDuration,
   falVideoResolution,
-  pollFalQueueResult,
   searchFalModels,
-  submitFalQueue,
 } from '@/lib/studio/generation/adapters/fal';
 import {
   NO_MODEL_SELECTED_ERROR,
   requireModelId,
 } from '@/lib/studio/generation/adapters/shared';
+import { createFalClient } from '@/lib/studio/generation/clients/fal.client';
 import type { GenerationRequest, GenerationResult, ProviderTestResult } from '@/lib/studio/generation/types';
 import { inferModalitiesFromModelId, unionModalities } from '@/lib/studio/provider-modalities';
 import type { ProviderModel } from '@/lib/types/studio';
@@ -123,16 +123,12 @@ export async function generateWithPika(req: GenerationRequest): Promise<Generati
       return { status: 'error', error: input.error };
     }
 
-    const { requestId } = await submitFalQueue(endpointId, req.apiKey, input);
-    const polled = await pollFalQueueResult(endpointId, req.apiKey, requestId);
-
-    if (polled.error) {
-      return { status: 'error', error: polled.error, providerJobId: requestId };
-    }
+    const client = createFalClient(req.apiKey);
+    const { data, requestId } = await runFalSubscribe(client, endpointId, input);
 
     return {
       status: 'complete',
-      videoUrl: polled.videoUrl,
+      videoUrl: falResultVideoUrl(data),
       posterUrl: imageUrl,
       providerJobId: requestId,
     };

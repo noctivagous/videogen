@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect } from 'react';
 import { ModalityChips } from '@/components/studio/ModalityChips';
+import { ProviderConnectionTestStatus } from '@/components/studio/ProviderConnectionTestStatus';
 import { ProviderIcon } from '@/components/studio/ProviderIcon';
 import { getLabByDirectProviderId } from '@/lib/constants/labs';
 import { labSettingsPath, providerSettingsPath } from '@/lib/constants/model-catalog';
@@ -14,13 +16,15 @@ import {
   hasApiKey,
   mergeProviderCapabilities,
 } from '@/lib/studio/provider-modalities';
-import { isServerManagedProvider } from '@/lib/storage/ai-settings';
+import { getProviderApiKey, isServerManagedProvider } from '@/lib/storage/ai-settings';
 import type { BuiltInProvider, CustomProvider } from '@/lib/types/studio';
+import { useProviderConnectionTest } from '@/hooks/useProviderConnectionTest';
 import { useStudioStore } from '@/store/useStudioStore';
 
 interface ProviderCardProps {
   provider: BuiltInProvider | CustomProvider;
   isCustom: boolean;
+  backHref?: string;
 }
 
 function statusLabel(status: ReturnType<typeof getProviderStatus>, modelCount: number): string {
@@ -44,7 +48,7 @@ function cardTierClass(status: ReturnType<typeof getProviderStatus>, modelCount:
   return '';
 }
 
-export function ProviderCard({ provider, isCustom }: ProviderCardProps) {
+export function ProviderCard({ provider, isCustom, backHref }: ProviderCardProps) {
   const ai = useStudioStore((s) => s.ai);
   const openProviderEdit = useStudioStore((s) => s.openProviderEdit);
 
@@ -56,6 +60,42 @@ export function ProviderCard({ provider, isCustom }: ProviderCardProps) {
 
   const builtIn = !isCustom ? (provider as BuiltInProvider) : null;
   const custom = isCustom ? (provider as CustomProvider) : null;
+  const displayName = isCustom ? custom!.name : builtIn!.name;
+
+  const { state: testState, runTest, hydrateFromDiscovery } = useProviderConnectionTest(displayName);
+
+  useEffect(() => {
+    if (testState.ui !== 'idle') return;
+    hydrateFromDiscovery(
+      discovery?.lastTestOk,
+      discovery?.lastTestMessage,
+      discovery?.models?.length ?? 0,
+    );
+  }, [
+    discovery?.lastTestOk,
+    discovery?.lastTestMessage,
+    discovery?.models?.length,
+    hydrateFromDiscovery,
+    testState.ui,
+  ]);
+
+  const handleTestConnection = () => {
+    if (!configured || testState.ui === 'testing') return;
+    const apiKey = getProviderApiKey(id, isCustom, ai);
+    void runTest({
+      providerId: id,
+      isCustom,
+      apiKey,
+      customBaseUrl: isCustom ? custom?.baseUrl : undefined,
+    });
+  };
+
+  const testButtonLabel =
+    testState.ui === 'testing'
+      ? 'Testing…'
+      : testState.ui === 'success'
+        ? 'Retest'
+        : 'Test';
 
   const staticPurposes = builtIn?.purposes ?? [];
   const staticModalities = builtIn?.modalities ?? ['video'];
@@ -92,10 +132,15 @@ export function ProviderCard({ provider, isCustom }: ProviderCardProps) {
       }`}
       aria-disabled={!enabled}
     >
-      <div className="h-[2.75rem] px-5 pt-4 flex items-start">
+      <div className="h-[2.75rem] px-5 pt-4 flex items-start justify-between gap-3">
         <div className="text-[10px] uppercase tracking-wider font-semibold text-brand-300/80 leading-tight line-clamp-2">
           {!isCustom && builtIn?.tagline ? builtIn.tagline : '\u00A0'}
         </div>
+        {backHref ? (
+          <Link href={backHref} className="text-sm text-brand-300 hover:text-brand-200 shrink-0">
+            Back to all settings
+          </Link>
+        ) : null}
       </div>
 
       <div className="h-[3.5rem] px-5 flex items-center justify-between border-b border-surface-700/60">
@@ -174,6 +219,17 @@ export function ProviderCard({ provider, isCustom }: ProviderCardProps) {
         />
       </div>
 
+      {(configured || testState.message) && (enabled || isCustom) && (
+        <div className="px-5 pb-3">
+          <ProviderConnectionTestStatus
+            ui={testState.ui}
+            message={testState.message}
+            detail={testState.detail}
+            compact
+          />
+        </div>
+      )}
+
       <div className="mt-auto px-5 py-3 flex items-center justify-between gap-2">
         <div className="font-mono text-[10px] text-gray-500 truncate flex-1">{masked}</div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -184,6 +240,27 @@ export function ProviderCard({ provider, isCustom }: ProviderCardProps) {
             >
               Details
             </Link>
+          )}
+          {configured && (enabled || isCustom) && (
+            <button
+              type="button"
+              disabled={testState.ui === 'testing'}
+              onClick={handleTestConnection}
+              className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
+                testState.ui === 'success'
+                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/15'
+                  : testState.ui === 'error'
+                    ? 'border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/15'
+                    : testState.ui === 'testing'
+                      ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+                      : 'border-surface-600 hover:bg-surface-700'
+              }`}
+            >
+              {testState.ui === 'testing' && (
+                <span className="inline-block w-3 h-3 mr-1.5 border-2 border-current border-t-transparent rounded-full animate-spin align-[-2px]" />
+              )}
+              {testButtonLabel}
+            </button>
           )}
           <button
             type="button"

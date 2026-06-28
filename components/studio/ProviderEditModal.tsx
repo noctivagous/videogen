@@ -1,35 +1,43 @@
 'use client';
 
 import { ModalityChips } from '@/components/studio/ModalityChips';
+import { ProviderConnectionTestStatus } from '@/components/studio/ProviderConnectionTestStatus';
 import { ProviderIcon } from '@/components/studio/ProviderIcon';
 import { ManagedModal } from '@/components/ui/ModalManager';
 import { useEffect, useState } from 'react';
 import { BUILT_IN_PROVIDERS } from '@/lib/constants/providers';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
-import type { ProviderTestResult } from '@/lib/studio/generation/types';
 import { getProviderDiscovery } from '@/lib/studio/provider-modalities';
 import { getProviderApiKey, isServerManagedProvider } from '@/lib/storage/ai-settings';
 import type { ProviderModel } from '@/lib/types/studio';
+import { useProviderConnectionTest } from '@/hooks/useProviderConnectionTest';
 import { useStudioStore } from '@/store/useStudioStore';
-
-type TestUiState = 'idle' | 'testing' | 'success' | 'error';
 
 export function ProviderEditModal() {
   const providerEdit = useStudioStore((s) => s.providerEdit);
   const ai = useStudioStore((s) => s.ai);
   const closeProviderEdit = useStudioStore((s) => s.closeProviderEdit);
   const saveProviderEdit = useStudioStore((s) => s.saveProviderEdit);
-  const applyProviderTestResult = useStudioStore((s) => s.applyProviderTestResult);
   const deleteCustomProvider = useStudioStore((s) => s.deleteCustomProvider);
   const showToast = useStudioStore((s) => s.showToast);
+
+  const builtIn = providerEdit ? BUILT_IN_PROVIDERS.find((p) => p.id === providerEdit.id) : undefined;
+  const custom = providerEdit?.isCustom
+    ? ai.customProviders.find((p) => p.id === providerEdit.id)
+    : null;
+  const displayName = providerEdit
+    ? providerEdit.isCustom
+      ? custom?.name ?? 'Custom provider'
+      : builtIn?.name ?? providerEdit.id
+    : '';
+
+  const { state: testState, runTest, reset, hydrateFromDiscovery } = useProviderConnectionTest(displayName);
 
   const [apiKey, setApiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [customName, setCustomName] = useState('');
   const [customDesc, setCustomDesc] = useState('');
   const [customBaseUrl, setCustomBaseUrl] = useState('');
-  const [testUi, setTestUi] = useState<TestUiState>('idle');
-  const [testMessage, setTestMessage] = useState<string | null>(null);
   const [testModels, setTestModels] = useState<ProviderModel[]>([]);
   const [showModels, setShowModels] = useState(false);
 
@@ -38,17 +46,17 @@ export function ProviderEditModal() {
     const key = getProviderApiKey(providerEdit.id, providerEdit.isCustom, ai);
     setApiKey(key);
     setShowKey(false);
-    setTestUi('idle');
-    setTestMessage(null);
+    reset();
     setTestModels([]);
     setShowModels(false);
 
     const discovery = getProviderDiscovery(providerEdit.id, providerEdit.isCustom, ai);
-    if (discovery?.lastTestMessage) {
-      setTestMessage(discovery.lastTestMessage);
-      setTestUi(discovery.lastTestOk ? 'success' : 'error');
-      setTestModels(discovery.models ?? []);
-    }
+    hydrateFromDiscovery(
+      discovery?.lastTestOk,
+      discovery?.lastTestMessage,
+      discovery?.models?.length ?? 0,
+    );
+    setTestModels(discovery?.models ?? []);
 
     if (providerEdit.isCustom) {
       const prov = ai.customProviders.find((p) => p.id === providerEdit.id);
@@ -56,66 +64,43 @@ export function ProviderEditModal() {
       setCustomDesc(prov?.desc || '');
       setCustomBaseUrl(prov?.baseUrl || '');
     }
-  }, [providerEdit, ai]);
+  }, [providerEdit, ai, reset, hydrateFromDiscovery]);
 
   if (!providerEdit) return null;
 
   const serverManaged = !providerEdit.isCustom && isServerManagedProvider(providerEdit.id, false, ai);
-  const builtIn = BUILT_IN_PROVIDERS.find((p) => p.id === providerEdit.id);
-  const custom = providerEdit.isCustom
-    ? ai.customProviders.find((p) => p.id === providerEdit.id)
-    : null;
 
-  const displayName = providerEdit.isCustom ? custom?.name : builtIn?.name;
   const displayIcon = providerEdit.isCustom ? '🛠️' : builtIn?.icon ?? '🔌';
   const displayHint = providerEdit.isCustom ? custom?.baseUrl : builtIn?.hint;
 
   const testConnection = async () => {
     if (!apiKey.trim() && !serverManaged) {
-      setTestMessage('Please enter an API key before testing.');
-      setTestUi('error');
       showToast('Please enter an API key', 'error');
       return;
     }
 
-    setTestUi('testing');
-    setTestMessage(null);
     setTestModels([]);
     setShowModels(false);
 
-    try {
-      const res = await fetch('/api/providers/test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          providerId: providerEdit.id,
-          isCustom: providerEdit.isCustom,
-          apiKey,
-          customBaseUrl: providerEdit.isCustom ? customBaseUrl : undefined,
-        }),
-      });
-      const result = (await res.json()) as ProviderTestResult;
-      setTestMessage(result.message);
-      setTestUi(result.ok ? 'success' : 'error');
-      setTestModels(result.models ?? []);
-      applyProviderTestResult(providerEdit.id, providerEdit.isCustom, result, apiKey);
-      showToast(result.message, result.ok ? 'success' : 'error');
-    } catch {
-      const message = 'Connection test failed — check network and try again.';
-      setTestMessage(message);
-      setTestUi('error');
-      applyProviderTestResult(providerEdit.id, providerEdit.isCustom, { ok: false, message }, apiKey);
-      showToast(message, 'error');
+    const result = await runTest({
+      providerId: providerEdit.id,
+      isCustom: providerEdit.isCustom,
+      apiKey,
+      customBaseUrl: providerEdit.isCustom ? customBaseUrl : undefined,
+    });
+    if (result?.models) {
+      setTestModels(result.models);
     }
   };
 
-  const testButtonLabel = testUi === 'testing'
-    ? 'Testing…'
-    : testUi === 'success'
-      ? 'Verified'
-      : testUi === 'error'
-        ? 'Failed'
-        : 'Test Connection';
+  const testButtonLabel =
+    testState.ui === 'testing'
+      ? 'Testing…'
+      : testState.ui === 'success'
+        ? 'Verified'
+        : testState.ui === 'error'
+          ? 'Failed'
+          : 'Test Connection';
 
   return (
     <ManagedModal
@@ -197,7 +182,11 @@ export function ProviderEditModal() {
               <input
                 type={showKey ? 'text' : 'password'}
                 value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
+                onChange={(e) => {
+                  setApiKey(e.target.value);
+                  reset();
+                  setTestModels([]);
+                }}
                 placeholder={serverManaged ? 'Using server key' : undefined}
                 className="w-full bg-surface-700 border border-surface-600 rounded-lg px-4 py-3 pr-12 text-sm outline-none font-mono"
               />
@@ -220,11 +209,11 @@ export function ProviderEditModal() {
             </div>
           </div>
 
-          {testMessage && (
-            <div className={`test-result-alert ${testUi === 'success' ? 'test-result-alert--success' : 'test-result-alert--error'}`}>
-              {testMessage}
-            </div>
-          )}
+          <ProviderConnectionTestStatus
+            ui={testState.ui}
+            message={testState.message}
+            detail={testState.detail}
+          />
 
           {testModels.length > 0 && (
             <div className="rounded-lg border border-surface-600 bg-surface-800/50 overflow-hidden">
@@ -254,22 +243,26 @@ export function ProviderEditModal() {
             <button
               type="button"
               onClick={testConnection}
-              disabled={testUi === 'testing'}
-              className={`flex-1 px-5 py-3 rounded-lg border text-sm font-medium flex items-center justify-center gap-2 transition-all ${
-                testUi === 'success'
+              disabled={testState.ui === 'testing' || (!apiKey.trim() && !serverManaged)}
+              className={`flex-1 px-5 py-3 rounded-lg border text-sm font-medium flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                testState.ui === 'success'
                   ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
-                  : testUi === 'error'
+                  : testState.ui === 'error'
                     ? 'border-red-500/40 bg-red-500/10 text-red-300'
-                    : 'border-surface-600 hover:bg-surface-700'
+                    : testState.ui === 'testing'
+                      ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+                      : 'border-surface-600 hover:bg-surface-700'
               }`}
             >
-              {testUi === 'testing' && <span className="inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-              {testUi === 'success' && (
+              {testState.ui === 'testing' && (
+                <span className="inline-block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              )}
+              {testState.ui === 'success' && (
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
               )}
-              {testUi === 'error' && (
+              {testState.ui === 'error' && (
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>

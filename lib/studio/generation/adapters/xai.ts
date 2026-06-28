@@ -5,10 +5,10 @@ import {
   parseResolution,
   requireModelId,
   sleep,
-  timedFetch,
 } from '@/lib/studio/generation/adapters/shared';
 import { augmentPromptForXAI } from '@/lib/studio/generation-prompt';
 import { hasPromptImageReferences } from '@/lib/studio/prompt-mentions';
+import { createXAIClient } from '@/lib/studio/generation/clients/openai.client';
 import { formatXAIVideoPollStatus, wrapProgressReporter } from '@/lib/studio/generation/progress';
 import type { GenerationRequest, GenerationResult, ProviderTestResult } from '@/lib/studio/generation/types';
 import { inferModalitiesFromModelId, unionModalities } from '@/lib/studio/provider-modalities';
@@ -19,7 +19,6 @@ import {
 } from '@/lib/studio/xai-video-models';
 import type { ProviderModel } from '@/lib/types/studio';
 
-const XAI_API = 'https://api.x.ai/v1';
 const XAI_VIDEO_POLL_MS = 5000;
 const XAI_VIDEO_MAX_POLLS = 58;
 
@@ -28,35 +27,26 @@ function xaiVideoResolution(resolution: string): '720p' | '480p' {
   return height >= 720 ? '720p' : '480p';
 }
 
-function xaiHeaders(apiKey: string): HeadersInit {
-  return {
-    Authorization: `Bearer ${apiKey}`,
-    'Content-Type': 'application/json',
-  };
-}
-
 async function pollXAIVideo(
-  apiKey: string,
+  client: ReturnType<typeof createXAIClient>,
   requestId: string,
   report: ReturnType<typeof wrapProgressReporter>,
 ): Promise<{ videoUrl?: string; error?: string }> {
   for (let poll = 1; poll <= XAI_VIDEO_MAX_POLLS; poll++) {
     await sleep(XAI_VIDEO_POLL_MS);
 
-    const res = await fetch(`${XAI_API}/videos/${requestId}`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => res.statusText);
-      return { error: formatApiError(res.status, text, 'xAI video status check failed') };
-    }
-
-    const data = (await res.json()) as {
+    let data: {
       status?: string;
       video?: { url?: string };
       error?: { message?: string; code?: string };
     };
+
+    try {
+      data = await client.get(`/videos/${requestId}`) as typeof data;
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'xAI video status check failed';
+      return { error: formatApiError(0, message, 'xAI video status check failed') };
+    }
 
     if (data.status === 'done') {
       report({
@@ -132,6 +122,8 @@ export async function generateWithXAI(req: GenerationRequest): Promise<Generatio
       resolution: xaiVideoResolution(req.resolution),
     };
 
+    const client = createXAIClient(req.apiKey);
+
     if (imageToVideoOnly) {
       report({ message: 'Uploading start frame', detail: 'POST /v1/videos/generations with image' });
       body.image = { url: resolveRefUrl(refs[0].url) };
@@ -148,18 +140,7 @@ export async function generateWithXAI(req: GenerationRequest): Promise<Generatio
       report({ message: 'Submitting text-to-video prompt', detail: 'POST /v1/videos/generations' });
     }
 
-    const res = await fetch(`${XAI_API}/videos/generations`, {
-      method: 'POST',
-      headers: xaiHeaders(req.apiKey),
-      body: JSON.stringify(body),
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => res.statusText);
-      return { status: 'error', error: formatApiError(res.status, text, 'xAI video generation failed') };
-    }
-
-    const started = (await res.json()) as { request_id?: string };
+    const started = await client.post('/videos/generations', { body }) as { request_id?: string };
     const requestId = started.request_id;
     if (!requestId) {
       return { status: 'error', error: 'xAI returned no request_id' };
@@ -170,7 +151,7 @@ export async function generateWithXAI(req: GenerationRequest): Promise<Generatio
       detail: `request_id ${requestId} — polling GET /v1/videos/{request_id} until status is done`,
     });
 
-    const polled = await pollXAIVideo(req.apiKey, requestId, report);
+    const polled = await pollXAIVideo(client, requestId, report);
     if (polled.error) {
       return { status: 'error', error: polled.error, providerJobId: requestId };
     }
@@ -182,17 +163,10 @@ export async function generateWithXAI(req: GenerationRequest): Promise<Generatio
 }
 
 export async function testXAI(apiKey: string): Promise<ProviderTestResult> {
+  const start = Date.now();
   try {
-    const { res, latencyMs } = await timedFetch(`${XAI_API}/models`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => res.statusText);
-      return { ok: false, message: formatApiError(res.status, text, 'xAI connection failed'), latencyMs };
-    }
-
-    const data = (await res.json()) as { data?: Array<{ id: string }> };
+    const client = createXAIClient(apiKey);
+    const data = await client.models.list() as { data?: Array<{ id: string }> };
     const raw = data.data ?? [];
     const models: ProviderModel[] = raw
       .map((m) => ({
@@ -212,7 +186,7 @@ export async function testXAI(apiKey: string): Promise<ProviderTestResult> {
         models,
         modalities: unionModalities(models),
         purposes: ['Text-to-Video', 'Image-to-Video', 'Image Generation'],
-        latencyMs,
+        latencyMs: Date.now() - start,
       };
     }
 
@@ -222,7 +196,7 @@ export async function testXAI(apiKey: string): Promise<ProviderTestResult> {
       models,
       modalities: unionModalities(models),
       purposes: ['Text-to-Video', 'Image-to-Video', 'Image Generation'],
-      latencyMs,
+      latencyMs: Date.now() - start,
     };
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : 'Could not reach xAI' };

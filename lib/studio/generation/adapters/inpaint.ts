@@ -1,38 +1,19 @@
+import { generateWithFalImage } from '@/lib/studio/generation/adapters/fal';
 import { resolveRefUrl } from '@/lib/studio/generation/adapters/refs.server';
 import {
+  replicateOutputUrl,
+  runReplicatePrediction,
+} from '@/lib/studio/generation/adapters/replicate-shared';
+import {
   formatApiError,
-  MAX_POLLS,
   NO_MODEL_SELECTED_ERROR,
-  POLL_INTERVAL_MS,
   requireModelId,
-  sleep,
 } from '@/lib/studio/generation/adapters/shared';
 import { DEFAULT_INPAINT_MODEL, DEFAULT_XAI_BAKE_IMAGE_MODEL } from '@/lib/constants/workflows';
+import { createReplicateClient } from '@/lib/studio/generation/clients/replicate.client';
+import { createXAIClient } from '@/lib/studio/generation/clients/openai.client';
 import { wrapProgressReporter } from '@/lib/studio/generation/progress';
 import type { InpaintRequest, InpaintResult } from '@/lib/studio/generation/inpaint-types';
-
-const XAI_API = 'https://api.x.ai/v1';
-
-async function replicateFetch(path: string, apiKey: string, init?: RequestInit) {
-  const res = await fetch(`https://api.replicate.com/v1${path}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => res.statusText);
-    throw new Error(`Replicate API error (${res.status}): ${text}`);
-  }
-  return res.json();
-}
-
-function resolveModelPath(modelId: string): string {
-  if (modelId.includes('/')) return `/models/${modelId}/predictions`;
-  throw new Error(`Replicate model id must be owner/name format (got "${modelId}")`);
-}
 
 function parseXAIImageResponse(
   data: { data?: Array<{ url?: string; b64_json?: string }> },
@@ -68,26 +49,15 @@ export async function generateWithXAIInpaint(req: InpaintRequest): Promise<Inpai
     body.resolution = '1k';
   }
 
-  const res = await fetch(`${XAI_API}/images/edits`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${req.apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => res.statusText);
-    return { status: 'error', error: formatApiError(res.status, text, 'xAI image edit failed') };
+  try {
+    const client = createXAIClient(req.apiKey);
+    const response = await client.post('/images/edits', { body });
+    report({ message: 'Pass 1 complete', detail: 'Decoding Grok Imagine edit response' });
+    return parseXAIImageResponse(response as { data?: Array<{ url?: string; b64_json?: string }> });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'xAI image edit failed';
+    return { status: 'error', error: formatApiError(0, message, 'xAI image edit failed') };
   }
-
-  report({ message: 'Pass 1 complete', detail: 'Decoding Grok Imagine edit response' });
-
-  const data = (await res.json()) as {
-    data?: Array<{ url?: string; b64_json?: string }>;
-  };
-  return parseXAIImageResponse(data);
 }
 
 export async function generateWithReplicateInpaint(req: InpaintRequest): Promise<InpaintResult> {
@@ -98,57 +68,65 @@ export async function generateWithReplicateInpaint(req: InpaintRequest): Promise
     return { status: 'error', error: 'Mask URL is required for Replicate inpainting.' };
   }
 
-  report({
-    message: 'Pass 1: FLUX Fill inpainting',
-    detail: `POST Replicate · ${modelId}`,
-  });
+  try {
+    const client = createReplicateClient(req.apiKey);
+    const image = resolveRefUrl(req.imageUrl);
+    const mask = resolveRefUrl(req.maskUrl);
 
-  const image = resolveRefUrl(req.imageUrl);
-  const mask = resolveRefUrl(req.maskUrl);
-
-  const prediction = await replicateFetch(resolveModelPath(modelId), req.apiKey, {
-    method: 'POST',
-    body: JSON.stringify({
-      input: {
-        image,
-        mask,
-        prompt: req.prompt,
+    const { output, id } = await runReplicatePrediction(
+      client,
+      modelId,
+      { image, mask, prompt: req.prompt },
+      report,
+      {
+        submit: 'Pass 1: FLUX Fill inpainting',
+        poll: (status, poll, jobId) => ({
+          message: `FLUX Fill ${status}`,
+          detail: `Poll ${poll} · job ${jobId}`,
+        }),
       },
-    }),
-  });
+    );
 
-  let result = prediction;
-  let polls = 0;
-  while (
-    result.status !== 'succeeded' &&
-    result.status !== 'failed' &&
-    result.status !== 'canceled' &&
-    polls < MAX_POLLS
-  ) {
-    await sleep(POLL_INTERVAL_MS);
-    result = await replicateFetch(`/predictions/${prediction.id}`, req.apiKey);
-    polls++;
-    report({
-      message: `FLUX Fill ${result.status ?? 'processing'}`,
-      detail: `Poll ${polls}/${MAX_POLLS} · job ${prediction.id}`,
-    });
-  }
-
-  if (result.status === 'failed' || result.status === 'canceled') {
+    return {
+      status: 'complete',
+      imageUrl: replicateOutputUrl(output, id, 'image'),
+      providerJobId: id,
+    };
+  } catch (e) {
     return {
       status: 'error',
-      error: result.error || `Inpaint ${result.status}`,
-      providerJobId: prediction.id,
+      error: e instanceof Error ? e.message : 'Replicate inpaint failed',
     };
   }
+}
 
-  const output = result.output;
-  const imageUrl = Array.isArray(output) ? output[0] : output;
-  if (!imageUrl || typeof imageUrl !== 'string') {
-    return { status: 'error', error: 'No image URL in inpaint response', providerJobId: prediction.id };
+export async function generateWithFalInpaint(req: InpaintRequest): Promise<InpaintResult> {
+  const report = wrapProgressReporter(req.onProgress);
+  const modelId = requireModelId(req.modelId) ?? DEFAULT_INPAINT_MODEL;
+  if (!modelId) return { status: 'error', error: NO_MODEL_SELECTED_ERROR };
+  if (!req.maskUrl) {
+    return { status: 'error', error: 'Mask URL is required for Fal inpainting.' };
   }
 
-  return { status: 'complete', imageUrl, providerJobId: prediction.id };
+  try {
+    const { imageUrl, requestId } = await generateWithFalImage(
+      req.apiKey,
+      modelId,
+      {
+        image_url: resolveRefUrl(req.imageUrl),
+        mask_url: resolveRefUrl(req.maskUrl),
+        prompt: req.prompt,
+      },
+      report,
+    );
+
+    return { status: 'complete', imageUrl, providerJobId: requestId };
+  } catch (e) {
+    return {
+      status: 'error',
+      error: e instanceof Error ? e.message : 'Fal inpaint failed',
+    };
+  }
 }
 
 export async function runInpaintGeneration(req: InpaintRequest): Promise<InpaintResult> {
@@ -158,8 +136,11 @@ export async function runInpaintGeneration(req: InpaintRequest): Promise<Inpaint
   if (req.providerId === 'replicate') {
     return generateWithReplicateInpaint(req);
   }
+  if (req.providerId === 'fal') {
+    return generateWithFalInpaint(req);
+  }
   return {
     status: 'error',
-    error: `${req.providerId} does not support baking yet. Use xAI or Replicate.`,
+    error: `${req.providerId} does not support baking yet. Use xAI, Replicate, or Fal.ai.`,
   };
 }

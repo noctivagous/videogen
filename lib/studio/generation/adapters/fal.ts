@@ -1,31 +1,25 @@
+import { pickImageInput, resolveRefUrl } from '@/lib/studio/generation/adapters/refs.server';
 import {
-  formatApiError,
-  mapHttpError,
-  MAX_POLLS,
+  falResultImageUrl,
+  falResultVideoUrl,
+  runFalSubscribe,
+} from '@/lib/studio/generation/adapters/fal-shared';
+import {
+  NO_MODEL_SELECTED_ERROR,
   parseResolution,
-  POLL_INTERVAL_MS,
-  sleep,
-  timedFetch,
+  requireModelId,
 } from '@/lib/studio/generation/adapters/shared';
+import {
+  createFalClient,
+  searchFalPlatformModels,
+  type FalModelEntry,
+} from '@/lib/studio/generation/clients/fal.client';
+import { wrapProgressReporter } from '@/lib/studio/generation/progress';
+import type { GenerationRequest, GenerationResult, ProviderTestResult } from '@/lib/studio/generation/types';
+import { inferModalitiesFromModelId, unionModalities } from '@/lib/studio/provider-modalities';
+import type { ProviderModel } from '@/lib/types/studio';
 
-export const FAL_QUEUE_API = 'https://queue.fal.run';
-export const FAL_PLATFORM_API = 'https://api.fal.ai/v1';
-
-export interface FalModelEntry {
-  endpoint_id: string;
-  metadata?: {
-    display_name?: string;
-    category?: string;
-    description?: string;
-  };
-}
-
-export function falHeaders(apiKey: string): HeadersInit {
-  return {
-    Authorization: `Key ${apiKey}`,
-    'Content-Type': 'application/json',
-  };
-}
+export type { FalModelEntry };
 
 export function falVideoResolution(resolution: string): '720p' | '1080p' {
   const { height } = parseResolution(resolution);
@@ -40,93 +34,136 @@ export async function searchFalModels(
   apiKey: string,
   params: Record<string, string>,
 ): Promise<FalModelEntry[]> {
-  const query = new URLSearchParams({ status: 'active', limit: '50', ...params });
-  const { res } = await timedFetch(`${FAL_PLATFORM_API}/models?${query}`, {
-    headers: falHeaders(apiKey),
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => res.statusText);
-    throw new Error(formatApiError(res.status, text, 'fal model search failed'));
-  }
-
-  const data = (await res.json()) as { models?: FalModelEntry[] };
-  return data.models ?? [];
+  return searchFalPlatformModels(apiKey, params);
 }
 
-export async function submitFalQueue(
-  endpointId: string,
-  apiKey: string,
-  input: Record<string, unknown>,
-): Promise<{ requestId: string }> {
-  const res = await fetch(`${FAL_QUEUE_API}/${endpointId}`, {
-    method: 'POST',
-    headers: falHeaders(apiKey),
-    body: JSON.stringify(input),
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => res.statusText);
-    throw new Error(formatApiError(res.status, text, 'fal queue submit failed'));
-  }
-
-  const data = (await res.json()) as { request_id?: string };
-  if (!data.request_id) {
-    throw new Error('fal did not return a request_id');
-  }
-  return { requestId: data.request_id };
+export function mapFalCatalogModels(entries: FalModelEntry[]): ProviderModel[] {
+  return entries
+    .map((entry) => ({
+      id: entry.endpoint_id,
+      name: entry.metadata?.display_name ?? entry.endpoint_id,
+      modalities: inferModalitiesFromModelId(entry.endpoint_id),
+      purposes: entry.metadata?.category ? [entry.metadata.category] : undefined,
+    }))
+    .filter((model) => model.modalities.some((mod) => mod === 'video' || mod === 'image'));
 }
 
-export async function pollFalQueueResult(
-  endpointId: string,
-  apiKey: string,
-  requestId: string,
-): Promise<{ videoUrl?: string; error?: string }> {
-  for (let poll = 0; poll < MAX_POLLS; poll++) {
-    await sleep(POLL_INTERVAL_MS);
+export async function testFal(apiKey: string): Promise<ProviderTestResult> {
+  const start = Date.now();
+  try {
+    const entries = await searchFalModels(apiKey, {});
+    const models = mapFalCatalogModels(entries);
 
-    const statusRes = await fetch(
-      `${FAL_QUEUE_API}/${endpointId}/requests/${requestId}/status`,
-      { headers: falHeaders(apiKey) },
-    );
-
-    if (!statusRes.ok) {
-      const text = await statusRes.text().catch(() => statusRes.statusText);
-      return { error: mapHttpError(statusRes.status, text) };
-    }
-
-    const status = (await statusRes.json()) as {
-      status?: string;
-      error?: string;
-    };
-
-    if (status.status === 'COMPLETED') {
-      const resultRes = await fetch(
-        `${FAL_QUEUE_API}/${endpointId}/requests/${requestId}`,
-        { headers: falHeaders(apiKey) },
-      );
-
-      if (!resultRes.ok) {
-        const text = await resultRes.text().catch(() => resultRes.statusText);
-        return { error: mapHttpError(resultRes.status, text) };
-      }
-
-      const result = (await resultRes.json()) as {
-        video?: { url?: string };
-        error?: string;
+    if (models.length === 0) {
+      return {
+        ok: true,
+        message: 'fal.ai API key verified — no video/image models returned from catalog search',
+        models: [],
+        modalities: [],
+        purposes: ['Text-to-Video', 'Image-to-Video', 'Serverless'],
+        latencyMs: Date.now() - start,
       };
-
-      const videoUrl = result.video?.url;
-      if (!videoUrl) {
-        return { error: result.error || 'fal returned no video URL' };
-      }
-      return { videoUrl };
     }
 
-    if (status.error) {
-      return { error: status.error };
+    const videoCount = models.filter((m) => m.modalities.includes('video')).length;
+    return {
+      ok: true,
+      message: `fal.ai API key verified — ${videoCount} video model${videoCount === 1 ? '' : 's'} found (${models.length} media endpoints)`,
+      models: models.slice(0, 24),
+      modalities: unionModalities(models),
+      purposes: ['Text-to-Video', 'Image-to-Video', 'Serverless'],
+      latencyMs: Date.now() - start,
+    };
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : 'Could not reach fal.ai',
+      latencyMs: Date.now() - start,
+    };
+  }
+}
+
+function buildFalVideoInput(
+  endpointId: string,
+  req: GenerationRequest,
+  imageUrl?: string,
+): Record<string, unknown> | { error: string } {
+  const prompt = req.prompt;
+  const resolution = falVideoResolution(req.resolution);
+  const duration = falVideoDuration(req.duration);
+
+  if (endpointId.includes('image-to-video') || endpointId.includes('img2vid')) {
+    if (!imageUrl) {
+      return { error: 'Fal image-to-video requires a Subject or Backdrop reference image' };
     }
+    return {
+      prompt,
+      image_url: imageUrl,
+      aspect_ratio: req.aspectRatio,
+      resolution,
+      duration,
+    };
   }
 
-  return { error: 'fal generation timed out' };
+  if (imageUrl) {
+    return {
+      prompt,
+      image_url: imageUrl,
+      aspect_ratio: req.aspectRatio,
+      resolution,
+      duration,
+    };
+  }
+
+  return {
+    prompt,
+    aspect_ratio: req.aspectRatio,
+    resolution,
+    duration,
+  };
+}
+
+export async function generateWithFal(req: GenerationRequest): Promise<GenerationResult> {
+  const report = wrapProgressReporter(req.onProgress);
+  try {
+    const endpointId = requireModelId(req.modelId);
+    if (!endpointId) {
+      return { status: 'error', error: NO_MODEL_SELECTED_ERROR };
+    }
+
+    const client = createFalClient(req.apiKey);
+    const image = pickImageInput(req.refs);
+    const imageUrl = image ? resolveRefUrl(image) : undefined;
+    const input = buildFalVideoInput(endpointId, req, imageUrl);
+
+    if ('error' in input && typeof input.error === 'string') {
+      return { status: 'error', error: input.error };
+    }
+
+    const { data, requestId } = await runFalSubscribe(client, endpointId, input, report, {
+      submit: 'Submitting to fal.ai',
+    });
+
+    return {
+      status: 'complete',
+      videoUrl: falResultVideoUrl(data),
+      posterUrl: imageUrl,
+      providerJobId: requestId,
+    };
+  } catch (e) {
+    return { status: 'error', error: e instanceof Error ? e.message : 'Fal generation failed' };
+  }
+}
+
+export async function generateWithFalImage(
+  apiKey: string,
+  endpointId: string,
+  input: Record<string, unknown>,
+  report?: ReturnType<typeof wrapProgressReporter>,
+): Promise<{ imageUrl: string; requestId: string }> {
+  const client = createFalClient(apiKey);
+  const { data, requestId } = await runFalSubscribe(client, endpointId, input, report, {
+    submit: 'Submitting image job to fal.ai',
+  });
+  return { imageUrl: falResultImageUrl(data), requestId };
 }

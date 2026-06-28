@@ -51,6 +51,9 @@ export const PROVIDER_SUPPORTED_CATEGORIES: Record<string, ModelCategoryId[]> = 
   luma: ['text-to-video', 'image-to-video', 'camera-control'],
   viggle: ['image-to-video', 'motion-transfer', 'character-replace'],
   openai: ['image-edit', 'text-to-image', 'text-to-speech', 'speech-to-text', 'llm', 'image-outpaint'],
+  openrouter: ['text-to-video', 'image-to-video', 'reference-to-video', 'llm'],
+  together: ['text-to-video', 'image-to-video', 'reference-to-video', 'llm'],
+  huggingface: ['text-to-video', 'image-to-video'],
 };
 
 export const PROVIDER_DEFAULT_MODEL_MAP: Record<string, Partial<Record<ModelCategoryId, string>>> = {
@@ -60,12 +63,15 @@ export const PROVIDER_DEFAULT_MODEL_MAP: Record<string, Partial<Record<ModelCate
   kling: { 'text-to-video': 'kling-v3', 'image-to-video': 'kling-v3', 'multi-shot': 'kling-v3-omni', 'lip-sync': 'kling-lip-sync' },
   runway: { 'video-edit': 'gen4-video-edit', 'video-inpaint': 'gen4-video-inpaint', 'video-compositing-generative': 'aleph' },
   viggle: { 'motion-transfer': 'viggle-mix-motion-v1', 'character-replace': 'viggle-character-swap-v1' },
+  openrouter: { 'text-to-video': 'google/veo-3.1-fast', 'image-to-video': 'x-ai/grok-imagine-video', 'reference-to-video': 'x-ai/grok-imagine-video' },
+  together: { 'text-to-video': 'minimax/video-01', 'image-to-video': 'minimax/video-01', 'reference-to-video': 'minimax/video-01' },
+  huggingface: { 'text-to-video': 'tencent/HunyuanVideo', 'image-to-video': 'stabilityai/stable-video-diffusion' },
 };
 
 export const FEATURE_CHECKLIST_ITEMS: Array<{ id: string; title: string; description: string; categories: ModelCategoryId[]; providers: Array<{ id: string; label: string }> }> = [
   { id: 'bake-start-frame', title: 'Bake Start Frame (Pass 1 + Pass 2)', description: 'When you pose the mannequins and other objects in the scene, the workflow will use mask inpaint or image edit AI models to replace the mannequins with the characters from your character sheets.', categories: ['mask-inpaint', 'image-edit', 'multi-image-identity-edit'], providers: [{ id: 'replicate', label: 'Replicate' }, { id: 'fal', label: 'fal.ai' }, { id: 'xai', label: 'xAI' }] },
   { id: 'mannequin-pose-match', title: '3D mannequin pose matching', description: 'You may want to drop an image of someone posing on the mannequin and this kind of model will convert the image to a 3D pose and apply it to the mannequin.', categories: ['pose-estimation'], providers: [{ id: 'fal', label: 'fal.ai' }, { id: 'replicate', label: 'Replicate' }] },
-  { id: 'video-generation', title: 'Video generation from baked frame', description: 'In short, these models generate video.\n\nText-to-Video: Generates video entirely from a text description. It builds scenes from scratch ("blank canvas"), allowing for high creative freedom but often lacking consistency across multiple shots.\n\nImage-to-Video: Animates a single static image. The visual identity is locked in, but the motion is usually limited to that specific frame or simple transitions.\n\nReference-to-Video: A hybrid approach that uses multiple reference images (or videos) alongside text prompts to generate consistent, multi-shot videos. It bridges the gap between the creative freedom of text and the visual consistency of images.', categories: ['image-to-video', 'text-to-video', 'reference-to-video'], providers: [{ id: 'xai', label: 'xAI' }, { id: 'replicate', label: 'Replicate' }, { id: 'fal', label: 'fal.ai' }, { id: 'kling', label: 'Kling' }, { id: 'runway', label: 'Runway' }, { id: 'luma', label: 'Luma' }] },
+  { id: 'video-generation', title: 'Video generation from baked frame', description: 'In short, these models generate video.\n\nText-to-Video: Generates video entirely from a text description. It builds scenes from scratch ("blank canvas"), allowing for high creative freedom but often lacking consistency across multiple shots.\n\nImage-to-Video: Animates a single static image. The visual identity is locked in, but the motion is usually limited to that specific frame or simple transitions.\n\nReference-to-Video: A hybrid approach that uses multiple reference images (or videos) alongside text prompts to generate consistent, multi-shot videos. It bridges the gap between the creative freedom of text and the visual consistency of images.', categories: ['image-to-video', 'text-to-video', 'reference-to-video'], providers: [{ id: 'xai', label: 'xAI' }, { id: 'replicate', label: 'Replicate' }, { id: 'fal', label: 'fal.ai' }, { id: 'openrouter', label: 'OpenRouter' }, { id: 'together', label: 'Together AI' }, { id: 'huggingface', label: 'Hugging Face' }, { id: 'kling', label: 'Kling' }, { id: 'runway', label: 'Runway' }, { id: 'luma', label: 'Luma' }] },
   { id: 'motion-transfer-performance', title: 'Motion transfer performance', description: 'These are specialized AI architectures designed to extract movement data from a "driving" video and apply it to a static "source" image or character.', categories: ['motion-transfer'], providers: [{ id: 'viggle', label: 'Viggle' }, { id: 'kling', label: 'Kling' }, { id: 'fal', label: 'fal.ai' }] },
   { id: 'dialogue-audio', title: 'Dialogue audio path', description: '', categories: ['lip-sync', 'text-to-speech', 'voice-cloning'], providers: [{ id: 'kling', label: 'Kling' }, { id: 'replicate', label: 'Replicate' }, { id: 'fal', label: 'fal.ai' }, { id: 'openai', label: 'OpenAI' }, { id: 'xai', label: 'xAI' }] },
 ];
@@ -78,7 +84,7 @@ export const DEFAULT_MODEL_SLOTS: Record<ModelCategoryId, ModelSlotConfig> = {
   'image-to-image': { categoryId: 'image-to-image', providerId: 'fal', modelId: 'fal-ai/flux-kontext-lora', status: 'partial' },
   'text-to-video': { categoryId: 'text-to-video', providerId: 'replicate', modelId: 'bytedance/seedance-2.0', status: 'partial' },
   'image-to-video': { categoryId: 'image-to-video', providerId: 'xai', modelId: 'grok-imagine-video-1.5', status: 'implemented' },
-  'reference-to-video': { categoryId: 'reference-to-video', providerId: 'replicate', modelId: 'bytedance/seedance-2.0', status: 'planned' },
+  'reference-to-video': { categoryId: 'reference-to-video', providerId: 'openrouter', modelId: 'x-ai/grok-imagine-video', status: 'partial' },
   'first-last-frame': { categoryId: 'first-last-frame', providerId: 'replicate', modelId: 'google/veo-3.1', status: 'planned' },
   'video-extension': { categoryId: 'video-extension', providerId: 'replicate', modelId: 'bytedance/seedance-2.0', status: 'planned' },
   'camera-control': { categoryId: 'camera-control', providerId: 'kling', modelId: 'kling-v3', status: 'planned' },

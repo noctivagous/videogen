@@ -1,5 +1,6 @@
 /** Client-safe generation capability checks — no adapter imports. */
 export const GENERATION_PROVIDER_IDS = [
+  'fal',
   'replicate',
   'runway',
   'luma',
@@ -8,6 +9,9 @@ export const GENERATION_PROVIDER_IDS = [
   'stability',
   'xai',
   'openai',
+  'openrouter',
+  'together',
+  'huggingface',
 ] as const;
 
 export type GenerationProviderId = (typeof GENERATION_PROVIDER_IDS)[number];

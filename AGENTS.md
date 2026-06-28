@@ -38,3 +38,10 @@
 
 ## Data/layout contracts
 - `video-generation-workflows.json` is the source of truth for every workflow dropdown, availability check, and Bake Start Frame checklist step—edit it if you are adjusting workflows rather than scattering logic around the UI.
+
+## Provider SDK clients (BYOK)
+- Aggregator adapters use per-request factories in `lib/studio/generation/clients/` — never global SDK singletons with env API keys.
+- Fal: `createFalClient({ credentials })` from `@fal-ai/client`; do not call global `fal.config()`.
+- Replicate, OpenAI (xAI base URL), Together, OpenRouter, and Hugging Face Inference each have matching `create*Client(apiKey)` helpers.
+- `next.config.ts` lists these packages under `serverExternalPackages` so Next bundles them correctly on the server.
+- OpenRouter video jobs must send **either** `frameImages` (image-to-video) **or** `inputReferences` (reference-to-video), never both.

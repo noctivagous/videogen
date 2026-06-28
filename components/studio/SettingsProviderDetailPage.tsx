@@ -63,22 +63,7 @@ export function SettingsProviderDetailPage({ providerId }: { providerId: string 
 
   return (
     <div className="space-y-6">
-      <div className="glass rounded-xl p-6 border border-surface-700">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="font-semibold text-lg">{provider.name}</h2>
-            {provider.tagline ? (
-              <p className="text-xs uppercase tracking-wider text-brand-300/90 mt-1">{provider.tagline}</p>
-            ) : null}
-            <p className="text-sm text-gray-400 mt-2">{provider.desc}</p>
-          </div>
-          <Link href={settingsAiTabRoute('providers')} className="text-sm text-brand-300 hover:text-brand-200 shrink-0">
-            Back to all settings
-          </Link>
-        </div>
-      </div>
-
-      <ProviderCard provider={provider} isCustom={false} />
+      <ProviderCard provider={provider} isCustom={false} backHref={settingsAiTabRoute('providers')} />
 
       {accessibleLabs.length > 0 ? (
         <div className="glass rounded-xl p-6 border border-surface-700">

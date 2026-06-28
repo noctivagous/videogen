@@ -1796,6 +1796,12 @@ input[type="range"].pro-slider::-moz-range-thumb {
   color: #6ee7b7;
 }
 
+.test-result-alert--testing {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  color: #fcd34d;
+}
+
 .test-result-alert--error {
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.28);
