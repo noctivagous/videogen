@@ -113,6 +113,8 @@ export const UI_SECTIONS = {
   studioSetupItem: { id: 'studio-setup-item', name: 'Setup Item' },
 
   studioSettingsDefaultProvider: { id: 'studio-settings-default-provider', name: 'Default Provider Settings' },
+  studioSettingsAggregators: { id: 'studio-settings-aggregators', name: 'Aggregator Providers' },
+  studioSettingsLabs: { id: 'studio-settings-labs', name: 'AI Labs' },
   studioSettingsBuiltInProviders: { id: 'studio-settings-built-in-providers', name: 'Built-in Providers' },
   studioSettingsCustomProviders: { id: 'studio-settings-custom-providers', name: 'Custom Providers' },
   studioSettingsFooter: { id: 'studio-settings-footer', name: 'Settings Modal Footer' },

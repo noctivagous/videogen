@@ -711,6 +711,24 @@ export interface AIState {
   modelSlots?: Record<string, ModelSlotConfig>;
 }
 
+export type ProviderKind = 'aggregator' | 'direct';
+
+export interface LabDefinition {
+  id: string;
+  name: string;
+  tagline?: string;
+  description: string;
+  /** Lab offers a first-party API wired in VideoGen */
+  hasDirectApi: boolean;
+  /** Built-in provider id when hasDirectApi is true (e.g. 'kling') */
+  directProviderId?: string;
+  /** Aggregator provider ids that host this lab's models */
+  aggregatorIds: string[];
+  /** Model categories this lab's models primarily serve */
+  categoryIds: string[];
+  notableModels?: string[];
+}
+
 export interface BuiltInProvider {
   id: string;
   name: string;
@@ -719,6 +737,8 @@ export interface BuiltInProvider {
   hint: string;
   purposes: string[];
   modalities: Modality[];
+  kind: ProviderKind;
+  tagline?: string;
 }
 
 export interface ScenePreviewPayload {

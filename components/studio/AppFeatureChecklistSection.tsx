@@ -3,17 +3,15 @@
 import Link from 'next/link';
 import { useMemo } from 'react';
 import { ArrowRight, CheckCircle2, Circle } from 'lucide-react';
-import { ModelCategoryThumbnail } from '@/components/studio/ModelCategoryThumbnail';
-import { ProviderIcon } from '@/components/studio/ProviderIcon';
+import { ModelCategoryLinkChip } from '@/components/studio/ModelCategoryLinkChip';
+import { ProviderLinkChip } from '@/components/studio/ProviderLinkChip';
 import { SummarySection } from '@/components/studio/SummarySection';
 import {
   checklistSettingsPath,
-  categorySettingsPath,
   FEATURE_CHECKLIST_ITEMS,
   MODEL_CATEGORY_DEFINITIONS,
-  providerSettingsPath,
 } from '@/lib/constants/model-catalog';
-import { BUILT_IN_PROVIDERS, isBuiltInProviderEnabled } from '@/lib/constants/providers';
+import { isBuiltInProviderEnabled } from '@/lib/constants/providers';
 import { isCustomProvider, isProviderConnected } from '@/lib/storage/ai-settings';
 import { useStudioStore } from '@/store/useStudioStore';
 
@@ -186,27 +184,13 @@ export function AppFeatureChecklistSection() {
                       <td>
                         <div className="flex flex-wrap items-center gap-1">
                           {item.categoryChecks.map((category) => (
-                            <span key={category.categoryId} className="relative inline-flex group">
-                              <Link
-                                href={categorySettingsPath(category.categoryId)}
-                                title={category.description}
-                                className={`inline-flex items-center gap-1 px-1.5 py-0.5 min-h-[1.875rem] leading-none rounded border ${
-                                  category.ready
-                                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
-                                    : 'border-amber-500/40 bg-amber-500/10 text-amber-200'
-                                }`}
-                              >
-                                <span aria-hidden>{category.ready ? '✓' : '○'}</span>
-                                <ModelCategoryThumbnail
-                                  categoryId={category.categoryId}
-                                  title={category.label}
-                                />
-                                <span>{category.label}</span>
-                              </Link>
-                              <span className="pointer-events-none absolute left-0 -top-1 -translate-y-full hidden group-hover:block group-focus-within:block z-20 w-56 rounded-md border border-surface-600 bg-surface-900/95 px-2 py-1.5 text-[10px] leading-relaxed text-gray-300 shadow-lg">
-                                {category.description}
-                              </span>
-                            </span>
+                            <ModelCategoryLinkChip
+                              key={category.categoryId}
+                              categoryId={category.categoryId}
+                              label={category.label}
+                              description={category.description}
+                              ready={category.ready}
+                            />
                           ))}
                         </div>
                       </td>
@@ -217,33 +201,13 @@ export function AppFeatureChecklistSection() {
                       </td>
                       <td>
                         <div className="flex flex-wrap items-center gap-1">
-                          {item.providersOrdered.map((provider) => {
-                            const providerMeta = BUILT_IN_PROVIDERS.find((entry) => entry.id === provider.id);
-                            return (
-                              <Link
-                                key={provider.id}
-                                href={providerSettingsPath(provider.id)}
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 min-h-[1.875rem] leading-none rounded border border-brand-500/30 bg-brand-500/10 text-brand-200 hover:bg-brand-500/20 transition-colors"
-                              >
-                                <span
-                                  aria-hidden
-                                  className={`w-1.5 h-1.5 rounded-full ${
-                                    provider.connected
-                                      ? 'bg-emerald-400'
-                                      : provider.enabled
-                                        ? 'bg-amber-400'
-                                        : 'bg-gray-500'
-                                  }`}
-                                />
-                                <ProviderIcon
-                                  providerId={provider.id}
-                                  fallbackIcon={providerMeta?.icon ?? provider.label[0] ?? '•'}
-                                  size="xs"
-                                />
-                                <span>{provider.label}</span>
-                              </Link>
-                            );
-                          })}
+                          {item.providersOrdered.map((provider) => (
+                            <ProviderLinkChip
+                              key={provider.id}
+                              providerId={provider.id}
+                              label={provider.label}
+                            />
+                          ))}
                         </div>
                       </td>
                     </tr>

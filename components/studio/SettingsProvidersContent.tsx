@@ -1,6 +1,12 @@
 'use client';
 
+import { LabCard } from '@/components/studio/LabCard';
 import { ProviderCard } from '@/components/studio/ProviderCard';
+import { LAB_DEFINITIONS, sortLabs } from '@/lib/constants/labs';
+import {
+  AGGREGATOR_PROVIDERS,
+  isBuiltInProviderEnabled,
+} from '@/lib/constants/providers';
 import {
   getAvailableImageModels,
   getAvailableVideoModels,
@@ -9,7 +15,6 @@ import {
   sortBuiltInProviders,
   sortCustomProviders,
 } from '@/lib/studio/provider-modalities';
-import { ENABLED_PROVIDER_IDS, isBuiltInProviderEnabled } from '@/lib/constants/providers';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { isCustomProvider } from '@/lib/storage/ai-settings';
 import { useStudioStore } from '@/store/useStudioStore';
@@ -77,8 +82,12 @@ export function SettingsProvidersContent({ className = '' }: { className?: strin
   const setDefaultImageProvider = useStudioStore((s) => s.setDefaultImageProvider);
   const setDefaultImageModel = useStudioStore((s) => s.setDefaultImageModel);
 
-  const sortedBuiltIn = sortBuiltInProviders(ai);
+  const sortedAggregators = sortBuiltInProviders(ai).filter((provider) =>
+    AGGREGATOR_PROVIDERS.some((aggregator) => aggregator.id === provider.id),
+  );
+  const sortedLabs = sortLabs(LAB_DEFINITIONS);
   const sortedCustom = sortCustomProviders(ai);
+  const enabledAggregatorCount = AGGREGATOR_PROVIDERS.filter((provider) => isBuiltInProviderEnabled(provider.id)).length;
   const isCustomVideo = isCustomProvider(ai.defaultVideoProvider, ai);
   const isCustomImage = isCustomProvider(ai.defaultImageProvider, ai);
   const videoModels = getAvailableVideoModels(ai.defaultVideoProvider, isCustomVideo, ai);
@@ -118,16 +127,36 @@ export function SettingsProvidersContent({ className = '' }: { className?: strin
         </div>
       </div>
 
-      <div {...uiSectionProps(UI_SECTIONS.studioSettingsBuiltInProviders)}>
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="font-semibold text-2xl tracking-tight">Built-in Providers</h2>
+      <div {...uiSectionProps(UI_SECTIONS.studioSettingsAggregators)}>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-2xl tracking-tight">Aggregators</h2>
           <div className="text-xs px-3 py-1 rounded-full bg-surface-800 text-gray-400 border border-surface-700">
-            {ENABLED_PROVIDER_IDS.length} of {sortedBuiltIn.length} available
+            {enabledAggregatorCount} of {AGGREGATOR_PROVIDERS.length} available
           </div>
         </div>
+        <p className="text-sm text-gray-400 mb-5 max-w-3xl">
+          Aggregators provide a convenient one-stop-shop to access models from many different labs simultaneously.
+        </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {sortedBuiltIn.map((p) => (
-            <ProviderCard key={p.id} provider={p} isCustom={false} />
+          {sortedAggregators.map((provider) => (
+            <ProviderCard key={provider.id} provider={provider} isCustom={false} />
+          ))}
+        </div>
+      </div>
+
+      <div {...uiSectionProps(UI_SECTIONS.studioSettingsLabs)}>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-2xl tracking-tight">Labs</h2>
+          <div className="text-xs px-3 py-1 rounded-full bg-surface-800 text-gray-400 border border-surface-700">
+            {sortedLabs.filter((lab) => lab.hasDirectApi).length} with direct API
+          </div>
+        </div>
+        <p className="text-sm text-gray-400 mb-5 max-w-3xl">
+          Labs are the original creators and researchers behind specific AI models. Some labs offer their own direct APIs.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {sortedLabs.map((lab) => (
+            <LabCard key={lab.id} lab={lab} />
           ))}
         </div>
       </div>

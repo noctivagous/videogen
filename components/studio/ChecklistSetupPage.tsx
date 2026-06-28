@@ -10,7 +10,7 @@ import {
 } from '@/lib/constants/model-catalog';
 import { BUILT_IN_PROVIDERS } from '@/lib/constants/providers';
 import { isCustomProvider, isProviderConnected } from '@/lib/storage/ai-settings';
-import { settingsSectionRoute } from '@/lib/studio/settings-routes';
+import { settingsAiTabRoute } from '@/lib/studio/settings-routes';
 import { useStudioStore } from '@/store/useStudioStore';
 
 export function ChecklistSetupPage({ checklistId }: { checklistId: string }) {
@@ -22,7 +22,7 @@ export function ChecklistSetupPage({ checklistId }: { checklistId: string }) {
       <div className="glass rounded-3xl p-6 border border-surface-700">
         <h2 className="font-semibold text-lg">Checklist not found</h2>
         <p className="text-sm text-gray-400 mt-1">No checklist item matches `{checklistId}`.</p>
-        <Link href={settingsSectionRoute('ai')} className="inline-flex mt-3 text-sm text-brand-300 hover:text-brand-200">
+        <Link href={settingsAiTabRoute('model-categories')} className="inline-flex mt-3 text-sm text-brand-300 hover:text-brand-200">
           Back to Settings
         </Link>
       </div>
@@ -65,7 +65,7 @@ export function ChecklistSetupPage({ checklistId }: { checklistId: string }) {
               Complete each required category to mark this checklist as ready.
             </p>
           </div>
-          <Link href={settingsSectionRoute('ai')} className="text-sm text-brand-300 hover:text-brand-200">
+          <Link href={settingsAiTabRoute('model-categories')} className="text-sm text-brand-300 hover:text-brand-200">
             Back to settings
           </Link>
         </div>

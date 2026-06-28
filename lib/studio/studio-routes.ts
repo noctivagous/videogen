@@ -34,7 +34,7 @@ export function isStudioPanelId(value: string): value is StudioPanelId {
 
 export function studioPanelRoute(panel: StudioPanelId): string {
   if (panel === 'settings') {
-    return '/studio/settings/ai';
+    return '/studio/settings/ai/model-categories';
   }
   if (panel === 'image-editor') {
     return '/studio/image-editor/generate';

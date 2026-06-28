@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { ModalityChips } from '@/components/studio/ModalityChips';
 import { ProviderIcon } from '@/components/studio/ProviderIcon';
-import { providerSettingsPath } from '@/lib/constants/model-catalog';
+import { getLabByDirectProviderId } from '@/lib/constants/labs';
+import { labSettingsPath, providerSettingsPath } from '@/lib/constants/model-catalog';
 import { isBuiltInProviderEnabled } from '@/lib/constants/providers';
 import { hasGenerationAdapter } from '@/lib/studio/generation/capabilities';
 import {
@@ -71,6 +72,12 @@ export function ProviderCard({ provider, isCustom }: ProviderCardProps) {
 
   const verifiedAt = formatRelativeTime(discovery?.lastTested);
   const canGenerate = hasGenerationAdapter(id, isCustom);
+  const directLab = !isCustom ? getLabByDirectProviderId(id) : undefined;
+  const builtInDetailPath = !isCustom && builtIn
+    ? builtIn.kind === 'direct' && directLab
+      ? labSettingsPath(directLab.id)
+      : providerSettingsPath(id)
+    : null;
 
   return (
     <div
@@ -94,10 +101,12 @@ export function ProviderCard({ provider, isCustom }: ProviderCardProps) {
           />
           <div className="min-w-0">
             <div className="font-semibold text-[15px] leading-tight">
-              {!isCustom ? (
-                <Link href={providerSettingsPath(id)} className="hover:text-brand-200 transition-colors">
+              {!isCustom && builtInDetailPath ? (
+                <Link href={builtInDetailPath} className="hover:text-brand-200 transition-colors">
                   {builtIn!.name}
                 </Link>
+              ) : !isCustom ? (
+                <span>{builtIn!.name}</span>
               ) : (
                 custom!.name
               )}
@@ -108,7 +117,7 @@ export function ProviderCard({ provider, isCustom }: ProviderCardProps) {
             <div className="text-[10px] text-gray-400 mt-0.5 line-clamp-1">
               {isCustom
                 ? (custom!.baseUrl ? custom!.baseUrl.replace(/^https?:\/\//, '') : 'No endpoint configured')
-                : builtIn!.desc.split('•')[0].trim()}
+                : (builtIn!.tagline ?? builtIn!.desc.split('•')[0].trim())}
             </div>
           </div>
         </div>

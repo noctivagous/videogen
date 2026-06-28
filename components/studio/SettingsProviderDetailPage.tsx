@@ -2,13 +2,16 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import { LabLinkChip } from '@/components/studio/LabLinkChip';
 import { ProviderCard } from '@/components/studio/ProviderCard';
-import { BUILT_IN_PROVIDERS } from '@/lib/constants/providers';
-import { getProviderCategoryMatrix, providerSettingsPath } from '@/lib/constants/model-catalog';
-import { settingsSectionRoute } from '@/lib/studio/settings-routes';
+import { ProviderLinkChip } from '@/components/studio/ProviderLinkChip';
+import { getLabByDirectProviderId, getLabsForAggregator } from '@/lib/constants/labs';
+import { AGGREGATOR_PROVIDERS, getBuiltInProviderById } from '@/lib/constants/providers';
+import { getProviderCategoryMatrix } from '@/lib/constants/model-catalog';
+import { settingsAiTabRoute } from '@/lib/studio/settings-routes';
 
 export function SettingsProviderDetailPage({ providerId }: { providerId: string }) {
-  const provider = BUILT_IN_PROVIDERS.find((item) => item.id === providerId);
+  const provider = getBuiltInProviderById(providerId);
   const [showUnsupported, setShowUnsupported] = useState(false);
   const matrix = useMemo(() => getProviderCategoryMatrix(providerId), [providerId]);
   const visibleRows = useMemo(
@@ -22,19 +25,41 @@ export function SettingsProviderDetailPage({ providerId }: { providerId: string 
   );
   const supportedCount = matrix.filter((row) => row.supported).length;
   const firstUnsupportedIndex = showUnsupported ? visibleRows.findIndex((row) => !row.supported) : -1;
+
   if (!provider) {
     return (
       <div className="glass rounded-3xl p-6 border border-surface-700">
         <h2 className="font-semibold text-lg">Provider not found</h2>
         <p className="text-sm text-gray-400 mt-1">No built-in provider matches `{providerId}`.</p>
-        <Link href={settingsSectionRoute('ai')} className="inline-flex mt-3 text-sm text-brand-300 hover:text-brand-200">
+        <Link href={settingsAiTabRoute('providers')} className="inline-flex mt-3 text-sm text-brand-300 hover:text-brand-200">
           Back to Settings
         </Link>
       </div>
     );
   }
 
-  const relatedProviders = ['replicate', 'fal', 'xai'].filter((id) => id !== providerId);
+  if (provider.kind === 'direct') {
+    const lab = getLabByDirectProviderId(providerId);
+    return (
+      <div className="glass rounded-3xl p-6 border border-surface-700">
+        <h2 className="font-semibold text-lg">{provider.name} is a lab direct API</h2>
+        <p className="text-sm text-gray-400 mt-1">
+          Direct lab APIs are documented on their lab page under <span className="text-gray-300">PROVIDED BY</span>.
+        </p>
+        {lab ? (
+          <div className="mt-3">
+            <LabLinkChip lab={lab} title={`View ${lab.name} lab page`} />
+          </div>
+        ) : null}
+        <Link href={settingsAiTabRoute('providers')} className="inline-flex mt-3 ml-4 text-sm text-gray-400 hover:text-gray-200">
+          Back to Settings
+        </Link>
+      </div>
+    );
+  }
+
+  const relatedProviders = AGGREGATOR_PROVIDERS.filter((entry) => entry.id !== providerId);
+  const accessibleLabs = getLabsForAggregator(providerId);
 
   return (
     <div className="space-y-6">
@@ -42,15 +67,31 @@ export function SettingsProviderDetailPage({ providerId }: { providerId: string 
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold text-lg">{provider.name}</h2>
-            <p className="text-sm text-gray-400 mt-1">{provider.desc}</p>
+            {provider.tagline ? (
+              <p className="text-xs uppercase tracking-wider text-brand-300/90 mt-1">{provider.tagline}</p>
+            ) : null}
+            <p className="text-sm text-gray-400 mt-2">{provider.desc}</p>
           </div>
-          <Link href={settingsSectionRoute('ai')} className="text-sm text-brand-300 hover:text-brand-200">
+          <Link href={settingsAiTabRoute('providers')} className="text-sm text-brand-300 hover:text-brand-200 shrink-0">
             Back to all settings
           </Link>
         </div>
       </div>
 
       <ProviderCard provider={provider} isCustom={false} />
+
+      {accessibleLabs.length > 0 ? (
+        <div className="glass rounded-3xl p-6 border border-surface-700">
+          <h3 className="text-sm font-semibold text-gray-200">
+            Labs accessible through {provider.name} ({accessibleLabs.length})
+          </h3>
+          <div className="mt-2 flex flex-wrap items-center gap-1">
+            {accessibleLabs.map((lab) => (
+              <LabLinkChip key={lab.id} lab={lab} />
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <div className="glass rounded-3xl p-6 border border-surface-700">
         <div className="flex items-center justify-between gap-3">
@@ -111,12 +152,10 @@ export function SettingsProviderDetailPage({ providerId }: { providerId: string 
       </div>
 
       <div className="glass rounded-3xl p-6 border border-surface-700">
-        <h3 className="text-sm font-semibold text-gray-200">Other dedicated provider pages</h3>
-        <div className="mt-2 flex flex-wrap gap-3 text-sm">
-          {relatedProviders.map((id) => (
-            <Link key={id} href={providerSettingsPath(id)} className="text-brand-300 hover:text-brand-200">
-              {BUILT_IN_PROVIDERS.find((entry) => entry.id === id)?.name ?? id}
-            </Link>
+        <h3 className="text-sm font-semibold text-gray-200">Other aggregators</h3>
+        <div className="mt-2 flex flex-wrap items-center gap-1">
+          {relatedProviders.map((entry) => (
+            <ProviderLinkChip key={entry.id} providerId={entry.id} />
           ))}
         </div>
       </div>

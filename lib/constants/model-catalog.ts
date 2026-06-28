@@ -129,6 +129,10 @@ export function providerSettingsPath(providerId: string): string {
   return `/studio/settings/ai/provider/${encodeURIComponent(providerId)}`;
 }
 
+export function labSettingsPath(labId: string): string {
+  return `/studio/settings/ai/lab/${encodeURIComponent(labId)}`;
+}
+
 export function categorySettingsPath(categoryId: ModelCategoryId): string {
   return `/studio/settings/ai/category/${encodeURIComponent(categoryId)}`;
 }
