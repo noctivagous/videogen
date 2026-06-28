@@ -21,7 +21,7 @@ export function SettingsLabDetailPage({ labId }: { labId: string }) {
 
   if (!lab) {
     return (
-      <div className="glass rounded-3xl p-6 border border-surface-700">
+      <div className="glass rounded-xl p-6 border border-surface-700">
         <h2 className="font-semibold text-lg">Lab not found</h2>
         <p className="text-sm text-gray-400 mt-1">No lab matches `{labId}`.</p>
         <Link href={settingsAiTabRoute('providers')} className="inline-flex mt-3 text-sm text-brand-300 hover:text-brand-200">
@@ -33,7 +33,7 @@ export function SettingsLabDetailPage({ labId }: { labId: string }) {
 
   return (
     <div className="space-y-6">
-      <div className="glass rounded-3xl p-6 border border-surface-700">
+      <div className="glass rounded-xl p-6 border border-surface-700">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0">
             <LabIcon lab={lab} size="sm" />
@@ -53,7 +53,7 @@ export function SettingsLabDetailPage({ labId }: { labId: string }) {
 
       <LabCard lab={lab} />
 
-      <div className="glass rounded-3xl p-6 border border-surface-700">
+      <div className="glass rounded-xl p-6 border border-surface-700">
         <h3 className="text-[10px] uppercase tracking-wider text-gray-500 mb-4">Provided by:</h3>
 
         {lab.hasDirectApi && directProvider ? (
@@ -80,7 +80,7 @@ export function SettingsLabDetailPage({ labId }: { labId: string }) {
       </div>
 
       {lab.notableModels && lab.notableModels.length > 0 ? (
-        <div className="glass rounded-3xl p-6 border border-surface-700">
+        <div className="glass rounded-xl p-6 border border-surface-700">
           <h3 className="text-sm font-semibold text-gray-200 mb-3">Notable models</h3>
           <ul className="space-y-1.5">
             {lab.notableModels.map((modelId) => (
@@ -90,7 +90,7 @@ export function SettingsLabDetailPage({ labId }: { labId: string }) {
         </div>
       ) : null}
 
-      <div className="glass rounded-3xl p-6 border border-surface-700">
+      <div className="glass rounded-xl p-6 border border-surface-700">
         <h3 className="text-sm font-semibold text-gray-200">Other labs</h3>
         <div className="mt-2 flex flex-wrap items-center gap-1">
           {relatedLabs.map((entry) => (

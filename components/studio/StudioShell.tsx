@@ -17,6 +17,7 @@ import { AppsLauncherModal } from '@/components/studio/AppsLauncherModal';
 import { EntityImageAssociateModal } from '@/components/studio/EntityImageAssociateModal';
 import { ProjectSettingsModal } from '@/components/studio/ProjectSettingsModal';
 import { SettingsModal } from '@/components/studio/SettingsModal';
+import { WelcomeModal } from '@/components/studio/WelcomeModal';
 import { Toast } from '@/components/studio/Toast';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { useStudioPanelRouteSync } from '@/hooks/use-studio-panel-navigation';
@@ -61,7 +62,7 @@ export function StudioShell() {
         <button
           type="button"
           onClick={() => setMobileDrawerOpen(true)}
-          className="w-14 h-14 bg-gradient-to-r from-brand-500 to-brand-600 rounded-full shadow-lg shadow-brand-500/40 flex items-center justify-center"
+          className="w-14 h-14 bg-gradient-to-r from-brand-500 to-brand-600 rounded-lg shadow-lg shadow-brand-500/40 flex items-center justify-center"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
@@ -103,6 +104,7 @@ export function StudioShell() {
       <AppsLauncherModal />
       <EntityImageAssociateModal />
       <ProjectSettingsModal />
+      <WelcomeModal />
     </div>
     </KeybindingsManager>
     </ContextMenuManager>

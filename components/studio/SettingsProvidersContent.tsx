@@ -47,7 +47,7 @@ function ProviderModelFields({
         <select
           value={providerId}
           onChange={(e) => onProviderChange(e.target.value)}
-          className="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none"
+          className="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none"
         >
           {sortedBuiltIn.filter((p) => isBuiltInProviderEnabled(p.id)).map((p) => (
             <option key={p.id} value={p.id}>{p.name}</option>
@@ -60,7 +60,7 @@ function ProviderModelFields({
           value={selectedModelId ?? ''}
           onChange={(e) => onModelChange(e.target.value)}
           disabled={models.length === 0}
-          className="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none disabled:opacity-50"
+          className="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none disabled:opacity-50"
         >
           {models.length === 0 ? (
             <option value="">No models — test connection first</option>
@@ -97,7 +97,7 @@ export function SettingsProvidersContent({ className = '' }: { className?: strin
 
   return (
     <div className={`space-y-8 ${className}`.trim()}>
-      <div className="glass rounded-3xl p-6 border border-surface-700" {...uiSectionProps(UI_SECTIONS.studioSettingsDefaultProvider)}>
+      <div className="glass rounded-xl p-6 border border-surface-700" {...uiSectionProps(UI_SECTIONS.studioSettingsDefaultProvider)}>
         <div className="mb-5">
           <h2 className="font-semibold text-lg">Default Providers & Models</h2>
           <p className="text-sm text-gray-400">
@@ -130,7 +130,7 @@ export function SettingsProvidersContent({ className = '' }: { className?: strin
       <div {...uiSectionProps(UI_SECTIONS.studioSettingsAggregators)}>
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-semibold text-2xl tracking-tight">Aggregators</h2>
-          <div className="text-xs px-3 py-1 rounded-full bg-surface-800 text-gray-400 border border-surface-700">
+          <div className="text-xs px-3 py-1 rounded-lg bg-surface-800 text-gray-400 border border-surface-700">
             {enabledAggregatorCount} of {AGGREGATOR_PROVIDERS.length} available
           </div>
         </div>
@@ -147,7 +147,7 @@ export function SettingsProvidersContent({ className = '' }: { className?: strin
       <div {...uiSectionProps(UI_SECTIONS.studioSettingsLabs)}>
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-semibold text-2xl tracking-tight">Labs</h2>
-          <div className="text-xs px-3 py-1 rounded-full bg-surface-800 text-gray-400 border border-surface-700">
+          <div className="text-xs px-3 py-1 rounded-lg bg-surface-800 text-gray-400 border border-surface-700">
             {sortedLabs.filter((lab) => lab.hasDirectApi).length} with direct API
           </div>
         </div>
@@ -168,7 +168,7 @@ export function SettingsProvidersContent({ className = '' }: { className?: strin
             type="button"
             disabled
             title="Custom providers not yet available"
-            className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-2xl bg-surface-800 border border-surface-700 text-gray-500 cursor-not-allowed"
+            className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-lg bg-surface-800 border border-surface-700 text-gray-500 cursor-not-allowed"
           >
             Add Custom Provider
           </button>

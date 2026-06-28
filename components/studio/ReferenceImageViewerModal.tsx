@@ -63,7 +63,7 @@ export function ReferenceImageViewerModal({
     <ManagedModal
       open={open}
       onClose={onClose}
-      className="reference-image-viewer__panel glass w-full max-w-5xl max-h-[92vh] rounded-2xl border border-surface-700 overflow-hidden flex flex-col modal"
+      className="reference-image-viewer__panel glass w-full max-w-5xl max-h-[92vh] rounded-lg border border-surface-700 overflow-hidden flex flex-col modal"
       role="dialog"
       aria-modal="true"
       aria-label={`${label} reference image`}

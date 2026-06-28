@@ -785,6 +785,7 @@ interface StudioStore {
   previewSuccessPrompt: string;
   settingsOpen: boolean;
   appsLauncherOpen: boolean;
+  welcomeModalOpen: boolean;
   projectSettingsOpen: boolean;
   projectSettingsProjectId: string | null;
   providerEdit: { id: string; isCustom: boolean } | null;
@@ -1004,6 +1005,8 @@ interface StudioStore {
   closeProjectSettings: () => void;
   openAppsLauncher: () => void;
   closeAppsLauncher: () => void;
+  openWelcomeModal: () => void;
+  closeWelcomeModal: () => void;
   setDefaultVideoProvider: (id: string) => void;
   setDefaultVideoModel: (modelId: string) => void;
   setDefaultImageProvider: (id: string) => void;
@@ -1083,6 +1086,7 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
   previewSuccessPrompt: '',
   settingsOpen: false,
   appsLauncherOpen: false,
+  welcomeModalOpen: false,
   projectSettingsOpen: false,
   projectSettingsProjectId: null,
   providerEdit: null,
@@ -3981,6 +3985,14 @@ export const useStudioStore = create<StudioStore>((set, get) => ({
 
   closeAppsLauncher() {
     set({ appsLauncherOpen: false });
+  },
+
+  openWelcomeModal() {
+    set({ welcomeModalOpen: true });
+  },
+
+  closeWelcomeModal() {
+    set({ welcomeModalOpen: false });
   },
 
   setDefaultVideoProvider(id) {

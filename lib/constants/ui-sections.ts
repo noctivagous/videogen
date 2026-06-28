@@ -18,6 +18,7 @@ export const UI_SECTIONS = {
   studioProviderEditModal: { id: 'studio-provider-edit-modal', name: 'Provider Edit Modal' },
   studioAppsLauncherModal: { id: 'studio-apps-launcher-modal', name: 'Apps Launcher Modal' },
   studioProjectSettingsModal: { id: 'studio-project-settings-modal', name: 'Project Settings Modal' },
+  studioWelcomeModal: { id: 'studio-welcome-modal', name: 'Welcome Modal' },
 
   studioHeaderBrand: { id: 'studio-header-brand', name: 'Header Brand' },
   studioHeaderAppsSplit: { id: 'studio-header-apps-split', name: 'Apps Split Button' },

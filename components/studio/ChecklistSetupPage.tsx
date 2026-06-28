@@ -19,7 +19,7 @@ export function ChecklistSetupPage({ checklistId }: { checklistId: string }) {
 
   if (!item) {
     return (
-      <div className="glass rounded-3xl p-6 border border-surface-700">
+      <div className="glass rounded-xl p-6 border border-surface-700">
         <h2 className="font-semibold text-lg">Checklist not found</h2>
         <p className="text-sm text-gray-400 mt-1">No checklist item matches `{checklistId}`.</p>
         <Link href={settingsAiTabRoute('model-categories')} className="inline-flex mt-3 text-sm text-brand-300 hover:text-brand-200">
@@ -57,7 +57,7 @@ export function ChecklistSetupPage({ checklistId }: { checklistId: string }) {
 
   return (
     <div className="space-y-6">
-      <div className="glass rounded-3xl p-6 border border-surface-700">
+      <div className="glass rounded-xl p-6 border border-surface-700">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold text-lg">{item.title}</h2>
@@ -74,7 +74,7 @@ export function ChecklistSetupPage({ checklistId }: { checklistId: string }) {
         </div>
       </div>
 
-      <div className="glass rounded-3xl p-6 border border-surface-700">
+      <div className="glass rounded-xl p-6 border border-surface-700">
         <h3 className="text-sm font-semibold text-gray-200">Required categories</h3>
         <ul className="mt-3 space-y-2">
           {categoryChecks.map((category) => (
@@ -108,7 +108,7 @@ export function ChecklistSetupPage({ checklistId }: { checklistId: string }) {
         </ul>
       </div>
 
-      <div className="glass rounded-3xl p-6 border border-surface-700">
+      <div className="glass rounded-xl p-6 border border-surface-700">
         <h3 className="text-sm font-semibold text-gray-200">Suggested providers</h3>
         <div className="mt-3 flex flex-wrap gap-2">
           {providerChecks.map((provider) => {

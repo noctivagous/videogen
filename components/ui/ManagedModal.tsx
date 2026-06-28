@@ -21,6 +21,8 @@ export interface ManagedModalProps extends Omit<HTMLAttributes<HTMLDivElement>, 
   children: ReactNode;
   /** Applied to the full-screen popover shell (centering + padding). */
   shellClassName?: string;
+  /** Modal variant that affects default shell sizing. */
+  variant?: 'default' | 'walkthrough';
 }
 
 function supportsPopover(element: HTMLElement): element is HTMLElement & {
@@ -36,6 +38,7 @@ export function ManagedModal({
   children,
   className = '',
   shellClassName = '',
+  variant = 'default',
   ...rest
 }: ManagedModalProps) {
   const modalId = useId();
@@ -56,16 +59,12 @@ export function ManagedModal({
   }, [open, modalId, onClose]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !mounted) return;
 
-    const frame = requestAnimationFrame(() => {
-      const element = popoverRef.current;
-      if (!element || !supportsPopover(element)) return;
-      if (!element.matches(':popover-open')) element.showPopover();
-    });
-
-    return () => cancelAnimationFrame(frame);
-  }, [open]);
+    const element = popoverRef.current;
+    if (!element || !supportsPopover(element)) return;
+    if (!element.matches(':popover-open')) element.showPopover();
+  }, [open, mounted]);
 
   useEffect(() => {
     const element = popoverRef.current;
@@ -97,17 +96,21 @@ export function ManagedModal({
 
   if (!mounted || !open) return null;
 
+  const defaultShellClass = variant === 'walkthrough' ? 'max-w-4xl' : '';
+  const effectiveShellClassName = shellClassName || defaultShellClass;
+
   return createPortal(
     <div
       ref={popoverRef}
-      popover="auto"
-      className={`studio-modal ${shellClassName}`.trim()}
+      popover="manual"
+      className={`studio-modal ${effectiveShellClassName}`.trim()}
+      style={{ pointerEvents: 'none' }}
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
       {...rest}
     >
-      <div className={className} onClick={(event) => event.stopPropagation()}>
+      <div className={className} style={{ pointerEvents: 'auto' }} onClick={(event) => event.stopPropagation()}>
         {children}
       </div>
     </div>,

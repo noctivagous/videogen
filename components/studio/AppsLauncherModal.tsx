@@ -13,7 +13,7 @@ export function AppsLauncherModal() {
     <ManagedModal
       open={appsLauncherOpen}
       onClose={closeAppsLauncher}
-      className="glass w-full max-w-2xl max-h-[85vh] rounded-2xl border border-surface-700 overflow-hidden flex flex-col modal"
+      className="glass w-full max-w-2xl max-h-[85vh] rounded-lg border border-surface-700 overflow-hidden flex flex-col modal"
       role="dialog"
       aria-modal="true"
       aria-label="App"

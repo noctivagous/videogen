@@ -122,7 +122,7 @@ function MenuSectionHeader({
           onClick={(event) => event.stopPropagation()}
           onKeyDown={(event) => event.stopPropagation()}
           placeholder={searchPlaceholder}
-          className="w-full rounded-full bg-surface-900/80 border border-surface-600 pl-7 pr-2.5 py-1 text-[10px] text-gray-200 placeholder:text-gray-500 outline-none focus:ring-1 focus:ring-brand-500/60 focus:border-brand-500/40"
+          className="w-full rounded-lg bg-surface-900/80 border border-surface-600 pl-7 pr-2.5 py-1 text-[10px] text-gray-200 placeholder:text-gray-500 outline-none focus:ring-1 focus:ring-brand-500/60 focus:border-brand-500/40"
         />
       </div>
     </div>

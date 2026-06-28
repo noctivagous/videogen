@@ -60,7 +60,7 @@ export function ProjectSettingsModal() {
     <ManagedModal
       open={projectSettingsOpen}
       onClose={closeProjectSettings}
-      className="glass w-full max-w-md rounded-2xl border border-surface-700 overflow-hidden flex flex-col modal"
+      className="glass w-full max-w-md rounded-lg border border-surface-700 overflow-hidden flex flex-col modal"
       role="dialog"
       aria-modal="true"
       aria-label="Project settings"

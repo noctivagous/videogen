@@ -48,7 +48,7 @@ export function ColorPaletteMakerLibraryContent({ scopeFilter }: ColorPaletteMak
     <div className="flex flex-1 min-h-0">
       <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6">
         {paletteAssets.length === 0 ? (
-          <div className="glass rounded-3xl p-6 border border-surface-700 text-center max-w-md mx-auto mt-8">
+          <div className="glass rounded-xl p-6 border border-surface-700 text-center max-w-md mx-auto mt-8">
             <h2 className="font-semibold text-lg text-gray-200">No palettes yet</h2>
             <p className="text-sm text-gray-400 mt-2">
               {scopeFilter === 'project'

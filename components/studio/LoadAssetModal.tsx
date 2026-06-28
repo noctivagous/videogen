@@ -22,7 +22,7 @@ export function LoadAssetModal({ open, onClose, onSelect }: LoadAssetModalProps)
     <ManagedModal
       open={open}
       onClose={onClose}
-      className="glass w-full max-w-lg max-h-[80vh] rounded-2xl border border-surface-700 overflow-hidden flex flex-col modal"
+      className="glass w-full max-w-lg max-h-[80vh] rounded-lg border border-surface-700 overflow-hidden flex flex-col modal"
       role="dialog"
       aria-modal="true"
       aria-label="Load baked frame from Assets"

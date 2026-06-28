@@ -36,7 +36,7 @@ export function SettingsProjectContent() {
 
   return (
     <div className="space-y-6">
-      <div className="glass rounded-3xl p-6 border border-surface-700 space-y-4">
+      <div className="glass rounded-xl p-6 border border-surface-700 space-y-4">
         <div>
           <h2 className="font-semibold text-lg">Project</h2>
           <p className="text-sm text-gray-400 mt-1">Name and metadata for the active project.</p>
@@ -76,7 +76,7 @@ export function SettingsProjectContent() {
         </div>
       </div>
 
-      <div className="glass rounded-3xl p-6 border border-surface-700 space-y-4">
+      <div className="glass rounded-xl p-6 border border-surface-700 space-y-4">
         <div>
           <h2 className="font-semibold text-lg">Output defaults</h2>
           <p className="text-sm text-gray-400 mt-1">Aspect ratio, resolution, frame rate, and clip length.</p>

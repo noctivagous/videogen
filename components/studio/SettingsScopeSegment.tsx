@@ -1,10 +1,17 @@
 'use client';
 
+import { Folder, Settings, Sparkles } from 'lucide-react';
 import {
   SETTINGS_SECTION_LABELS,
   SETTINGS_SECTIONS,
   type SettingsSection,
 } from '@/lib/studio/settings-routes';
+
+const SECTION_ICONS: Record<SettingsSection, typeof Settings> = {
+  app: Settings,
+  project: Folder,
+  ai: Sparkles,
+};
 
 interface SettingsScopeSegmentProps {
   value: SettingsSection;
@@ -18,18 +25,22 @@ export function SettingsScopeSegment({ value, onChange }: SettingsScopeSegmentPr
       role="tablist"
       aria-label="Settings section"
     >
-      {SETTINGS_SECTIONS.map((section) => (
-        <button
-          key={section}
-          type="button"
-          role="tab"
-          aria-selected={value === section}
-          className={`frame-view-segment-btn text-[10px] px-2.5 py-1 ${value === section ? 'active' : ''}`}
-          onClick={() => onChange(section)}
-        >
-          {SETTINGS_SECTION_LABELS[section]}
-        </button>
-      ))}
+      {SETTINGS_SECTIONS.map((section) => {
+        const Icon = SECTION_ICONS[section];
+        return (
+          <button
+            key={section}
+            type="button"
+            role="tab"
+            aria-selected={value === section}
+            className={`frame-view-segment-btn text-[10px] px-2.5 py-1 ${value === section ? 'active' : ''}`}
+            onClick={() => onChange(section)}
+          >
+            <Icon className="w-3 h-3" aria-hidden />
+            {SETTINGS_SECTION_LABELS[section]}
+          </button>
+        );
+      })}
     </div>
   );
 }

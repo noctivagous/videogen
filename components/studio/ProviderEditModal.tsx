@@ -121,7 +121,7 @@ export function ProviderEditModal() {
     <ManagedModal
       open
       onClose={closeProviderEdit}
-      className="glass w-full max-w-md rounded-3xl border border-surface-700 overflow-hidden modal"
+      className="glass w-full max-w-md rounded-xl border border-surface-700 overflow-hidden modal"
       {...uiSectionProps(UI_SECTIONS.studioProviderEditModal)}
     >
         <div className="px-6 py-5 border-b border-surface-700 flex items-center justify-between">
@@ -162,7 +162,7 @@ export function ProviderEditModal() {
                   type="text"
                   value={customName}
                   onChange={(e) => setCustomName(e.target.value)}
-                  className="w-full bg-surface-700 border border-surface-600 rounded-2xl px-4 py-3 text-sm outline-none"
+                  className="w-full bg-surface-700 border border-surface-600 rounded-lg px-4 py-3 text-sm outline-none"
                 />
               </div>
               <div>
@@ -171,7 +171,7 @@ export function ProviderEditModal() {
                   type="text"
                   value={customDesc}
                   onChange={(e) => setCustomDesc(e.target.value)}
-                  className="w-full bg-surface-700 border border-surface-600 rounded-2xl px-4 py-3 text-sm outline-none"
+                  className="w-full bg-surface-700 border border-surface-600 rounded-lg px-4 py-3 text-sm outline-none"
                 />
               </div>
               <div>
@@ -180,7 +180,7 @@ export function ProviderEditModal() {
                   type="url"
                   value={customBaseUrl}
                   onChange={(e) => setCustomBaseUrl(e.target.value)}
-                  className="w-full bg-surface-700 border border-surface-600 rounded-2xl px-4 py-3 text-sm outline-none font-mono text-xs"
+                  className="w-full bg-surface-700 border border-surface-600 rounded-lg px-4 py-3 text-sm outline-none font-mono text-xs"
                 />
               </div>
             </div>
@@ -199,7 +199,7 @@ export function ProviderEditModal() {
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 placeholder={serverManaged ? 'Using server key' : undefined}
-                className="w-full bg-surface-700 border border-surface-600 rounded-2xl px-4 py-3 pr-12 text-sm outline-none font-mono"
+                className="w-full bg-surface-700 border border-surface-600 rounded-lg px-4 py-3 pr-12 text-sm outline-none font-mono"
               />
               <button
                 type="button"
@@ -227,7 +227,7 @@ export function ProviderEditModal() {
           )}
 
           {testModels.length > 0 && (
-            <div className="rounded-2xl border border-surface-600 bg-surface-800/50 overflow-hidden">
+            <div className="rounded-lg border border-surface-600 bg-surface-800/50 overflow-hidden">
               <button
                 type="button"
                 onClick={() => setShowModels(!showModels)}
@@ -255,7 +255,7 @@ export function ProviderEditModal() {
               type="button"
               onClick={testConnection}
               disabled={testUi === 'testing'}
-              className={`flex-1 px-5 py-3 rounded-2xl border text-sm font-medium flex items-center justify-center gap-2 transition-all ${
+              className={`flex-1 px-5 py-3 rounded-lg border text-sm font-medium flex items-center justify-center gap-2 transition-all ${
                 testUi === 'success'
                   ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
                   : testUi === 'error'
@@ -279,7 +279,7 @@ export function ProviderEditModal() {
             <button
               type="button"
               onClick={() => saveProviderEdit(apiKey, providerEdit.isCustom ? { name: customName, desc: customDesc, baseUrl: customBaseUrl } : undefined)}
-              className="flex-1 px-5 py-3 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 text-sm font-semibold"
+              className="flex-1 px-5 py-3 rounded-lg bg-gradient-to-r from-brand-500 to-brand-600 text-sm font-semibold"
             >
               Save Key
             </button>
@@ -293,7 +293,7 @@ export function ProviderEditModal() {
                   deleteCustomProvider(providerEdit.id);
                 }
               }}
-              className="w-full text-sm py-2.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-2xl border border-red-500/30 transition-all"
+              className="w-full text-sm py-2.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg border border-red-500/30 transition-all"
             >
               Remove this custom provider
             </button>

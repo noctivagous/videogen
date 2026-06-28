@@ -59,7 +59,7 @@ export function SettingsModelCatalogContent({
 
   return (
     <div className="space-y-8">
-      <div className="glass rounded-3xl p-6 border border-surface-700">
+      <div className="glass rounded-xl p-6 border border-surface-700">
         <div className="mb-4">
           <h2 className="font-semibold text-lg">Model categories</h2>
           <p className="text-sm text-gray-400">Each category is part of app data and can be tuned per provider/model.</p>
@@ -77,7 +77,7 @@ export function SettingsModelCatalogContent({
           <select
             value={providerFilter}
             onChange={(event) => setProviderFilter(event.target.value)}
-            className="w-full max-w-sm bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-2xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none"
+            className="w-full max-w-sm bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none"
           >
             <option value="all">All providers</option>
             {BUILT_IN_PROVIDERS.map((provider) => (
@@ -112,7 +112,7 @@ export function SettingsModelCatalogContent({
           ))}
         </div>
 
-        <div className="mt-5 rounded-2xl border border-surface-700 bg-surface-900/40 p-4 space-y-4">
+        <div className="mt-5 rounded-lg border border-surface-700 bg-surface-900/40 p-4 space-y-4">
           <div>
             <div className="text-sm font-medium text-gray-100">{activeDefinition.label}</div>
             <p className="text-xs text-gray-400 mt-1">{activeDefinition.description}</p>
@@ -141,7 +141,7 @@ export function SettingsModelCatalogContent({
                   setModelSlotConfig(activeCategory, { providerId: event.target.value });
                 }}
                 disabled={isScopedToProvider}
-                className="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none"
+                className="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all select-arrow appearance-none"
               >
                 {BUILT_IN_PROVIDERS.map((provider) => (
                   <option key={provider.id} value={provider.id}>
@@ -168,7 +168,7 @@ export function SettingsModelCatalogContent({
                 onChange={(event) => {
                   setModelSlotConfig(activeCategory, { modelId: event.target.value });
                 }}
-                className="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all"
+                className="w-full bg-surface-700 hover:bg-surface-600 border border-surface-600 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all"
               />
             </div>
           </div>

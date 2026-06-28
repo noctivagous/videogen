@@ -20,12 +20,12 @@ export function SettingsModal() {
     <ManagedModal
       open={settingsOpen}
       onClose={closeSettings}
-      className="glass w-full max-w-6xl max-h-[92vh] rounded-3xl border border-surface-700 overflow-hidden flex flex-col modal"
+      className="glass w-full max-w-6xl max-h-[92vh] rounded-xl border border-surface-700 overflow-hidden flex flex-col modal"
       {...uiSectionProps(UI_SECTIONS.studioSettingsModal)}
     >
       <div className="px-6 py-5 border-b border-surface-700 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center">
             <Settings className="w-5 h-5 text-white" aria-hidden />
           </div>
           <div>
@@ -45,8 +45,8 @@ export function SettingsModal() {
       </div>
 
       <div className="px-6 py-4 border-t border-surface-700 flex justify-end gap-3 flex-shrink-0" {...uiSectionProps(UI_SECTIONS.studioSettingsFooter)}>
-        <button type="button" onClick={closeSettings} className="px-6 py-2.5 rounded-2xl border border-surface-600 hover:bg-surface-700 text-sm font-medium">Close</button>
-        <button type="button" onClick={handleSaveAll} className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 text-sm font-semibold">Save Changes</button>
+        <button type="button" onClick={closeSettings} className="px-6 py-2.5 rounded-lg border border-surface-600 hover:bg-surface-700 text-sm font-medium">Close</button>
+        <button type="button" onClick={handleSaveAll} className="px-6 py-2.5 rounded-lg bg-gradient-to-r from-brand-500 to-brand-600 text-sm font-semibold">Save Changes</button>
       </div>
     </ManagedModal>
   );

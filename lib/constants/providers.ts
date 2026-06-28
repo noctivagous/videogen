@@ -4,7 +4,7 @@ import type { BuiltInProvider } from '@/lib/types/studio';
  * Built-in providers users can configure and select in the app today.
  * All other built-in cards remain visible in Settings but are grayed out.
  */
-export const ENABLED_PROVIDER_IDS = ['fal', 'replicate', 'xai'] as const;
+export const ENABLED_PROVIDER_IDS = ['fal', 'replicate', 'xai', 'together', 'huggingface', 'openrouter'] as const;
 
 export type EnabledProviderId = (typeof ENABLED_PROVIDER_IDS)[number];
 

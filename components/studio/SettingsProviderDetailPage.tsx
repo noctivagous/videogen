@@ -28,7 +28,7 @@ export function SettingsProviderDetailPage({ providerId }: { providerId: string 
 
   if (!provider) {
     return (
-      <div className="glass rounded-3xl p-6 border border-surface-700">
+      <div className="glass rounded-xl p-6 border border-surface-700">
         <h2 className="font-semibold text-lg">Provider not found</h2>
         <p className="text-sm text-gray-400 mt-1">No built-in provider matches `{providerId}`.</p>
         <Link href={settingsAiTabRoute('providers')} className="inline-flex mt-3 text-sm text-brand-300 hover:text-brand-200">
@@ -41,7 +41,7 @@ export function SettingsProviderDetailPage({ providerId }: { providerId: string 
   if (provider.kind === 'direct') {
     const lab = getLabByDirectProviderId(providerId);
     return (
-      <div className="glass rounded-3xl p-6 border border-surface-700">
+      <div className="glass rounded-xl p-6 border border-surface-700">
         <h2 className="font-semibold text-lg">{provider.name} is a lab direct API</h2>
         <p className="text-sm text-gray-400 mt-1">
           Direct lab APIs are documented on their lab page under <span className="text-gray-300">PROVIDED BY</span>.
@@ -63,7 +63,7 @@ export function SettingsProviderDetailPage({ providerId }: { providerId: string 
 
   return (
     <div className="space-y-6">
-      <div className="glass rounded-3xl p-6 border border-surface-700">
+      <div className="glass rounded-xl p-6 border border-surface-700">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold text-lg">{provider.name}</h2>
@@ -81,7 +81,7 @@ export function SettingsProviderDetailPage({ providerId }: { providerId: string 
       <ProviderCard provider={provider} isCustom={false} />
 
       {accessibleLabs.length > 0 ? (
-        <div className="glass rounded-3xl p-6 border border-surface-700">
+        <div className="glass rounded-xl p-6 border border-surface-700">
           <h3 className="text-sm font-semibold text-gray-200">
             Labs accessible through {provider.name} ({accessibleLabs.length})
           </h3>
@@ -93,7 +93,7 @@ export function SettingsProviderDetailPage({ providerId }: { providerId: string 
         </div>
       ) : null}
 
-      <div className="glass rounded-3xl p-6 border border-surface-700">
+      <div className="glass rounded-xl p-6 border border-surface-700">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h3 className="text-sm font-semibold text-gray-200">
@@ -111,7 +111,7 @@ export function SettingsProviderDetailPage({ providerId }: { providerId: string 
             {showUnsupported ? 'Hide unsupported' : 'Show all categories'}
           </button>
         </div>
-        <div className="mt-4 rounded-2xl border border-surface-700 bg-surface-900/40 overflow-hidden">
+        <div className="mt-4 rounded-lg border border-surface-700 bg-surface-900/40 overflow-hidden">
           <div className="grid grid-cols-[minmax(0,1.1fr)_auto_minmax(0,1fr)] gap-3 px-3 py-2 text-[10px] uppercase tracking-wider text-gray-500 border-b border-surface-700">
             <div>Category</div>
             <div>Status</div>
@@ -151,7 +151,7 @@ export function SettingsProviderDetailPage({ providerId }: { providerId: string 
         </div>
       </div>
 
-      <div className="glass rounded-3xl p-6 border border-surface-700">
+      <div className="glass rounded-xl p-6 border border-surface-700">
         <h3 className="text-sm font-semibold text-gray-200">Other aggregators</h3>
         <div className="mt-2 flex flex-wrap items-center gap-1">
           {relatedProviders.map((entry) => (

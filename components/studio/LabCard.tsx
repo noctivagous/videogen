@@ -20,7 +20,7 @@ export function LabCard({ lab }: LabCardProps) {
   const categories = getLabCategories(lab);
 
   return (
-    <div className="provider-card glass rounded-3xl p-5 border border-surface-700 flex flex-col">
+    <div className="provider-card glass rounded-xl p-5 border border-surface-700 flex flex-col">
       <div className="flex items-start justify-between mb-3 gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <LabIcon lab={lab} size="md" />
@@ -68,7 +68,7 @@ export function LabCard({ lab }: LabCardProps) {
           <button
             type="button"
             onClick={() => openProviderEdit(lab.directProviderId!, false)}
-            className="text-xs font-semibold px-4 py-1.5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white transition-all"
+            className="text-xs font-semibold px-4 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white transition-all"
           >
             Configure API
           </button>

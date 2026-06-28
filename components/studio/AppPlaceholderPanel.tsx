@@ -27,7 +27,7 @@ export function AppPlaceholderPanel({ appId }: AppPlaceholderPanelProps) {
       />
       <div className="flex flex-1 min-h-0 flex-col items-center justify-center p-8 text-center">
         <div className="max-w-md space-y-4">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-surface-800 border border-surface-600 flex items-center justify-center">
+          <div className="w-14 h-14 mx-auto rounded-lg bg-surface-800 border border-surface-600 flex items-center justify-center">
             <svg className="w-7 h-7 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
               <path
                 strokeLinecap="round"

@@ -590,7 +590,7 @@ export function PreviewPanel() {
                 {...uiSectionProps(UI_SECTIONS.studioPreviewSuccessOverlay)}
               >
                 <div className="p-8">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-brand-500/20 flex items-center justify-center">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-lg bg-brand-500/20 flex items-center justify-center">
                     <svg className="w-8 h-8 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                     </svg>

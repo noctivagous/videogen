@@ -147,7 +147,7 @@ export function AppFeatureChecklistSection() {
                   </td>
                   <td className="align-top min-w-0">
                     <div className="flex items-center justify-between gap-3">
-                      <div className="text-sm font-semibold text-gray-100 leading-tight">{item.title}</div>
+                      <div className="text-base font-semibold text-gray-100 leading-tight">{item.title}</div>
                       {item.ready ? (
                         <span
                           className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded-md border flex-shrink-0 text-emerald-300 border-emerald-500/40 bg-emerald-500/10"
@@ -166,7 +166,11 @@ export function AppFeatureChecklistSection() {
                       )}
                     </div>
 
-                    <table className="workflow-settings-table mt-0.5">
+                    <div className="flex gap-4 mt-1">
+                      {item.description && (
+                        <div className="text-xs text-gray-400 leading-relaxed max-w-[250px] flex-shrink-0">{item.description}</div>
+                      )}
+                      <table className="workflow-settings-table min-w-0">
                   <thead>
                     <tr>
                       <th scope="col" className="w-[6.5rem]">Item</th>
@@ -213,6 +217,7 @@ export function AppFeatureChecklistSection() {
                     </tr>
                   </tbody>
                     </table>
+                    </div>
                   </td>
                 </tr>
               </tbody>
