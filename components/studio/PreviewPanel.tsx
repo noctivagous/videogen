@@ -91,6 +91,32 @@ function fitPreviewFrame(
 /** Set NEXT_PUBLIC_POSEBLOCK_COMPOSITOR=1 to enable 3D compositor in framing mode. */
 const COMPOSITOR_ENABLED = process.env.NEXT_PUBLIC_POSEBLOCK_COMPOSITOR === '1';
 
+const BLOCKING_DESELECT_IGNORE_SELECTOR = [
+  'button',
+  'select',
+  'input',
+  'textarea',
+  'a',
+  '[role="button"]',
+  '[role="tab"]',
+  '[role="option"]',
+  '.preview-panel-tab-bar',
+  '.preview-project-settings-bar',
+  '.preview-backdrop-lock',
+  '.preview-settings-select',
+  '.preview-settings-duration',
+  '.segmented-control',
+  '.tab-control',
+  '.generated-video-dropdown',
+  '.mannequin-hit-target',
+  '.mannequin-handle',
+  '.mannequin-bounds-overlay',
+  '.mannequin-bounds-face-btn',
+  '.backdrop-transform-widget',
+  '.backdrop-framing-hit-target',
+  '.backdrop-framing-pan-layer',
+].join(', ');
+
 function isImageDrag(e: DragEvent): boolean {
   const types = Array.from(e.dataTransfer.types);
   return (
@@ -105,6 +131,7 @@ export function PreviewPanel() {
   const previewStageRef = useRef<HTMLDivElement>(null);
   const previewFrameAreaRef = useRef<HTMLDivElement>(null);
   const previewFrameRef = useRef<HTMLDivElement>(null);
+  const previewChromeRef = useRef<HTMLDivElement>(null);
   const frameView = useStudioStore((s) => s.frameView);
   const setFrameView = useStudioStore((s) => s.setFrameView);
   const workspaceView = useStudioStore((s) => s.workspaceView);
@@ -297,6 +324,31 @@ export function PreviewPanel() {
     };
   }, []);
 
+  const blockingSelectionClearEnabled =
+    isShotDesigner && frameView === 'preview' && previewSubMode === 'framing' && !showModelPreview;
+
+  useEffect(() => {
+    if (!blockingSelectionClearEnabled || selectedMannequinIds.length === 0) return;
+
+    const onPointerDownCapture = (event: PointerEvent) => {
+      if (event.button !== 0) return;
+      const chrome = previewChromeRef.current;
+      if (!chrome) return;
+      const target = event.target;
+      if (!(target instanceof Element) || !chrome.contains(target)) return;
+      if (target.closest(BLOCKING_DESELECT_IGNORE_SELECTOR)) return;
+      if (COMPOSITOR_ENABLED && target.closest('canvas')) return;
+      clearMannequinSelection();
+    };
+
+    document.addEventListener('pointerdown', onPointerDownCapture, true);
+    return () => document.removeEventListener('pointerdown', onPointerDownCapture, true);
+  }, [
+    blockingSelectionClearEnabled,
+    selectedMannequinIds.length,
+    clearMannequinSelection,
+  ]);
+
   const renderPreviewContent = () => {
     if (showBakedEmptyState && shot) {
       return (
@@ -444,6 +496,7 @@ export function PreviewPanel() {
 
       {isShotDesigner && (
       <div
+        ref={previewChromeRef}
         className="preview-panel-tabbed-workspace"
         {...uiSectionProps(UI_SECTIONS.studioPreviewMainChrome)}
       >

@@ -1,7 +1,7 @@
 interface HierarchyTreeConnectorProps {
   /** Draw vertical spine through the full branch height (when nested children follow). */
   extendsBelow?: boolean;
-  /** px from top to the corner — aligns with the row label. */
+  /** px from top to the corner — aligns with the fieldset titlebar. */
   cornerOffset?: number;
   /** px horizontal stub from spine to content. */
   stubLength?: number;
