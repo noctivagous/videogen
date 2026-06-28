@@ -821,6 +821,10 @@ body {
   background-color: var(--pro-panel);
 }
 
+[data-ui-section="studio-camera-controls"] {
+  background-color: rgba(5, 5, 5, 1);
+}
+
 #studio-camera-panel .camera-panel-heading,
 #studio-camera-panel .camera-panel-subheading,
 #studio-camera-panel .camera-panel-label {
@@ -1874,36 +1878,39 @@ input[type="range"].pro-slider::-moz-range-thumb {
 
 /* Preview tabbed workspace — tabs sit flush on the stage panel below */
 .preview-panel-tabbed-workspace {
+  --preview-chrome-inset-top: 0.5rem;
+  --preview-chrome-inset-x: 15px;
+  --preview-chrome-inset-bottom: 15px;
+  --preview-chrome-inset-right: 15px;
   position: absolute;
   inset: 0;
   z-index: 0;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  padding: 0.5rem 1rem 1rem;
-  padding-left: calc(0.5rem + 31px);
+  padding:
+    var(--preview-chrome-inset-top)
+    var(--preview-chrome-inset-right)
+    var(--preview-chrome-inset-bottom)
+    var(--preview-chrome-inset-x);
   background-color: rgba(0, 0, 0, 1);
   background-image: none;
-}
-
-@media (min-width: 768px) {
-  .preview-panel-tabbed-workspace {
-    padding-right: 2rem;
-    padding-bottom: 2rem;
-  }
 }
 
 .preview-panel-tab-bar {
   display: flex;
   align-items: flex-end;
   flex-shrink: 0;
+  width: 100%;
 }
 
 .preview-panel-tab-panel {
   position: relative;
   display: flex;
-  flex: 1;
+  flex: 1 1 0;
   flex-direction: column;
+  align-self: stretch;
+  width: 100%;
   min-height: 0;
   margin-top: -1px;
   border: 1px solid var(--pro-border-dark);
@@ -1917,7 +1924,7 @@ input[type="range"].pro-slider::-moz-range-thumb {
   box-shadow:
     inset 0 1px 2px rgba(0, 0, 0, 0.55),
     0 1px 0 rgba(255, 255, 255, 0.02);
-  overflow: visible;
+  overflow: hidden;
 }
 
 .preview-panel-tab-panel__fill {
@@ -1928,23 +1935,38 @@ input[type="range"].pro-slider::-moz-range-thumb {
 
 .preview-panel-tab-panel .preview-panel-stage-shell {
   position: relative;
-  top: auto;
-  right: auto;
-  bottom: auto;
-  left: -31px;
+  inset: auto;
   display: flex;
   flex-direction: column;
-  flex: 1;
+  flex: 1 1 0;
+  width: 100%;
   min-height: 0;
-  padding: 0.75rem 1rem 0.75rem;
-  padding-left: calc(31px + 0.5rem);
-  padding-right: 0;
+  padding: 0;
 }
 
-@media (min-width: 768px) {
-  .preview-panel-tab-panel .preview-panel-stage-shell {
-    padding-top: 1rem;
-  }
+.preview-panel-tab-panel .preview-frame-stage {
+  gap: 0;
+}
+
+.preview-panel-tab-panel .preview-frame-stage__settings {
+  border-bottom: 1px solid var(--pro-border-dark);
+}
+
+.preview-panel-tab-panel #studio-preview-resolution-badge,
+.preview-panel-tab-panel .preview-project-settings-bar {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid var(--pro-border-dark);
+  box-shadow: none;
+  margin: 0;
+  background: unset;
+  background-image: none;
+}
+
+.preview-panel-tab-panel .preview-frame-stage__viewport {
+  padding: 5px;
 }
 
 /* TabControl — active tab merges into tabpanel */
@@ -4273,10 +4295,11 @@ legend.workflow-step-fieldset__legend.w-full {
   z-index: 1;
   background: linear-gradient(
     90deg,
-    rgba(39, 39, 45, 0.72) 0%,
-    rgba(39, 39, 45, 0.45) 62%,
-    rgba(39, 39, 45, 0.18) 82%,
-    transparent calc(var(--model-workflow-group-thumb-size) + 0.125rem)
+    rgba(24, 24, 27, 0.92) 0%,
+    rgba(24, 24, 27, 0.72) 42%,
+    rgba(24, 24, 27, 0.38) 68%,
+    rgba(24, 24, 27, 0.16) 84%,
+    rgba(24, 24, 27, 0.08) 100%
   );
   pointer-events: none;
 }

@@ -482,7 +482,7 @@ export function PreviewPanel() {
       <div className="preview-panel-stage-shell">
         <div
           ref={previewStageRef}
-          className="relative w-full h-full max-w-5xl flex flex-col min-h-0"
+          className="relative w-full h-full flex flex-col min-h-0"
         >
           {showBackdropEditStack && shot && backdropSourceUrl && (
             <>
@@ -511,7 +511,7 @@ export function PreviewPanel() {
             <div ref={previewFrameAreaRef} className="preview-frame-stage__viewport">
             <div
               ref={previewFrameRef}
-              className={`preview-frame-stage__frame preview-frame relative rounded-xl border-2 overflow-hidden shadow-2xl group ${
+              className={`preview-frame-stage__frame preview-frame relative border-2 overflow-hidden shadow-2xl group ${
                 backdropDragOver
                   ? 'border-brand-500 ring-2 ring-brand-500/40'
                   : 'border-surface-700'
