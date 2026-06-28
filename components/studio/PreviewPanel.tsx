@@ -390,7 +390,7 @@ export function PreviewPanel() {
 
   return (
     <div
-      className="relative flex-1 min-h-0 overflow-hidden"
+      className="relative flex-1 min-h-0 overflow-visible"
       {...uiSectionProps(UI_SECTIONS.studioPreviewPanel)}
     >
       {workspaceView === 'app-summary' && (

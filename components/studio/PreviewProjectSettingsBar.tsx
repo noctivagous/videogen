@@ -18,7 +18,7 @@ export function PreviewProjectSettingsBar() {
 
   return (
     <div
-      className="preview-project-settings-bar flex items-center gap-2 flex-wrap justify-end"
+      className="preview-project-settings-bar flex items-center gap-2 flex-wrap justify-start"
       {...uiSectionProps(UI_SECTIONS.studioPreviewResolutionBadge)}
     >
       <BackdropFramingLockToggle />
