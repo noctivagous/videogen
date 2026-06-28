@@ -247,6 +247,10 @@ body {
     padding: 0.75rem;
   }
 
+  .pro-pane-body:has(.workflow-checklist) {
+    padding: 0;
+  }
+
   .pro-panel {
     background-color: var(--pro-panel);
     background-image:
@@ -502,6 +506,90 @@ body {
     cursor: not-allowed;
   }
 
+  /* Lighter raised field — toolbar chips, launcher icons */
+  .pro-field-relief-level-1 {
+    width: 100%;
+    background-color: #1c2129;
+    background-image:
+      linear-gradient(to bottom, rgba(52, 58, 68, 0.92), rgba(22, 26, 32, 0.98)),
+      var(--pro-tex-relief);
+    background-repeat: repeat, repeat;
+    background-size: auto, var(--pro-tex-tile) var(--pro-tex-tile);
+    border: 1px solid var(--pro-border-dark);
+    border-top-color: var(--pro-btn-border-top);
+    border-bottom-color: #14171c;
+    border-radius: 4px;
+    color: #d4dbe6;
+    font-weight: 500;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 1px 3px rgba(0, 0, 0, 0.45);
+    outline: none;
+    cursor: pointer;
+    transition: background 0.1s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+  }
+
+  .pro-field-relief-level-1:hover:not(:disabled) {
+    background-color: #242a34;
+    background-image:
+      linear-gradient(to bottom, rgba(62, 69, 80, 0.94), rgba(30, 35, 42, 0.99)),
+      var(--pro-tex-relief);
+    border-top-color: #6a7380;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 2px 5px rgba(0, 0, 0, 0.5);
+  }
+
+  .pro-field-relief-level-1:focus {
+    border-color: rgba(99, 102, 241, 0.5);
+    border-top-color: #6a7380;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 1px 3px rgba(0, 0, 0, 0.45),
+      0 0 0 1px rgba(99, 102, 241, 0.32);
+  }
+
+  .pro-field-relief-level-1:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .studio-launcher-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    flex-shrink: 0;
+  }
+
+  .studio-launcher-icon-btn--active {
+    background-image:
+      linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--launcher-accent) 22%, #343b48),
+        color-mix(in srgb, var(--launcher-accent) 10%, #1a1e26)
+      ),
+      var(--pro-tex-relief);
+    border-color: color-mix(in srgb, var(--launcher-accent) 55%, var(--pro-border-dark));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 1px 3px rgba(0, 0, 0, 0.45),
+      0 0 0 1px color-mix(in srgb, var(--launcher-accent) 32%, transparent);
+  }
+
+  .studio-launcher-icon-btn--active:hover:not(:disabled) {
+    background-image:
+      linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--launcher-accent) 28%, #3d4552),
+        color-mix(in srgb, var(--launcher-accent) 14%, #222830)
+      ),
+      var(--pro-tex-relief);
+    border-color: color-mix(in srgb, var(--launcher-accent) 62%, var(--pro-border-dark));
+  }
+
   .pro-checkbox {
     display: flex;
     align-items: center;
@@ -748,6 +836,238 @@ body {
   pointer-events: auto;
   flex-shrink: 0;
   margin-left: auto;
+}
+
+/* Preview settings controls — relief material, segment-button scale */
+.preview-settings-select {
+  width: auto;
+  padding: 6px 1.75rem 6px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #dbe2ec;
+  text-shadow: 0 -1px 0 #000;
+  line-height: 1.25;
+}
+
+.preview-settings-duration {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  width: auto;
+  padding: 6px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #dbe2ec;
+  text-shadow: 0 -1px 0 #000;
+  line-height: 1.25;
+}
+
+.preview-settings-duration__input {
+  width: 2rem;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+
+.preview-settings-duration__input::-webkit-outer-spin-button,
+.preview-settings-duration__input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.preview-settings-duration__suffix {
+  color: #9aa3b2;
+  font-weight: 600;
+}
+
+/* Preview backdrop lock — relief chip + inset toggle track */
+.preview-backdrop-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  width: auto;
+  padding: 6px 10px;
+  background-color: #101318;
+  background-image:
+    linear-gradient(to bottom, rgba(34, 38, 46, 0.96), rgba(8, 10, 14, 0.99)),
+    var(--pro-tex-relief);
+  background-repeat: repeat, repeat;
+  background-size: auto, var(--pro-tex-tile) var(--pro-tex-tile);
+  border: 1px solid var(--pro-border-dark);
+  border-top-color: #3a404c;
+  border-bottom-color: #050608;
+  border-radius: 4px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 2px 5px rgba(0, 0, 0, 0.58);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #dbe2ec;
+  text-shadow: 0 -1px 0 #000;
+  line-height: 1.25;
+}
+
+.preview-backdrop-lock--locked {
+  border-color: rgba(99, 102, 241, 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 2px 5px rgba(0, 0, 0, 0.58),
+    0 0 0 1px rgba(99, 102, 241, 0.22);
+}
+
+.preview-backdrop-lock--ready {
+  border-color: rgba(52, 211, 153, 0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 2px 5px rgba(0, 0, 0, 0.58),
+    0 0 0 1px rgba(52, 211, 153, 0.2);
+}
+
+.preview-backdrop-lock--error {
+  border-color: rgba(248, 113, 113, 0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 2px 5px rgba(0, 0, 0, 0.58),
+    0 0 0 1px rgba(248, 113, 113, 0.2);
+}
+
+.preview-backdrop-lock--empty {
+  opacity: 0.7;
+}
+
+.preview-backdrop-lock__label {
+  white-space: nowrap;
+}
+
+.preview-backdrop-lock__status--idle {
+  color: #9aa3b2;
+}
+
+.preview-backdrop-lock__status--locked {
+  color: #a5b4fc;
+}
+
+.preview-backdrop-lock__status--ready {
+  color: #34d399;
+}
+
+.preview-backdrop-lock__status--pending {
+  color: #9aa3b2;
+}
+
+.preview-backdrop-lock__status--error {
+  color: #fca5a5;
+}
+
+.preview-backdrop-lock__toggle {
+  position: relative;
+  width: 40px;
+  height: 20px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  padding: 0;
+  cursor: pointer;
+  background-color: #0a0c10;
+  background-image:
+    linear-gradient(to bottom, rgba(8, 10, 14, 0.99), rgba(20, 24, 30, 0.96)),
+    var(--pro-tex-panel);
+  background-repeat: repeat, repeat;
+  background-size: auto, var(--pro-tex-tile) var(--pro-tex-tile);
+  border: 1px solid var(--pro-border-dark);
+  border-bottom-color: #050608;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.72);
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.preview-backdrop-lock__toggle--active {
+  background-image:
+    linear-gradient(to bottom, rgba(67, 56, 202, 0.92), rgba(49, 46, 129, 0.98)),
+    var(--pro-tex-panel);
+  border-color: rgba(99, 102, 241, 0.55);
+  border-top-color: rgba(129, 140, 248, 0.45);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.45),
+    0 0 8px rgba(99, 102, 241, 0.28);
+}
+
+.preview-backdrop-lock__toggle--ready.preview-backdrop-lock__toggle--active {
+  background-image:
+    linear-gradient(to bottom, rgba(5, 150, 105, 0.92), rgba(4, 120, 87, 0.98)),
+    var(--pro-tex-panel);
+  border-color: rgba(52, 211, 153, 0.55);
+  border-top-color: rgba(110, 231, 183, 0.4);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.45),
+    0 0 8px rgba(52, 211, 153, 0.28);
+}
+
+.preview-backdrop-lock__toggle--error {
+  border-color: rgba(248, 113, 113, 0.55);
+}
+
+.preview-backdrop-lock__toggle:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.preview-backdrop-lock__knob {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: linear-gradient(to bottom, var(--pro-btn-top), var(--pro-btn-bot));
+  border: 1px solid var(--pro-border-dark);
+  border-top-color: var(--pro-btn-border-top);
+  border-bottom-color: var(--pro-btn-border-bot);
+  color: #9aa3b2;
+  box-shadow:
+    inset 0 1px 0 var(--pro-inset-highlight),
+    0 1px 2px rgba(0, 0, 0, 0.5);
+  transition: transform 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.preview-backdrop-lock__toggle--active .preview-backdrop-lock__knob {
+  transform: translateX(20px);
+  color: #6366f1;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 1px 3px rgba(0, 0, 0, 0.55);
+}
+
+.preview-backdrop-lock__toggle--ready.preview-backdrop-lock__toggle--active .preview-backdrop-lock__knob {
+  color: #34d399;
+}
+
+.preview-backdrop-lock__icon {
+  width: 0.625rem;
+  height: 0.625rem;
+}
+
+.preview-backdrop-lock__spinner {
+  display: block;
+  width: 0.625rem;
+  height: 0.625rem;
+  border: 2px solid rgba(154, 163, 178, 0.35);
+  border-top-color: #9aa3b2;
+  border-radius: 999px;
+  animation: spin 0.8s linear infinite;
 }
 
 .preview-frame-stage {
@@ -1579,7 +1899,8 @@ input[type="range"].pro-slider::-moz-range-thumb {
   max-width: min(100%, 28rem);
 }
 
-.preview-panel-controls .frame-view-segment {
+.preview-panel-controls .frame-view-segment,
+.preview-panel-controls .segmented-control {
   width: auto;
 }
 
@@ -1777,11 +2098,14 @@ legend.workflow-step-fieldset__legend.w-full {
   @apply mt-2 mb-0;
 }
 
-/* Depth-aware workflow checklist styling keeps nested fieldsets readable
-   without shrinking level-3 content width too aggressively. */
+/* Workflow checklist: each fieldset has a titlebar legend — no nested inset shrink. */
+.workflow-checklist {
+  gap: 0.5rem;
+}
+
 .workflow-checklist > .workflow-step-fieldset {
-  --fieldset-pad-x: 0.75rem;
-  --fieldset-pad-b: 0.625rem;
+  --fieldset-pad-x: 0.5rem;
+  --fieldset-pad-b: 0.375rem;
   border-radius: 6px;
   border-color: var(--pro-border-dark);
   background-color: var(--pro-group);
@@ -1790,11 +2114,11 @@ legend.workflow-step-fieldset__legend.w-full {
     var(--pro-tex-panel);
 }
 
-.workflow-checklist > .workflow-step-fieldset > .workflow-step-fieldset--nested {
-  --fieldset-pad-x: 0.625rem;
-  --fieldset-pad-b: 0.5rem;
+.workflow-checklist .workflow-step-fieldset--nested {
+  --fieldset-pad-x: 0.5rem;
+  --fieldset-pad-b: 0.375rem;
+  margin-top: 0;
   border-radius: 5px;
-  margin-top: 0.5rem;
   border-color: var(--pro-border-dark);
   background-color: var(--pro-inset);
   background-image:
@@ -1803,33 +2127,17 @@ legend.workflow-step-fieldset__legend.w-full {
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
-.workflow-checklist > .workflow-step-fieldset > .workflow-step-fieldset--nested > .workflow-step-fieldset--nested {
-  --fieldset-pad-x: 0.5rem;
-  --fieldset-pad-b: 0.5rem;
+.workflow-checklist .workflow-step-fieldset--nested .workflow-step-fieldset--nested {
   border-radius: 4px;
-  margin-top: 0.4rem;
-  border-color: var(--pro-border-dark);
   background-color: #15181e;
   background-image:
     linear-gradient(rgba(21, 24, 30, 0.96), rgba(12, 14, 18, 0.99)),
     var(--pro-tex-panel);
+  box-shadow: none;
 }
 
-.workflow-checklist > .workflow-step-fieldset > .workflow-step-fieldset--nested > .workflow-step-fieldset--nested > .workflow-step-fieldset--nested {
-  --fieldset-pad-x: 0.35rem;
-  --fieldset-pad-b: 0.35rem;
-  border-radius: 0.35rem;
-}
-
-.workflow-checklist
-  > .workflow-step-fieldset
-  > .workflow-step-fieldset--nested
-  > .workflow-step-fieldset--nested
-  > legend.workflow-step-fieldset__legend {
-  min-height: 24px;
-  font-size: 9px;
-  letter-spacing: 0.04em;
-  padding: 0.25rem 0.5rem;
+.workflow-checklist legend.workflow-step-fieldset__legend {
+  margin-bottom: 0.375rem;
 }
 
 .workflow-step-fieldset--square {
@@ -2772,99 +3080,7 @@ legend.workflow-step-fieldset__legend.w-full {
   pointer-events: none;
 }
 
-.backdrop-framing-lock-toggle-wrap {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  background: #3f3f46;
-  border: 1px solid #52525b;
-  border-radius: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  flex-shrink: 0;
-}
 
-.backdrop-framing-lock-toggle-wrap--locked {
-  border-color: rgba(99, 102, 241, 0.45);
-}
-
-.backdrop-framing-lock-toggle-wrap--ready {
-  border-color: rgba(52, 211, 153, 0.45);
-}
-
-.backdrop-framing-lock-toggle-wrap--error {
-  border-color: rgba(248, 113, 113, 0.45);
-}
-
-.backdrop-lock-toggle {
-  position: relative;
-  width: 44px;
-  height: 22px;
-  border-radius: 11px;
-  background: #27272a;
-  border: 1px solid #3f3f46;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-  flex-shrink: 0;
-  padding: 0;
-}
-
-.backdrop-lock-toggle.active {
-  background: #4f46e5;
-  border-color: #6366f1;
-}
-
-.backdrop-lock-toggle--ready.active {
-  background: #059669;
-  border-color: #34d399;
-}
-
-.backdrop-lock-toggle--error {
-  border-color: #f87171;
-}
-
-.backdrop-lock-toggle:disabled {
-  opacity: 0.7;
-  cursor: wait;
-}
-
-.backdrop-lock-toggle__knob {
-  position: absolute;
-  top: 1px;
-  left: 1px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #fafafa;
-  color: #52525b;
-  transition: transform 0.15s ease, color 0.15s ease;
-}
-
-.backdrop-lock-toggle.active .backdrop-lock-toggle__knob {
-  transform: translateX(22px);
-  color: #4f46e5;
-}
-
-.backdrop-lock-toggle--ready.active .backdrop-lock-toggle__knob {
-  color: #059669;
-}
-
-.backdrop-lock-toggle__icon {
-  width: 0.75rem;
-  height: 0.75rem;
-}
-
-.backdrop-lock-toggle__spinner {
-  display: block;
-  width: 0.75rem;
-  height: 0.75rem;
-  border: 2px solid rgba(82, 82, 91, 0.35);
-  border-top-color: #52525b;
-  border-radius: 999px;
-  animation: spin 0.8s linear infinite;
-}
 
 .composition-toggle {
   position: relative;
@@ -2972,6 +3188,92 @@ legend.workflow-step-fieldset__legend.w-full {
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
 }
 
+/* Flush segmented control — shared by FrameViewSegment, ColorModeSegment */
+.segmented-control {
+  display: inline-flex;
+  gap: 0;
+  padding: 0;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--pro-inset);
+  border: 1px solid var(--pro-border-dark);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.6),
+    0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.segmented-control--full {
+  display: flex;
+  width: 100%;
+}
+
+.segmented-control-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border-radius: 0;
+  color: #dbe2ec;
+  background: linear-gradient(to bottom, var(--pro-btn-top), var(--pro-btn-bot));
+  border: 0;
+  border-right: 1px solid var(--pro-border-dark);
+  box-shadow:
+    inset 0 1px 0 var(--pro-inset-highlight),
+    0 1px 2px rgba(0, 0, 0, 0.4);
+  text-shadow: 0 -1px 0 #000;
+  transition: background 0.1s ease, box-shadow 0.1s ease, color 0.1s ease;
+  cursor: pointer;
+}
+
+.segmented-control--full .segmented-control-btn {
+  flex: 1;
+  min-width: 0;
+}
+
+.segmented-control-btn:last-child {
+  border-right: 0;
+}
+
+.segmented-control-btn:hover:not(:disabled):not(.active) {
+  background: linear-gradient(to bottom, #555d6b, #353c48);
+}
+
+.segmented-control-btn.active {
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(to bottom, var(--pro-active-top), var(--pro-active-bot));
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 0 10px var(--pro-active-glow);
+}
+
+.segmented-control-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.segmented-control-count {
+  min-width: 1.125rem;
+  padding: 0 4px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.25rem;
+  text-align: center;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.15);
+  color: inherit;
+}
+
+.segmented-control-btn.active .segmented-control-count {
+  background: rgba(255, 255, 255, 0.22);
+}
+
 .frame-view-segment {
   display: inline-flex;
   gap: 4px;
@@ -3007,11 +3309,13 @@ legend.workflow-step-fieldset__legend.w-full {
   cursor: pointer;
 }
 
-.preview-submode-segment .frame-view-segment-btn:not(.active):not(:disabled) {
+.preview-submode-segment .frame-view-segment-btn:not(.active):not(:disabled),
+.preview-submode-segment .segmented-control-btn:not(.active):not(:disabled) {
   color: #c5ccd6;
 }
 
-.preview-submode-segment .frame-view-segment-btn:disabled {
+.preview-submode-segment .frame-view-segment-btn:disabled,
+.preview-submode-segment .segmented-control-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }

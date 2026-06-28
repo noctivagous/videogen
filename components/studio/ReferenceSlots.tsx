@@ -665,7 +665,7 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
           </fieldset>
         )}
         {assignCharactersStep && (
-          <fieldset className="workflow-step-fieldset workflow-step-fieldset--nested mt-2">
+          <fieldset className="workflow-step-fieldset workflow-step-fieldset--nested">
             <legend className="workflow-step-fieldset__legend flex items-center gap-1.5">
               <span
                 className={`inline-flex w-4 h-4 rounded-full items-center justify-center text-[9px] font-bold ${
@@ -726,7 +726,7 @@ export function ReferenceSlots({ slotRefs, hoverSlot = null }: ReferenceSlotsPro
         )}
         {isBakeStartFrameWorkflow && workflowSteps.length > 0 && (
           <div
-            className="workflow-checklist flex flex-col gap-3"
+            className="workflow-checklist flex flex-col"
             aria-label="Bake start frame workflow"
           >
             {assetsFieldsetOrder != null && renderAssetsFieldset(assetsFieldsetOrder)}

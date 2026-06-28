@@ -1,5 +1,6 @@
 'use client';
 
+import { SegmentedControl, type SegmentedControlItem } from '@/components/ui/SegmentedControl';
 import {
   FX_COLOR_MODES,
   FX_MODE_LABELS,
@@ -127,48 +128,41 @@ export function ColorModeIconBar({ value, onChange }: ColorModeSegmentProps) {
 export function ColorModeSegment({ value, onChange }: ColorModeSegmentProps) {
   const primary = parentColorMode(value);
 
+  const primaryItems: SegmentedControlItem[] = PRIMARY_MODES.map((mode) => ({
+    id: mode.id,
+    label: mode.label,
+  }));
+
+  const fxItems: SegmentedControlItem[] = FX_COLOR_MODES.map((fxMode) => ({
+    id: fxMode,
+    label: FX_MODE_LABELS[fxMode],
+  }));
+
   return (
     <div className="space-y-2">
-      <div className="frame-view-segment w-full" role="tablist" aria-label="Color palette mode">
-        {PRIMARY_MODES.map((mode) => (
-          <button
-            key={mode.id}
-            type="button"
-            role="tab"
-            aria-selected={primary === mode.id}
-            className={`frame-view-segment-btn flex-1 justify-center ${primary === mode.id ? 'active' : ''}`}
-            onClick={() => {
-              if (mode.id === 'fx') {
-                onChange(FX_COLOR_MODES.includes(value as FxColorMode) ? value : DEFAULT_FX_MODE);
-              } else {
-                onChange(mode.id);
-              }
-            }}
-          >
-            {mode.label}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        fullWidth
+        value={primary}
+        onChange={(id) => {
+          if (id === 'fx') {
+            onChange(FX_COLOR_MODES.includes(value as FxColorMode) ? value : DEFAULT_FX_MODE);
+          } else {
+            onChange(id as ColorPaletteMode);
+          }
+        }}
+        items={primaryItems}
+        aria-label="Color palette mode"
+      />
 
       {primary === 'fx' && (
-        <div
-          className="frame-view-segment w-full"
-          role="tablist"
+        <SegmentedControl
+          fullWidth
+          value={value}
+          onChange={(id) => onChange(id as ColorPaletteMode)}
+          items={fxItems}
           aria-label="FX color mode"
-        >
-          {FX_COLOR_MODES.map((fxMode) => (
-            <button
-              key={fxMode}
-              type="button"
-              role="tab"
-              aria-selected={value === fxMode}
-              className={`frame-view-segment-btn flex-1 justify-center text-xs ${value === fxMode ? 'active' : ''}`}
-              onClick={() => onChange(fxMode)}
-            >
-              {FX_MODE_LABELS[fxMode]}
-            </button>
-          ))}
-        </div>
+          buttonClassName="text-xs"
+        />
       )}
     </div>
   );

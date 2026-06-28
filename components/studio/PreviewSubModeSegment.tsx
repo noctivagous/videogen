@@ -1,5 +1,6 @@
 'use client';
 
+import { SegmentedControl, type SegmentedControlItem } from '@/components/ui/SegmentedControl';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import type { PreviewSubMode } from '@/lib/types/studio';
 
@@ -18,41 +19,41 @@ export function PreviewSubModeSegment({
   hasBakedImage,
   bakeWorkflow,
 }: PreviewSubModeSegmentProps) {
+  const bakedImageTitle =
+    bakeWorkflow && !hasBakedImage
+      ? 'View baked image or load from Assets'
+      : hasBakedImage
+        ? 'Baked start frame'
+        : 'Model preview';
+
+  const items: SegmentedControlItem[] = [
+    { id: 'framing', label: 'Blocking' },
+    {
+      id: 'model',
+      label: (
+        <>
+          Baked Image
+          {modelStale && hasBakedImage && (
+            <span
+              className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400"
+              aria-label="Out of date"
+            />
+          )}
+        </>
+      ),
+      title: bakedImageTitle,
+    },
+  ];
+
   return (
-    <div
-      className="frame-view-segment preview-submode-segment flex items-center gap-1"
-      role="tablist"
+    <SegmentedControl
+      className="preview-submode-segment"
+      buttonClassName="text-[10px] px-2 py-1 relative"
+      value={value}
+      onChange={(id) => onChange(id as PreviewSubMode)}
+      items={items}
       aria-label="Preview sub-mode"
       {...uiSectionProps(UI_SECTIONS.studioPreviewFrameViewSegment)}
-    >
-      <button
-        type="button"
-        role="tab"
-        aria-selected={value === 'framing'}
-        className={`frame-view-segment-btn text-[10px] px-2 py-1 ${value === 'framing' ? 'active' : ''}`}
-        onClick={() => onChange('framing')}
-      >
-        Blocking
-      </button>
-      <button
-        type="button"
-        role="tab"
-        aria-selected={value === 'model'}
-        className={`frame-view-segment-btn text-[10px] px-2 py-1 relative ${value === 'model' ? 'active' : ''}`}
-        onClick={() => onChange('model')}
-        title={
-          bakeWorkflow && !hasBakedImage
-            ? 'View baked image or load from Assets'
-            : hasBakedImage
-              ? 'Baked start frame'
-              : 'Model preview'
-        }
-      >
-        Baked Image
-        {modelStale && hasBakedImage && (
-          <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400" aria-label="Out of date" />
-        )}
-      </button>
-    </div>
+    />
   );
 }

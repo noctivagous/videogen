@@ -1,5 +1,6 @@
 'use client';
 
+import { PRO_ENCLOSURE } from '@/lib/constants/prosumer-surfaces';
 import { UI_SECTIONS, uiSectionProps } from '@/lib/constants/ui-sections';
 import { getBackdropCropStatus, getEffectiveBackdropSourceUrl } from '@/lib/studio/backdrop-framing';
 import type { AspectRatio } from '@/lib/types/studio';
@@ -8,7 +9,7 @@ import { useStudioStore } from '@/store/useStudioStore';
 function LockIcon({ locked }: { locked: boolean }) {
   if (locked) {
     return (
-      <svg className="backdrop-lock-toggle__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+      <svg className="preview-backdrop-lock__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -20,7 +21,7 @@ function LockIcon({ locked }: { locked: boolean }) {
   }
 
   return (
-    <svg className="backdrop-lock-toggle__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+    <svg className="preview-backdrop-lock__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -29,6 +30,30 @@ function LockIcon({ locked }: { locked: boolean }) {
       />
     </svg>
   );
+}
+
+function wrapStateClass(
+  backdropLockError: boolean,
+  backdropLockReady: boolean,
+  backdropFramingLocked: boolean,
+): string {
+  if (backdropLockError) return 'preview-backdrop-lock--error';
+  if (backdropLockReady) return 'preview-backdrop-lock--ready';
+  if (backdropFramingLocked) return 'preview-backdrop-lock--locked';
+  return '';
+}
+
+function statusStateClass(
+  backdropLockPending: boolean,
+  backdropLockReady: boolean,
+  backdropFramingLocked: boolean,
+  backdropLockError: boolean,
+): string {
+  if (backdropLockPending) return 'preview-backdrop-lock__status--pending';
+  if (backdropLockReady) return 'preview-backdrop-lock__status--ready';
+  if (backdropLockError) return 'preview-backdrop-lock__status--error';
+  if (backdropFramingLocked) return 'preview-backdrop-lock__status--locked';
+  return 'preview-backdrop-lock__status--idle';
 }
 
 export function BackdropFramingLockToggle() {
@@ -44,11 +69,11 @@ export function BackdropFramingLockToggle() {
   if (!hasBackdrop) {
     return (
       <div
-        className="backdrop-framing-lock-toggle-wrap"
+        className={`${PRO_ENCLOSURE.previewBackdropLock} preview-backdrop-lock--empty`}
         {...uiSectionProps(UI_SECTIONS.studioPreviewBackdropLockToggle)}
       >
-        <span className="backdrop-framing-lock-toggle-wrap__label text-sm whitespace-nowrap text-gray-400">
-          No Backdrop
+        <span className="preview-backdrop-lock__label">
+          <span className="preview-backdrop-lock__status--idle">No Backdrop</span>
         </span>
       </div>
     );
@@ -77,27 +102,22 @@ export function BackdropFramingLockToggle() {
 
   return (
     <div
-      className={`backdrop-framing-lock-toggle-wrap ${
-        backdropLockError
-          ? 'backdrop-framing-lock-toggle-wrap--error'
-          : backdropLockReady
-            ? 'backdrop-framing-lock-toggle-wrap--ready'
-            : backdropFramingLocked
-              ? 'backdrop-framing-lock-toggle-wrap--locked'
-              : ''
-      }`}
+      className={`${PRO_ENCLOSURE.previewBackdropLock} ${wrapStateClass(
+        backdropLockError,
+        backdropLockReady,
+        backdropFramingLocked,
+      )}`.trim()}
       {...uiSectionProps(UI_SECTIONS.studioPreviewBackdropLockToggle)}
     >
-      <span className="backdrop-framing-lock-toggle-wrap__label text-sm whitespace-nowrap">
+      <span className="preview-backdrop-lock__label">
         Backdrop{' '}
         <span
-          className={
-            backdropLockReady
-              ? 'text-emerald-400'
-              : backdropFramingLocked
-                ? 'text-brand-300'
-                : 'text-gray-400'
-          }
+          className={statusStateClass(
+            backdropLockPending,
+            backdropLockReady,
+            backdropFramingLocked,
+            backdropLockError,
+          )}
         >
           {statusLabel}
         </span>
@@ -106,18 +126,20 @@ export function BackdropFramingLockToggle() {
         type="button"
         onClick={() => toggleBackdropFramingLock()}
         disabled={backdropLockPending}
-        className={`backdrop-lock-toggle ${backdropFramingLocked ? 'active' : ''} ${
-          backdropLockReady ? 'backdrop-lock-toggle--ready' : ''
-        } ${backdropLockError ? 'backdrop-lock-toggle--error' : ''}`}
+        className={`preview-backdrop-lock__toggle ${
+          backdropFramingLocked ? 'preview-backdrop-lock__toggle--active' : ''
+        } ${backdropLockReady ? 'preview-backdrop-lock__toggle--ready' : ''} ${
+          backdropLockError ? 'preview-backdrop-lock__toggle--error' : ''
+        }`.trim()}
         aria-pressed={backdropFramingLocked}
         aria-label={title}
         title={title}
       >
-        <span className="backdrop-lock-toggle__knob">
+        <span className="preview-backdrop-lock__knob">
           {backdropLockPending ? (
-            <span className="backdrop-lock-toggle__spinner" aria-hidden />
+            <span className="preview-backdrop-lock__spinner" aria-hidden />
           ) : backdropLockReady ? (
-            <svg className="backdrop-lock-toggle__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+            <svg className="preview-backdrop-lock__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
             </svg>
           ) : (

@@ -38,6 +38,9 @@ export const PRO_CONTROL = {
   menuItemDestructive: 'pro-menu-item pro-menu-item--destructive',
   /** Small floating panel — mentions, previews */
   popover: 'pro-popover',
+  /** Flush joined segment strip — no gaps between items */
+  segmentedControl: 'segmented-control',
+  segmentedControlBtn: 'segmented-control-btn',
 } as const;
 
 /** Labeled control enclosures */
@@ -51,11 +54,15 @@ export const PRO_ENCLOSURE = {
   reliefBoxDark: 'pro-relief-box pro-relief-box--dark',
   field: 'pro-field',
   fieldRelief: 'pro-field-relief',
+  /** Lighter raised field — toolbar launcher chips */
+  fieldReliefLevel1: 'pro-field-relief-level-1',
   label: 'pro-label',
   valuePill: 'pro-value-pill',
   pane: 'pro-pane',
   paneTitlebar: 'pro-pane-titlebar',
   paneBody: 'pro-pane-body',
+  /** Preview settings bar — backdrop lock relief chip */
+  previewBackdropLock: 'preview-backdrop-lock',
 } as const;
 
 /** Global prosumer scrollbars are applied via `*` in globals.css (Firefox + WebKit). */

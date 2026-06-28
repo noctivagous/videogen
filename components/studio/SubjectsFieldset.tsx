@@ -238,7 +238,7 @@ export function SubjectsFieldset({
   const charactersPickerDone = Boolean(characterSheetStep?.done);
 
   return (
-    <fieldset className="workflow-step-fieldset workflow-step-fieldset--nested mt-2">
+    <fieldset className="workflow-step-fieldset workflow-step-fieldset--nested">
       <legend className="workflow-step-fieldset__legend flex items-center gap-1.5">
         <span
           className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${

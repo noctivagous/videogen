@@ -63,12 +63,12 @@ export function LightingAtmosphereSfxFieldset({
         />
       </fieldset>
 
-      <fieldset className="workflow-step-fieldset workflow-step-fieldset--nested mt-2">
+      <fieldset className="workflow-step-fieldset workflow-step-fieldset--nested">
         <legend className="workflow-step-fieldset__legend">Atmosphere / Environment</legend>
         <SettingsSummaryTable columns={['Preset', 'Applied']} rows={environmentRows} />
       </fieldset>
 
-      <fieldset className="workflow-step-fieldset workflow-step-fieldset--nested mt-2">
+      <fieldset className="workflow-step-fieldset workflow-step-fieldset--nested">
         <legend className="workflow-step-fieldset__legend">SFX</legend>
         <SettingsSummaryTable
           columns={['Effect', 'Applied']}
