@@ -57,11 +57,13 @@ export function ProjectHierarchyTree({ setup, shot, workflow }: ProjectHierarchy
       <div className="project-hierarchy-tree__root">
         <HierarchyFieldset title="Setup">{setup}</HierarchyFieldset>
       </div>
-      <TreeBranch depth={1} extendsBelow cornerOffset={14}>
+      <TreeBranch depth={1} extendsBelow={false} cornerOffset={14}>
         <HierarchyFieldset title="Shot" nested>
-          {shot}
+          <div className="project-hierarchy-tree__shot-body">
+            {shot}
+            {workflow}
+          </div>
         </HierarchyFieldset>
-        <TreeBranch depth={2} extendsBelow={false}>{workflow}</TreeBranch>
       </TreeBranch>
     </div>
   );

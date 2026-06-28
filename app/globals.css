@@ -819,10 +819,18 @@ body {
 
 #studio-camera-panel {
   background-color: var(--pro-panel);
+  padding: 0;
+}
+
+#studio-camera-panel .camera-panel-workflow-refs {
+  border-radius: 0;
+  border-left-width: 0;
+  border-right-width: 0;
 }
 
 [data-ui-section="studio-camera-controls"] {
   background-color: rgba(5, 5, 5, 1);
+  padding: 0;
 }
 
 #studio-camera-panel .camera-panel-heading,
@@ -1402,6 +1410,12 @@ body.backdrop-widget-dragging * {
 .project-hierarchy-tree__root,
 .project-hierarchy-tree__content {
   min-width: 0;
+}
+
+.project-hierarchy-tree__shot-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .project-hierarchy-tree__branch {

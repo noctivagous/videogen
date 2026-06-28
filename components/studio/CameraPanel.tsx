@@ -65,7 +65,7 @@ export function CameraPanel() {
   };
 
   return (
-    <div className="p-4" {...uiSectionProps(UI_SECTIONS.studioCameraControls, { id: false })}>
+    <div {...uiSectionProps(UI_SECTIONS.studioCameraControls, { id: false })}>
       <WorkflowSection shot={shot} onChange={setWorkflow} />
 
       <div className="border-t border-surface-700 mb-4" aria-hidden />
