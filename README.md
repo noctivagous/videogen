@@ -2,20 +2,23 @@
 
 <h2>Introduction</h2>
 
- <p>
-VideoGen has set out to make precise AI filmmaking moves
-possible, contrasting sharply with using
-text prompts to make videos.
-<p>
-With a text prompt it is hard to achieve a starting workflow
-like the following.
+<p style="width:500px">
+The VideoGen project is designed to make intricate AI filmmaking moves
+possible, as opposed to crafting raw 
+text prompts to make videos. Take the following feature:
 
 
-<p align="left">
-  <em>1. The user provides the backdrop plate and sets up
-   a close-up shot with two mannequins.</em><br>
-  <em>SOLEMN, FOREGROUND: (Close-up two-shot)</em><br>
+<p align="left" style="width:500px">
+  <em>1. The user provides the backdrop plate image and sets up
+   a close-up shot with two mannequins (which will be replaced later
+   by the actual characters by an AI image edit model), choosing 
+   poses from a provided library of model poses. </em> <br/><br/>
+
   <img src="public/readme/posing-1-closeup-twoshot.png" alt="Posing 1" width="500">
+  <p style="width:500px">A solemn shot is depicted with a subject in the foreground 
+  on the left (Close-up two-shot).  The user adjusted
+   the head to look camera right. The user can, in a later version of the app,
+  configure the facial expression and gaze direction of the characters.</p><br>
   <br>
   
 </p>
@@ -23,14 +26,15 @@ like the following.
 
 <p align="left">
   <em>2. The user moves the head down of one of the mannequins.</em><br>
-  <em>MORE SOMBER, LOOKING DOWN. Close-up two-shot looking down</em><br>
+  <em>MORE SOMBER, LOOKING DOWN. Close-up two-shot looking down.</em><br>
   <img src="public/readme/posing-2-closeup-twoshot-lookingdown.png" alt="Posing 2" width="500">
   
 </p>
 
 <p align="left">
-  <em>3. The user changes the pose of the second mannequin and places it on the ledge.</em><br>
-  <em>BLOCKING CHANGE: Ledge. (Close-up two-shot)</em><br>
+  <em>3. The user changes the second mannequin's to a sitting position in the
+  stock library of poses and places it on the ledge.</em><br>
+  <em>BLOCKING CHANGE: Subject on the ledge. (Close-up two-shot)</em><br>
   <img src="public/readme/posing-3-closeup-twoshot-ledge.png" alt="Posing 3" width="500">
   <br>
 
@@ -38,11 +42,11 @@ like the following.
 
 <p> 
 Platforms like Runway and Higgsfield are built text-prompt-first.
-Both optimize for "describe a shot, get a clip" rather than 
+Both optimize for "describe a shot textually, get a clip" rather than 
 "place the camera, block the actors, describe the action and 
-conditions." The text-prompt-first workflow will nudge the user towards
-outcomes that are common-looking for AI video. The user will
-follow a path that provides the AI less custom image and placement information.
+conditions second." The text-prompt-first workflow will nudge the user towards
+outcomes that are common-looking for AI video. The user start on
+a path that provides the AI less custom image and placement information.
 Because of how today's AI works, any gaps will be filled 
 in from the mean ("the dataset centroid") of AI training data.
 
@@ -71,19 +75,20 @@ authentic in the end, would use VideoGen.
 <p>It is worth noting that in real life filmmaking
 there are two alternations occurring during production: 
 the inherited resources of the situation and that which has been
-purchased, planned, and arranged by design, with the bigger the budget corresponding
+procured, planned, and arranged by design, with the bigger the budget corresponding
 to more that has been planned, arranged, and designed.  In other words,
 on a no-budget short film the actors show up in their own clothes
-(conditions given to the filmmaker), the small crew uses borrowed, available locations 
-whereas in a big budget film there is everything from location scouts,
+(conditions given to the filmmaker), the small crew uses 
+borrowed, available locations whereas in a big budget film there is 
+everything from location scouts,
 custom studio sets, wardrobe, set dressers and hair stylists.
-The spectrum of detail rises in physical filmmaking
+The level detail rises in physical filmmaking
 according to budget.  The situation is different
 in AI in that it brings in big budget conditions according
-to the mean.  That is what is so confusing about AI video,
-that it brings in big budget production quality but will
-result in common-looking output if not given specific resources.
-What is important then is that the software assists 
+to the mean of the training dataset.  That one reason AI video
+leads to confusion, that it brings in big budget production quality but will
+result in common-looking AI output if not fed specific resources
+for video generation. What is important then is that the software assists 
 the user in making many custom resources and delivering
 them to the AI model.
 
